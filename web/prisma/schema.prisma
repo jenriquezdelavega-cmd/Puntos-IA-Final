@@ -1,0 +1,66 @@
+// web/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  createdAt   DateTime @default(now())
+  memberships Membership[]
+  dailyCodes  DailyCode[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  password  String   @default("1234")
+  name      String?
+  gender    String?  
+  birthDate DateTime? 
+
+  // 👇 AQUÍ ESTÁ LA LÍNEA QUE FALTABA
+  createdAt DateTime @default(now()) 
+
+  memberships Membership[]
+}
+
+model Membership {
+  id             String   @id @default(uuid())
+  currentVisits  Int      @default(0)
+  totalVisits    Int      @default(0)
+  lastVisitAt    DateTime?
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  visits         Visit[]
+  @@unique([tenantId, userId])
+}
+
+model DailyCode {
+  id        String   @id @default(uuid())
+  code      String
+  validDate DateTime @default(now())
+  isActive  Boolean  @default(true)
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  visits    Visit[]
+}
+
+model Visit {
+  id        String   @id @default(uuid())
+  visitedAt DateTime @default(now())
+  membershipId String
+  membership   Membership @relation(fields: [membershipId], references: [id])
+  dailyCodeId String
+  dailyCode   DailyCode @relation(fields: [dailyCodeId], references: [id])
+  @@unique([membershipId, dailyCodeId])
+}
