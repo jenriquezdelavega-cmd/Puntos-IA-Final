@@ -82,3 +82,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Error técnico: ' + error.message }, { status: 500 });
   }
 }
+// Forzar rebuild
