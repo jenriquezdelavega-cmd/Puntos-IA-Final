@@ -6,36 +6,39 @@ const prisma = new PrismaClient();
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    console.log("📝 RECIBIDO:", body);
+    const { name, phone, password, gender, birthDate } = body;
 
-    const { name, phone, password, gender } = body;
-
-    // Validar datos
     if (!name || !phone || !password) {
-      return NextResponse.json({ error: 'Faltan datos obligatorios' }, { status: 400 });
+      return NextResponse.json({ error: 'Nombre, teléfono y contraseña son obligatorios' }, { status: 400 });
     }
 
-    // Verificar duplicados
     const existingUser = await prisma.user.findUnique({ where: { phone } });
     if (existingUser) {
       return NextResponse.json({ error: 'Este teléfono ya está registrado' }, { status: 400 });
     }
 
-    // 🛠️ CORRECCIÓN: Quitamos 'points: 0' porque eso va en la Membresía
+    // Convertir fecha de texto (2000-01-01) a Objeto Fecha real
+    let finalDate = null;
+    if (birthDate) {
+      finalDate = new Date(birthDate);
+      if (isNaN(finalDate.getTime())) finalDate = null; // Si es fecha inválida, ignorar
+    }
+
     const newUser = await prisma.user.create({
       data: {
         name,
         phone,
         password,
-        gender: gender || 'No especificado'
+        gender: gender || 'No especificado',
+        birthDate: finalDate, // 🎂 ¡Aquí se guarda!
+        points: 0
       }
     });
 
-    console.log("✅ Usuario creado con éxito:", newUser.id);
-    return NextResponse.json({ id: newUser.id, name: newUser.name, gender: newUser.gender });
+    return NextResponse.json({ id: newUser.id, name: newUser.name });
 
   } catch (error: any) {
-    console.error("🔥 ERROR:", error);
-    return NextResponse.json({ error: error.message || 'Error del servidor' }, { status: 500 });
+    console.error("Error registro:", error);
+    return NextResponse.json({ error: 'Error al registrar usuario' }, { status: 500 });
   }
 }
