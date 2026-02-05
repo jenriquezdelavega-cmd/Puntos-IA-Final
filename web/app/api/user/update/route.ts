@@ -1,4 +1,3 @@
-// web/app/api/user/update/route.ts
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
@@ -6,36 +5,30 @@ const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
-    const { phone, currentPassword, newPassword, name, gender, birthDate } = await request.json();
+    const body = await request.json();
+    const { id, name, phone, gender } = body; // 👈 Aseguramos recibir 'gender'
 
-    // 1. Verificar credenciales actuales
-    const user = await prisma.user.findUnique({ where: { phone } });
-    if (!user || user.password !== currentPassword) {
-      return NextResponse.json({ error: 'Contraseña actual incorrecta' }, { status: 401 });
+    if (!id) {
+      return NextResponse.json({ error: 'Falta ID de usuario' }, { status: 400 });
     }
 
-    // 2. Preparar datos a actualizar
-    const updateData: any = {
-      name,
-      gender,
-      birthDate: birthDate ? new Date(birthDate) : null
-    };
-
-    // Solo actualizamos password si el usuario escribió una nueva
-    if (newPassword && newPassword.trim() !== '') {
-      updateData.password = newPassword;
-    }
-
-    // 3. Guardar cambios
-    await prisma.user.update({
-      where: { phone },
-      data: updateData
+    // Actualizar en la base de datos
+    const updatedUser = await prisma.user.update({
+      where: { id: id },
+      data: {
+        name: name,
+        phone: phone,
+        gender: gender // 👈 ¡Aquí está la clave! Guardarlo.
+      }
     });
 
-    return NextResponse.json({ success: true, message: 'Perfil actualizado' });
+    return NextResponse.json({ 
+      success: true, 
+      user: updatedUser 
+    });
 
   } catch (error: any) {
-    console.error("Error update:", error);
-    return NextResponse.json({ error: error.message || 'Error al actualizar' }, { status: 500 });
+    console.error("Error actualizando:", error);
+    return NextResponse.json({ error: 'Error al actualizar' }, { status: 500 });
   }
 }
