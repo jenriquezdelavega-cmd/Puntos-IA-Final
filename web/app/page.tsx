@@ -19,7 +19,7 @@ export default function Home() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // --- LÓGICA (Igual que antes) ---
+  // --- LÓGICA ---
   const handleLogin = async () => {
     setLoading(true); setMessage('');
     try {
@@ -85,8 +85,8 @@ export default function Home() {
   if (view === 'WELCOME') return (
     <div className="min-h-screen bg-blue-700 flex flex-col items-center justify-center p-6 text-white">
       <h1 className="text-4xl font-bold mb-10">Puntos IA 🤖</h1>
-      <button onClick={() => setView('LOGIN')} className="w-full bg-white text-blue-700 py-4 rounded-xl font-bold mb-4 shadow-lg active:scale-95 transition-all">Iniciar Sesión</button>
-      <button onClick={() => setView('REGISTER')} className="w-full border-2 border-white py-4 rounded-xl font-bold active:scale-95 transition-all">Crear Cuenta</button>
+      <button onClick={() => setView('LOGIN')} className="w-full bg-white text-blue-700 py-4 rounded-xl font-bold mb-4 shadow-lg">Iniciar Sesión</button>
+      <button onClick={() => setView('REGISTER')} className="w-full border-2 border-white py-4 rounded-xl font-bold">Crear Cuenta</button>
     </div>
   );
 
@@ -94,7 +94,6 @@ export default function Home() {
     <div className="min-h-screen p-6 bg-gray-50 flex flex-col">
       <button onClick={() => setView('WELCOME')} className="mb-6 text-gray-400 w-fit">← Volver</button>
       <h2 className="text-2xl font-bold mb-6 text-gray-800">Hola de nuevo 👋</h2>
-      
       <div className="space-y-4">
         <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Teléfono</label>
@@ -105,7 +104,6 @@ export default function Home() {
             <input type="password" className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
         </div>
       </div>
-
       {message && <p className="text-red-500 mt-4 text-center">{message}</p>}
       <button onClick={handleLogin} disabled={loading} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold mt-8 shadow-lg">{loading ? '...' : 'Entrar'}</button>
     </div>
@@ -116,36 +114,38 @@ export default function Home() {
       <button onClick={() => setView('WELCOME')} className="mb-6 text-gray-400 w-fit">← Volver</button>
       <h2 className="text-2xl font-bold mb-6 text-gray-800">Crear Cuenta 🚀</h2>
       
+      {/* FORMULARIO DE REGISTRO ALINEADO (VERTICAL) */}
       <div className="space-y-5 flex-1 overflow-y-auto pb-4">
          
          <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Nombre Completo</label>
-            <input className="w-full p-3 rounded-xl border border-gray-200 text-black bg-white" placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} />
+            <input className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white" placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} />
          </div>
 
          <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Teléfono Celular</label>
-            <input className="w-full p-3 rounded-xl border border-gray-200 text-black bg-white" placeholder="Será tu ID" value={phone} onChange={e => setPhone(e.target.value)} />
+            <input className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white" placeholder="Será tu ID" value={phone} onChange={e => setPhone(e.target.value)} />
          </div>
 
-         <div className="flex gap-4">
-             <div className="flex-1">
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Fecha Nacimiento</label>
-                <input type="date" className="w-full p-3 rounded-xl border border-gray-200 text-black bg-white h-[50px]" value={birthDate} onChange={e => setBirthDate(e.target.value)} />
-             </div>
-             <div className="flex-1">
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Género</label>
-                <select className="w-full p-3 rounded-xl border border-gray-200 text-black bg-white h-[50px]" value={gender} onChange={e => setGender(e.target.value)}>
-                    <option value="">Seleccionar</option>
-                    <option value="Hombre">Hombre</option>
-                    <option value="Mujer">Mujer</option>
-                </select>
-             </div>
+         {/* FECHA (Full Width) */}
+         <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Fecha Nacimiento</label>
+            <input type="date" className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white h-[58px]" value={birthDate} onChange={e => setBirthDate(e.target.value)} />
+         </div>
+
+         {/* GÉNERO (Full Width) */}
+         <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Género</label>
+            <select className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white h-[58px]" value={gender} onChange={e => setGender(e.target.value)}>
+                <option value="">Seleccionar Género</option>
+                <option value="Hombre">Hombre</option>
+                <option value="Mujer">Mujer</option>
+            </select>
          </div>
          
          <div>
             <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Contraseña</label>
-            <input type="password" className="w-full p-3 rounded-xl border border-gray-200 text-black bg-white" placeholder="Crea una clave" value={password} onChange={e => setPassword(e.target.value)} />
+            <input type="password" className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white" placeholder="Crea una clave" value={password} onChange={e => setPassword(e.target.value)} />
          </div>
 
       </div>
@@ -170,7 +170,7 @@ export default function Home() {
                 <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mb-2">Tus Puntos</p>
                 <h2 className="text-7xl font-bold">{user.points || 0}</h2>
              </div>
-             <button onClick={() => setScanning(true)} className="w-full bg-black text-white py-5 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all">
+             <button onClick={() => setScanning(true)} className="w-full bg-black text-white py-5 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2">
                📷 Escanear QR
              </button>
            </div>
