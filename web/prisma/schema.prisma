@@ -1,5 +1,3 @@
-// web/prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,7 +10,12 @@ datasource db {
 model Tenant {
   id          String   @id @default(uuid())
   name        String
-  slug        String   @unique
+  slug        String   @unique // Identificador url (ej: pizzeria-luigi)
+  
+  // 🆕 Credenciales para el dueño del negocio
+  username    String   @unique @default("admin")
+  password    String   @default("1234")
+
   createdAt   DateTime @default(now())
   memberships Membership[]
   dailyCodes  DailyCode[]
@@ -25,10 +28,7 @@ model User {
   name      String?
   gender    String?  
   birthDate DateTime? 
-
-  // 👇 AQUÍ ESTÁ LA LÍNEA QUE FALTABA
   createdAt DateTime @default(now()) 
-
   memberships Membership[]
 }
 
