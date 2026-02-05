@@ -1,4 +1,4 @@
-// web/app/api/user/register/route.ts
+cat <<EOF > app/api/user/register/route.ts
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
@@ -6,34 +6,44 @@ const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
-    const { phone, password, name } = await request.json();
+    const body = await request.json();
+    // 👇 AQUÍ ESTABA EL DETALLE: Agregamos 'gender' a la lista
+    const { name, phone, password, gender } = body;
 
-    if (!phone || !password) {
-      return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
+    // Validaciones básicas
+    if (!name || !phone || !password) {
+      return NextResponse.json({ error: 'Faltan datos obligatorios' }, { status: 400 });
     }
 
-    // 1. Verificar si ya existe
-    const existingUser = await prisma.user.findUnique({ where: { phone } });
+    // Verificar si ya existe el teléfono
+    const existingUser = await prisma.user.findUnique({
+      where: { phone: phone }
+    });
 
     if (existingUser) {
-      // Si ya existe (porque hizo check-in antes), avisamos
-      return NextResponse.json({ 
-        error: 'Este teléfono ya está registrado. Intenta entrar con "1234" o tu clave.' 
-      }, { status: 409 });
+      return NextResponse.json({ error: 'Este teléfono ya está registrado' }, { status: 400 });
     }
 
-    // 2. Crear Usuario Nuevo
+    // Crear usuario CON GÉNERO
     const newUser = await prisma.user.create({
       data: {
+        name,
         phone,
         password,
-        name: name || 'Cliente Nuevo'
+        gender: gender || "Prefiero no decirlo", // Guardamos el género (o un default)
+        points: 0
       }
     });
 
-    return NextResponse.json({ success: true, message: 'Cuenta creada exitosamente' });
+    return NextResponse.json({ 
+      id: newUser.id, 
+      name: newUser.name,
+      gender: newUser.gender // Devolvemos el dato para confirmar
+    });
 
-  } catch (error) {
-    return NextResponse.json({ error: 'Error al registrar' }, { status: 500 });
+  } catch (error: any) {
+    console.error("Error registro:", error);
+    return NextResponse.json({ error: 'Error al crear usuario' }, { status: 500 });
   }
 }
+EOF
