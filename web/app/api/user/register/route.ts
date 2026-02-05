@@ -6,30 +6,39 @@ const prisma = new PrismaClient();
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    console.log("📝 RECIBIDO EN REGISTRO:", body); // 👈 Esto nos dirá la verdad en los logs
+
     const { name, phone, password, gender } = body;
 
-    // Validación simple
     if (!name || !phone || !password) {
-      return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
+      console.log("❌ Faltan datos obligatorios");
+      return NextResponse.json({ error: 'Faltan datos obligatorios' }, { status: 400 });
     }
 
+    // Verificar duplicados
     const existingUser = await prisma.user.findUnique({ where: { phone } });
     if (existingUser) {
-      return NextResponse.json({ error: 'Teléfono ya existe' }, { status: 400 });
+      console.log("❌ Usuario ya existe:", phone);
+      return NextResponse.json({ error: 'El teléfono ya está registrado' }, { status: 400 });
     }
 
+    // Crear usuario
+    console.log("🛠️ Creando usuario con género:", gender);
     const newUser = await prisma.user.create({
       data: {
         name,
         phone,
         password,
-        gender: gender || 'No especificado',
+        gender: gender || "No especificado",
         points: 0
       }
     });
 
-    return NextResponse.json({ id: newUser.id, name: newUser.name });
+    console.log("✅ Usuario creado con ID:", newUser.id);
+    return NextResponse.json({ id: newUser.id, name: newUser.name, gender: newUser.gender });
+
   } catch (error: any) {
-    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
+    console.error("🔥 ERROR CRÍTICO EN REGISTRO:", error);
+    return NextResponse.json({ error: error.message || 'Error del servidor' }, { status: 500 });
   }
 }
