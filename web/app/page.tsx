@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 
 type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
@@ -18,8 +18,33 @@ export default function Home() {
   const [scanning, setScanning] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // 🆕 ESTADO PARA CÓDIGO PENDIENTE (DE URL)
+  const [pendingCode, setPendingCode] = useState<string | null>(null);
 
-  // --- LÓGICA ---
+  // 1. DETECTAR CÓDIGO EN URL AL INICIAR
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const codeFromUrl = params.get('code');
+      if (codeFromUrl) {
+        setPendingCode(codeFromUrl);
+        // Si no estamos logueados, avisamos
+        if (!user) setMessage('👋 ¡Código detectado! Inicia sesión para sumar puntos.');
+      }
+    }
+  }, []);
+
+  // 2. EFECTO: SI ENTRAMOS Y HAY CÓDIGO PENDIENTE -> PROCESARLO
+  useEffect(() => {
+    if (user && pendingCode) {
+      handleScan(pendingCode);
+      setPendingCode(null); // Limpiar para no repetir
+      // Limpiar URL visualmente
+      window.history.replaceState({}, '', '/');
+    }
+  }, [user, pendingCode]);
+
   const handleLogin = async () => {
     setLoading(true); setMessage('');
     try {
@@ -67,26 +92,49 @@ export default function Home() {
   const handleScan = async (result: string) => {
     if (!result) return;
     setScanning(false);
-    setMessage('Procesando...');
+    
+    // Feedback visual inmediato
+    const originalMessage = message;
+    setMessage('🔄 Procesando Check-in...');
+
     try {
       const res = await fetch('/api/check-in/scan', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, code: result })
+        body: JSON.stringify({ userId: user?.id, code: result })
       });
       const data = await res.json();
-      if (res.ok) { alert(data.message); setUser({ ...user, points: (user.points || 0) + 10 }); }
-      else alert('❌ ' + data.error);
-    } catch (e) { alert('Error escaneo'); }
-    setMessage('');
+      
+      if (res.ok) { 
+        alert(data.message); 
+        setUser((prev: any) => ({ ...prev, points: (prev.points || 0) + 10 })); 
+        setMessage('');
+      } else { 
+        // Si el error es "ya registrado", no mostramos alerta molesta, solo texto
+        if(res.status === 400) alert(data.error); 
+        else alert('❌ ' + data.error);
+        setMessage('');
+      }
+    } catch (e) { 
+      // Si el user era null (caso raro de race condition), lo ignoramos
+      if (user) alert('Error al procesar código'); 
+      setMessage('');
+    }
   };
-
-  // --- VISTAS ---
 
   if (view === 'WELCOME') return (
     <div className="min-h-screen bg-blue-700 flex flex-col items-center justify-center p-6 text-white">
-      <h1 className="text-4xl font-bold mb-10">Puntos IA 🤖</h1>
-      <button onClick={() => setView('LOGIN')} className="w-full bg-white text-blue-700 py-4 rounded-xl font-bold mb-4 shadow-lg">Iniciar Sesión</button>
-      <button onClick={() => setView('REGISTER')} className="w-full border-2 border-white py-4 rounded-xl font-bold">Crear Cuenta</button>
+      <h1 className="text-4xl font-bold mb-4">Puntos IA 🤖</h1>
+      
+      {/* MENSAJE DE BIENVENIDA SI HAY CÓDIGO */}
+      {pendingCode && (
+        <div className="bg-white/20 p-4 rounded-xl mb-6 backdrop-blur-sm border border-white/30 animate-pulse">
+           <p className="text-sm font-bold">🎉 ¡Has escaneado un código!</p>
+           <p className="text-xs">Inicia sesión para reclamar tus puntos.</p>
+        </div>
+      )}
+
+      <button onClick={() => setView('LOGIN')} className="w-full bg-white text-blue-700 py-4 rounded-xl font-bold mb-4 shadow-lg active:scale-95 transition-all">Iniciar Sesión</button>
+      <button onClick={() => setView('REGISTER')} className="w-full border-2 border-white py-4 rounded-xl font-bold active:scale-95 transition-all">Crear Cuenta</button>
     </div>
   );
 
@@ -95,16 +143,10 @@ export default function Home() {
       <button onClick={() => setView('WELCOME')} className="mb-6 text-gray-400 w-fit">← Volver</button>
       <h2 className="text-2xl font-bold mb-6 text-gray-800">Hola de nuevo 👋</h2>
       <div className="space-y-4">
-        <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Teléfono</label>
-            <input className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white" placeholder="Ej: 5512345678" value={phone} onChange={e => setPhone(e.target.value)} />
-        </div>
-        <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Contraseña</label>
-            <input type="password" className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} />
-        </div>
+        <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Teléfono</label><input className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white" placeholder="Ej: 5512345678" value={phone} onChange={e => setPhone(e.target.value)} /></div>
+        <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Contraseña</label><input type="password" className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} /></div>
       </div>
-      {message && <p className="text-red-500 mt-4 text-center">{message}</p>}
+      {message && <p className="text-blue-600 font-bold mt-4 text-center">{message}</p>}
       <button onClick={handleLogin} disabled={loading} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold mt-8 shadow-lg">{loading ? '...' : 'Entrar'}</button>
     </div>
   );
@@ -113,49 +155,18 @@ export default function Home() {
     <div className="min-h-screen p-6 bg-gray-50 flex flex-col">
       <button onClick={() => setView('WELCOME')} className="mb-6 text-gray-400 w-fit">← Volver</button>
       <h2 className="text-2xl font-bold mb-6 text-gray-800">Crear Cuenta 🚀</h2>
-      
-      {/* FORMULARIO DE REGISTRO ALINEADO (VERTICAL) */}
       <div className="space-y-5 flex-1 overflow-y-auto pb-4">
-         
-         <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Nombre Completo</label>
-            <input className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white" placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} />
-         </div>
-
-         <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Teléfono Celular</label>
-            <input className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white" placeholder="Será tu ID" value={phone} onChange={e => setPhone(e.target.value)} />
-         </div>
-
-         {/* FECHA (Full Width) */}
-         <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Fecha Nacimiento</label>
-            <input type="date" className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white h-[58px]" value={birthDate} onChange={e => setBirthDate(e.target.value)} />
-         </div>
-
-         {/* GÉNERO (Full Width) */}
-         <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Género</label>
-            <select className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white h-[58px]" value={gender} onChange={e => setGender(e.target.value)}>
-                <option value="">Seleccionar Género</option>
-                <option value="Hombre">Hombre</option>
-                <option value="Mujer">Mujer</option>
-            </select>
-         </div>
-         
-         <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Contraseña</label>
-            <input type="password" className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white" placeholder="Crea una clave" value={password} onChange={e => setPassword(e.target.value)} />
-         </div>
-
+         <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Nombre Completo</label><input className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white" placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} /></div>
+         <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Teléfono Celular</label><input className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white" placeholder="Será tu ID" value={phone} onChange={e => setPhone(e.target.value)} /></div>
+         <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Fecha Nacimiento</label><input type="date" className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white h-[58px]" value={birthDate} onChange={e => setBirthDate(e.target.value)} /></div>
+         <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Género</label><select className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white h-[58px]" value={gender} onChange={e => setGender(e.target.value)}><option value="">Seleccionar Género</option><option value="Hombre">Hombre</option><option value="Mujer">Mujer</option></select></div>
+         <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Contraseña</label><input type="password" className="w-full p-4 rounded-xl border border-gray-200 text-black bg-white" placeholder="Crea una clave" value={password} onChange={e => setPassword(e.target.value)} /></div>
       </div>
-
       {message && <p className="text-red-500 mb-4 text-center text-sm">{message}</p>}
       <button onClick={handleRegister} disabled={loading} className="w-full bg-green-600 text-white py-4 rounded-xl font-bold shadow-lg mb-4">{loading ? '...' : 'Registrarme'}</button>
     </div>
   );
 
-  // APP (Dashboard)
   return (
     <div className="min-h-screen bg-gray-100 pb-24">
       <div className="bg-white p-6 shadow-sm sticky top-0 z-10 flex justify-between">
@@ -170,7 +181,7 @@ export default function Home() {
                 <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mb-2">Tus Puntos</p>
                 <h2 className="text-7xl font-bold">{user.points || 0}</h2>
              </div>
-             <button onClick={() => setScanning(true)} className="w-full bg-black text-white py-5 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2">
+             <button onClick={() => setScanning(true)} className="w-full bg-black text-white py-5 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all">
                📷 Escanear QR
              </button>
            </div>
@@ -190,21 +201,9 @@ export default function Home() {
            <div className="bg-white p-6 rounded-2xl shadow-sm">
              <h2 className="text-xl font-bold mb-6 text-gray-800">Mis Datos</h2>
              <div className="space-y-4">
-               <div>
-                 <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Nombre</label>
-                 <input className="w-full p-3 bg-gray-50 rounded-lg text-gray-700 border-none" value={name} onChange={e => setName(e.target.value)} />
-               </div>
-               <div>
-                 <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Fecha Nacimiento</label>
-                 <input type="date" className="w-full p-3 bg-gray-50 rounded-lg text-gray-700 border-none" value={birthDate} onChange={e => setBirthDate(e.target.value)} />
-               </div>
-               <div>
-                 <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Género</label>
-                 <select className="w-full p-3 bg-gray-50 rounded-lg text-gray-700 border-none" value={gender} onChange={e => setGender(e.target.value)}>
-                    <option value="Hombre">Hombre</option>
-                    <option value="Mujer">Mujer</option>
-                 </select>
-               </div>
+               <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Nombre</label><input className="w-full p-3 bg-gray-50 rounded-lg text-gray-700 border-none" value={name} onChange={e => setName(e.target.value)} /></div>
+               <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Fecha Nacimiento</label><input type="date" className="w-full p-3 bg-gray-50 rounded-lg text-gray-700 border-none" value={birthDate} onChange={e => setBirthDate(e.target.value)} /></div>
+               <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1">Género</label><select className="w-full p-3 bg-gray-50 rounded-lg text-gray-700 border-none" value={gender} onChange={e => setGender(e.target.value)}><option value="Hombre">Hombre</option><option value="Mujer">Mujer</option></select></div>
              </div>
              <button onClick={handleUpdate} className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold mt-6 shadow-lg">Guardar Cambios</button>
              {message && <p className="text-center text-green-600 mt-4">{message}</p>}
