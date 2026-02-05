@@ -6,39 +6,43 @@ const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { password } = body;
+    const { password } = await request.json();
 
-    console.log("🔍 Intentando generar código...");
-
-    // 1. Verificar Password
     if (password !== 'admin123') {
       return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
     }
 
-    // 2. Buscar si existe la cafetería
-    const tenant = await prisma.tenant.findUnique({
+    // 1. Buscar Cafetería
+    let tenant = await prisma.tenant.findUnique({
       where: { slug: 'cafeteria-central' }
     });
 
-    // 🚨 DIAGNÓSTICO: Si no existe, avisar claramente
+    // 🚨 AUTO-REPARACIÓN: Si no existe, ¡LA CREAMOS AQUÍ MISMO!
     if (!tenant) {
-      console.error("❌ Error: No se encuentra 'cafeteria-central' en la tabla Tenant");
-      return NextResponse.json({ 
-        error: 'LA CAFETERÍA NO EXISTE EN LA BASE DE DATOS. Ejecuta el script de reparación (fix.ts).' 
-      }, { status: 404 });
+      console.log("⚠️ Cafetería no encontrada. Creándola automáticamente...");
+      try {
+        tenant = await prisma.tenant.create({
+          data: {
+            name: 'Cafetería Central',
+            slug: 'cafeteria-central'
+          }
+        });
+        console.log("✅ Cafetería creada con éxito.");
+      } catch (createError) {
+        console.error("❌ Error al crear cafetería:", createError);
+        return NextResponse.json({ error: 'Error crítico creando el negocio' }, { status: 500 });
+      }
     }
 
-    // 3. Generar Código (Letras y Números)
+    // 2. Generar Código
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let randomCode = "";
     for (let i = 0; i < 5; i++) {
       randomCode += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    // Formato: AB-123 (Insertamos guion para que sea legible)
     const formattedCode = `${randomCode.slice(0, 2)}-${randomCode.slice(2)}`;
 
-    // 4. Guardar en la Base de Datos
+    // 3. Guardar
     const newCode = await prisma.dailyCode.create({
       data: {
         code: formattedCode,
@@ -47,11 +51,10 @@ export async function POST(request: Request) {
       }
     });
 
-    console.log("✅ Código generado exitosamente:", newCode.code);
     return NextResponse.json({ code: newCode.code });
 
   } catch (error: any) {
-    console.error("🔥 ERROR GRAVE:", error);
-    return NextResponse.json({ error: `Error técnico: ${error.message}` }, { status: 500 });
+    console.error("🔥 Error:", error);
+    return NextResponse.json({ error: error.message || 'Error desconocido' }, { status: 500 });
   }
 }
