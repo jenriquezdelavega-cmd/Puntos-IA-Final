@@ -1,73 +1,66 @@
-// web/app/admin/page.tsx
 'use client';
 import { useState } from 'react';
-import { RefreshCcw, Lock } from 'lucide-react';
 
 export default function AdminPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState('');
-  const [currentCode, setCurrentCode] = useState<string | null>(null);
+  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState(''); // Campo para pass
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === 'admin123') setIsAuthenticated(true);
-    else alert('Contraseña incorrecta');
-  };
-
-  const generateNewCode = async () => {
+  const generateCode = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/generate', { method: 'POST' });
+      // Enviamos el password que escribiste (o admin123 por defecto si quieres probar rápido)
+      const res = await fetch('/api/admin/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: password || 'admin123' }) 
+      });
+      
       const data = await res.json();
-      if (data.success) setCurrentCode(data.code);
-    } catch (error) {
-      alert('Error');
+      if (data.code) {
+        setCode(data.code);
+      } else {
+        alert('Error: ' + (data.error || 'Desconocido'));
+      }
+    } catch (e) {
+      alert('Error de conexión');
     }
     setLoading(false);
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-        <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-sm text-center">
-          <div className="mx-auto bg-blue-100 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4">
-            <Lock className="w-8 h-8 text-blue-600" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Acceso Negocio</h2>
-          <input
-            type="password"
-            placeholder="Contraseña"
-            className="w-full mb-4 p-3 border rounded-lg text-black"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <button type="submit" className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold">Entrar</button>
-        </form>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-xl max-w-sm w-full text-center">
-        <h1 className="text-xl font-bold text-gray-800">Cafetería Central</h1>
-        <p className="text-xs font-bold text-gray-400 mb-8 uppercase">Panel de Admin</p>
+    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white p-4">
+      <h1 className="text-3xl font-bold mb-8">Panel de Dueño 👨‍🍳</h1>
+      
+      <div className="bg-gray-800 p-6 rounded-xl shadow-lg w-full max-w-sm text-center">
+        <p className="mb-4 text-gray-400">Genera el código para hoy:</p>
+        
+        {/* Campo de contraseña simple */}
+        <input 
+          type="password"
+          placeholder="Contraseña (admin123)"
+          className="w-full p-3 rounded bg-gray-700 text-white mb-4 border border-gray-600"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
-        {currentCode ? (
-          <div className="mb-8">
-            <div className="bg-blue-50 p-6 rounded-xl border-2 border-blue-100 mb-4">
-              <p className="text-5xl font-black text-blue-600 tracking-widest">{currentCode}</p>
-            </div>
-            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${currentCode}`} className="mx-auto rounded-lg" />
+        {code ? (
+          <div className="bg-green-500/20 text-green-400 p-6 rounded-lg mb-4 border-2 border-green-500">
+            <p className="text-sm">CÓDIGO ACTIVO:</p>
+            <p className="text-5xl font-mono font-bold tracking-widest my-2">{code}</p>
           </div>
         ) : (
-          <p className="text-gray-400 mb-8">Genera un código para hoy</p>
+          <div className="bg-gray-700/50 p-6 rounded-lg mb-4 h-32 flex items-center justify-center">
+            <p className="text-gray-500">---</p>
+          </div>
         )}
 
-        <button onClick={generateNewCode} disabled={loading} className="w-full py-4 bg-gray-900 text-white rounded-xl font-bold flex justify-center items-center">
-          <RefreshCcw className={`w-5 h-5 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Generando...' : 'GENERAR CÓDIGO'}
+        <button 
+          onClick={generateCode}
+          disabled={loading}
+          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-lg transition-all active:scale-95 disabled:opacity-50"
+        >
+          {loading ? 'Generando...' : 'GENERAR CÓDIGO NUEVO 🎲'}
         </button>
       </div>
     </div>
