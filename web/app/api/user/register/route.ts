@@ -6,26 +6,14 @@ const prisma = new PrismaClient();
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    console.log("📝 DATOS RECIBIDOS:", body); // Veremos esto en los logs
-
     const { name, phone, password, gender, birthDate } = body;
 
-    // Validación básica
-    if (!name || !phone || !password) {
-      return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 });
-    }
+    if (!name || !phone || !password) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
 
-    // Conversión de Fecha EXPLÍCITA
     let finalDate = null;
     if (birthDate) {
-      // Forzamos el formato ISO-8601 (YYYY-MM-DDTHH:mm:ss.sssZ)
-      // Añadimos hora para evitar problemas de zona horaria
-      finalDate = new Date(birthDate + "T12:00:00Z"); 
-      
-      if (isNaN(finalDate.getTime())) {
-         console.log("❌ Fecha inválida:", birthDate);
-         return NextResponse.json({ error: 'Formato de fecha inválido' }, { status: 400 });
-      }
+      finalDate = new Date(birthDate + "T12:00:00Z");
+      if (isNaN(finalDate.getTime())) finalDate = null;
     }
 
     const newUser = await prisma.user.create({
@@ -34,16 +22,16 @@ export async function POST(request: Request) {
         phone,
         password,
         gender: gender || 'No especificado',
-        birthDate: finalDate, 
-        points: 0
+        birthDate: finalDate
+        // ❌ ¡AQUÍ ESTABA EL ERROR! Borramos 'points: 0'
       }
     });
 
-    return NextResponse.json({ id: newUser.id });
+    return NextResponse.json({ id: newUser.id, name: newUser.name });
 
   } catch (error: any) {
-    console.error("🔥 ERROR DETALLADO:", error);
-    // Devolvemos el mensaje técnico exacto para que lo veas en pantalla
+    console.error("Error:", error);
+    if (error.code === 'P2002') return NextResponse.json({ error: 'Teléfono duplicado' }, { status: 400 });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
