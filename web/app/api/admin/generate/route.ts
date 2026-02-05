@@ -1,4 +1,3 @@
-// web/app/api/admin/generate/route.ts
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
@@ -6,55 +5,41 @@ const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
-    const { password } = await request.json();
+    const body = await request.json();
+    const { password } = body;
 
     if (password !== 'admin123') {
-      return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
+      return NextResponse.json({ error: 'Password incorrecto' }, { status: 401 });
     }
 
-    // 1. Buscar Cafetería
-    let tenant = await prisma.tenant.findUnique({
+    // Buscamos la cafetería (que YA sabemos que existe gracias al debug)
+    const tenant = await prisma.tenant.findUnique({
       where: { slug: 'cafeteria-central' }
     });
 
-    // 🚨 AUTO-REPARACIÓN: Si no existe, ¡LA CREAMOS AQUÍ MISMO!
     if (!tenant) {
-      console.log("⚠️ Cafetería no encontrada. Creándola automáticamente...");
-      try {
-        tenant = await prisma.tenant.create({
-          data: {
-            name: 'Cafetería Central',
-            slug: 'cafeteria-central'
-          }
-        });
-        console.log("✅ Cafetería creada con éxito.");
-      } catch (createError) {
-        console.error("❌ Error al crear cafetería:", createError);
-        return NextResponse.json({ error: 'Error crítico creando el negocio' }, { status: 500 });
-      }
+      return NextResponse.json({ error: 'Error grave: Cafetería no encontrada' }, { status: 404 });
     }
 
-    // 2. Generar Código
+    // Generar código simple
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let randomCode = "";
-    for (let i = 0; i < 5; i++) {
-      randomCode += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    const formattedCode = `${randomCode.slice(0, 2)}-${randomCode.slice(2)}`;
+    let code = "";
+    for (let i = 0; i < 5; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+    const finalCode = `${code.slice(0, 2)}-${code.slice(2)}`;
 
-    // 3. Guardar
-    const newCode = await prisma.dailyCode.create({
+    // Guardar
+    const savedCode = await prisma.dailyCode.create({
       data: {
-        code: formattedCode,
+        code: finalCode,
         tenantId: tenant.id,
         isActive: true
       }
     });
 
-    return NextResponse.json({ code: newCode.code });
+    return NextResponse.json({ code: savedCode.code });
 
   } catch (error: any) {
-    console.error("🔥 Error:", error);
-    return NextResponse.json({ error: error.message || 'Error desconocido' }, { status: 500 });
+    console.error(error);
+    return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
   }
 }
