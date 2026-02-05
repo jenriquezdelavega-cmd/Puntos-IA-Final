@@ -6,29 +6,29 @@ const prisma = new PrismaClient();
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id, name, phone, gender } = body; // 👈 Aseguramos recibir 'gender'
+    console.log("📝 UPDATE RECIBIDO:", body); // Logs para debug
+
+    const { id, name, phone, gender } = body;
 
     if (!id) {
+      console.log("❌ Falta ID");
       return NextResponse.json({ error: 'Falta ID de usuario' }, { status: 400 });
     }
 
-    // Actualizar en la base de datos
+    // Actualizar
     const updatedUser = await prisma.user.update({
       where: { id: id },
       data: {
         name: name,
-        phone: phone,
-        gender: gender // 👈 ¡Aquí está la clave! Guardarlo.
+        gender: gender // Aquí se guarda
       }
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      user: updatedUser 
-    });
+    console.log("✅ Usuario actualizado:", updatedUser.name);
+    return NextResponse.json({ success: true, user: updatedUser });
 
   } catch (error: any) {
-    console.error("Error actualizando:", error);
+    console.error("🔥 Error Update:", error);
     return NextResponse.json({ error: 'Error al actualizar' }, { status: 500 });
   }
 }
