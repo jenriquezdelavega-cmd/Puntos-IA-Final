@@ -1,28 +1,38 @@
 'use client';
 import { useState, useEffect } from 'react';
 
+// Definimos los tipos para que TypeScript sea feliz
+interface StatItem {
+  gender: string;
+  _count: {
+    gender: number;
+  };
+}
+
+interface StatsData {
+  total: number;
+  breakdown: StatItem[];
+}
+
 export default function AdminPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Estados para analíticas
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<StatsData | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
-  // Intentar Login
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (password === 'admin123') {
       setIsLoggedIn(true);
-      fetchStats(); // 👈 Al entrar, cargamos los datos
+      fetchStats();
     } else {
       alert('🔒 Contraseña incorrecta');
     }
   };
 
-  // Función para pedir estadísticas al servidor
   const fetchStats = async () => {
     setStatsLoading(true);
     try {
@@ -56,7 +66,6 @@ export default function AdminPage() {
     setLoading(false);
   };
 
-  // VISTA 1: LOGIN
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-4">
@@ -82,20 +91,15 @@ export default function AdminPage() {
     );
   }
 
-  // VISTA 2: DASHBOARD
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        
-        {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold">Panel de Control 🚀</h1>
           <button onClick={() => setIsLoggedIn(false)} className="text-sm text-gray-400 hover:text-white">Salir</button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          {/* TARJETA 1: GENERADOR */}
           <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
             <h2 className="text-lg font-semibold mb-4 text-blue-400">🎲 Código Diario</h2>
             {code ? (
@@ -107,22 +111,16 @@ export default function AdminPage() {
                 Sin código activo
               </div>
             )}
-            <button 
-              onClick={generateCode}
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-lg font-bold transition-all"
-            >
+            <button onClick={generateCode} disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-lg font-bold transition-all">
               {loading ? 'Generando...' : 'Generar Nuevo'}
             </button>
           </div>
 
-          {/* TARJETA 2: ANALÍTICAS */}
           <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-lg">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-purple-400">📊 Clientes</h2>
               <button onClick={fetchStats} className="text-xs bg-gray-700 px-2 py-1 rounded hover:bg-gray-600">Actualizar</button>
             </div>
-
             {statsLoading ? (
               <p className="text-center text-gray-500 py-10">Cargando datos...</p>
             ) : stats ? (
@@ -131,16 +129,12 @@ export default function AdminPage() {
                   <span className="text-5xl font-bold text-white">{stats.total}</span>
                   <p className="text-gray-400 text-sm">Usuarios Totales</p>
                 </div>
-
                 <div className="space-y-3">
-                  {stats.breakdown && stats.breakdown.map((item: any, index: number) => {
-                    // Calcular porcentaje simple
-                    const percent = Math.round((item._count.gender / stats.total) * 100);
-                    // Colores según género
+                  {stats.breakdown && stats.breakdown.map((item, index) => {
+                    const percent = stats.total > 0 ? Math.round((item._count.gender / stats.total) * 100) : 0;
                     let color = 'bg-gray-500';
                     if (item.gender === 'Hombre') color = 'bg-blue-500';
                     if (item.gender === 'Mujer') color = 'bg-pink-500';
-
                     return (
                       <div key={index}>
                         <div className="flex justify-between text-sm mb-1">
@@ -159,7 +153,6 @@ export default function AdminPage() {
               <p className="text-center text-red-400">No hay datos</p>
             )}
           </div>
-
         </div>
       </div>
     </div>
