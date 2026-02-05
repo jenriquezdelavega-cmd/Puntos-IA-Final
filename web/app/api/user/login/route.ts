@@ -10,11 +10,12 @@ export async function POST(request: Request) {
 
     if (!phone || !password) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
 
-    // Buscar usuario e incluir sus membresías
     const user = await prisma.user.findUnique({
       where: { phone },
       include: {
-        memberships: true // 👈 ¡Traemos las tarjetas de puntos!
+        memberships: {
+          include: { tenant: true } // 👈 ¡Traemos el nombre del negocio!
+        }
       }
     });
 
@@ -22,8 +23,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Credenciales incorrectas' }, { status: 401 });
     }
 
-    // Calcular Puntos Totales (Suma de todas las visitas * 10)
-    const totalPoints = user.memberships.reduce((sum, m) => sum + (m.totalVisits * 10), 0);
+    // Preparamos la lista bonita para el frontend
+    const memberships = user.memberships.map(m => ({
+      tenantId: m.tenantId,
+      name: m.tenant.name,
+      points: m.totalVisits * 10
+    }));
 
     return NextResponse.json({ 
       id: user.id, 
@@ -31,7 +36,7 @@ export async function POST(request: Request) {
       phone: user.phone, 
       gender: user.gender,
       birthDate: user.birthDate,
-      points: totalPoints // 👈 Enviamos la suma real
+      memberships: memberships // 👈 Enviamos la lista completa
     });
 
   } catch (error: any) {
