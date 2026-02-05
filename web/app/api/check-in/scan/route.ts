@@ -8,78 +8,86 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { userId, code } = body;
 
-    console.log("📸 CHECK-IN INTENTO:", { userId, code });
+    console.log("📸 Procesando escaneo:", { userId, code });
 
     if (!userId || !code) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
 
-    // 1. Buscar Código
+    // 1. Buscar el Código Diario
     const validCode = await prisma.dailyCode.findFirst({
       where: { code: code, isActive: true },
       include: { tenant: true }
     });
 
     if (!validCode) {
-      console.log("❌ Código inválido:", code);
-      return NextResponse.json({ error: 'Código inválido o expirado' }, { status: 404 });
+      return NextResponse.json({ error: 'Código inválido' }, { status: 404 });
     }
 
-    // 2. Verificar duplicado hoy
-    const existingCheckin = await prisma.checkIn.findFirst({
-      where: { userId: userId, dailyCodeId: validCode.id }
-    });
-
-    if (existingCheckin) {
-      console.log("⚠️ Ya hizo check-in hoy");
-      return NextResponse.json({ error: '¡Ya hiciste check-in hoy!' }, { status: 400 });
-    }
-
-    console.log("🛠️ Registrando check-in...");
-
-    // 3. Crear registro Check-in
-    await prisma.checkIn.create({
-      data: {
-        userId: userId,
-        tenantId: validCode.tenantId,
-        dailyCodeId: validCode.id,
-        pointsEarned: 10
-      }
-    });
-
-    console.log("🛠️ Actualizando Membresía...");
-
-    // 4. Actualizar Membresía (Upsert)
-    const membership = await prisma.membership.upsert({
+    // 2. Buscar o Crear la Membresía del Usuario con este Negocio
+    // (Usamos findFirst porque tu schema tiene @@unique([tenantId, userId]))
+    let membership = await prisma.membership.findFirst({
       where: {
-        userId_tenantId: {
-          userId: userId,
-          tenantId: validCode.tenantId
-        }
-      },
-      update: {
-        points: { increment: 10 },
-        visits: { increment: 1 },
-        lastVisit: new Date()
-      },
-      create: {
         userId: userId,
-        tenantId: validCode.tenantId,
-        points: 10,
-        visits: 1,
-        lastVisit: new Date()
+        tenantId: validCode.tenantId
       }
     });
 
-    console.log("✅ ÉXITO! Puntos actuales:", membership.points);
+    if (!membership) {
+      console.log("🆕 Creando nueva membresía...");
+      membership = await prisma.membership.create({
+        data: {
+          userId: userId,
+          tenantId: validCode.tenantId,
+          currentVisits: 0,
+          totalVisits: 0
+        }
+      });
+    }
+
+    // 3. Verificar si ya visitó hoy con este código
+    // (Buscamos en la tabla 'Visit')
+    const existingVisit = await prisma.visit.findFirst({
+      where: {
+        membershipId: membership.id,
+        dailyCodeId: validCode.id
+      }
+    });
+
+    if (existingVisit) {
+      return NextResponse.json({ error: '¡Ya registraste esta visita hoy!' }, { status: 400 });
+    }
+
+    // 4. Registrar la Visita y Actualizar Contadores
+    // Usamos una transacción para que se haga todo junto
+    const [newVisit, updatedMembership] = await prisma.$transaction([
+      // Crear Visita
+      prisma.visit.create({
+        data: {
+          membershipId: membership.id,
+          dailyCodeId: validCode.id
+        }
+      }),
+      // Sumar visitas a la membresía
+      prisma.membership.update({
+        where: { id: membership.id },
+        data: {
+          currentVisits: { increment: 1 },
+          totalVisits: { increment: 1 },
+          lastVisitAt: new Date()
+        }
+      })
+    ]);
+
+    // 5. Calcular Puntos (Asumimos 1 Visita = 10 Puntos para mostrarlo bonito)
+    const pointsDisplay = updatedMembership.totalVisits * 10;
 
     return NextResponse.json({ 
       success: true, 
-      points: membership.points, 
-      message: `¡+10 Puntos en ${validCode.tenant.name}!` 
+      points: pointsDisplay, 
+      message: `¡Visita registrada en ${validCode.tenant.name}!` 
     });
 
   } catch (error: any) {
-    console.error("🔥 ERROR CHECK-IN:", error);
-    return NextResponse.json({ error: 'Error técnico: ' + error.message }, { status: 500 });
+    console.error("🔥 Error Scan:", error);
+    return NextResponse.json({ error: error.message || 'Error técnico' }, { status: 500 });
   }
 }
-// Forzar rebuild
