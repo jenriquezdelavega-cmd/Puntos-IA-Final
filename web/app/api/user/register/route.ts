@@ -6,22 +6,26 @@ const prisma = new PrismaClient();
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    console.log("📝 DATOS RECIBIDOS:", body); // Veremos esto en los logs
+
     const { name, phone, password, gender, birthDate } = body;
 
+    // Validación básica
     if (!name || !phone || !password) {
-      return NextResponse.json({ error: 'Nombre, teléfono y contraseña son obligatorios' }, { status: 400 });
+      return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 });
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { phone } });
-    if (existingUser) {
-      return NextResponse.json({ error: 'Este teléfono ya está registrado' }, { status: 400 });
-    }
-
-    // Convertir fecha de texto (2000-01-01) a Objeto Fecha real
+    // Conversión de Fecha EXPLÍCITA
     let finalDate = null;
     if (birthDate) {
-      finalDate = new Date(birthDate);
-      if (isNaN(finalDate.getTime())) finalDate = null; // Si es fecha inválida, ignorar
+      // Forzamos el formato ISO-8601 (YYYY-MM-DDTHH:mm:ss.sssZ)
+      // Añadimos hora para evitar problemas de zona horaria
+      finalDate = new Date(birthDate + "T12:00:00Z"); 
+      
+      if (isNaN(finalDate.getTime())) {
+         console.log("❌ Fecha inválida:", birthDate);
+         return NextResponse.json({ error: 'Formato de fecha inválido' }, { status: 400 });
+      }
     }
 
     const newUser = await prisma.user.create({
@@ -30,15 +34,16 @@ export async function POST(request: Request) {
         phone,
         password,
         gender: gender || 'No especificado',
-        birthDate: finalDate, // 🎂 ¡Aquí se guarda!
+        birthDate: finalDate, 
         points: 0
       }
     });
 
-    return NextResponse.json({ id: newUser.id, name: newUser.name });
+    return NextResponse.json({ id: newUser.id });
 
   } catch (error: any) {
-    console.error("Error registro:", error);
-    return NextResponse.json({ error: 'Error al registrar usuario' }, { status: 500 });
+    console.error("🔥 ERROR DETALLADO:", error);
+    // Devolvemos el mensaje técnico exacto para que lo veas en pantalla
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
