@@ -9,7 +9,6 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('checkin');
   const [user, setUser] = useState<any>(null);
   
-  // Datos Formulario
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -22,7 +21,7 @@ export default function Home() {
   const [manualCode, setManualCode] = useState('');
   const [pendingCode, setPendingCode] = useState<string | null>(null);
 
-  // --- LOGICA DE URL Y AUTH (Igual que antes) ---
+  // --- LOGICA ---
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -91,9 +90,7 @@ export default function Home() {
       const data = await res.json();
       if (res.ok) { 
         alert(data.message);
-        // Recargar datos del usuario para actualizar las barras
-        // Esto es un truco rápido para refrescar las membresías
-        handleLogin(); 
+        handleLogin(); // Refrescar puntos
         setManualCode('');
       } else { 
         if(res.status === 400) alert(data.error); else alert('❌ ' + data.error);
@@ -102,7 +99,17 @@ export default function Home() {
     setMessage('');
   };
 
+  const handleLogout = () => {
+    if(confirm("¿Cerrar sesión?")) {
+        setUser(null);
+        setView('WELCOME');
+        setPhone('');
+        setPassword('');
+    }
+  };
+
   // --- VISTAS ---
+
   if (view === 'WELCOME') return (
     <div className="min-h-screen bg-blue-700 flex flex-col items-center justify-center p-6 text-white">
       <h1 className="text-4xl font-bold mb-4">Puntos IA 🤖</h1>
@@ -143,59 +150,50 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-100 pb-24">
-      <div className="bg-white p-6 shadow-sm sticky top-0 z-10 flex justify-between">
-         <h1 className="font-bold text-gray-800">Hola, {user.name}</h1>
-         <div className="bg-blue-100 text-blue-600 h-8 w-8 rounded-full flex items-center justify-center font-bold">{user.name[0]}</div>
+      <div className="bg-white p-6 shadow-sm sticky top-0 z-10 flex justify-between items-center">
+         <div>
+            <h1 className="font-bold text-gray-800">Hola, {user.name.split(' ')[0]}</h1>
+            <p className="text-xs text-blue-500 font-bold">MIEMBRO</p>
+         </div>
+         {/* BOTÓN SALIR DISCRETO */}
+         <button 
+           onClick={handleLogout}
+           className="h-10 w-10 bg-blue-50 hover:bg-red-50 text-blue-600 hover:text-red-500 rounded-full flex items-center justify-center font-bold transition-colors border border-blue-100"
+           title="Cerrar Sesión"
+         >
+           {user.name.charAt(0)}
+         </button>
       </div>
 
       <div className="p-6">
         {activeTab === 'checkin' && !scanning && (
            <div className="flex flex-col items-center animate-fadeIn gap-6">
              
-             {/* LISTA DE TARJETAS DE PUNTOS */}
              <div className="w-full space-y-4">
                {user.memberships && user.memberships.length > 0 ? (
                  user.memberships.map((m: any, idx: number) => {
-                   // Lógica de progreso: 0 a 100
                    const progress = Math.min(m.points, 100);
                    const isWinner = m.points >= 100;
-                   
                    return (
                      <div key={idx} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 relative overflow-hidden">
                        <div className="flex justify-between items-center mb-2">
                          <h3 className="font-bold text-gray-800 text-lg">{m.name}</h3>
                          <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">{m.points} pts</span>
                        </div>
-                       
-                       {/* BARRA DE PROGRESO */}
                        <div className="w-full bg-gray-100 rounded-full h-4 mb-2 overflow-hidden">
-                         <div 
-                            className={`h-full rounded-full transition-all duration-1000 ${isWinner ? 'bg-gradient-to-r from-yellow-400 to-orange-500 animate-pulse' : 'bg-blue-600'}`} 
-                            style={{ width: `${progress}%` }}
-                         ></div>
+                         <div className={`h-full rounded-full transition-all duration-1000 ${isWinner ? 'bg-gradient-to-r from-yellow-400 to-orange-500 animate-pulse' : 'bg-blue-600'}`} style={{ width: `${progress}%` }}></div>
                        </div>
-                       
-                       <div className="flex justify-between text-xs text-gray-400 font-bold uppercase">
-                         <span>0</span>
-                         {isWinner ? <span className="text-orange-500">🏆 ¡Premio Disponible!</span> : <span>Meta: 100</span>}
-                       </div>
+                       <div className="flex justify-between text-xs text-gray-400 font-bold uppercase"><span>0</span>{isWinner ? <span className="text-orange-500">🏆 ¡Premio Disponible!</span> : <span>Meta: 100</span>}</div>
                      </div>
                    );
                  })
                ) : (
-                 <div className="text-center py-10 opacity-50">
-                    <p className="text-4xl mb-2">🤷‍♂️</p>
-                    <p>Aún no tienes puntos.<br/>¡Visita un negocio y escanea!</p>
-                 </div>
+                 <div className="text-center py-10 opacity-50"><p className="text-4xl mb-2">🤷‍♂️</p><p>Aún no tienes puntos.<br/>¡Visita un negocio y escanea!</p></div>
                )}
              </div>
 
-             {/* BOTONES DE ESCANEO */}
              <div className="w-full">
-               <button onClick={() => setScanning(true)} className="w-full bg-black text-white py-5 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all mb-4">
-                 📷 Escanear QR
-               </button>
-
+               <button onClick={() => setScanning(true)} className="w-full bg-black text-white py-5 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all mb-4">📷 Escanear QR</button>
                <div className="w-full bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
                  <label className="block text-xs font-bold text-gray-400 uppercase mb-2 text-center">¿Problemas con la cámara?</label>
                  <div className="flex gap-2">
@@ -228,7 +226,9 @@ export default function Home() {
              </div>
              <button onClick={handleUpdate} className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold mt-6 shadow-lg">Guardar Cambios</button>
              {message && <p className="text-center text-green-600 mt-4">{message}</p>}
-             <button onClick={() => { setUser(null); setView('WELCOME'); }} className="w-full mt-6 text-red-400 text-sm">Cerrar Sesión</button>
+             
+             {/* BOTÓN SALIR GRANDE TAMBIÉN AQUÍ */}
+             <button onClick={handleLogout} className="w-full mt-6 text-red-400 text-sm py-4 border border-red-100 rounded-xl hover:bg-red-50">Cerrar Sesión</button>
            </div>
         )}
       </div>
