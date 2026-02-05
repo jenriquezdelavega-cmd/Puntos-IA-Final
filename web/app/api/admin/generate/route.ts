@@ -4,48 +4,54 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Función auxiliar para crear códigos aleatorios (ej: WX-928)
-function generateRandomCode() {
-  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const numbers = '0123456789';
-  let result = '';
-  for (let i = 0; i < 2; i++) result += letters.charAt(Math.floor(Math.random() * letters.length));
-  result += '-';
-  for (let i = 0; i < 3; i++) result += numbers.charAt(Math.floor(Math.random() * numbers.length));
-  return result;
-}
-
 export async function POST(request: Request) {
   try {
-    // En una app real, aquí verificaríamos la sesión del admin
-    // Por ahora, asumimos que es "Cafetería Central"
-    const tenantSlug = 'cafeteria-central';
+    const body = await request.json();
+    const { password } = body;
 
-    const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
-    if (!tenant) return NextResponse.json({ error: 'Negocio no encontrado' }, { status: 404 });
+    console.log("🔍 Intentando generar código...");
 
-    // 1. Desactivar códigos anteriores de este negocio
-    await prisma.dailyCode.updateMany({
-      where: { tenantId: tenant.id, isActive: true },
-      data: { isActive: false }
+    // 1. Verificar Password
+    if (password !== 'admin123') {
+      return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
+    }
+
+    // 2. Buscar si existe la cafetería
+    const tenant = await prisma.tenant.findUnique({
+      where: { slug: 'cafeteria-central' }
     });
 
-    // 2. Generar nuevo código único
-    const newCodeString = generateRandomCode();
+    // 🚨 DIAGNÓSTICO: Si no existe, avisar claramente
+    if (!tenant) {
+      console.error("❌ Error: No se encuentra 'cafeteria-central' en la tabla Tenant");
+      return NextResponse.json({ 
+        error: 'LA CAFETERÍA NO EXISTE EN LA BASE DE DATOS. Ejecuta el script de reparación (fix.ts).' 
+      }, { status: 404 });
+    }
 
-    // 3. Guardarlo en BD
-    const newDailyCode = await prisma.dailyCode.create({
+    // 3. Generar Código (Letras y Números)
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let randomCode = "";
+    for (let i = 0; i < 5; i++) {
+      randomCode += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    // Formato: AB-123 (Insertamos guion para que sea legible)
+    const formattedCode = `${randomCode.slice(0, 2)}-${randomCode.slice(2)}`;
+
+    // 4. Guardar en la Base de Datos
+    const newCode = await prisma.dailyCode.create({
       data: {
-        code: newCodeString,
+        code: formattedCode,
         tenantId: tenant.id,
-        validDate: new Date(),
         isActive: true
       }
     });
 
-    return NextResponse.json({ success: true, code: newDailyCode.code });
+    console.log("✅ Código generado exitosamente:", newCode.code);
+    return NextResponse.json({ code: newCode.code });
 
-  } catch (error) {
-    return NextResponse.json({ error: 'Error generando código' }, { status: 500 });
+  } catch (error: any) {
+    console.error("🔥 ERROR GRAVE:", error);
+    return NextResponse.json({ error: `Error técnico: ${error.message}` }, { status: 500 });
   }
 }
