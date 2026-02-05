@@ -9,20 +9,16 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('checkin');
   const [user, setUser] = useState<any>(null);
   
-  // Datos Auth
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [gender, setGender] = useState('');
   const [birthDate, setBirthDate] = useState('');
   
-  // Estado Cámara
   const [scanning, setScanning] = useState(false);
-  
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // --- LOGIN ---
   const handleLogin = async () => {
     setLoading(true); setMessage('');
     try {
@@ -33,17 +29,15 @@ export default function Home() {
       const data = await res.json();
       if (res.ok) {
         setUser(data); setName(data.name); setGender(data.gender || '');
-        if (data.birthDate) setBirthDate(data.birthDate.split('T')[0]);
-        else setBirthDate('');
+        if (data.birthDate) setBirthDate(data.birthDate.split('T')[0]); else setBirthDate('');
         setView('APP');
       } else setMessage(data.error);
     } catch (e) { setMessage('Error de conexión'); }
     setLoading(false);
   };
 
-  // --- REGISTRO ---
   const handleRegister = async () => {
-    if (!name || !phone || !password) return setMessage('Faltan datos');
+    if (!name || !phone || !password || !gender) return setMessage('Faltan datos');
     setLoading(true);
     try {
       const res = await fetch('/api/user/register', {
@@ -56,7 +50,6 @@ export default function Home() {
     setLoading(false);
   };
 
-  // --- UPDATE ---
   const handleUpdate = async () => {
     if (!user?.id) return;
     setMessage('Guardando...');
@@ -70,34 +63,22 @@ export default function Home() {
     } catch (e) { setMessage('Error de red'); }
   };
 
-  // --- ESCANEAR QR ---
   const handleScan = async (result: string) => {
     if (!result) return;
-    setScanning(false); // Apagar cámara
-    setMessage('Procesando código...');
-    
+    setScanning(false);
+    setMessage('Procesando...');
     try {
       const res = await fetch('/api/check-in/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, code: result })
       });
       const data = await res.json();
-      
-      if (res.ok) {
-        alert(data.message || '¡Puntos sumados!');
-        // Actualizar puntos locales (sumar 10)
-        setUser({ ...user, points: (user.points || 0) + 10 });
-      } else {
-        alert('❌ ' + data.error);
-      }
-    } catch (e) {
-      alert('Error de conexión al escanear');
-    }
+      if (res.ok) { alert(data.message); setUser({ ...user, points: (user.points || 0) + 10 }); }
+      else alert('❌ ' + data.error);
+    } catch (e) { alert('Error escaneo'); }
     setMessage('');
   };
 
-  // VISTAS
   if (view === 'WELCOME') return (
     <div className="min-h-screen bg-blue-700 flex flex-col items-center justify-center p-6 text-white">
       <h1 className="text-4xl font-bold mb-10">Puntos IA 🤖</h1>
@@ -125,9 +106,14 @@ export default function Home() {
          <input className="w-full p-3 rounded-xl border text-black" placeholder="Nombre" value={name} onChange={e => setName(e.target.value)} />
          <input className="w-full p-3 rounded-xl border text-black" placeholder="Teléfono" value={phone} onChange={e => setPhone(e.target.value)} />
          <input type="date" className="w-full p-3 rounded-xl border text-black" value={birthDate} onChange={e => setBirthDate(e.target.value)} />
+         
+         {/* SOLO 2 OPCIONES AHORA */}
          <select className="w-full p-3 rounded-xl border text-black bg-white" value={gender} onChange={e => setGender(e.target.value)}>
-             <option value="">Género</option><option value="Hombre">Hombre</option><option value="Mujer">Mujer</option>
+             <option value="">Selecciona Género</option>
+             <option value="Hombre">Hombre</option>
+             <option value="Mujer">Mujer</option>
          </select>
+         
          <input type="password" className="w-full p-3 rounded-xl border text-black" placeholder="Contraseña" value={password} onChange={e => setPassword(e.target.value)} />
       </div>
       {message && <p className="text-red-500 mb-4 text-center">{message}</p>}
@@ -135,7 +121,6 @@ export default function Home() {
     </div>
   );
 
-  // APP DASHBOARD
   return (
     <div className="min-h-screen bg-gray-100 pb-24">
       <div className="bg-white p-6 shadow-sm sticky top-0 z-10 flex justify-between">
@@ -150,33 +135,19 @@ export default function Home() {
                 <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mb-2">Tus Puntos</p>
                 <h2 className="text-7xl font-bold">{user.points || 0}</h2>
              </div>
-             
-             <button 
-               onClick={() => setScanning(true)}
-               className="w-full bg-black text-white py-5 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-transform"
-             >
-               📷 Escanear Código QR
+             <button onClick={() => setScanning(true)} className="w-full bg-black text-white py-5 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2">
+               📷 Escanear QR
              </button>
            </div>
         )}
 
-        {/* PANTALLA DE CÁMARA */}
         {scanning && (
           <div className="fixed inset-0 bg-black z-50 flex flex-col">
             <div className="flex-1 relative">
-                <Scanner 
-                    onScan={(result) => result[0] && handleScan(result[0].rawValue)} 
-                    onError={(error) => console.log(error)}
-                />
-                {/* Marco visual */}
+                <Scanner onScan={(r) => r[0] && handleScan(r[0].rawValue)} onError={(e) => console.log(e)} />
                 <div className="absolute inset-0 border-2 border-white/30 m-10 rounded-3xl pointer-events-none"></div>
             </div>
-            <button 
-                onClick={() => setScanning(false)}
-                className="bg-red-600 text-white p-6 font-bold text-center"
-            >
-                Cancelar Escaneo
-            </button>
+            <button onClick={() => setScanning(false)} className="bg-red-600 text-white p-6 font-bold text-center">Cancelar</button>
           </div>
         )}
 
@@ -186,8 +157,11 @@ export default function Home() {
              <div className="space-y-4">
                <input className="w-full p-3 bg-gray-50 rounded-lg text-gray-700" value={name} onChange={e => setName(e.target.value)} />
                <input type="date" className="w-full p-3 bg-gray-50 rounded-lg text-gray-700" value={birthDate} onChange={e => setBirthDate(e.target.value)} />
+               
+               {/* SOLO 2 OPCIONES EN PERFIL TAMBIÉN */}
                <select className="w-full p-3 bg-gray-50 rounded-lg text-gray-700" value={gender} onChange={e => setGender(e.target.value)}>
-                  <option value="Hombre">Hombre</option><option value="Mujer">Mujer</option><option value="Otro">Otro</option>
+                  <option value="Hombre">Hombre</option>
+                  <option value="Mujer">Mujer</option>
                </select>
              </div>
              <button onClick={handleUpdate} className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold mt-6">Guardar Cambios</button>

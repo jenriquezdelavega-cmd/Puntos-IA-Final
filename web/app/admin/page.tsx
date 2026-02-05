@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import QRCode from 'react-qr-code';
 
-interface StatItem { gender: string; _count: { gender: number }; }
+interface StatItem { gender: string | null; _count: { gender: number }; }
 interface StatsData { total: number; breakdown: StatItem[]; }
 
 export default function AdminPage() {
@@ -41,26 +41,39 @@ export default function AdminPage() {
     setLoading(false);
   };
 
-  // 💉 FUNCIÓN PARA INYECTAR DATOS
   const injectData = async () => {
-    if(!confirm("¿Seguro que quieres crear 12 usuarios falsos de prueba?")) return;
-    try {
-        await fetch('/api/admin/seed', { method: 'POST' });
-        alert("¡Datos inyectados! Actualizando...");
-        fetchStats();
-    } catch(e) { alert("Error al inyectar"); }
+    if(!confirm("¿Inyectar datos de prueba?")) return;
+    try { await fetch('/api/admin/seed', { method: 'POST' }); fetchStats(); } catch(e) {}
   };
 
-  // Lógica Limpia de Gráfica
+  // 🧹 LÓGICA DE LIMPIEZA BINARIA
   const processData = () => {
     if (!stats?.breakdown) return [];
-    // Como ya blindamos el backend, confiamos en los grupos
-    const total = stats.total || 1;
-    return stats.breakdown.map(item => ({
-      label: item.gender || 'Otro',
-      count: item._count.gender,
-      percent: Math.round((item._count.gender / total) * 100)
-    })).sort((a, b) => b.count - a.count);
+    
+    // Contadores limpios
+    let h = 0;
+    let m = 0;
+    
+    stats.breakdown.forEach(item => {
+      const g = (item.gender || '').toLowerCase().trim();
+      
+      // Agrupar Hombres (M, Hombre, Male, etc)
+      if (['hombre', 'm', 'male', 'masculino'].includes(g)) {
+        h += item._count.gender;
+      }
+      // Agrupar Mujeres (F, Mujer, Female, etc)
+      else if (['mujer', 'f', 'female', 'femenino'].includes(g)) {
+        m += item._count.gender;
+      }
+      // Ignoramos 'Otro' o desconocidos
+    });
+
+    const totalVisible = h + m || 1; // Para calcular % solo entre H y M
+
+    return [
+      { label: 'Hombre', count: h, percent: Math.round((h / totalVisible) * 100) },
+      { label: 'Mujer', count: m, percent: Math.round((m / totalVisible) * 100) }
+    ];
   };
 
   const chartData = processData();
@@ -87,7 +100,6 @@ export default function AdminPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           
-          {/* QR */}
           <div className="bg-gray-800 p-8 rounded-3xl border border-gray-700 shadow-xl flex flex-col items-center">
             <h2 className="text-xl font-bold mb-6 text-blue-400">🎲 Código del Día</h2>
             <div className="w-full flex-1 flex flex-col items-center justify-center bg-gray-900/50 rounded-2xl p-6 border-2 border-dashed border-gray-700 mb-6">
@@ -98,7 +110,6 @@ export default function AdminPage() {
             <button onClick={generateCode} disabled={loading} className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg">{loading ? '...' : 'Generar QR'}</button>
           </div>
 
-          {/* ESTADÍSTICAS */}
           <div className="bg-gray-800 p-8 rounded-3xl border border-gray-700 shadow-xl relative">
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-xl font-bold text-purple-400">📊 Clientes</h2>
@@ -109,13 +120,11 @@ export default function AdminPage() {
               <div>
                 <div className="text-center mb-10">
                   <span className="text-7xl font-bold text-white block">{stats.total}</span>
-                  <span className="text-gray-400 text-xs uppercase tracking-widest">Registrados</span>
+                  <span className="text-gray-400 text-xs uppercase tracking-widest">Total Registrados</span>
                 </div>
                 <div className="space-y-6">
                   {chartData.map((item, index) => {
-                    let color = 'bg-gray-500';
-                    if (item.label === 'Hombre') color = 'bg-blue-500';
-                    if (item.label === 'Mujer') color = 'bg-pink-500';
+                    const color = item.label === 'Hombre' ? 'bg-blue-500' : 'bg-pink-500';
                     return (
                       <div key={index}>
                         <div className="flex justify-between text-sm mb-2 text-gray-300">
@@ -131,12 +140,8 @@ export default function AdminPage() {
               </div>
             ) : <p className="text-center text-gray-500">Cargando...</p>}
             
-            {/* BOTÓN SECRETO PARA DEMO */}
-            <button onClick={injectData} className="absolute bottom-4 right-4 text-xs text-gray-700 hover:text-gray-500">
-                + Demo Data
-            </button>
+            <button onClick={injectData} className="absolute bottom-4 right-4 text-xs text-gray-700 opacity-50 hover:opacity-100">+ Demo Data</button>
           </div>
-
         </div>
       </div>
     </div>
