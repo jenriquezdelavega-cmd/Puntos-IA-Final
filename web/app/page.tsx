@@ -18,29 +18,26 @@ export default function Home() {
   const [scanning, setScanning] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  // 🆕 ESTADO PARA CÓDIGO PENDIENTE (DE URL)
+  const [manualCode, setManualCode] = useState(''); // 🆕 Estado para código manual
   const [pendingCode, setPendingCode] = useState<string | null>(null);
 
-  // 1. DETECTAR CÓDIGO EN URL AL INICIAR
+  // 1. DETECTAR CÓDIGO EN URL
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const codeFromUrl = params.get('code');
       if (codeFromUrl) {
         setPendingCode(codeFromUrl);
-        // Si no estamos logueados, avisamos
-        if (!user) setMessage('👋 ¡Código detectado! Inicia sesión para sumar puntos.');
+        if (!user) setMessage('👋 ¡Código detectado! Inicia sesión.');
       }
     }
   }, []);
 
-  // 2. EFECTO: SI ENTRAMOS Y HAY CÓDIGO PENDIENTE -> PROCESARLO
+  // 2. PROCESAR CÓDIGO PENDIENTE
   useEffect(() => {
     if (user && pendingCode) {
       handleScan(pendingCode);
-      setPendingCode(null); // Limpiar para no repetir
-      // Limpiar URL visualmente
+      setPendingCode(null);
       window.history.replaceState({}, '', '/');
     }
   }, [user, pendingCode]);
@@ -92,10 +89,7 @@ export default function Home() {
   const handleScan = async (result: string) => {
     if (!result) return;
     setScanning(false);
-    
-    // Feedback visual inmediato
-    const originalMessage = message;
-    setMessage('🔄 Procesando Check-in...');
+    setMessage('Procesando Check-in...');
 
     try {
       const res = await fetch('/api/check-in/scan', {
@@ -107,32 +101,29 @@ export default function Home() {
       if (res.ok) { 
         alert(data.message); 
         setUser((prev: any) => ({ ...prev, points: (prev.points || 0) + 10 })); 
+        setManualCode(''); // Limpiar campo manual si tuvo éxito
         setMessage('');
       } else { 
-        // Si el error es "ya registrado", no mostramos alerta molesta, solo texto
         if(res.status === 400) alert(data.error); 
         else alert('❌ ' + data.error);
         setMessage('');
       }
     } catch (e) { 
-      // Si el user era null (caso raro de race condition), lo ignoramos
       if (user) alert('Error al procesar código'); 
       setMessage('');
     }
   };
 
+  // VISTAS
   if (view === 'WELCOME') return (
     <div className="min-h-screen bg-blue-700 flex flex-col items-center justify-center p-6 text-white">
       <h1 className="text-4xl font-bold mb-4">Puntos IA 🤖</h1>
-      
-      {/* MENSAJE DE BIENVENIDA SI HAY CÓDIGO */}
       {pendingCode && (
         <div className="bg-white/20 p-4 rounded-xl mb-6 backdrop-blur-sm border border-white/30 animate-pulse">
            <p className="text-sm font-bold">🎉 ¡Has escaneado un código!</p>
            <p className="text-xs">Inicia sesión para reclamar tus puntos.</p>
         </div>
       )}
-
       <button onClick={() => setView('LOGIN')} className="w-full bg-white text-blue-700 py-4 rounded-xl font-bold mb-4 shadow-lg active:scale-95 transition-all">Iniciar Sesión</button>
       <button onClick={() => setView('REGISTER')} className="w-full border-2 border-white py-4 rounded-xl font-bold active:scale-95 transition-all">Crear Cuenta</button>
     </div>
@@ -181,9 +172,33 @@ export default function Home() {
                 <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mb-2">Tus Puntos</p>
                 <h2 className="text-7xl font-bold">{user.points || 0}</h2>
              </div>
-             <button onClick={() => setScanning(true)} className="w-full bg-black text-white py-5 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all">
+             
+             {/* BOTÓN CÁMARA */}
+             <button onClick={() => setScanning(true)} className="w-full bg-black text-white py-5 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all mb-6">
                📷 Escanear QR
              </button>
+
+             {/* 🆕 ENTRADA MANUAL */}
+             <div className="w-full bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+               <label className="block text-xs font-bold text-gray-400 uppercase mb-2 text-center">¿No funciona la cámara?</label>
+               <div className="flex gap-2">
+                 <input 
+                   className="flex-1 p-3 bg-gray-50 rounded-lg text-black uppercase font-mono text-center tracking-widest border border-gray-200" 
+                   placeholder="AB-123" 
+                   value={manualCode} 
+                   onChange={e => setManualCode(e.target.value.toUpperCase())}
+                   maxLength={7}
+                 />
+                 <button 
+                   onClick={() => handleScan(manualCode)}
+                   disabled={!manualCode}
+                   className="bg-gray-200 text-gray-700 font-bold px-4 rounded-lg hover:bg-gray-300 disabled:opacity-50"
+                 >
+                   👉
+                 </button>
+               </div>
+             </div>
+
            </div>
         )}
 
