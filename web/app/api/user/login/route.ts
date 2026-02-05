@@ -8,23 +8,30 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { phone, password } = body;
 
-    if (!phone || !password) {
-      return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
-    }
+    if (!phone || !password) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
 
-    const user = await prisma.user.findUnique({ where: { phone } });
+    // Buscar usuario e incluir sus membresías
+    const user = await prisma.user.findUnique({
+      where: { phone },
+      include: {
+        memberships: true // 👈 ¡Traemos las tarjetas de puntos!
+      }
+    });
 
     if (!user || user.password !== password) {
       return NextResponse.json({ error: 'Credenciales incorrectas' }, { status: 401 });
     }
+
+    // Calcular Puntos Totales (Suma de todas las visitas * 10)
+    const totalPoints = user.memberships.reduce((sum, m) => sum + (m.totalVisits * 10), 0);
 
     return NextResponse.json({ 
       id: user.id, 
       name: user.name, 
       phone: user.phone, 
       gender: user.gender,
-      birthDate: user.birthDate, // 🎂 ¡Ahora sí la enviamos!
-      points: user.points 
+      birthDate: user.birthDate,
+      points: totalPoints // 👈 Enviamos la suma real
     });
 
   } catch (error: any) {
