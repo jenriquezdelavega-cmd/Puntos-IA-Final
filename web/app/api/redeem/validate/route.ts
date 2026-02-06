@@ -7,29 +7,31 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { tenantId, code } = body;
 
-    // 1. Buscar el código de canje
     const redemption = await prisma.redemption.findFirst({
       where: { tenantId, code, isUsed: false },
       include: { user: true }
     });
 
-    if (!redemption) return NextResponse.json({ error: 'Código inválido o ya usado' }, { status: 404 });
+    if (!redemption) return NextResponse.json({ error: 'Código inválido' }, { status: 404 });
 
-    // 2. Verificar que el usuario AÚN tenga los puntos (Doble check)
+    // 🛠️ CORRECCIÓN AQUÍ TAMBIÉN
     const membership = await prisma.membership.findUnique({
-      where: { userId_tenantId: { userId: redemption.userId, tenantId } }
+      where: {
+        tenantId_userId: { // 👈 Corregido
+          tenantId: tenantId,
+          userId: redemption.userId
+        }
+      }
     });
 
     if (!membership || membership.totalVisits * 10 < 100) {
-      return NextResponse.json({ error: 'El usuario ya no tiene puntos suficientes' }, { status: 400 });
+      return NextResponse.json({ error: 'Puntos insuficientes' }, { status: 400 });
     }
 
-    // 3. TRANSACCIÓN FINAL: Restar puntos y marcar usado
-    // Restamos 10 visitas (100 puntos)
     await prisma.$transaction([
       prisma.membership.update({
         where: { id: membership.id },
-        data: { totalVisits: { decrement: 10 } } // Resta 100 pts
+        data: { totalVisits: { decrement: 10 } } 
       }),
       prisma.redemption.update({
         where: { id: redemption.id },
@@ -37,11 +39,7 @@ export async function POST(request: Request) {
       })
     ]);
 
-    return NextResponse.json({ 
-      success: true, 
-      user: redemption.user.name, 
-      message: '¡Puntos descontados correctamente!' 
-    });
+    return NextResponse.json({ success: true, user: redemption.user.name });
 
-  } catch (error) { return NextResponse.json({ error: 'Error al procesar' }, { status: 500 }); }
+  } catch (error: any) { return NextResponse.json({ error: error.message }, { status: 500 }); }
 }
