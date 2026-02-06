@@ -10,15 +10,14 @@ datasource db {
 model Tenant {
   id          String   @id @default(uuid())
   name        String
-  slug        String   @unique // Identificador url (ej: pizzeria-luigi)
-  
-  // 🆕 Credenciales para el dueño del negocio
+  slug        String   @unique
   username    String   @unique @default("admin")
   password    String   @default("1234")
-
+  prize       String   @default("Premio Sorpresa") // 🆕 El Regalo
   createdAt   DateTime @default(now())
   memberships Membership[]
   dailyCodes  DailyCode[]
+  redemptions Redemption[] // 🆕 Relación con canjes
 }
 
 model User {
@@ -30,6 +29,7 @@ model User {
   birthDate DateTime? 
   createdAt DateTime @default(now()) 
   memberships Membership[]
+  redemptions Redemption[]
 }
 
 model Membership {
@@ -63,4 +63,18 @@ model Visit {
   dailyCodeId String
   dailyCode   DailyCode @relation(fields: [dailyCodeId], references: [id])
   @@unique([membershipId, dailyCodeId])
+}
+
+// 🆕 MODELO PARA CANJES
+model Redemption {
+  id        String   @id @default(uuid())
+  code      String   // El código corto (ej: WIN-999)
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
 }
