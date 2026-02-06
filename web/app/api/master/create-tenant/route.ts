@@ -6,31 +6,32 @@ const prisma = new PrismaClient();
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { masterPassword, name, slug, username, password } = body;
+    const { masterPassword, name, slug } = body;
 
     // 🔒 Seguridad Maestra
     if (masterPassword !== 'superadmin2026') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    if (!name || !slug || !username || !password) {
-      return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
+    if (!name || !slug) {
+      return NextResponse.json({ error: 'Faltan datos (Nombre o Slug)' }, { status: 400 });
     }
 
-    // Crear el negocio en la BD
+    // Crear el negocio (Sin usuario/pass, eso se crea aparte ahora)
     const newTenant = await prisma.tenant.create({
       data: {
         name,
         slug,
-        username,
-        password
+        username: null, // Dejamos esto limpio para evitar errores de duplicados
+        password: null
       }
     });
 
     return NextResponse.json({ success: true, tenant: newTenant });
 
   } catch (error: any) {
-    if (error.code === 'P2002') return NextResponse.json({ error: 'El Slug o Usuario ya existe' }, { status: 400 });
+    console.error(error);
+    if (error.code === 'P2002') return NextResponse.json({ error: 'Ese Slug (URL) ya existe, usa otro.' }, { status: 400 });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -9,7 +9,7 @@ export default function MasterPage() {
   // Create Tenant
   const [tName, setTName] = useState('');
   const [tSlug, setTSlug] = useState('');
-  const [tLink, setTLink] = useState(''); // 🆕 Link Google Maps
+  const [tLink, setTLink] = useState(''); 
   
   // Create User
   const [selectedTenant, setSelectedTenant] = useState('');
@@ -25,7 +25,6 @@ export default function MasterPage() {
   const handleAuth = (e: React.FormEvent) => { e.preventDefault(); if (masterPass === 'superadmin2026') { setAuth(true); loadTenants(); } else alert('No'); };
   const loadTenants = async () => { try { const res = await fetch('/api/master/list-tenants', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ masterPassword: 'superadmin2026' }) }); const data = await res.json(); if(data.tenants) setTenants(data.tenants); } catch(e) {} };
 
-  // EXTRAER COORDENADAS DEL LINK
   const extractCoords = (link: string) => {
     const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
     const match = link.match(regex);
@@ -34,22 +33,27 @@ export default function MasterPage() {
 
   const createTenant = async () => {
     setMsg('Creando Negocio...');
-    const coords = extractCoords(tLink); // Intentar sacar coordenadas
-    
     try {
       const res = await fetch('/api/master/create-tenant', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
-        // Enviamos coords si existen (Ojo: Tendrías que actualizar la API create-tenant para recibirlas, o que el admin las ponga después)
-        // Para simplificar, creamos el negocio y el admin ajusta el mapa.
-        body: JSON.stringify({ masterPassword: masterPass, name: tName, slug: tSlug, username: 'temp', password: 'temp' }) 
+        // 🛠️ YA NO ENVIAMOS USER/PASS FALSOS
+        body: JSON.stringify({ masterPassword: masterPass, name: tName, slug: tSlug }) 
       });
-      if (res.ok) { setMsg('✅ Negocio Creado. (Configura ubicación en el panel del negocio)'); setTName(''); setTSlug(''); setTLink(''); loadTenants(); }
-      else setMsg('❌ Error');
+      if (res.ok) { 
+          setMsg('✅ Negocio Creado. Ahora agrégale un empleado Admin.'); 
+          setTName(''); setTSlug(''); setTLink(''); 
+          loadTenants(); 
+      }
+      else {
+          const d = await res.json();
+          setMsg('❌ ' + d.error);
+      }
     } catch (e) { setMsg('Error'); }
   };
 
   const createUser = async () => {
     if(!selectedTenant) return alert("Selecciona negocio");
+    setMsg('Creando Usuario...');
     try {
       const res = await fetch('/api/master/create-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, tenantId: selectedTenant, name: uName, phone: uPhone, email: uEmail, username: uUser, password: uPass, role: uRole }) });
       if (res.ok) { setMsg('✅ Usuario Agregado'); setUName(''); setUUser(''); setUPass(''); loadTenants(); } else { const d = await res.json(); setMsg('❌ ' + d.error); }
