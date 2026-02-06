@@ -96,6 +96,16 @@ export default function Home() {
 
   const handleLogout = () => { if(confirm("¿Salir?")) { setUser(null); setView('WELCOME'); setPhone(''); setPassword(''); setMessage(''); } };
 
+  // --- LOGO CSS PURO (Restaurado y Mejorado) ---
+  const BrandLogo = () => (
+    <div className="flex items-center justify-center gap-2 mb-4 animate-fadeIn">
+      <span className="text-6xl font-extrabold tracking-tighter text-white drop-shadow-md font-sans">punto</span>
+      {/* Esfera brillante */}
+      <div className="h-12 w-12 rounded-full bg-gradient-to-tr from-yellow-300 via-orange-400 to-red-500 shadow-[0_0_20px_rgba(255,165,0,0.8)] border-4 border-white/20"></div>
+      <span className="text-6xl font-extrabold tracking-tighter text-white drop-shadow-md font-sans">IA</span>
+    </div>
+  );
+
   // --- VISTAS ---
 
   if (view === 'WELCOME') return (
@@ -104,21 +114,11 @@ export default function Home() {
       <div className="absolute bottom-20 right-10 w-32 h-32 bg-yellow-300/20 rounded-full blur-2xl"></div>
 
       <div className="z-10 text-center w-full max-w-sm flex flex-col items-center">
-        {/* LOGO REAL */}
-        <img 
-          src="https://www.photo-pick.com/online/DjzJCCTG.link" 
-          alt="PuntoIA Logo" 
-          className="w-48 mb-6 drop-shadow-xl"
-          // Fallback por si la url caduca
-          onError={(e) => { e.currentTarget.style.display='none'; }} 
-        />
+        {/* LOGO */}
+        <BrandLogo />
         
-        {/* Fallback Texto por si no carga la imagen */}
-        <div className="hidden" id="logo-text">
-           <h1 className="text-5xl font-black">puntoIA</h1>
-        </div>
-
-        <p className="text-white/90 text-lg font-medium mb-12 tracking-wide">Tu lealtad, fácil y ya.</p>
+        {/* Slogan con margen suficiente para no empalmar */}
+        <p className="text-white/90 text-lg font-medium mb-12 tracking-wide mt-2">Tu lealtad, fácil y ya.</p>
 
         {pendingCode && <div className="bg-white/20 p-4 rounded-2xl mb-8 border border-white/30 backdrop-blur-sm animate-bounce"><p className="font-bold">🎉 ¡Código detectado!</p></div>}
 
@@ -138,30 +138,30 @@ export default function Home() {
     const isReg = view === 'REGISTER';
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        <div className="bg-gradient-to-r from-orange-400 to-pink-500 p-8 pb-12 rounded-b-[3rem] shadow-lg text-white text-center relative">
+        <div className="bg-gradient-to-r from-orange-400 to-pink-500 p-8 pb-16 rounded-b-[3rem] shadow-lg text-white text-center relative">
            <button onClick={() => setView('WELCOME')} className="absolute top-6 left-6 text-white/80 hover:text-white font-bold text-2xl">←</button>
-           <h2 className="text-3xl font-extrabold mt-2">{isReg ? 'Únete a PuntoIA' : 'Bienvenido'}</h2>
+           <h2 className="text-3xl font-extrabold mt-4">{isReg ? 'Únete a PuntoIA' : 'Bienvenido'}</h2>
            <p className="text-white/80 text-sm mt-1">{isReg ? 'Empieza a ganar hoy' : 'Tus premios te esperan'}</p>
         </div>
 
-        <div className="flex-1 px-6 -mt-8 pb-10">
-          <div className="bg-white rounded-3xl shadow-xl p-6 space-y-5 border border-gray-100">
+        <div className="flex-1 px-6 -mt-12 pb-10">
+          <div className="bg-white rounded-3xl shadow-xl p-8 space-y-6 border border-gray-100">
              
-             {isReg && <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Nombre</label><input className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold focus:ring-2 focus:ring-pink-400 outline-none" value={name} onChange={e=>setName(e.target.value)} /></div>}
+             {isReg && <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-1">Nombre</label><input className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold focus:ring-2 focus:ring-pink-400 outline-none" value={name} onChange={e=>setName(e.target.value)} /></div>}
              
-             <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Teléfono</label><input type="tel" maxLength={10} className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold focus:ring-2 focus:ring-pink-400 outline-none" value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,''))} placeholder="10 dígitos" /></div>
+             <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-1">Teléfono</label><input type="tel" maxLength={10} className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold focus:ring-2 focus:ring-pink-400 outline-none" value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,''))} placeholder="10 dígitos" /></div>
              
              {isReg && (
                <>
-                 <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Email (Opcional)</label><input type="email" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium focus:ring-2 focus:ring-pink-400 outline-none" value={email} onChange={e=>setEmail(e.target.value)} /></div>
+                 <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-1">Email (Opcional)</label><input type="email" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium focus:ring-2 focus:ring-pink-400 outline-none" value={email} onChange={e=>setEmail(e.target.value)} /></div>
                  <div className="flex gap-3">
-                    <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1">Fecha</label><input type="date" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium" value={birthDate} onChange={e=>setBirthDate(e.target.value)} /></div>
-                    <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1">Género</label><select className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium" value={gender} onChange={e=>setGender(e.target.value)}><option value="">-</option><option value="Hombre">M</option><option value="Mujer">F</option></select></div>
+                    <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-1">Fecha</label><input type="date" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium" value={birthDate} onChange={e=>setBirthDate(e.target.value)} /></div>
+                    <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-1">Género</label><select className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium" value={gender} onChange={e=>setGender(e.target.value)}><option value="">-</option><option value="Hombre">M</option><option value="Mujer">F</option></select></div>
                  </div>
                </>
              )}
 
-             <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Contraseña</label><input type="password" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold focus:ring-2 focus:ring-pink-400 outline-none" value={password} onChange={e=>setPassword(e.target.value)} /></div>
+             <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-1">Contraseña</label><input type="password" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold focus:ring-2 focus:ring-pink-400 outline-none" value={password} onChange={e=>setPassword(e.target.value)} /></div>
              
              {message && <div className="p-3 bg-red-50 text-red-500 rounded-xl text-center font-bold text-sm animate-pulse">{message}</div>}
 
@@ -190,6 +190,7 @@ export default function Home() {
         </div>
       )}
 
+      {/* HEADER PRINCIPAL */}
       <div className="bg-white px-6 pt-12 pb-6 sticky top-0 z-10 shadow-sm flex justify-between items-center">
          <div>
             <p className="text-gray-400 text-xs font-bold uppercase tracking-wide">Bienvenido,</p>
@@ -270,11 +271,11 @@ export default function Home() {
                 <div><h2 className="text-xl font-black text-gray-800">Mi Perfil</h2><p className="text-sm text-gray-400">Edita tu información</p></div>
              </div>
              <div className="space-y-5">
-               <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Nombre</label><input className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-transparent focus:bg-white focus:border-pink-300 outline-none transition-all" value={name} onChange={e => setName(e.target.value)} /></div>
-               <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Email</label><input type="email" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-transparent focus:bg-white focus:border-pink-300 outline-none transition-all" value={email} onChange={e => setEmail(e.target.value)} /></div>
+               <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-1">Nombre</label><input className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-transparent focus:bg-white focus:border-pink-300 outline-none transition-all" value={name} onChange={e => setName(e.target.value)} /></div>
+               <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-1">Email</label><input type="email" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-transparent focus:bg-white focus:border-pink-300 outline-none transition-all" value={email} onChange={e => setEmail(e.target.value)} /></div>
                <div className="flex gap-3">
-                  <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1">Fecha</label><input type="date" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold" value={birthDate} onChange={e => setBirthDate(e.target.value)} /></div>
-                  <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1">Género</label><select className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold" value={gender} onChange={e => setGender(e.target.value)}><option value="Hombre">M</option><option value="Mujer">F</option></select></div>
+                  <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-1">Fecha</label><input type="date" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold" value={birthDate} onChange={e => setBirthDate(e.target.value)} /></div>
+                  <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-1">Género</label><select className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold" value={gender} onChange={e => setGender(e.target.value)}><option value="Hombre">M</option><option value="Mujer">F</option></select></div>
                </div>
              </div>
              <button onClick={handleUpdate} className="w-full bg-gray-900 text-white p-4 rounded-2xl font-bold mt-8 shadow-lg active:scale-95 transition-all">Guardar Cambios 💾</button>
