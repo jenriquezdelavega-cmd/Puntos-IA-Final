@@ -6,25 +6,16 @@ const prisma = new PrismaClient();
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, phone, password, gender, birthDate } = body;
+    const { name, phone, email, password, gender, birthDate } = body; // 🆕 email
 
     if (!name || !phone || !password) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
 
-    // 🛡️ LIMPIEZA DE GÉNERO (Blindaje)
-    // Solo permitimos estos 3 valores exactos. Si llega otra cosa, se pone 'Otro'.
-    const validGenders = ['Hombre', 'Mujer', 'Otro'];
-    let cleanGender = gender;
-    
-    // Normalización
-    if (gender === 'Male' || gender === 'M') cleanGender = 'Hombre';
-    if (gender === 'Female' || gender === 'F') cleanGender = 'Mujer';
-    
-    // Si no es válido, default a Otro
-    if (!validGenders.includes(cleanGender)) {
-        cleanGender = 'Otro';
-    }
+    // Limpieza Género
+    let cleanGender = 'Otro';
+    if (gender === 'Hombre') cleanGender = 'Hombre';
+    if (gender === 'Mujer') cleanGender = 'Mujer';
 
-    // Procesar fecha
+    // Fecha
     let finalDate = null;
     if (birthDate) {
       finalDate = new Date(birthDate + "T12:00:00Z");
@@ -35,8 +26,9 @@ export async function POST(request: Request) {
       data: {
         name,
         phone,
+        email: email || null, // 🆕 Guardar email
         password,
-        gender: cleanGender, // Usamos el género limpio
+        gender: cleanGender,
         birthDate: finalDate
       }
     });
@@ -44,7 +36,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ id: newUser.id, name: newUser.name });
 
   } catch (error: any) {
-    if (error.code === 'P2002') return NextResponse.json({ error: 'Teléfono duplicado' }, { status: 400 });
+    if (error.code === 'P2002') return NextResponse.json({ error: 'Teléfono ya registrado' }, { status: 400 });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

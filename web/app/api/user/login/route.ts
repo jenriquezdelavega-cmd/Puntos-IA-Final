@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       where: { phone },
       include: {
         memberships: {
-          include: { tenant: true } // 👈 ¡Traemos el nombre del negocio!
+          include: { tenant: true } // Traemos datos del negocio (incluyendo prize)
         }
       }
     });
@@ -23,10 +23,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Credenciales incorrectas' }, { status: 401 });
     }
 
-    // Preparamos la lista bonita para el frontend
+    // Mapeamos para enviar limpio al frontend
     const memberships = user.memberships.map(m => ({
       tenantId: m.tenantId,
       name: m.tenant.name,
+      prize: m.tenant.prize, // 👈 ¡AQUÍ ESTÁ LA CLAVE! Enviamos el premio real
       points: m.totalVisits * 10
     }));
 
@@ -34,9 +35,10 @@ export async function POST(request: Request) {
       id: user.id, 
       name: user.name, 
       phone: user.phone, 
+      email: user.email, // 🆕 Enviamos email
       gender: user.gender,
       birthDate: user.birthDate,
-      memberships: memberships // 👈 Enviamos la lista completa
+      memberships: memberships 
     });
 
   } catch (error: any) {

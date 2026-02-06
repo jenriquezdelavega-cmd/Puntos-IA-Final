@@ -12,6 +12,7 @@ export default function Home() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [email, setEmail] = useState(''); // 🆕 Estado Email
   const [gender, setGender] = useState('');
   const [birthDate, setBirthDate] = useState('');
   
@@ -38,7 +39,10 @@ export default function Home() {
       const res = await fetch('/api/user/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ phone, password }) });
       const data = await res.json();
       if (res.ok) {
-        setUser(data); setName(data.name); setGender(data.gender || '');
+        setUser(data); 
+        setName(data.name); 
+        setEmail(data.email || ''); // 🆕 Cargar email
+        setGender(data.gender || '');
         if (data.birthDate) setBirthDate(data.birthDate.split('T')[0]); else setBirthDate('');
         setView('APP');
       } else setMessage(data.error);
@@ -50,7 +54,10 @@ export default function Home() {
     if (!name || !phone || !password) return setMessage('Faltan datos');
     setLoading(true);
     try {
-      const res = await fetch('/api/user/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name, phone, password, gender, birthDate }) });
+      const res = await fetch('/api/user/register', { 
+        method: 'POST', headers: {'Content-Type':'application/json'}, 
+        body: JSON.stringify({ name, phone, email, password, gender, birthDate }) // 🆕 Enviar email
+      });
       if (res.ok) handleLogin(); else { const d = await res.json(); setMessage(d.error); }
     } catch (e) { setMessage('Error'); }
     setLoading(false);
@@ -60,8 +67,11 @@ export default function Home() {
     if (!user?.id) return;
     setMessage('Guardando...');
     try {
-      const res = await fetch('/api/user/update', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: user.id, name, gender, birthDate }) });
-      if (res.ok) { setMessage('✅ Datos actualizados'); setUser({ ...user, name, gender, birthDate }); }
+      const res = await fetch('/api/user/update', { 
+        method: 'POST', headers: {'Content-Type':'application/json'}, 
+        body: JSON.stringify({ id: user.id, name, email, gender, birthDate }) // 🆕 Update email
+      });
+      if (res.ok) { setMessage('✅ Datos actualizados'); setUser({ ...user, name, email, gender, birthDate }); }
       else setMessage('Error');
     } catch (e) { setMessage('Error'); }
   };
@@ -69,10 +79,8 @@ export default function Home() {
   const handleScan = async (result: string) => {
     if (!result) return;
     setScanning(false);
-    
     let finalCode = result;
     if (result.includes('code=')) finalCode = result.split('code=')[1].split('&')[0];
-
     try {
       const res = await fetch('/api/check-in/scan', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user?.id, code: finalCode }) });
       const data = await res.json();
@@ -89,9 +97,7 @@ export default function Home() {
     } catch(e) { alert('Error'); }
   };
 
-  const handleLogout = () => {
-    if(confirm("¿Salir?")) { setUser(null); setView('WELCOME'); setPhone(''); setPassword(''); }
-  };
+  const handleLogout = () => { if(confirm("¿Salir?")) { setUser(null); setView('WELCOME'); setPhone(''); setPassword(''); } };
 
   if (view === 'WELCOME') return (
     <div className="min-h-screen bg-blue-700 flex flex-col items-center justify-center p-6 text-white">
@@ -115,15 +121,16 @@ export default function Home() {
            
            {isReg && (
              <>
+               {/* 🆕 CAMPO EMAIL */}
+               <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1 ml-1">Email (Opcional)</label><input type="email" className="w-full p-4 rounded-xl border border-gray-300 text-black bg-white font-medium" value={email} onChange={e=>setEmail(e.target.value)} placeholder="correo@ejemplo.com" /></div>
+
                <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1 ml-1">Fecha Nacimiento</label><input type="date" className="w-full p-4 rounded-xl border border-gray-300 text-black bg-white font-medium h-[58px]" value={birthDate} onChange={e=>setBirthDate(e.target.value)} /></div>
-               <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1 ml-1">Género</label><select className="w-full p-4 rounded-xl border border-gray-300 text-black bg-white font-medium h-[58px]" value={gender} onChange={e=>setGender(e.target.value)}><option value="">Seleccionar</option><option value="Hombre">Hombre</option><option value="Mujer">Mujer</option></select></div>
+               <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1 ml-1">Género</label><select className="w-full p-4 bg-gray-50 rounded-xl text-black bg-white font-medium h-[58px]" value={gender} onChange={e=>setGender(e.target.value)}><option value="">Seleccionar</option><option value="Hombre">Hombre</option><option value="Mujer">Mujer</option></select></div>
              </>
            )}
 
            <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1 ml-1">Contraseña</label><input type="password" className="w-full p-4 rounded-xl border border-gray-300 text-black bg-white font-medium" value={password} onChange={e=>setPassword(e.target.value)} /></div>
         </div>
-
-        {message && <p className="text-blue-600 font-bold text-center mb-4">{message}</p>}
         <button onClick={isReg ? handleRegister : handleLogin} disabled={loading} className={`w-full text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all ${isReg ? 'bg-green-600' : 'bg-blue-600'}`}>{loading ? '...' : isReg ? 'Registrarme' : 'Entrar'}</button>
       </div>
     );
@@ -151,16 +158,13 @@ export default function Home() {
       <div className="p-6">
         {activeTab === 'checkin' && !scanning && (
            <div className="flex flex-col gap-6">
-             {/* LISTA DE TARJETAS */}
              <div className="w-full space-y-4">
                {user.memberships && user.memberships.length > 0 ? (
                  user.memberships.map((m: any, idx: number) => {
                    const progress = Math.min(m.points, 100);
                    const isWinner = m.points >= 100;
-                   // 🆕 TRUCO: Accedemos a m.tenant.prize, o usamos el nombre que venía en la lista plana 'm.prizeName' si lo hubiéramos mandado así.
-                   // Como el backend manda memberships: [{name: "Negocio", points: 10, ...}], necesitamos asegurarnos que venga el PREMIO.
-                   // Nota: En el backend 'user/login', el include tenant trae todo.
-                   const prizeName = m.tenant?.prize || "Premio Sorpresa"; 
+                   // 🆕 USAMOS EL PREMIO REAL QUE VIENE DEL LOGIN (m.prize)
+                   const prizeName = m.prize || "Premio Sorpresa"; 
                    
                    return (
                      <div key={idx} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 relative overflow-hidden">
@@ -173,7 +177,6 @@ export default function Home() {
                            <div className="w-full bg-gray-100 rounded-full h-4 mb-3 overflow-hidden"><div className="h-full rounded-full bg-blue-600 transition-all duration-1000" style={{ width: `${progress}%` }}></div></div>
                            <div className="flex justify-between text-xs text-gray-500 font-bold uppercase">
                              <span>0</span>
-                             {/* 🆕 AQUÍ MOSTRAMOS EL PREMIO CLARAMENTE */}
                              <span className="text-blue-600">Meta: {prizeName}</span>
                            </div>
                          </>
@@ -189,9 +192,7 @@ export default function Home() {
                  })
                ) : <div className="text-center py-10 opacity-50"><p className="text-gray-500">Sin puntos aún. ¡Visita un negocio!</p></div>}
              </div>
-
              <button onClick={() => setScanning(true)} className="w-full bg-black text-white py-5 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all">📷 Escanear QR</button>
-             
              <div className="w-full bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex gap-2">
                  <input className="flex-1 p-3 bg-gray-50 rounded-lg text-black uppercase font-mono text-center tracking-widest border border-gray-300 font-bold placeholder-gray-400" placeholder="CÓDIGO MANUAL" value={manualCode} onChange={e => setManualCode(e.target.value.toUpperCase())} maxLength={7} />
                  <button onClick={() => handleScan(manualCode)} disabled={!manualCode} className="bg-gray-200 text-gray-700 font-bold px-5 rounded-lg hover:bg-gray-300 disabled:opacity-50">👉</button>
@@ -206,12 +207,14 @@ export default function Home() {
           </div>
         )}
 
-        {/* 🆕 SECCIÓN DE PERFIL RESTAURADA */}
         {activeTab === 'profile' && (
            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
              <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2">👤 Editar Datos</h2>
              <div className="space-y-4">
                <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Nombre</label><input className="w-full p-4 bg-gray-50 rounded-xl text-gray-800 border border-gray-200 font-medium" value={name} onChange={e => setName(e.target.value)} /></div>
+               {/* 🆕 CAMPO EMAIL EN PERFIL */}
+               <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Email</label><input type="email" className="w-full p-4 bg-gray-50 rounded-xl text-gray-800 border border-gray-200 font-medium" value={email} onChange={e => setEmail(e.target.value)} /></div>
+               
                <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Fecha Nacimiento</label><input type="date" className="w-full p-4 bg-gray-50 rounded-xl text-gray-800 border border-gray-200 font-medium" value={birthDate} onChange={e => setBirthDate(e.target.value)} /></div>
                <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Género</label><select className="w-full p-4 bg-gray-50 rounded-xl text-gray-800 border border-gray-200 font-medium" value={gender} onChange={e => setGender(e.target.value)}><option value="Hombre">Hombre</option><option value="Mujer">Mujer</option></select></div>
              </div>

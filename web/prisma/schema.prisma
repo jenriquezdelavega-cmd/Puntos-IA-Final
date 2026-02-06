@@ -13,16 +13,17 @@ model Tenant {
   slug        String   @unique
   username    String   @unique @default("admin")
   password    String   @default("1234")
-  prize       String   @default("Premio Sorpresa") // 🆕 El Regalo
+  prize       String   @default("Premio Sorpresa")
   createdAt   DateTime @default(now())
   memberships Membership[]
   dailyCodes  DailyCode[]
-  redemptions Redemption[] // 🆕 Relación con canjes
+  redemptions Redemption[]
 }
 
 model User {
   id        String   @id @default(uuid())
   phone     String   @unique
+  email     String?  // 🆕 Nuevo campo (opcional para no romper viejos)
   password  String   @default("1234")
   name      String?
   gender    String?  
@@ -65,16 +66,13 @@ model Visit {
   @@unique([membershipId, dailyCodeId])
 }
 
-// 🆕 MODELO PARA CANJES
 model Redemption {
   id        String   @id @default(uuid())
-  code      String   // El código corto (ej: WIN-999)
+  code      String
   isUsed    Boolean  @default(false)
   createdAt DateTime @default(now())
-  
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  
   userId    String
   user      User     @relation(fields: [userId], references: [id])
 }
