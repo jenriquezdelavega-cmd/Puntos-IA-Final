@@ -12,7 +12,7 @@ export default function Home() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [email, setEmail] = useState(''); // 🆕 Estado Email
+  const [email, setEmail] = useState('');
   const [gender, setGender] = useState('');
   const [birthDate, setBirthDate] = useState('');
   
@@ -22,6 +22,10 @@ export default function Home() {
   const [manualCode, setManualCode] = useState('');
   const [pendingCode, setPendingCode] = useState<string | null>(null);
   const [prizeCode, setPrizeCode] = useState<{code: string, tenant: string} | null>(null);
+
+  // 🛡️ REGLAS DE VALIDACIÓN
+  const isValidPhone = (p: string) => /^\d{10}$/.test(p); // Solo 10 números
+  const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); // Formato correo
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -33,47 +37,70 @@ export default function Home() {
 
   useEffect(() => { if (user && pendingCode) { handleScan(pendingCode); setPendingCode(null); window.history.replaceState({}, '', '/'); } }, [user, pendingCode]);
 
+  // --- HANDLERS ---
+
   const handleLogin = async () => {
-    setLoading(true); setMessage('');
+    setMessage('');
+    // Validaciones
+    if (!phone) return setMessage('❌ Ingresa tu teléfono');
+    if (!isValidPhone(phone)) return setMessage('❌ El teléfono debe tener 10 dígitos numéricos');
+    if (!password) return setMessage('❌ Ingresa tu contraseña');
+
+    setLoading(true); 
     try {
       const res = await fetch('/api/user/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ phone, password }) });
       const data = await res.json();
       if (res.ok) {
         setUser(data); 
         setName(data.name); 
-        setEmail(data.email || ''); // 🆕 Cargar email
+        setEmail(data.email || ''); 
         setGender(data.gender || '');
         if (data.birthDate) setBirthDate(data.birthDate.split('T')[0]); else setBirthDate('');
         setView('APP');
-      } else setMessage(data.error);
-    } catch (e) { setMessage('Error'); }
+      } else setMessage('⚠️ ' + data.error);
+    } catch (e) { setMessage('🔥 Error de conexión'); }
     setLoading(false);
   };
 
   const handleRegister = async () => {
-    if (!name || !phone || !password) return setMessage('Faltan datos');
+    setMessage('');
+    // Validaciones Estrictas
+    if (!name.trim()) return setMessage('❌ Falta tu nombre');
+    if (!isValidPhone(phone)) return setMessage('❌ El teléfono debe ser de 10 dígitos');
+    if (email && !isValidEmail(email)) return setMessage('❌ El formato del correo es inválido');
+    if (!birthDate) return setMessage('❌ Falta fecha de nacimiento');
+    if (!gender) return setMessage('❌ Selecciona un género');
+    if (!password || password.length < 4) return setMessage('❌ La contraseña es muy corta');
+
     setLoading(true);
     try {
       const res = await fetch('/api/user/register', { 
         method: 'POST', headers: {'Content-Type':'application/json'}, 
-        body: JSON.stringify({ name, phone, email, password, gender, birthDate }) // 🆕 Enviar email
+        body: JSON.stringify({ name, phone, email, password, gender, birthDate }) 
       });
-      if (res.ok) handleLogin(); else { const d = await res.json(); setMessage(d.error); }
-    } catch (e) { setMessage('Error'); }
+      if (res.ok) handleLogin(); 
+      else { const d = await res.json(); setMessage('⚠️ ' + d.error); }
+    } catch (e) { setMessage('🔥 Error de conexión'); }
     setLoading(false);
   };
 
   const handleUpdate = async () => {
     if (!user?.id) return;
+    setMessage('');
+    
+    // Validaciones Update
+    if (!name.trim()) return setMessage('❌ El nombre no puede estar vacío');
+    if (email && !isValidEmail(email)) return setMessage('❌ Correo inválido');
+
     setMessage('Guardando...');
     try {
       const res = await fetch('/api/user/update', { 
         method: 'POST', headers: {'Content-Type':'application/json'}, 
-        body: JSON.stringify({ id: user.id, name, email, gender, birthDate }) // 🆕 Update email
+        body: JSON.stringify({ id: user.id, name, email, gender, birthDate }) 
       });
       if (res.ok) { setMessage('✅ Datos actualizados'); setUser({ ...user, name, email, gender, birthDate }); }
-      else setMessage('Error');
-    } catch (e) { setMessage('Error'); }
+      else setMessage('❌ Error al actualizar');
+    } catch (e) { setMessage('🔥 Error de red'); }
   };
 
   const handleScan = async (result: string) => {
@@ -81,11 +108,12 @@ export default function Home() {
     setScanning(false);
     let finalCode = result;
     if (result.includes('code=')) finalCode = result.split('code=')[1].split('&')[0];
+
     try {
       const res = await fetch('/api/check-in/scan', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user?.id, code: finalCode }) });
       const data = await res.json();
-      if (res.ok) { alert(data.message); handleLogin(); setManualCode(''); } else alert(data.error);
-    } catch (e) { if(user) alert('Error'); }
+      if (res.ok) { alert(data.message); handleLogin(); setManualCode(''); } else alert('❌ ' + data.error);
+    } catch (e) { if(user) alert('Error de conexión'); }
   };
 
   const getPrizeCode = async (tenantId: string, tenantName: string) => {
@@ -97,13 +125,16 @@ export default function Home() {
     } catch(e) { alert('Error'); }
   };
 
-  const handleLogout = () => { if(confirm("¿Salir?")) { setUser(null); setView('WELCOME'); setPhone(''); setPassword(''); } };
+  const handleLogout = () => { if(confirm("¿Salir?")) { setUser(null); setView('WELCOME'); setPhone(''); setPassword(''); setMessage(''); } };
+
+  // --- UI COMPONENTS ---
 
   if (view === 'WELCOME') return (
     <div className="min-h-screen bg-blue-700 flex flex-col items-center justify-center p-6 text-white">
       <h1 className="text-4xl font-bold mb-4">Puntos IA 🤖</h1>
-      <button onClick={() => setView('LOGIN')} className="w-full bg-white text-blue-700 py-4 rounded-xl font-bold mb-4 active:scale-95 transition-all">Iniciar Sesión</button>
-      <button onClick={() => setView('REGISTER')} className="w-full border-2 border-white py-4 rounded-xl font-bold active:scale-95 transition-all">Crear Cuenta</button>
+      {pendingCode && <div className="bg-white/20 p-4 rounded-xl mb-6 animate-pulse"><p className="text-sm font-bold">🎉 Código detectado</p></div>}
+      <button onClick={() => {setMessage(''); setView('LOGIN');}} className="w-full bg-white text-blue-700 py-4 rounded-xl font-bold mb-4 active:scale-95 transition-all">Iniciar Sesión</button>
+      <button onClick={() => {setMessage(''); setView('REGISTER');}} className="w-full border-2 border-white py-4 rounded-xl font-bold active:scale-95 transition-all">Crear Cuenta</button>
     </div>
   );
 
@@ -115,22 +146,28 @@ export default function Home() {
         <h2 className="text-2xl font-bold mb-6 text-gray-800">{isReg ? 'Crear Cuenta 🚀' : 'Hola de nuevo 👋'}</h2>
         
         <div className="space-y-4 flex-1 overflow-y-auto pb-4">
-           {isReg && <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1 ml-1">Nombre</label><input className="w-full p-4 rounded-xl border border-gray-300 text-black bg-white font-medium" value={name} onChange={e=>setName(e.target.value)} /></div>}
+           {isReg && <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1 ml-1">Nombre</label><input className="w-full p-4 rounded-xl border border-gray-300 text-black bg-white font-medium focus:border-blue-500 outline-none" value={name} onChange={e=>setName(e.target.value)} /></div>}
            
-           <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1 ml-1">Teléfono</label><input className="w-full p-4 rounded-xl border border-gray-300 text-black bg-white font-medium" value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Tu ID único" /></div>
+           <div>
+             <label className="block text-xs font-bold text-gray-600 uppercase mb-1 ml-1">Teléfono (10 dígitos)</label>
+             <input type="tel" maxLength={10} className="w-full p-4 rounded-xl border border-gray-300 text-black bg-white font-medium focus:border-blue-500 outline-none" value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,''))} placeholder="Ej: 5512345678" />
+           </div>
            
            {isReg && (
              <>
-               {/* 🆕 CAMPO EMAIL */}
-               <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1 ml-1">Email (Opcional)</label><input type="email" className="w-full p-4 rounded-xl border border-gray-300 text-black bg-white font-medium" value={email} onChange={e=>setEmail(e.target.value)} placeholder="correo@ejemplo.com" /></div>
+               <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1 ml-1">Email (Opcional)</label><input type="email" className="w-full p-4 rounded-xl border border-gray-300 text-black bg-white font-medium focus:border-blue-500 outline-none" value={email} onChange={e=>setEmail(e.target.value)} placeholder="correo@ejemplo.com" /></div>
 
                <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1 ml-1">Fecha Nacimiento</label><input type="date" className="w-full p-4 rounded-xl border border-gray-300 text-black bg-white font-medium h-[58px]" value={birthDate} onChange={e=>setBirthDate(e.target.value)} /></div>
                <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1 ml-1">Género</label><select className="w-full p-4 bg-gray-50 rounded-xl text-black bg-white font-medium h-[58px]" value={gender} onChange={e=>setGender(e.target.value)}><option value="">Seleccionar</option><option value="Hombre">Hombre</option><option value="Mujer">Mujer</option></select></div>
              </>
            )}
 
-           <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1 ml-1">Contraseña</label><input type="password" className="w-full p-4 rounded-xl border border-gray-300 text-black bg-white font-medium" value={password} onChange={e=>setPassword(e.target.value)} /></div>
+           <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1 ml-1">Contraseña</label><input type="password" className="w-full p-4 rounded-xl border border-gray-300 text-black bg-white font-medium focus:border-blue-500 outline-none" value={password} onChange={e=>setPassword(e.target.value)} /></div>
         </div>
+        
+        {/* MENSAJE DE ERROR CLARO */}
+        {message && <div className="p-3 mb-4 rounded-lg bg-red-50 border border-red-100 text-red-600 font-bold text-center text-sm animate-pulse">{message}</div>}
+        
         <button onClick={isReg ? handleRegister : handleLogin} disabled={loading} className={`w-full text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition-all ${isReg ? 'bg-green-600' : 'bg-blue-600'}`}>{loading ? '...' : isReg ? 'Registrarme' : 'Entrar'}</button>
       </div>
     );
@@ -163,9 +200,7 @@ export default function Home() {
                  user.memberships.map((m: any, idx: number) => {
                    const progress = Math.min(m.points, 100);
                    const isWinner = m.points >= 100;
-                   // 🆕 USAMOS EL PREMIO REAL QUE VIENE DEL LOGIN (m.prize)
                    const prizeName = m.prize || "Premio Sorpresa"; 
-                   
                    return (
                      <div key={idx} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200 relative overflow-hidden">
                        <div className="flex justify-between items-center mb-3">
@@ -175,16 +210,11 @@ export default function Home() {
                        {!isWinner ? (
                          <>
                            <div className="w-full bg-gray-100 rounded-full h-4 mb-3 overflow-hidden"><div className="h-full rounded-full bg-blue-600 transition-all duration-1000" style={{ width: `${progress}%` }}></div></div>
-                           <div className="flex justify-between text-xs text-gray-500 font-bold uppercase">
-                             <span>0</span>
-                             <span className="text-blue-600">Meta: {prizeName}</span>
-                           </div>
+                           <div className="flex justify-between text-xs text-gray-500 font-bold uppercase"><span>0</span><span className="text-blue-600">Meta: {prizeName}</span></div>
                          </>
                        ) : (
                          <div className="animate-pulse">
-                           <button onClick={() => getPrizeCode(m.tenantId, m.name)} className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold py-3 rounded-xl shadow-md transform hover:scale-105 transition-all">
-                             🏆 CANJEAR: {prizeName}
-                           </button>
+                           <button onClick={() => getPrizeCode(m.tenantId, m.name)} className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold py-3 rounded-xl shadow-md transform hover:scale-105 transition-all">🏆 CANJEAR: {prizeName}</button>
                          </div>
                        )}
                      </div>
@@ -212,14 +242,12 @@ export default function Home() {
              <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2">👤 Editar Datos</h2>
              <div className="space-y-4">
                <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Nombre</label><input className="w-full p-4 bg-gray-50 rounded-xl text-gray-800 border border-gray-200 font-medium" value={name} onChange={e => setName(e.target.value)} /></div>
-               {/* 🆕 CAMPO EMAIL EN PERFIL */}
                <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Email</label><input type="email" className="w-full p-4 bg-gray-50 rounded-xl text-gray-800 border border-gray-200 font-medium" value={email} onChange={e => setEmail(e.target.value)} /></div>
-               
                <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Fecha Nacimiento</label><input type="date" className="w-full p-4 bg-gray-50 rounded-xl text-gray-800 border border-gray-200 font-medium" value={birthDate} onChange={e => setBirthDate(e.target.value)} /></div>
                <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Género</label><select className="w-full p-4 bg-gray-50 rounded-xl text-gray-800 border border-gray-200 font-medium" value={gender} onChange={e => setGender(e.target.value)}><option value="Hombre">Hombre</option><option value="Mujer">Mujer</option></select></div>
              </div>
              <button onClick={handleUpdate} className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold mt-8 shadow-md active:scale-95 transition-all">Guardar Cambios</button>
-             {message && <p className="text-center text-green-600 mt-4 font-bold">{message}</p>}
+             {message && <p className="text-center mt-4 font-bold bg-gray-100 p-2 rounded text-sm">{message}</p>}
            </div>
         )}
       </div>
