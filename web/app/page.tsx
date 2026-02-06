@@ -28,7 +28,7 @@ export default function Home() {
   const [manualCode, setManualCode] = useState('');
   const [pendingCode, setPendingCode] = useState<string | null>(null);
   const [prizeCode, setPrizeCode] = useState<{code: string, tenant: string} | null>(null);
-  const [tenants, setTenants] = useState<any[]>([]); // Mapa
+  const [tenants, setTenants] = useState<any[]>([]);
 
   const isValidPhone = (p: string) => /^\d{10}$/.test(p);
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -209,7 +209,6 @@ export default function Home() {
            </div>
         )}
 
-        {/* 🗺️ MAPA VIBRANTE */}
         {activeTab === 'map' && (
            <div className="h-[65vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white">
              <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -226,7 +225,7 @@ export default function Home() {
            </div>
         )}
 
-        {scanning && (<div className="fixed inset-0 bg-black z-50 flex flex-col"><Scanner onScan={(r) => r[0] && handleScan(r[0].rawValue)} onError={(e) => console.log(e)} /><button onClick={() => setScanning(false)} className="absolute bottom-12 left-8 right-8 bg-white/20 backdrop-blur-md text-white p-5 rounded-3xl font-bold border border-white/20 shadow-2xl">Cancelar</button></div>)}
+        {scanning && (<div className="fixed inset-0 bg-black z-50 flex flex-col"><Scanner onScan={(r) => r[0] && handleScan(r[0].rawValue)} onError={(e) => console.log(e)} /><button onClick={() => setScanning(false)} className="absolute bottom-12 left-8 right-8 bg-white/20 backdrop-blur-md text-white p-5 rounded-3xl font-bold border border-white/20 shadow-2xl">Cancelar Escaneo</button></div>)}
 
         {activeTab === 'profile' && (
            <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
@@ -234,8 +233,15 @@ export default function Home() {
              <div className="space-y-6">
                <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Nombre</label><input className="w-full p-5 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-transparent focus:bg-white focus:border-pink-200 outline-none transition-all" value={name} onChange={e => setName(e.target.value)} /></div>
                <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Email</label><input type="email" className="w-full p-5 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-transparent focus:bg-white focus:border-pink-200 outline-none transition-all" value={email} onChange={e => setEmail(e.target.value)} /></div>
+               
+               {/* 🛠️ CAMPOS RESTAURADOS AQUÍ 👇 */}
+               <div className="flex gap-4">
+                  <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Fecha</label><input type="date" className="w-full p-5 bg-gray-50 rounded-2xl text-gray-800 font-bold" value={birthDate} onChange={e => setBirthDate(e.target.value)} /></div>
+                  <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Género</label><select className="w-full p-5 bg-gray-50 rounded-2xl text-gray-800 font-bold appearance-none" value={gender} onChange={e => setGender(e.target.value)}><option value="Hombre">M</option><option value="Mujer">F</option></select></div>
+               </div>
              </div>
              <button onClick={handleUpdate} className="w-full bg-gray-900 text-white p-5 rounded-2xl font-bold mt-10 shadow-xl active:scale-95 transition-all text-lg hover:bg-black">Guardar Cambios 💾</button>
+             {message && <p className="text-center text-green-600 mt-6 font-bold bg-green-50 p-4 rounded-2xl border border-green-100">{message}</p>}
            </div>
         )}
       </div>
