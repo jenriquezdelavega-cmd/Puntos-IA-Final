@@ -1,18 +1,41 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import QRCode from 'react-qr-code';
+import dynamic from 'next/dynamic';
+
+// Cargar Mapa sin SSR
+const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false });
+const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false });
+const useMapEvents = dynamic(() => import('react-leaflet').then(m => m.useMapEvents), { ssr: false });
+
+// Componente para capturar clics en el mapa
+function LocationMarker({ position, setPosition }: any) {
+  const map = useMapEvents({
+    click(e: any) {
+      setPosition([e.latlng.lat, e.latlng.lng]);
+      map.flyTo(e.latlng, map.getZoom());
+    },
+  });
+  return position ? <Marker position={position} /> : null;
+}
 
 export default function AdminPage() {
-  const [tenant, setTenant] = useState<any>(null); // Datos negocio
-  const [userRole, setUserRole] = useState(''); // Rol del usuario logueado
-  
+  const [tenant, setTenant] = useState<any>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  
   const [code, setCode] = useState('');
   const [reportData, setReportData] = useState<any>(null);
   const [baseUrl, setBaseUrl] = useState('');
-  const [tab, setTab] = useState('qr'); // Staff empieza en QR
+  const [tab, setTab] = useState('qr');
+  const [userRole, setUserRole] = useState('');
+
+  // Configuración
   const [prizeName, setPrizeName] = useState('');
+  const [googleLink, setGoogleLink] = useState('');
+  const [coords, setCoords] = useState<[number, number]>([19.4326, -99.1332]); // Default CDMX
+  
   const [redeemCode, setRedeemCode] = useState('');
   const [msg, setMsg] = useState('');
 
@@ -23,34 +46,52 @@ export default function AdminPage() {
       const data = await res.json();
       if(res.ok) {
         setTenant(data.tenant);
-        setUserRole(data.user.role); // 🆕 Guardar rol
+        setUserRole(data.user.role);
         setPrizeName(data.tenant.prize || '');
-        if (typeof window !== 'undefined') setBaseUrl(window.location.origin);
-        
-        // Redirigir según rol
-        if (data.user.role === 'ADMIN') {
-            setTab('dashboard');
-            loadReports(data.tenant.id);
-        } else {
-            setTab('qr'); // Staff directo a QR
+        // Cargar coordenadas guardadas o default
+        if (data.tenant.lat && data.tenant.lng) {
+            setCoords([data.tenant.lat, data.tenant.lng]);
         }
+        if (typeof window !== 'undefined') setBaseUrl(window.location.origin);
+        if (data.user.role === 'ADMIN') { setTab('dashboard'); loadReports(data.tenant.id); } 
+        else setTab('qr');
       } else alert(data.error);
     } catch(e) { alert('Error'); }
   };
 
-  const handleLogout = () => {
-    if(confirm("¿Cerrar sesión?")) {
-        setTenant(null);
-        setUsername('');
-        setPassword('');
+  const loadReports = async (tid: string) => { try { const res = await fetch('/api/admin/reports', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tid }) }); setReportData(await res.json()); } catch(e) {} };
+  const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch (e) {} };
+  
+  // PARSEAR LINK DE GOOGLE MAPS
+  const handleGoogleLink = (link: string) => {
+    setGoogleLink(link);
+    // Intentar extraer coordenadas de la URL (ej: @19.432,-99.133)
+    const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+    const match = link.match(regex);
+    if (match) {
+        const lat = parseFloat(match[1]);
+        const lng = parseFloat(match[2]);
+        setCoords([lat, lng]);
+        alert(`📍 Ubicación detectada: ${lat}, ${lng}`);
     }
   };
 
-  const loadReports = async (tid: string) => {
-    try { const res = await fetch('/api/admin/reports', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tid }) }); setReportData(await res.json()); } catch(e) {}
+  const saveSettings = async () => {
+    try {
+      await fetch('/api/tenant/settings', { 
+        method: 'POST', headers: {'Content-Type': 'application/json'}, 
+        body: JSON.stringify({ 
+            tenantId: tenant.id, 
+            prize: prizeName,
+            lat: coords[0],
+            lng: coords[1],
+            address: googleLink || 'Ubicación de Mapa'
+        }) 
+      });
+      alert('✅ Configuración Guardada');
+    } catch(e) { alert('Error'); }
   };
-  const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch (e) {} };
-  const savePrize = async () => { try { await fetch('/api/tenant/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, prize: prizeName }) }); alert('Guardado'); } catch(e) { alert('Error'); } };
+
   const validateRedeem = async () => { setMsg('Validando...'); try { const res = await fetch('/api/redeem/validate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, code: redeemCode }) }); const data = await res.json(); if (res.ok) { setMsg(`✅ ENTREGAR A: ${data.user}`); setRedeemCode(''); if(userRole==='ADMIN') loadReports(tenant.id); } else setMsg('❌ ' + data.error); } catch(e) { setMsg('Error'); } };
   const downloadCSV = () => { if (!reportData?.csvData) return; const headers = Object.keys(reportData.csvData[0]).join(','); const rows = reportData.csvData.map((obj: any) => Object.values(obj).join(',')).join('\n'); const encodedUri = encodeURI("data:text/csv;charset=utf-8," + headers + "\n" + rows); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `clientes_${tenant.slug}.csv`); document.body.appendChild(link); link.click(); };
 
@@ -71,38 +112,27 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
-      {/* SIDEBAR */}
       <div className="w-full md:w-64 bg-gray-900 text-white flex md:flex-col p-6 fixed bottom-0 md:relative z-50 md:h-full justify-between md:justify-start border-t md:border-t-0 md:border-r border-gray-800">
         <h1 className="text-2xl font-black tracking-tighter mb-4 hidden md:block">punto<span className="text-pink-500">IA</span></h1>
-        
-        <div className="hidden md:block mb-6">
-            <span className={`px-2 py-1 rounded text-xs font-bold ${userRole==='ADMIN'?'bg-purple-500':'bg-blue-500'}`}>{userRole}</span>
-        </div>
-
+        <div className="hidden md:block mb-6"><span className={`px-2 py-1 rounded text-xs font-bold ${userRole==='ADMIN'?'bg-purple-500':'bg-blue-500'}`}>{userRole}</span></div>
         <nav className="flex md:flex-col gap-2 w-full justify-around md:justify-start">
-          {/* Solo ADMIN ve Dashboard */}
           {userRole === 'ADMIN' && <button onClick={()=>setTab('dashboard')} className={`p-3 rounded-xl ${tab==='dashboard'?'bg-gray-800 text-white':'text-gray-400'}`}>📊 <span className="hidden md:inline ml-2">Dashboard</span></button>}
-          
           <button onClick={()=>setTab('qr')} className={`p-3 rounded-xl ${tab==='qr'?'bg-gray-800 text-white':'text-gray-400'}`}>🎲 <span className="hidden md:inline ml-2">QR</span></button>
           <button onClick={()=>setTab('redeem')} className={`p-3 rounded-xl ${tab==='redeem'?'bg-gray-800 text-white':'text-gray-400'}`}>🎁 <span className="hidden md:inline ml-2">Canjear</span></button>
-          
-          {/* Solo ADMIN ve Config */}
           {userRole === 'ADMIN' && <button onClick={()=>setTab('settings')} className={`p-3 rounded-xl ${tab==='settings'?'bg-gray-800 text-white':'text-gray-400'}`}>⚙️ <span className="hidden md:inline ml-2">Config</span></button>}
         </nav>
-        
-        {/* BOTÓN SALIR DESKTOP */}
         <div className="hidden md:block mt-auto pt-6 border-t border-gray-800">
            <p className="font-bold text-sm truncate">{tenant.name}</p>
-           <button onClick={handleLogout} className="text-xs text-red-400 mt-4 hover:text-red-300 border border-red-900 p-2 rounded w-full">Cerrar Sesión</button>
+           <button onClick={() => setTenant(null)} className="text-xs text-red-400 mt-4 hover:text-red-300 border border-red-900 p-2 rounded w-full">Cerrar Sesión</button>
         </div>
       </div>
-
-      {/* BOTÓN SALIR MÓVIL (Flotante arriba derecha) */}
-      <button onClick={handleLogout} className="md:hidden fixed top-4 right-4 z-50 bg-red-600 text-white w-8 h-8 rounded-full font-bold flex items-center justify-center shadow-lg">✕</button>
+      
+      {/* BOTÓN SALIR MÓVIL */}
+      <button onClick={() => setTenant(null)} className="md:hidden fixed top-4 right-4 z-50 bg-red-600 text-white w-8 h-8 rounded-full font-bold flex items-center justify-center shadow-lg">✕</button>
 
       <div className="flex-1 p-8 overflow-y-auto mb-20 md:mb-0">
         
-        {/* VISTA DASHBOARD (Solo Admin) */}
+        {/* VISTA DASHBOARD */}
         {tab === 'dashboard' && userRole === 'ADMIN' && (
           <div className="space-y-8 animate-fadeIn">
             <h2 className="text-3xl font-bold text-gray-800">Resumen</h2>
@@ -110,7 +140,6 @@ export default function AdminPage() {
                <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100"><p className="text-gray-400 text-xs font-bold uppercase">Clientes</p><p className="text-4xl font-black text-gray-900 mt-2">{reportData?.csvData?.length || 0}</p></div>
                <div className="bg-gradient-to-br from-orange-400 to-pink-500 p-6 rounded-3xl shadow-lg text-white cursor-pointer" onClick={downloadCSV}><p className="font-bold uppercase text-xs opacity-80">Base de Datos</p><p className="text-2xl font-black mt-2">📥 Excel</p></div>
             </div>
-            {/* ... (Resto de gráficas iguales) ... */}
             <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100"><h3 className="text-lg font-bold text-gray-800 mb-6">Tendencia</h3><div className="h-40 flex items-end justify-between gap-2">{reportData?.chartData?.map((d:any,i:number)=><div key={i} className="flex-1 bg-indigo-500 rounded-t-lg" style={{height:`${Math.min(d.count*20,150)}px`}}></div>)}</div></div>
           </div>
         )}
@@ -139,15 +168,43 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* VISTA CONFIG (Solo Admin) */}
+        {/* VISTA CONFIG (MAPA + PREMIO) */}
         {tab === 'settings' && userRole === 'ADMIN' && (
-          <div className="max-w-lg mx-auto mt-10 animate-fadeIn">
-             <div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-6">
-                <h2 className="text-xl font-bold text-gray-800">Configuración</h2>
-                <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Negocio</label><input className="w-full p-4 bg-gray-100 rounded-2xl mt-1 text-gray-500 font-bold border border-transparent cursor-not-allowed" value={tenant.name} readOnly /></div>
+          <div className="max-w-lg mx-auto mt-10 animate-fadeIn space-y-6">
+             {/* TARJETA CONFIG BASICA */}
+             <div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
+                <h2 className="text-xl font-bold text-gray-800">Datos del Negocio</h2>
+                <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Nombre</label><input className="w-full p-4 bg-gray-100 rounded-2xl mt-1 text-gray-500 font-bold border border-transparent cursor-not-allowed" value={tenant.name} readOnly /></div>
                 <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Premio</label><input className="w-full p-4 bg-gray-50 rounded-2xl mt-1 font-medium text-gray-800 border border-transparent focus:bg-white focus:border-gray-200 outline-none transition-all" value={prizeName} onChange={e => setPrizeName(e.target.value)} /></div>
-                <button onClick={savePrize} className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold hover:bg-black transition-all">Guardar Cambios</button>
              </div>
+
+             {/* TARJETA MAPA */}
+             <div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
+                <h2 className="text-xl font-bold text-gray-800">📍 Ubicación</h2>
+                <p className="text-sm text-gray-500">Pega un link de Google Maps o toca el mapa.</p>
+                
+                <input 
+                  className="w-full p-3 bg-blue-50 rounded-xl text-blue-800 text-xs font-mono border border-blue-100 mb-2" 
+                  placeholder="https://maps.google.com/?q=..."
+                  value={googleLink}
+                  onChange={(e) => handleGoogleLink(e.target.value)}
+                />
+
+                <div className="h-[300px] w-full rounded-2xl overflow-hidden border border-gray-200 z-0">
+                   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+                   {/* Importante: El mapa necesita renderizarse solo en cliente, si da error refrescar */}
+                   {typeof window !== 'undefined' && (
+                     <MapContainer center={coords} zoom={15} style={{ height: '100%', width: '100%' }}>
+                       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                       <LocationMarker position={coords} setPosition={setCoords} />
+                     </MapContainer>
+                   )}
+                </div>
+                
+                <p className="text-center text-xs text-gray-400 mt-2">Lat: {coords[0].toFixed(4)}, Lng: {coords[1].toFixed(4)}</p>
+             </div>
+
+             <button onClick={saveSettings} className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold hover:bg-black transition-all shadow-lg">Guardar Todo</button>
           </div>
         )}
       </div>
