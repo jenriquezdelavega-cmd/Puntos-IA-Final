@@ -97,34 +97,37 @@ export default function Home() {
 
   const handleLogout = () => { if(confirm("¿Salir?")) { setUser(null); setView('WELCOME'); setPhone(''); setPassword(''); setMessage(''); } };
 
-  // --- LOGO COMPONENTE ---
+  // --- LOGO VECTORIAL HD ---
   const BrandLogo = () => (
-    <div className="flex items-center justify-center gap-1 mb-2">
-      <span className="text-5xl font-extrabold tracking-tighter text-white drop-shadow-md">punto</span>
-      <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-yellow-300 via-orange-400 to-red-500 shadow-[0_0_15px_rgba(255,165,0,0.8)] border-2 border-white/50"></div>
-      <span className="text-5xl font-extrabold tracking-tighter text-white drop-shadow-md">IA</span>
+    <div className="flex items-center justify-center gap-3 mb-6 animate-fadeIn select-none">
+      <h1 className="text-6xl font-black tracking-tighter text-white drop-shadow-2xl" style={{fontFamily: 'Inter, sans-serif'}}>
+        punto<span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-orange-100">IA</span>
+      </h1>
+      {/* Orbe Decorativo */}
+      <div className="h-4 w-4 rounded-full bg-white animate-pulse shadow-[0_0_15px_white]"></div>
     </div>
   );
 
   // --- VISTAS ---
 
   if (view === 'WELCOME') return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 flex flex-col items-center justify-center p-8 text-white relative overflow-hidden">
-      {/* Partículas de fondo */}
-      <div className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full blur-xl animate-pulse"></div>
-      <div className="absolute bottom-20 right-10 w-32 h-32 bg-yellow-300/20 rounded-full blur-2xl"></div>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex flex-col items-center justify-center p-8 text-white relative overflow-hidden">
+      
+      {/* Fondo Animado Sutil */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-400/30 rounded-full blur-[100px]"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-orange-400/30 rounded-full blur-[100px]"></div>
 
-      <div className="z-10 text-center w-full max-w-sm">
+      <div className="z-10 text-center w-full max-w-sm flex flex-col items-center">
         <BrandLogo />
-        <p className="text-white/90 text-lg font-medium mb-12 tracking-wide">Tu lealtad, fácil y ya.</p>
+        <p className="text-white/80 text-lg font-medium mb-12 tracking-wide mt-2">La forma inteligente de ganar.</p>
 
         {pendingCode && <div className="bg-white/20 p-4 rounded-2xl mb-8 border border-white/30 backdrop-blur-sm animate-bounce"><p className="font-bold">🎉 ¡Código detectado!</p></div>}
 
-        <div className="space-y-4">
-          <button onClick={() => {setMessage(''); setView('LOGIN');}} className="w-full bg-white text-pink-600 py-4 rounded-2xl font-extrabold text-lg shadow-xl hover:bg-gray-50 active:scale-95 transition-all">
+        <div className="space-y-4 w-full">
+          <button onClick={() => {setMessage(''); setView('LOGIN');}} className="w-full bg-white text-purple-700 py-4 rounded-2xl font-extrabold text-lg shadow-2xl hover:bg-gray-50 active:scale-95 transition-all">
             Iniciar Sesión
           </button>
-          <button onClick={() => {setMessage(''); setView('REGISTER');}} className="w-full bg-transparent border-2 border-white/50 text-white py-4 rounded-2xl font-bold text-lg hover:bg-white/10 active:scale-95 transition-all">
+          <button onClick={() => {setMessage(''); setView('REGISTER');}} className="w-full bg-black/20 border border-white/20 text-white py-4 rounded-2xl font-bold text-lg hover:bg-black/30 active:scale-95 transition-all backdrop-blur-sm">
             Crear Cuenta
           </button>
         </div>
@@ -136,36 +139,36 @@ export default function Home() {
     const isReg = view === 'REGISTER';
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        {/* Header con gradiente */}
-        <div className="bg-gradient-to-r from-orange-400 to-pink-500 p-8 pb-12 rounded-b-[3rem] shadow-lg text-white text-center relative">
-           <button onClick={() => setView('WELCOME')} className="absolute top-6 left-6 text-white/80 hover:text-white font-bold text-2xl">←</button>
-           <h2 className="text-3xl font-extrabold mt-2">{isReg ? 'Únete a PuntoIA' : 'Bienvenido'}</h2>
-           <p className="text-white/80 text-sm mt-1">{isReg ? 'Empieza a ganar hoy' : 'Tus premios te esperan'}</p>
+        {/* Header Expandido (Safe Area) */}
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 pb-20 pt-16 rounded-b-[3rem] shadow-xl text-white text-center relative z-0">
+           <button onClick={() => setView('WELCOME')} className="absolute top-12 left-6 text-white/70 hover:text-white font-bold text-2xl transition-colors">←</button>
+           <h2 className="text-3xl font-extrabold mt-2 tracking-tight">{isReg ? 'Únete al Club' : 'Bienvenido'}</h2>
+           <p className="text-white/70 text-sm mt-1 font-medium">{isReg ? 'Tus recompensas comienzan aquí' : 'Continúa sumando puntos'}</p>
         </div>
 
-        <div className="flex-1 px-6 -mt-8">
-          <div className="bg-white rounded-3xl shadow-xl p-6 space-y-5 border border-gray-100">
+        <div className="flex-1 px-6 -mt-12 pb-10 z-10">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 space-y-6 border border-gray-100">
              
-             {isReg && <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Nombre</label><input className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold focus:ring-2 focus:ring-pink-400 outline-none" value={name} onChange={e=>setName(e.target.value)} /></div>}
+             {isReg && <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Nombre Completo</label><input className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold focus:bg-white focus:ring-2 focus:ring-purple-500 outline-none transition-all" value={name} onChange={e=>setName(e.target.value)} /></div>}
              
-             <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Teléfono</label><input type="tel" maxLength={10} className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold focus:ring-2 focus:ring-pink-400 outline-none" value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,''))} placeholder="10 dígitos" /></div>
+             <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Teléfono Celular</label><input type="tel" maxLength={10} className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold focus:bg-white focus:ring-2 focus:ring-purple-500 outline-none transition-all" value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,''))} placeholder="10 dígitos" /></div>
              
              {isReg && (
                <>
-                 <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Email (Opcional)</label><input type="email" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium focus:ring-2 focus:ring-pink-400 outline-none" value={email} onChange={e=>setEmail(e.target.value)} /></div>
-                 <div className="flex gap-3">
-                    <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1">Fecha</label><input type="date" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium" value={birthDate} onChange={e=>setBirthDate(e.target.value)} /></div>
-                    <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1">Género</label><select className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium" value={gender} onChange={e=>setGender(e.target.value)}><option value="">-</option><option value="Hombre">M</option><option value="Mujer">F</option></select></div>
+                 <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Email (Opcional)</label><input type="email" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium focus:bg-white focus:ring-2 focus:ring-purple-500 outline-none transition-all" value={email} onChange={e=>setEmail(e.target.value)} /></div>
+                 <div className="flex gap-4">
+                    <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Fecha</label><input type="date" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium h-[58px]" value={birthDate} onChange={e=>setBirthDate(e.target.value)} /></div>
+                    <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Género</label><select className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium h-[58px]" value={gender} onChange={e=>setGender(e.target.value)}><option value="">-</option><option value="Hombre">M</option><option value="Mujer">F</option></select></div>
                  </div>
                </>
              )}
 
-             <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Contraseña</label><input type="password" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold focus:ring-2 focus:ring-pink-400 outline-none" value={password} onChange={e=>setPassword(e.target.value)} /></div>
+             <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Contraseña</label><input type="password" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold focus:bg-white focus:ring-2 focus:ring-purple-500 outline-none transition-all" value={password} onChange={e=>setPassword(e.target.value)} /></div>
              
-             {message && <div className="p-3 bg-red-50 text-red-500 rounded-xl text-center font-bold text-sm animate-pulse">{message}</div>}
+             {message && <div className="p-4 bg-red-50 text-red-500 rounded-2xl text-center font-bold text-sm animate-fadeIn border border-red-100">{message}</div>}
 
-             <button onClick={isReg ? handleRegister : handleLogin} disabled={loading} className="w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white py-4 rounded-2xl font-bold shadow-lg hover:shadow-xl active:scale-95 transition-all text-lg mt-2">
-               {loading ? 'Procesando...' : isReg ? 'Registrarme' : 'Entrar ->'}
+             <button onClick={isReg ? handleRegister : handleLogin} disabled={loading} className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold shadow-xl hover:shadow-2xl active:scale-95 transition-all text-lg mt-4">
+               {loading ? 'Procesando...' : isReg ? 'Crear Cuenta' : 'Entrar'}
              </button>
           </div>
         </div>
@@ -174,35 +177,35 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-28">
+    <div className="min-h-screen bg-gray-50 pb-32">
       {prizeCode && (
         <div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-6 animate-fadeIn backdrop-blur-md">
-          <div className="bg-white p-8 rounded-3xl text-center w-full max-w-sm relative shadow-2xl">
-            <button onClick={() => { setPrizeCode(null); handleLogin(); }} className="absolute top-4 right-4 text-gray-400 font-bold p-2 text-xl">✕</button>
-            <p className="text-pink-500 uppercase text-xs font-black tracking-widest mb-2">¡FELICIDADES!</p>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">{prizeCode.tenant}</h2>
-            <div className="bg-gradient-to-r from-yellow-100 to-orange-100 border-2 border-orange-300 p-6 rounded-3xl mb-4">
-               <p className="text-6xl font-mono font-black text-orange-600 tracking-widest">{prizeCode.code}</p>
+          <div className="bg-white p-8 rounded-[2rem] text-center w-full max-w-sm relative shadow-2xl overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-400 to-orange-500"></div>
+            <button onClick={() => { setPrizeCode(null); handleLogin(); }} className="absolute top-4 right-4 text-gray-400 font-bold p-2 text-xl hover:text-gray-600">✕</button>
+            <p className="text-purple-600 uppercase text-xs font-black tracking-widest mb-2 mt-4">¡PREMIO DESBLOQUEADO!</p>
+            <h2 className="text-3xl font-black text-gray-900 mb-6 leading-tight">{prizeCode.tenant}</h2>
+            <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-8 rounded-3xl mb-6">
+               <p className="text-5xl font-mono font-bold text-gray-800 tracking-widest">{prizeCode.code}</p>
             </div>
-            <p className="text-sm text-gray-500 font-medium">Muestra este código en caja.</p>
+            <p className="text-sm text-gray-500 font-medium">Muestra este código al personal.</p>
           </div>
         </div>
       )}
 
-      {/* HEADER PRINCIPAL */}
-      <div className="bg-white px-6 pt-12 pb-6 sticky top-0 z-10 shadow-sm flex justify-between items-center">
+      {/* HEADER APP (Más espacio arriba) */}
+      <div className="bg-white px-8 pt-16 pb-6 sticky top-0 z-20 shadow-sm flex justify-between items-center">
          <div>
-            <p className="text-gray-400 text-xs font-bold uppercase tracking-wide">Bienvenido,</p>
-            <h1 className="text-2xl font-black text-gray-800">{user.name.split(' ')[0]}</h1>
+            <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Hola,</p>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">{user.name.split(' ')[0]}</h1>
          </div>
-         <button onClick={handleLogout} className="h-10 w-10 bg-red-50 text-red-500 rounded-full font-bold border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all">✕</button>
+         <button onClick={handleLogout} className="h-12 w-12 bg-red-50 text-red-500 rounded-full font-bold border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all text-xl">✕</button>
       </div>
 
       <div className="p-6">
         {activeTab === 'checkin' && !scanning && (
            <div className="flex flex-col gap-6">
-             {/* LISTA DE TARJETAS */}
-             <div className="space-y-5">
+             <div className="space-y-6">
                {user.memberships && user.memberships.length > 0 ? (
                  user.memberships.map((m: any, idx: number) => {
                    const progress = Math.min(m.points, 100);
@@ -210,29 +213,25 @@ export default function Home() {
                    const prizeName = m.prize || "Sorpresa"; 
                    
                    return (
-                     <div key={idx} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 relative overflow-hidden group">
-                       {/* Fondo sutil de tarjeta */}
-                       <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-orange-100 to-pink-100 rounded-bl-full opacity-50"></div>
-                       
+                     <div key={idx} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-all">
                        <div className="relative z-10">
-                         <div className="flex justify-between items-center mb-4">
-                           <h3 className="font-bold text-gray-800 text-lg">{m.name}</h3>
-                           <span className="bg-gray-900 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md">{m.points} pts</span>
+                         <div className="flex justify-between items-center mb-6">
+                           <h3 className="font-bold text-gray-800 text-xl tracking-tight">{m.name}</h3>
+                           <span className="bg-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">{m.points} pts</span>
                          </div>
-                         
                          {!isWinner ? (
                            <>
-                             <div className="w-full bg-gray-100 rounded-full h-3 mb-3 overflow-hidden">
-                               <div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-pink-500 transition-all duration-1000 shadow-[0_0_10px_rgba(236,72,153,0.5)]" style={{ width: `${progress}%` }}></div>
+                             <div className="w-full bg-gray-100 rounded-full h-4 mb-3 overflow-hidden border border-gray-100">
+                               <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-1000 shadow-[0_0_15px_rgba(236,72,153,0.4)]" style={{ width: `${progress}%` }}></div>
                              </div>
                              <div className="flex justify-between text-xs font-bold uppercase tracking-wide">
-                               <span className="text-gray-300">Inicio</span>
-                               <span className="text-pink-500">Meta: {prizeName}</span>
+                               <span className="text-gray-400">Progreso</span>
+                               <span className="text-purple-600">Meta: {prizeName}</span>
                              </div>
                            </>
                          ) : (
-                           <button onClick={() => getPrizeCode(m.tenantId, m.name)} className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold py-4 rounded-2xl shadow-lg transform hover:scale-[1.02] transition-all animate-pulse">
-                             🏆 CANJEAR: {prizeName}
+                           <button onClick={() => getPrizeCode(m.tenantId, m.name)} className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-black py-4 rounded-2xl shadow-xl transform hover:scale-[1.02] transition-all animate-pulse tracking-wide text-lg">
+                             🏆 CANJEAR AHORA
                            </button>
                          )}
                        </div>
@@ -240,22 +239,22 @@ export default function Home() {
                    );
                  })
                ) : (
-                 <div className="text-center py-12 opacity-60">
-                    <p className="text-6xl mb-4">🚀</p>
-                    <p className="font-bold text-gray-500">Aún no tienes puntos</p>
-                    <p className="text-sm text-gray-400">Visita un negocio y escanea su código</p>
+                 <div className="text-center py-16 opacity-50 bg-white rounded-[2rem] border border-gray-100 border-dashed">
+                    <p className="text-6xl mb-4 grayscale">🛸</p>
+                    <p className="font-bold text-gray-400 text-lg">Tu billetera está vacía</p>
+                    <p className="text-sm text-gray-300 mt-1">Escanea tu primer código para empezar</p>
                  </div>
                )}
              </div>
 
              <div className="mt-4">
-               <button onClick={() => setScanning(true)} className="w-full bg-gray-900 text-white py-5 rounded-3xl font-bold shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all text-lg">
+               <button onClick={() => setScanning(true)} className="w-full bg-gray-900 text-white py-5 rounded-[2rem] font-bold shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all text-lg hover:bg-black">
                  <span className="text-2xl">📷</span> Escanear QR
                </button>
                
                <div className="mt-6 flex gap-3">
-                   <input className="flex-1 p-4 bg-white rounded-2xl text-gray-800 font-bold text-center tracking-[0.3em] uppercase border border-gray-200 placeholder-gray-300 shadow-sm outline-none focus:border-pink-400" placeholder="AB-12" value={manualCode} onChange={e => setManualCode(e.target.value.toUpperCase())} maxLength={7} />
-                   <button onClick={() => handleScan(manualCode)} disabled={!manualCode} className="bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold px-6 rounded-2xl shadow-lg disabled:opacity-50 disabled:shadow-none">OK</button>
+                   <input className="flex-1 p-5 bg-white rounded-2xl text-gray-800 font-bold text-center tracking-[0.3em] uppercase border-2 border-gray-100 placeholder-gray-300 shadow-sm outline-none focus:border-purple-500 transition-all" placeholder="AB-12" value={manualCode} onChange={e => setManualCode(e.target.value.toUpperCase())} maxLength={7} />
+                   <button onClick={() => handleScan(manualCode)} disabled={!manualCode} className="bg-purple-600 text-white font-bold px-8 rounded-2xl shadow-lg disabled:opacity-50 disabled:shadow-none hover:bg-purple-700 transition-all">OK</button>
                </div>
              </div>
            </div>
@@ -264,40 +263,40 @@ export default function Home() {
         {scanning && (
           <div className="fixed inset-0 bg-black z-50 flex flex-col">
             <Scanner onScan={(r) => r[0] && handleScan(r[0].rawValue)} onError={(e) => console.log(e)} />
-            <button onClick={() => setScanning(false)} className="absolute bottom-10 left-10 right-10 bg-white/20 backdrop-blur text-white p-4 rounded-2xl font-bold border border-white/30">Cancelar</button>
+            <button onClick={() => setScanning(false)} className="absolute bottom-12 left-8 right-8 bg-white/20 backdrop-blur-md text-white p-5 rounded-3xl font-bold border border-white/20 shadow-2xl">Cancelar Escaneo</button>
           </div>
         )}
 
         {activeTab === 'profile' && (
-           <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-             <div className="flex items-center gap-4 mb-8">
-                <div className="h-16 w-16 bg-gradient-to-br from-orange-100 to-pink-100 rounded-2xl flex items-center justify-center text-3xl">👤</div>
-                <div><h2 className="text-xl font-black text-gray-800">Mi Perfil</h2><p className="text-sm text-gray-400">Edita tu información</p></div>
+           <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
+             <div className="flex items-center gap-5 mb-10">
+                <div className="h-20 w-20 bg-gradient-to-br from-purple-100 to-pink-100 rounded-[1.5rem] flex items-center justify-center text-4xl shadow-inner text-purple-500">👤</div>
+                <div><h2 className="text-2xl font-black text-gray-900">Mi Perfil</h2><p className="text-sm text-gray-400 font-medium">Gestiona tu identidad</p></div>
              </div>
              
-             <div className="space-y-5">
-               <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Nombre</label><input className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-transparent focus:bg-white focus:border-pink-300 outline-none transition-all" value={name} onChange={e => setName(e.target.value)} /></div>
-               <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Email</label><input type="email" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-transparent focus:bg-white focus:border-pink-300 outline-none transition-all" value={email} onChange={e => setEmail(e.target.value)} /></div>
-               <div className="flex gap-3">
-                  <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1">Fecha</label><input type="date" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold" value={birthDate} onChange={e => setBirthDate(e.target.value)} /></div>
-                  <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1">Género</label><select className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold" value={gender} onChange={e => setGender(e.target.value)}><option value="Hombre">M</option><option value="Mujer">F</option></select></div>
+             <div className="space-y-6">
+               <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Nombre</label><input className="w-full p-5 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-transparent focus:bg-white focus:border-purple-200 outline-none transition-all" value={name} onChange={e => setName(e.target.value)} /></div>
+               <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Email</label><input type="email" className="w-full p-5 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-transparent focus:bg-white focus:border-purple-200 outline-none transition-all" value={email} onChange={e => setEmail(e.target.value)} /></div>
+               <div className="flex gap-4">
+                  <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Fecha</label><input type="date" className="w-full p-5 bg-gray-50 rounded-2xl text-gray-800 font-bold" value={birthDate} onChange={e => setBirthDate(e.target.value)} /></div>
+                  <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Género</label><select className="w-full p-5 bg-gray-50 rounded-2xl text-gray-800 font-bold appearance-none" value={gender} onChange={e => setGender(e.target.value)}><option value="Hombre">M</option><option value="Mujer">F</option></select></div>
                </div>
              </div>
-             <button onClick={handleUpdate} className="w-full bg-gray-900 text-white p-4 rounded-2xl font-bold mt-8 shadow-lg active:scale-95 transition-all">Guardar Cambios 💾</button>
-             {message && <p className="text-center text-green-600 mt-4 font-bold bg-green-50 p-2 rounded-lg">{message}</p>}
+             <button onClick={handleUpdate} className="w-full bg-gray-900 text-white p-5 rounded-2xl font-bold mt-10 shadow-xl active:scale-95 transition-all text-lg hover:bg-black">Guardar Cambios 💾</button>
+             {message && <p className="text-center text-green-600 mt-6 font-bold bg-green-50 p-4 rounded-2xl border border-green-100">{message}</p>}
            </div>
         )}
       </div>
 
-      {/* NAVBAR FLOTANTE */}
-      <div className="fixed bottom-6 left-6 right-6 bg-white/90 backdrop-blur-lg border border-white/50 p-2 rounded-[2rem] shadow-2xl flex justify-between items-center z-40">
-        <button onClick={() => setActiveTab('checkin')} className={`flex-1 flex flex-col items-center py-3 rounded-[1.5rem] transition-all ${activeTab==='checkin'?'bg-gray-900 text-white shadow-lg':'text-gray-400 hover:bg-gray-50'}`}>
+      {/* NAVBAR FLOTANTE ESTILO ISLA DINÁMICA */}
+      <div className="fixed bottom-8 left-8 right-8 bg-white/80 backdrop-blur-xl border border-white/40 p-2 rounded-[2.5rem] shadow-2xl flex justify-between items-center z-40 ring-1 ring-black/5">
+        <button onClick={() => setActiveTab('checkin')} className={`flex-1 flex flex-col items-center py-4 rounded-[2rem] transition-all duration-300 ${activeTab==='checkin'?'bg-gray-900 text-white shadow-lg scale-105':'text-gray-400 hover:bg-white hover:text-gray-600'}`}>
             <span className="text-xl mb-1">🔥</span>
-            <span className="text-[10px] font-bold uppercase tracking-wider">Puntos</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">Puntos</span>
         </button>
-        <button onClick={() => setActiveTab('profile')} className={`flex-1 flex flex-col items-center py-3 rounded-[1.5rem] transition-all ${activeTab==='profile'?'bg-gray-900 text-white shadow-lg':'text-gray-400 hover:bg-gray-50'}`}>
+        <button onClick={() => setActiveTab('profile')} className={`flex-1 flex flex-col items-center py-4 rounded-[2rem] transition-all duration-300 ${activeTab==='profile'?'bg-gray-900 text-white shadow-lg scale-105':'text-gray-400 hover:bg-white hover:text-gray-600'}`}>
             <span className="text-xl mb-1">👤</span>
-            <span className="text-[10px] font-bold uppercase tracking-wider">Perfil</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">Perfil</span>
         </button>
       </div>
     </div>
