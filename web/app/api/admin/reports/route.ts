@@ -9,53 +9,70 @@ export async function POST(request: Request) {
 
     if (!tenantId) return NextResponse.json({ error: 'Falta Tenant ID' }, { status: 400 });
 
-    // 1. OBTENER TODAS LAS VISITAS (Para gráfica)
-    // Buscamos visitas de este negocio
+    // 1. VISITAS
     const visits = await prisma.visit.findMany({
-      where: {
-        membership: { tenantId: tenantId }
-      },
-      include: {
-        membership: {
-          include: { user: true }
-        }
-      },
+      where: { membership: { tenantId } },
       orderBy: { visitedAt: 'asc' }
     });
 
-    // Agrupar visitas por fecha (YYYY-MM-DD)
     const visitsByDate: Record<string, number> = {};
     visits.forEach(v => {
       const date = v.visitedAt.toISOString().split('T')[0];
       visitsByDate[date] = (visitsByDate[date] || 0) + 1;
     });
+    const chartData = Object.keys(visitsByDate).map(d => ({ date: d, count: visitsByDate[d] }));
 
-    // Formatear para gráfica
-    const chartData = Object.keys(visitsByDate).map(date => ({
-      date,
-      count: visitsByDate[date]
-    }));
-
-    // 2. OBTENER CLIENTES (Para Excel)
-    // Lista plana de usuarios con sus puntos
+    // 2. DEMOGRAFÍA
     const memberships = await prisma.membership.findMany({
-      where: { tenantId: tenantId },
+      where: { tenantId },
       include: { user: true }
     });
 
+    let male = 0, female = 0, other = 0;
+    
+    // 🆕 NUEVOS RANGOS DE EDAD
+    const ages = { '<18': 0, '18-25': 0, '26-35': 0, '36-45': 0, '46-65': 0, '>65': 0 };
+
+    memberships.forEach(m => {
+      // Género
+      const g = (m.user.gender || '').toLowerCase();
+      if (g === 'hombre' || g === 'm') male++;
+      else if (g === 'mujer' || g === 'f') female++;
+      else other++;
+
+      // Edad
+      if (m.user.birthDate) {
+        const birth = new Date(m.user.birthDate);
+        const age = new Date().getFullYear() - birth.getFullYear();
+        
+        if (age < 18) ages['<18']++;
+        else if (age >= 18 && age <= 25) ages['18-25']++;
+        else if (age >= 26 && age <= 35) ages['26-35']++;
+        else if (age >= 36 && age <= 45) ages['36-45']++;
+        else if (age >= 46 && age <= 65) ages['46-65']++;
+        else if (age > 65) ages['>65']++;
+      }
+    });
+
+    const genderData = [
+      { label: 'Hombres', value: male, color: '#3b82f6' },
+      { label: 'Mujeres', value: female, color: '#ec4899' },
+      { label: 'Otros', value: other, color: '#9ca3af' }
+    ];
+
+    const ageData = Object.keys(ages).map(k => ({ label: k, value: ages[k as keyof typeof ages] }));
+
+    // CSV
     const csvData = memberships.map(m => ({
       Nombre: m.user.name || 'Anónimo',
       Telefono: m.user.phone,
       Email: m.user.email || '',
       Genero: m.user.gender || '',
-      VisitasTotales: m.totalVisits,
-      UltimaVisita: m.lastVisitAt ? m.lastVisitAt.toISOString().split('T')[0] : 'N/A'
+      Visitas: m.totalVisits,
+      Ultima: m.lastVisitAt ? m.lastVisitAt.toISOString().split('T')[0] : '-'
     }));
 
-    return NextResponse.json({ 
-      chartData, 
-      csvData 
-    });
+    return NextResponse.json({ chartData, genderData, ageData, csvData });
 
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
