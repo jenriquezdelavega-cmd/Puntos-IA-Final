@@ -11,19 +11,22 @@ model Tenant {
   id          String   @id @default(uuid())
   name        String
   slug        String   @unique
-  // Mantenemos estos por compatibilidad temporal, pero usaremos TenantUser
   username    String?   @unique 
   password    String?   
   prize       String   @default("Premio Sorpresa")
-  createdAt   DateTime @default(now())
   
-  users       TenantUser[] // 🆕 Empleados
+  // 🆕 UBICACIÓN GEOGRÁFICA
+  lat         Float?   @default(19.4326) // Default CDMX
+  lng         Float?   @default(-99.1332)
+  address     String?  @default("Dirección pendiente")
+
+  createdAt   DateTime @default(now())
+  users       TenantUser[]
   memberships Membership[]
   dailyCodes  DailyCode[]
   redemptions Redemption[]
 }
 
-// 🆕 NUEVA TABLA DE EMPLEADOS
 model TenantUser {
   id        String   @id @default(uuid())
   name      String
@@ -31,8 +34,7 @@ model TenantUser {
   email     String
   username  String   @unique
   password  String
-  role      String   // "ADMIN" o "STAFF"
-  
+  role      String   
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
 }
