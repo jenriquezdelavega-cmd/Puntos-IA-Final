@@ -11,19 +11,36 @@ model Tenant {
   id          String   @id @default(uuid())
   name        String
   slug        String   @unique
-  username    String   @unique @default("admin")
-  password    String   @default("1234")
+  // Mantenemos estos por compatibilidad temporal, pero usaremos TenantUser
+  username    String?   @unique 
+  password    String?   
   prize       String   @default("Premio Sorpresa")
   createdAt   DateTime @default(now())
+  
+  users       TenantUser[] // 🆕 Empleados
   memberships Membership[]
   dailyCodes  DailyCode[]
   redemptions Redemption[]
 }
 
+// 🆕 NUEVA TABLA DE EMPLEADOS
+model TenantUser {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String
+  email     String
+  username  String   @unique
+  password  String
+  role      String   // "ADMIN" o "STAFF"
+  
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+}
+
 model User {
   id        String   @id @default(uuid())
   phone     String   @unique
-  email     String?  // 🆕 Nuevo campo (opcional para no romper viejos)
+  email     String?
   password  String   @default("1234")
   name      String?
   gender    String?  
