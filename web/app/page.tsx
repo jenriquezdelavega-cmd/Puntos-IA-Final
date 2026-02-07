@@ -5,36 +5,21 @@ import dynamic from 'next/dynamic';
 
 const BusinessMap = dynamic(
   () => import('./components/BusinessMap'), 
-  { ssr: false, loading: () => <div className="h-full w-full bg-gray-50 flex flex-col items-center justify-center text-gray-400 animate-pulse"><span className="text-4xl mb-2">🗺️</span><span className="text-xs font-bold uppercase tracking-widest">Cargando Mapa...</span></div> }
+  { ssr: false, loading: () => <div className="h-full w-full bg-gray-50 flex flex-col items-center justify-center text-gray-400 animate-pulse"><span className="text-4xl mb-2">🗺️</span><span className="text-xs font-bold uppercase tracking-widest">Cargando...</span></div> }
 );
 
 type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
 
-// --- COMPONENTE TUTORIAL ACTUALIZADO ---
 const Onboarding = () => {
   const [slide, setSlide] = useState(0);
-  const slides = [
-    { icon: "📸", title: "1. Escanea", text: "Visita tus lugares favoritos y escanea el código QR en caja." },
-    { icon: "🔥", title: "2. Suma", text: "Acumula puntos en cada visita automáticamente." },
-    { icon: "🎁", title: "3. Canjea", text: "Al llegar a la meta, genera tu código de premio en la app." },
-    { icon: "🏆", title: "4. Gana", text: "Muestra el código al cajero y recibe tu recompensa." }
-  ];
-
-  useEffect(() => {
-    const interval = setInterval(() => { setSlide((prev) => (prev + 1) % slides.length); }, 4000); // 4 seg por slide
-    return () => clearInterval(interval);
-  }, []);
-
+  const slides = [{icon:"📸",title:"1. Escanea",text:"Visita y escanea el código QR."},{icon:"🔥",title:"2. Suma",text:"Acumula puntos automáticamente."},{icon:"🎁",title:"3. Canjea",text:"Genera tu código de premio."},{icon:"🏆",title:"4. Gana",text:"Recibe tu recompensa."}];
+  useEffect(() => { const i = setInterval(() => setSlide(p => (p+1)%4), 4000); return () => clearInterval(i); }, []);
   return (
-    <div className="flex flex-col items-center justify-center w-full transition-all duration-500 ease-in-out">
+    <div className="flex flex-col items-center w-full transition-all duration-500">
       <div className="text-5xl mb-3 animate-bounce drop-shadow-md">{slides[slide].icon}</div>
-      <h2 className="text-xl font-black text-white mb-2 tracking-tight drop-shadow-md">{slides[slide].title}</h2>
-      <p className="text-white/90 text-center font-medium text-xs leading-relaxed h-8 px-4">{slides[slide].text}</p>
-      <div className="flex gap-2 mt-4">
-        {slides.map((_, i) => (
-          <div key={i} onClick={() => setSlide(i)} className={`h-1.5 w-1.5 rounded-full cursor-pointer transition-all duration-300 ${i === slide ? 'bg-white w-4' : 'bg-white/40'}`} />
-        ))}
-      </div>
+      <h2 className="text-xl font-black text-white mb-2 drop-shadow-md">{slides[slide].title}</h2>
+      <p className="text-white/90 text-center text-xs h-8 px-4">{slides[slide].text}</p>
+      <div className="flex gap-2 mt-4">{slides.map((_,i)=><div key={i} onClick={()=>setSlide(i)} className={`h-1.5 w-1.5 rounded-full transition-all cursor-pointer ${i===slide?'bg-white w-4':'bg-white/40'}`}/>)}</div>
     </div>
   );
 };
@@ -66,83 +51,33 @@ export default function Home() {
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const p = new URLSearchParams(window.location.search);
-      const c = p.get('code');
-      if (c) { setPendingCode(c); if(!user) setMessage('👋 Código detectado.'); }
-    }
+    if (typeof window !== 'undefined') { const p = new URLSearchParams(window.location.search); const c = p.get('code'); if (c) { setPendingCode(c); if(!user) setMessage('👋 Código detectado.'); } }
     loadMapData();
   }, []);
-
   useEffect(() => { if (user && pendingCode) { handleScan(pendingCode); setPendingCode(null); window.history.replaceState({}, '', '/'); } }, [user, pendingCode]);
 
   const loadMapData = async () => { try { const res = await fetch('/api/map/tenants'); const d = await res.json(); if(d.tenants) setTenants(d.tenants); } catch(e){} };
 
   const handleLogin = async () => {
-    setMessage('');
-    if (!phone) return setMessage('❌ Ingresa tu teléfono');
-    setLoading(true);
-    try {
-      const res = await fetch('/api/user/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ phone, password }) });
-      const data = await res.json();
-      if (res.ok) {
-        setUser(data); setName(data.name); setEmail(data.email||''); setGender(data.gender||'');
-        if (data.birthDate) setBirthDate(data.birthDate.split('T')[0]); else setBirthDate('');
-        setView('APP');
-      } else setMessage('⚠️ ' + data.error);
-    } catch (e) { setMessage('🔥 Error de conexión'); }
-    setLoading(false);
+    setMessage(''); if (!phone) return setMessage('❌ Teléfono requerido'); setLoading(true);
+    try { const res = await fetch('/api/user/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ phone, password }) }); const data = await res.json(); if (res.ok) { setUser(data); setName(data.name); setEmail(data.email||''); setGender(data.gender||''); if(data.birthDate) setBirthDate(data.birthDate.split('T')[0]); else setBirthDate(''); setView('APP'); } else setMessage('⚠️ ' + data.error); } catch (e) { setMessage('🔥 Error de conexión'); } setLoading(false);
   };
-
   const handleRegister = async () => {
-    setMessage('');
-    if (!name.trim()) return setMessage('❌ Falta nombre');
-    if (!isValidPhone(phone)) return setMessage('❌ Teléfono inválido (10 dígitos)');
-    setLoading(true);
-    try {
-      const res = await fetch('/api/user/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name, phone, email, password, gender, birthDate }) });
-      if (res.ok) handleLogin(); else { const d = await res.json(); setMessage('⚠️ ' + d.error); }
-    } catch (e) { setMessage('🔥 Error de conexión'); }
-    setLoading(false);
+    setMessage(''); if (!name.trim()) return setMessage('❌ Nombre requerido'); if (!isValidPhone(phone)) return setMessage('❌ Teléfono 10 dígitos'); setLoading(true);
+    try { const res = await fetch('/api/user/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name, phone, email, password, gender, birthDate }) }); if (res.ok) handleLogin(); else { const d = await res.json(); setMessage('⚠️ ' + d.error); } } catch (e) { setMessage('🔥 Error de conexión'); } setLoading(false);
   };
-
-  const handleUpdate = async () => {
-    if (!user?.id) return;
-    setMessage('Guardando...');
-    try {
-      const res = await fetch('/api/user/update', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: user.id, name, email, gender, birthDate }) });
-      if (res.ok) { setMessage('✅ Datos actualizados'); setUser({ ...user, name, email, gender, birthDate }); } else setMessage('❌ Error');
-    } catch (e) { setMessage('🔥 Error de red'); }
-  };
-
+  const handleUpdate = async () => { if (!user?.id) return; setMessage('Guardando...'); try { const res = await fetch('/api/user/update', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: user.id, name, email, gender, birthDate }) }); if (res.ok) { setMessage('✅ Datos actualizados'); setUser({ ...user, name, email, gender, birthDate }); } else setMessage('❌ Error'); } catch (e) { setMessage('🔥 Error de red'); } };
+  
   const handleScan = async (result: string) => {
-    if (!result) return;
-    setScanning(false);
-    let finalCode = result;
-    if (result.includes('code=')) finalCode = result.split('code=')[1].split('&')[0];
-    try {
-      const res = await fetch('/api/check-in/scan', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user?.id, code: finalCode }) });
-      const data = await res.json();
-      if (res.ok) { alert(data.message); handleLogin(); setManualCode(''); } else alert('❌ ' + data.error);
-    } catch (e) { if(user) alert('Error'); }
+    if (!result) return; setScanning(false); let finalCode = result; if (result.includes('code=')) finalCode = result.split('code=')[1].split('&')[0];
+    try { const res = await fetch('/api/check-in/scan', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user?.id, code: finalCode }) }); const data = await res.json(); if (res.ok) { alert(data.message); handleLogin(); setManualCode(''); } else alert('❌ ' + data.error); } catch (e) { if(user) alert('Error'); }
   };
-
   const getPrizeCode = async (tenantId: string, tenantName: string) => {
     if(!confirm(`¿Canjear premio en ${tenantName}?`)) return;
-    try {
-      const res = await fetch('/api/redeem/request', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user.id, tenantId }) });
-      const data = await res.json();
-      if(res.ok) setPrizeCode({ code: data.code, tenant: tenantName }); else alert(data.error);
-    } catch(e) { alert('Error'); }
+    try { const res = await fetch('/api/redeem/request', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user.id, tenantId }) }); const data = await res.json(); if(res.ok) setPrizeCode({ code: data.code, tenant: tenantName }); else alert(data.error); } catch(e) { alert('Error'); }
   };
-
-  const goToBusinessMap = (tName: string) => {
-    const target = tenants.find(t => t.name === tName);
-    if (target && target.lat && target.lng) { setMapFocus([target.lat, target.lng]); setActiveTab('map'); } else { alert("Ubicación no disponible."); }
-  };
-
+  const goToBusinessMap = (tName: string) => { const target = tenants.find(t => t.name === tName); if (target && target.lat && target.lng) { setMapFocus([target.lat, target.lng]); setActiveTab('map'); } else { alert("Ubicación no disponible."); } };
   const handleLogout = () => { if(confirm("¿Salir?")) { setUser(null); setView('WELCOME'); setPhone(''); setPassword(''); setMessage(''); } };
-  
   const toggleCard = (id: string) => { setExpandedId(expandedId === id ? null : id); };
 
   const BrandLogo = () => (
@@ -154,24 +89,17 @@ export default function Home() {
   );
 
   // --- VISTAS ---
-
   if (view === 'WELCOME') return (
     <div className="min-h-screen bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 flex flex-col items-center justify-center p-6 text-white relative overflow-y-auto">
       <div className="w-full max-w-sm flex flex-col items-center py-10">
         <BrandLogo />
         <p className="text-white text-xl font-medium mb-8 tracking-wide drop-shadow-md">Tu lealtad, fácil y ya.</p>
-
         {pendingCode && <div className="bg-white/20 p-4 rounded-2xl mb-4 border border-white/30 backdrop-blur-sm animate-bounce w-full text-center"><p className="font-bold">🎉 ¡Código detectado!</p></div>}
-
         <div className="space-y-4 w-full mb-12">
           <button onClick={() => {setMessage(''); setView('LOGIN');}} className="w-full bg-white text-pink-600 py-4 rounded-2xl font-extrabold text-lg shadow-xl hover:bg-gray-50 active:scale-95 transition-all">Iniciar Sesión</button>
           <button onClick={() => {setMessage(''); setView('REGISTER');}} className="w-full bg-white/10 border-2 border-white/50 text-white py-4 rounded-2xl font-bold text-lg hover:bg-white/20 active:scale-95 transition-all backdrop-blur-sm">Crear Cuenta</button>
         </div>
-
-        <div className="w-full pt-8 border-t border-white/20">
-           <p className="text-center text-white/60 text-xs font-bold uppercase tracking-widest mb-6">¿CÓMO FUNCIONA?</p>
-           <Onboarding />
-        </div>
+        <div className="w-full pt-8 border-t border-white/20"><p className="text-center text-white/60 text-xs font-bold uppercase tracking-widest mb-6">¿CÓMO FUNCIONA?</p><Onboarding /></div>
       </div>
     </div>
   );
@@ -187,17 +115,9 @@ export default function Home() {
         </div>
         <div className="flex-1 px-6 -mt-12 pb-10 z-10">
           <div className="bg-white rounded-3xl shadow-2xl p-8 space-y-6 border border-gray-100">
-             {isReg && <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Nombre Completo</label><input className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={name} onChange={e=>setName(e.target.value)} /></div>}
-             <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Teléfono Celular</label><input type="tel" maxLength={10} className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,''))} placeholder="10 dígitos" /></div>
-             {isReg && (
-               <>
-                 <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Email (Opcional)</label><input type="email" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={email} onChange={e=>setEmail(e.target.value)} /></div>
-                 <div className="flex gap-4">
-                    <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Fecha</label><input type="date" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium border border-gray-100 h-[58px]" value={birthDate} onChange={e=>setBirthDate(e.target.value)} /></div>
-                    <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Género</label><select className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium border border-gray-100 h-[58px]" value={gender} onChange={e=>setGender(e.target.value)}><option value="">-</option><option value="Hombre">M</option><option value="Mujer">F</option></select></div>
-                 </div>
-               </>
-             )}
+             {isReg && <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Nombre</label><input className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={name} onChange={e=>setName(e.target.value)} /></div>}
+             <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Teléfono</label><input type="tel" maxLength={10} className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,''))} placeholder="10 dígitos" /></div>
+             {isReg && (<><div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Email</label><input type="email" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={email} onChange={e=>setEmail(e.target.value)} /></div><div className="flex gap-4"><div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Fecha</label><input type="date" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium border border-gray-100 h-[58px]" value={birthDate} onChange={e=>setBirthDate(e.target.value)} /></div><div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Género</label><select className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium border border-gray-100 h-[58px]" value={gender} onChange={e=>setGender(e.target.value)}><option value="">-</option><option value="Hombre">M</option><option value="Mujer">F</option></select></div></div></>)}
              <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Contraseña</label><input type="password" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={password} onChange={e=>setPassword(e.target.value)} /></div>
              {message && <div className="p-4 bg-red-50 text-red-500 rounded-2xl text-center font-bold text-sm animate-fadeIn border border-red-100">{message}</div>}
              <button onClick={isReg ? handleRegister : handleLogin} disabled={loading} className="w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white py-4 rounded-2xl font-bold shadow-xl hover:shadow-2xl active:scale-95 transition-all text-lg mt-4">{loading ? 'Procesando...' : isReg ? 'Crear Cuenta' : 'Entrar'}</button>
@@ -209,36 +129,13 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
-      {/* MODAL TUTORIAL */}
-      {showTutorial && (
-        <div className="fixed inset-0 bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 z-[60] flex flex-col items-center justify-center p-8 animate-fadeIn">
-           <div className="w-full max-w-sm">
-              <h2 className="text-white text-center font-black text-3xl mb-10">¿Cómo usar PuntoIA?</h2>
-              <Onboarding />
-              <button onClick={() => setShowTutorial(false)} className="w-full bg-white text-purple-600 font-bold py-4 rounded-2xl mt-12 shadow-xl hover:bg-gray-100">¡Entendido!</button>
-           </div>
-        </div>
-      )}
-
-      {prizeCode && (
-        <div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-6 animate-fadeIn backdrop-blur-md">
-          <div className="bg-white p-8 rounded-[2rem] text-center w-full max-w-sm relative shadow-2xl overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-400 to-orange-500"></div>
-            <button onClick={() => { setPrizeCode(null); handleLogin(); }} className="absolute top-4 right-4 text-gray-400 font-bold p-2 text-xl hover:text-gray-600">✕</button>
-            <p className="text-pink-500 uppercase text-xs font-black tracking-widest mb-2 mt-4">¡PREMIO DESBLOQUEADO!</p>
-            <h2 className="text-3xl font-black text-gray-900 mb-6 leading-tight">{prizeCode.tenant}</h2>
-            <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-8 rounded-3xl mb-6"><p className="text-5xl font-mono font-bold text-gray-800 tracking-widest">{prizeCode.code}</p></div>
-            <p className="text-sm text-gray-500 font-medium">Muestra este código al personal.</p>
-          </div>
-        </div>
-      )}
+      {showTutorial && (<div className="fixed inset-0 bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 z-[60] flex flex-col items-center justify-center p-8 animate-fadeIn"><div className="w-full max-w-sm"><h2 className="text-white text-center font-black text-3xl mb-10">¿Cómo usar PuntoIA?</h2><Onboarding /><button onClick={() => setShowTutorial(false)} className="w-full bg-white text-purple-600 font-bold py-4 rounded-2xl mt-12 shadow-xl hover:bg-gray-100">¡Entendido!</button></div></div>)}
+      {prizeCode && (<div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-6 animate-fadeIn backdrop-blur-md"><div className="bg-white p-8 rounded-[2rem] text-center w-full max-w-sm relative shadow-2xl overflow-hidden"><div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-400 to-orange-500"></div><button onClick={() => { setPrizeCode(null); handleLogin(); }} className="absolute top-4 right-4 text-gray-400 font-bold p-2 text-xl hover:text-gray-600">✕</button><p className="text-pink-500 uppercase text-xs font-black tracking-widest mb-2 mt-4">¡PREMIO DESBLOQUEADO!</p><h2 className="text-3xl font-black text-gray-900 mb-6 leading-tight">{prizeCode.tenant}</h2><div className="bg-gray-50 border-2 border-dashed border-gray-200 p-8 rounded-3xl mb-6"><p className="text-5xl font-mono font-bold text-gray-800 tracking-widest">{prizeCode.code}</p></div><p className="text-sm text-gray-500 font-medium">Muestra este código al personal.</p></div></div>)}
 
       <div className="bg-white px-8 pt-16 pb-6 sticky top-0 z-20 shadow-sm flex justify-between items-center">
          <div><p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Hola,</p><h1 className="text-3xl font-black text-gray-900 tracking-tight">{user.name.split(' ')[0]}</h1></div>
          <div className="flex gap-2">
-            <button onClick={() => setShowTutorial(true)} className="h-12 w-12 bg-blue-50 text-blue-500 rounded-full font-bold border border-blue-100 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Ayuda">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
-            </button>
+            <button onClick={() => setShowTutorial(true)} className="h-12 w-12 bg-blue-50 text-blue-500 rounded-full font-bold border border-blue-100 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Ayuda"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg></button>
             <button onClick={handleLogout} className="h-12 w-12 bg-red-50 text-red-500 rounded-full font-bold border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm">✕</button>
          </div>
       </div>
@@ -246,33 +143,90 @@ export default function Home() {
       <div className="p-6">
         {activeTab === 'checkin' && !scanning && (
            <div className="flex flex-col gap-6">
-             <div className="space-y-4">
+             <div className="space-y-6">
                {user.memberships?.map((m: any, idx: number) => {
                    const progress = Math.min(m.points, 100);
                    const isWinner = m.points >= 100;
                    const isExpanded = expandedId === m.tenantId;
                    return (
-                     <div key={idx} onClick={() => toggleCard(m.tenantId)} className={`bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 relative overflow-hidden transition-all duration-300 cursor-pointer ${isExpanded ? 'shadow-xl ring-2 ring-pink-100' : 'hover:shadow-md'}`}>
+                     <div key={idx} onClick={() => toggleCard(m.tenantId)} className={`bg-white p-6 rounded-[2.5rem] relative overflow-hidden transition-all duration-500 cursor-pointer border border-gray-100 ${isExpanded ? 'shadow-2xl ring-4 ring-pink-50 scale-[1.02]' : 'shadow-lg hover:shadow-xl hover:scale-[1.01]'}`}>
+                       
+                       {/* FONDO DECORATIVO */}
+                       <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-100 via-pink-100 to-purple-100 rounded-bl-full opacity-60 z-0"></div>
+                       
                        <div className="relative z-10">
-                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="font-bold text-gray-800 text-xl tracking-tight">{m.name}</h3>
-                            <span className="bg-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">{m.points} pts</span>
+                         {/* ENCABEZADO TARJETA */}
+                         <div className="flex justify-between items-start mb-6">
+                            <div className="flex items-center gap-4">
+                                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-gray-900 to-gray-700 text-white flex items-center justify-center font-black text-2xl shadow-lg">
+                                    {m.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-800 text-xl tracking-tight leading-none">{m.name}</h3>
+                                    <p className="text-xs text-gray-400 mt-1 font-medium tracking-wide">MIEMBRO VIP</p>
+                                </div>
+                            </div>
+                            {/* PUNTOS GRANDES */}
+                            <div className="text-right">
+                                <span className="block text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-600">{m.points}</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">PUNTOS</span>
+                            </div>
                          </div>
-                         {!isWinner ? (<><div className="w-full bg-gray-100 rounded-full h-4 mb-3 overflow-hidden border border-gray-100"><div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-pink-500 transition-all duration-1000" style={{ width: `${progress}%` }}></div></div><div className="flex justify-between text-xs font-bold uppercase tracking-wide"><span className="text-gray-400">{isExpanded ? 'Menos' : 'Ver más...'}</span><span className="text-pink-500">Meta: {m.prize}</span></div></>) : (<button onClick={(e) => {e.stopPropagation(); getPrizeCode(m.tenantId, m.name);}} className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-black py-4 rounded-2xl shadow-xl animate-pulse tracking-wide text-lg relative z-20">🏆 CANJEAR AHORA</button>)}
                          
-                         {isExpanded && (
-                           <div className="mt-6 pt-6 border-t border-gray-100 grid grid-cols-2 gap-3 animate-fadeIn">
-                              <button onClick={(e) => { e.stopPropagation(); goToBusinessMap(m.name); }} className="bg-blue-50 text-blue-600 py-3 rounded-xl font-bold text-xs flex flex-col items-center hover:bg-blue-100 transition-colors"><span className="text-lg mb-1">📍</span> Ubicación</button>
-                              {m.instagram ? (<a href={`https://instagram.com/${m.instagram.replace('@','')}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="bg-pink-50 text-pink-600 py-3 rounded-xl font-bold text-xs flex flex-col items-center hover:bg-pink-100 transition-colors no-underline"><span className="text-lg mb-1">📸</span> Instagram</a>) : (<div className="bg-gray-50 text-gray-300 py-3 rounded-xl font-bold text-xs flex flex-col items-center"><span className="text-lg mb-1">📸</span> No IG</div>)}
-                           </div>
+                         {/* BARRA PROGRESO O BOTÓN GANADOR */}
+                         {!isWinner ? (
+                           <>
+                             <div className="relative w-full h-5 bg-gray-100 rounded-full overflow-hidden mb-3 shadow-inner">
+                               <div className="absolute inset-0 bg-gray-200/50"></div>
+                               <div 
+                                 className="h-full rounded-full bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 transition-all duration-1000 relative" 
+                                 style={{ width: `${progress}%` }}
+                               >
+                                  {/* EFECTO SHIMMER (BRILLO) */}
+                                  <div className="absolute top-0 left-0 bottom-0 right-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer w-full h-full"></div>
+                               </div>
+                             </div>
+                             <div className="flex justify-between items-center text-xs font-bold uppercase tracking-wide">
+                                <span className="text-gray-400 flex items-center gap-1">{isExpanded ? '🔽 Menos info' : '▶️ Ver opciones'}</span>
+                                <span className="text-purple-600 bg-purple-50 px-2 py-1 rounded-lg">🏆 Meta: {m.prize}</span>
+                             </div>
+                           </>
+                         ) : (
+                           <button onClick={(e) => {e.stopPropagation(); getPrizeCode(m.tenantId, m.name);}} className="w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white font-black py-5 rounded-2xl shadow-xl animate-pulse tracking-wide text-lg relative z-20 hover:scale-[1.02] transition-transform border-4 border-white/20">
+                             🎁 CANJEAR PREMIO
+                           </button>
                          )}
+                         
+                         {/* OPCIONES EXPANDIBLES */}
+                         <div className={`grid grid-cols-2 gap-3 mt-4 overflow-hidden transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
+                              <button onClick={(e) => { e.stopPropagation(); goToBusinessMap(m.name); }} className="bg-white border-2 border-blue-50 text-blue-600 py-4 rounded-2xl font-bold text-xs flex flex-col items-center hover:bg-blue-50 transition-colors shadow-sm group">
+                                <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">📍</span> Ver Mapa
+                              </button>
+                              
+                              {m.instagram ? (
+                                <a href={`https://instagram.com/${m.instagram.replace('@','')}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="bg-white border-2 border-pink-50 text-pink-600 py-4 rounded-2xl font-bold text-xs flex flex-col items-center hover:bg-pink-50 transition-colors no-underline shadow-sm group">
+                                  <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">📸</span> Instagram
+                                </a>
+                              ) : (
+                                <div className="bg-gray-50 border-2 border-gray-100 text-gray-300 py-4 rounded-2xl font-bold text-xs flex flex-col items-center grayscale opacity-50">
+                                  <span className="text-2xl mb-1">📸</span> No IG
+                                </div>
+                              )}
+                         </div>
                        </div>
                      </div>
                    );
                })}
              </div>
-             <button onClick={() => setScanning(true)} className="w-full bg-gray-900 text-white py-5 rounded-[2rem] font-bold shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all text-lg hover:bg-black"><span className="text-2xl">📷</span> Escanear QR</button>
-             <div className="mt-6 flex gap-3"><input className="flex-1 p-5 bg-white rounded-2xl text-gray-800 font-bold text-center tracking-[0.3em] uppercase border-2 border-gray-100 placeholder-gray-300 shadow-sm outline-none focus:border-pink-400 transition-all" placeholder="AB-12" value={manualCode} onChange={e => setManualCode(e.target.value.toUpperCase())} maxLength={7} /><button onClick={() => handleScan(manualCode)} disabled={!manualCode} className="bg-pink-500 text-white font-bold px-8 rounded-2xl shadow-lg disabled:opacity-50 disabled:shadow-none hover:bg-pink-600 transition-all">OK</button></div>
+             <button onClick={() => setScanning(true)} className="w-full bg-gray-900 text-white py-6 rounded-[2.5rem] font-bold shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all text-xl hover:bg-black group"><span className="group-hover:rotate-12 transition-transform duration-300">📷</span> Escanear Nuevo QR</button>
+             
+             {/* CAMPO MANUAL DISCRETO */}
+             <div className="mt-8 flex justify-center">
+                <div className="flex bg-white p-2 rounded-full shadow-sm border border-gray-100 w-full max-w-xs">
+                   <input className="flex-1 p-2 bg-transparent text-gray-800 font-bold text-center tracking-[0.2em] uppercase text-sm outline-none placeholder-gray-300" placeholder="CÓDIGO MANUAL" value={manualCode} onChange={e => setManualCode(e.target.value.toUpperCase())} maxLength={7} />
+                   <button onClick={() => handleScan(manualCode)} disabled={!manualCode} className="bg-gray-200 text-gray-600 font-bold px-4 rounded-full disabled:opacity-50 hover:bg-gray-300 transition-all">OK</button>
+                </div>
+             </div>
            </div>
         )}
 
