@@ -4,7 +4,6 @@ const prisma = new PrismaClient();
 
 export async function GET() {
   try {
-    // Solo traemos lo necesario para el mapa
     const tenants = await prisma.tenant.findMany({
       select: {
         id: true,
@@ -12,7 +11,8 @@ export async function GET() {
         lat: true,
         lng: true,
         address: true,
-        prize: true
+        prize: true,
+        instagram: true // 🆕 Enviar IG
       }
     });
     return NextResponse.json({ tenants });

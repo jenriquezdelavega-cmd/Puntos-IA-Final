@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { tenantId, prize, lat, lng, address } = body; // 🆕 Nuevos campos
+    const { tenantId, prize, lat, lng, address, instagram } = body; // 🆕 IG
 
     if (!tenantId) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
 
@@ -15,7 +15,8 @@ export async function POST(request: Request) {
         prize: prize,
         lat: lat ? parseFloat(lat) : undefined,
         lng: lng ? parseFloat(lng) : undefined,
-        address: address
+        address: address,
+        instagram: instagram // 🆕 Guardar IG
       }
     });
 

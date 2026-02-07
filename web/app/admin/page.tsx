@@ -3,17 +3,12 @@ import { useState } from 'react';
 import QRCode from 'react-qr-code';
 import dynamic from 'next/dynamic';
 
-// 🔄 MAPA ADMIN SEGURO
-const AdminMap = dynamic(() => import('../components/AdminMap'), { 
-  ssr: false, 
-  loading: () => <div className="h-full w-full bg-gray-100 animate-pulse flex items-center justify-center text-gray-400">Cargando Mapa...</div>
-});
+const AdminMap = dynamic(() => import('../components/AdminMap'), { ssr: false, loading: () => <div className="h-full bg-gray-100 animate-pulse text-center pt-10 text-gray-400">Cargando...</div> });
 
 export default function AdminPage() {
   const [tenant, setTenant] = useState<any>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  
   const [code, setCode] = useState('');
   const [reportData, setReportData] = useState<any>(null);
   const [baseUrl, setBaseUrl] = useState('');
@@ -21,8 +16,7 @@ export default function AdminPage() {
   const [userRole, setUserRole] = useState('');
 
   const [prizeName, setPrizeName] = useState('');
-  
-  // 🆕 ESTADOS PARA BÚSQUEDA
+  const [instagram, setInstagram] = useState(''); // 🆕 IG Estado
   const [addressSearch, setAddressSearch] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [coords, setCoords] = useState<[number, number]>([19.4326, -99.1332]);
@@ -39,10 +33,9 @@ export default function AdminPage() {
         setTenant(data.tenant);
         setUserRole(data.user.role);
         setPrizeName(data.tenant.prize || '');
-        // Cargar ubicación guardada
+        setInstagram(data.tenant.instagram || ''); // 🆕 Cargar IG
         if (data.tenant.lat && data.tenant.lng) {
             setCoords([data.tenant.lat, data.tenant.lng]);
-            // Si ya hay dirección guardada, ponerla en el buscador
             if (data.tenant.address) setAddressSearch(data.tenant.address);
         }
         if (typeof window !== 'undefined') setBaseUrl(window.location.origin);
@@ -54,7 +47,6 @@ export default function AdminPage() {
   const loadReports = async (tid: string) => { try { const res = await fetch('/api/admin/reports', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tid }) }); setReportData(await res.json()); } catch(e) {} };
   const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch (e) {} };
   
-  // 🔍 BUSCADOR DE DIRECCIONES (NOMINATIM API)
   const searchLocation = async () => {
     if (!addressSearch) return;
     setIsSearching(true);
@@ -62,13 +54,9 @@ export default function AdminPage() {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressSearch)}`);
         const data = await res.json();
         if (data && data.length > 0) {
-            const lat = parseFloat(data[0].lat);
-            const lon = parseFloat(data[0].lon);
-            setCoords([lat, lon]); // Mover mapa
-        } else {
-            alert("No encontramos esa dirección. Intenta ser más específico (ej: Calle, Colonia, Ciudad).");
-        }
-    } catch (e) { alert("Error al buscar"); }
+            setCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
+        } else alert("No encontrado");
+    } catch (e) { alert("Error"); }
     setIsSearching(false);
   };
 
@@ -76,7 +64,7 @@ export default function AdminPage() {
     try {
       await fetch('/api/tenant/settings', { 
         method: 'POST', headers: {'Content-Type': 'application/json'}, 
-        body: JSON.stringify({ tenantId: tenant.id, prize: prizeName, lat: coords[0], lng: coords[1], address: addressSearch }) 
+        body: JSON.stringify({ tenantId: tenant.id, prize: prizeName, lat: coords[0], lng: coords[1], address: addressSearch, instagram: instagram }) 
       });
       alert('✅ Guardado');
     } catch(e) { alert('Error'); }
@@ -85,18 +73,7 @@ export default function AdminPage() {
   const validateRedeem = async () => { setMsg('Validando...'); try { const res = await fetch('/api/redeem/validate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, code: redeemCode }) }); const data = await res.json(); if (res.ok) { setMsg(`✅ ENTREGAR A: ${data.user}`); setRedeemCode(''); if(userRole==='ADMIN') loadReports(tenant.id); } else setMsg('❌ ' + data.error); } catch(e) { setMsg('Error'); } };
   const downloadCSV = () => { if (!reportData?.csvData) return; const headers = Object.keys(reportData.csvData[0]).join(','); const rows = reportData.csvData.map((obj: any) => Object.values(obj).join(',')).join('\n'); const encodedUri = encodeURI("data:text/csv;charset=utf-8," + headers + "\n" + rows); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `clientes_${tenant.slug}.csv`); document.body.appendChild(link); link.click(); };
 
-  if (!tenant) return (
-    <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4">
-      <div className="bg-gray-800 p-8 rounded-2xl w-full max-w-sm shadow-2xl border border-gray-700">
-        <div className="text-center mb-8"><h1 className="text-3xl font-black text-white tracking-tighter">punto<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500">IA</span></h1><p className="text-gray-400 text-sm mt-2">Acceso de Personal</p></div>
-        <form onSubmit={handleLogin} className="space-y-4">
-          <input className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Usuario" value={username} onChange={e=>setUsername(e.target.value)} />
-          <input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Contraseña" value={password} onChange={e=>setPassword(e.target.value)} />
-          <button className="w-full bg-gradient-to-r from-orange-500 to-pink-600 font-bold py-4 rounded-xl text-white shadow-lg">Iniciar Sesión</button>
-        </form>
-      </div>
-    </div>
-  );
+  if (!tenant) return <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4"><div className="bg-gray-800 p-8 rounded-2xl w-full max-w-sm shadow-2xl border border-gray-700"><div className="text-center mb-8"><h1 className="text-3xl font-black text-white tracking-tighter">punto<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500">IA</span></h1><p className="text-gray-400 text-sm mt-2">Acceso de Personal</p></div><form onSubmit={handleLogin} className="space-y-4"><input className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Usuario" value={username} onChange={e=>setUsername(e.target.value)} /><input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Contraseña" value={password} onChange={e=>setPassword(e.target.value)} /><button className="w-full bg-gradient-to-r from-orange-500 to-pink-600 font-bold py-4 rounded-xl text-white shadow-lg">Iniciar Sesión</button></form></div></div>;
 
   const qrValue = code ? `${baseUrl}/?code=${code}` : '';
 
@@ -111,10 +88,7 @@ export default function AdminPage() {
           <button onClick={()=>setTab('redeem')} className={`p-3 rounded-xl ${tab==='redeem'?'bg-gray-800 text-white':'text-gray-400'}`}>🎁 <span className="hidden md:inline ml-2">Canjear</span></button>
           {userRole === 'ADMIN' && <button onClick={()=>setTab('settings')} className={`p-3 rounded-xl ${tab==='settings'?'bg-gray-800 text-white':'text-gray-400'}`}>⚙️ <span className="hidden md:inline ml-2">Config</span></button>}
         </nav>
-        <div className="hidden md:block mt-auto pt-6 border-t border-gray-800">
-           <p className="font-bold text-sm truncate">{tenant.name}</p>
-           <button onClick={() => setTenant(null)} className="text-xs text-red-400 mt-4 hover:text-red-300 border border-red-900 p-2 rounded w-full">Cerrar Sesión</button>
-        </div>
+        <div className="hidden md:block mt-auto pt-6 border-t border-gray-800"><p className="font-bold text-sm truncate">{tenant.name}</p><button onClick={() => setTenant(null)} className="text-xs text-red-400 mt-4 hover:text-red-300 border border-red-900 p-2 rounded w-full">Cerrar Sesión</button></div>
       </div>
       <button onClick={() => setTenant(null)} className="md:hidden fixed top-4 right-4 z-50 bg-red-600 text-white w-8 h-8 rounded-full font-bold flex items-center justify-center shadow-lg">✕</button>
 
@@ -158,30 +132,26 @@ export default function AdminPage() {
                 <h2 className="text-xl font-bold text-gray-800">Datos</h2>
                 <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Nombre</label><input className="w-full p-4 bg-gray-100 rounded-2xl mt-1 text-gray-500 font-bold border border-transparent cursor-not-allowed" value={tenant.name} readOnly /></div>
                 <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Premio</label><input className="w-full p-4 bg-gray-50 rounded-2xl mt-1 font-medium text-gray-800 border border-transparent focus:bg-white focus:border-gray-200 outline-none transition-all" value={prizeName} onChange={e => setPrizeName(e.target.value)} /></div>
+                
+                {/* 🆕 CAMPO INSTAGRAM */}
+                <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">Instagram</label>
+                    <input 
+                      className="w-full p-4 bg-pink-50 rounded-2xl mt-1 font-medium text-pink-600 border border-pink-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" 
+                      value={instagram} 
+                      onChange={e => setInstagram(e.target.value)} 
+                      placeholder="@tu_negocio"
+                    />
+                </div>
              </div>
 
              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
                 <h2 className="text-xl font-bold text-gray-800">📍 Ubicación</h2>
-                
-                {/* 🆕 BUSCADOR DE DIRECCIONES */}
                 <div className="flex gap-2 mb-2">
-                    <input 
-                      className="flex-1 p-3 bg-blue-50 rounded-xl text-gray-800 text-sm border border-blue-100 outline-none focus:ring-2 focus:ring-blue-300" 
-                      placeholder="Ej: Av Reforma 222, CDMX" 
-                      value={addressSearch} 
-                      onChange={(e) => setAddressSearch(e.target.value)} 
-                      onKeyDown={(e) => e.key === 'Enter' && searchLocation()}
-                    />
-                    <button onClick={searchLocation} disabled={isSearching} className="bg-blue-600 text-white px-4 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50">
-                        {isSearching ? '...' : '🔍'}
-                    </button>
+                    <input className="flex-1 p-3 bg-blue-50 rounded-xl text-gray-800 text-sm border border-blue-100 outline-none focus:ring-2 focus:ring-blue-300" placeholder="Dirección..." value={addressSearch} onChange={(e) => setAddressSearch(e.target.value)} />
+                    <button onClick={searchLocation} disabled={isSearching} className="bg-blue-600 text-white px-4 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50">🔍</button>
                 </div>
-                
-                <div className="h-[300px] w-full rounded-2xl overflow-hidden border border-gray-200 z-0 relative">
-                   <AdminMap coords={coords} setCoords={setCoords} />
-                </div>
-                
-                <p className="text-center text-xs text-gray-400 mt-2">Lat: {coords[0].toFixed(4)}, Lng: {coords[1].toFixed(4)}</p>
+                <div className="h-[300px] w-full rounded-2xl overflow-hidden border border-gray-200 z-0 relative"><AdminMap coords={coords} setCoords={setCoords} /></div>
              </div>
              <button onClick={saveSettings} className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold hover:bg-black transition-all shadow-lg">Guardar Todo</button>
           </div>
