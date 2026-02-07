@@ -3,10 +3,7 @@ import { useState, useEffect } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import dynamic from 'next/dynamic';
 
-const BusinessMap = dynamic(
-  () => import('./components/BusinessMap'), 
-  { ssr: false, loading: () => <div className="h-full w-full bg-gray-50 flex flex-col items-center justify-center text-gray-400 animate-pulse"><span className="text-4xl mb-2">🗺️</span><span className="text-xs font-bold uppercase tracking-widest">Cargando...</span></div> }
-);
+const BusinessMap = dynamic(() => import('./components/BusinessMap'), { ssr: false, loading: () => <div className="h-full w-full bg-gray-50 flex items-center justify-center text-gray-400">Cargando...</div> });
 
 type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
 
@@ -46,6 +43,10 @@ export default function Home() {
   const [mapFocus, setMapFocus] = useState<[number, number] | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  
+  // 🆕 ESTADOS HISTORIAL
+  const [history, setHistory] = useState<any[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   const isValidPhone = (p: string) => /^\d{10}$/.test(p);
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -58,6 +59,17 @@ export default function Home() {
 
   const loadMapData = async () => { try { const res = await fetch('/api/map/tenants'); const d = await res.json(); if(d.tenants) setTenants(d.tenants); } catch(e){} };
 
+  // 🆕 CARGAR HISTORIAL
+  const loadHistory = async () => {
+    if(!user?.id) return;
+    try {
+        const res = await fetch('/api/user/history', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user.id }) });
+        const data = await res.json();
+        if(data.history) setHistory(data.history);
+        setShowHistory(true);
+    } catch(e) { alert("Error cargando historial"); }
+  };
+
   const handleLogin = async () => {
     setMessage(''); if (!phone) return setMessage('❌ Teléfono requerido'); setLoading(true);
     try { const res = await fetch('/api/user/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ phone, password }) }); const data = await res.json(); if (res.ok) { setUser(data); setName(data.name); setEmail(data.email||''); setGender(data.gender||''); if(data.birthDate) setBirthDate(data.birthDate.split('T')[0]); else setBirthDate(''); setView('APP'); } else setMessage('⚠️ ' + data.error); } catch (e) { setMessage('🔥 Error de conexión'); } setLoading(false);
@@ -66,19 +78,7 @@ export default function Home() {
     setMessage(''); if (!name.trim()) return setMessage('❌ Nombre requerido'); if (!isValidPhone(phone)) return setMessage('❌ Teléfono 10 dígitos'); setLoading(true);
     try { const res = await fetch('/api/user/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name, phone, email, password, gender, birthDate }) }); if (res.ok) handleLogin(); else { const d = await res.json(); setMessage('⚠️ ' + d.error); } } catch (e) { setMessage('🔥 Error de conexión'); } setLoading(false);
   };
-  const handleUpdate = async () => { 
-    if (!user?.id) return; 
-    if (!isValidPhone(phone)) return setMessage('❌ Teléfono inválido');
-    setMessage('Guardando...'); 
-    try { 
-      const res = await fetch('/api/user/update', { 
-        method: 'POST', headers: {'Content-Type':'application/json'}, 
-        body: JSON.stringify({ id: user.id, name, email, gender, birthDate, phone }) 
-      }); 
-      if (res.ok) { setMessage('✅ Datos actualizados'); setUser({ ...user, name, email, gender, birthDate, phone }); } 
-      else { const d = await res.json(); setMessage('❌ ' + d.error); }
-    } catch (e) { setMessage('🔥 Error de red'); } 
-  };
+  const handleUpdate = async () => { if (!user?.id) return; setMessage('Guardando...'); try { const res = await fetch('/api/user/update', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: user.id, name, email, gender, birthDate, phone }) }); if (res.ok) { setMessage('✅ Datos actualizados'); setUser({ ...user, name, email, gender, birthDate, phone }); } else setMessage('❌ Error'); } catch (e) { setMessage('🔥 Error de red'); } };
   
   const handleScan = async (result: string) => {
     if (!result) return; setScanning(false); let finalCode = result; if (result.includes('code=')) finalCode = result.split('code=')[1].split('&')[0];
@@ -93,7 +93,6 @@ export default function Home() {
   const toggleCard = (id: string) => { setExpandedId(expandedId === id ? null : id); };
 
   const BrandLogo = () => (
-    // 🤏 MARGIN BOTTOM REDUCIDO (mb-2 en vez de mb-6)
     <div className="flex items-center justify-center gap-1 mb-2 select-none scale-90">
       <span className="text-6xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>punto</span>
       <div className="relative h-12 w-12 mx-1"><div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200 via-orange-400 to-red-500 shadow-[0_0_25px_rgba(255,200,0,0.8)]"></div><div className="absolute top-2 left-3 w-3 h-3 bg-white rounded-full blur-[2px] opacity-90"></div></div>
@@ -105,11 +104,117 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 flex flex-col items-center justify-center p-6 text-white relative overflow-y-auto">
       <div className="w-full max-w-sm flex flex-col items-center py-10">
         <BrandLogo />
-        {/* SLOGAN MÁS PEGADO (mt-0) */}
-        <p className="text-white text-xl font-medium mb-10 mt-0 tracking-wide drop-shadow-md text-center leading-tight">
-          Premiamos tu lealtad,<br/><span className="font-extrabold italic">fácil y YA.</span>
-        </p>
-        
+        <p className="text-white text-xl font-medium mb-10 mt-0 tracking-wide drop-shadow-md text-center leading-tight">Premiamos tu lealtad,<br/><span className="font-extrabold italic">fácil y YA.</span></p>
+        {pendingCode && <div className="bg-white/20 p-4 rounded-2xl mb-4 border border-white/30 backdrop-blur-sm animate-bounce w-full text-center"><p 
+
+cat <<'EOF' > app/page.tsx
+'use client';
+import { useState, useEffect } from 'react';
+import { Scanner } from '@yudiel/react-qr-scanner';
+import dynamic from 'next/dynamic';
+
+const BusinessMap = dynamic(() => import('./components/BusinessMap'), { ssr: false, loading: () => <div className="h-full w-full bg-gray-50 flex items-center justify-center text-gray-400">Cargando...</div> });
+
+type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
+
+const Onboarding = () => {
+  const [slide, setSlide] = useState(0);
+  const slides = [{icon:"📸",title:"1. Escanea",text:"Visita y escanea el código QR."},{icon:"🔥",title:"2. Suma",text:"Acumula puntos automáticamente."},{icon:"🎁",title:"3. Canjea",text:"Genera tu código de premio."},{icon:"🏆",title:"4. Gana",text:"Recibe tu recompensa."}];
+  useEffect(() => { const i = setInterval(() => setSlide(p => (p+1)%4), 4000); return () => clearInterval(i); }, []);
+  return (
+    <div className="flex flex-col items-center w-full transition-all duration-500">
+      <div className="text-5xl mb-3 animate-bounce drop-shadow-md">{slides[slide].icon}</div>
+      <h2 className="text-xl font-black text-white mb-2 drop-shadow-md">{slides[slide].title}</h2>
+      <p className="text-white/90 text-center text-xs h-8 px-4">{slides[slide].text}</p>
+      <div className="flex gap-2 mt-4">{slides.map((_,i)=><div key={i} onClick={()=>setSlide(i)} className={`h-1.5 w-1.5 rounded-full transition-all cursor-pointer ${i===slide?'bg-white w-4':'bg-white/40'}`}/>)}</div>
+    </div>
+  );
+};
+
+export default function Home() {
+  const [view, setView] = useState<ViewState>('WELCOME');
+  const [activeTab, setActiveTab] = useState('checkin');
+  const [user, setUser] = useState<any>(null);
+  
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [gender, setGender] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  
+  const [scanning, setScanning] = useState(false);
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [manualCode, setManualCode] = useState('');
+  const [pendingCode, setPendingCode] = useState<string | null>(null);
+  const [prizeCode, setPrizeCode] = useState<{code: string, tenant: string} | null>(null);
+  const [tenants, setTenants] = useState<any[]>([]);
+  const [mapFocus, setMapFocus] = useState<[number, number] | null>(null);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  
+  // 🆕 ESTADOS HISTORIAL
+  const [history, setHistory] = useState<any[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const isValidPhone = (p: string) => /^\d{10}$/.test(p);
+  const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') { const p = new URLSearchParams(window.location.search); const c = p.get('code'); if (c) { setPendingCode(c); if(!user) setMessage('👋 Código detectado.'); } }
+    loadMapData();
+  }, []);
+  useEffect(() => { if (user && pendingCode) { handleScan(pendingCode); setPendingCode(null); window.history.replaceState({}, '', '/'); } }, [user, pendingCode]);
+
+  const loadMapData = async () => { try { const res = await fetch('/api/map/tenants'); const d = await res.json(); if(d.tenants) setTenants(d.tenants); } catch(e){} };
+
+  // 🆕 CARGAR HISTORIAL
+  const loadHistory = async () => {
+    if(!user?.id) return;
+    try {
+        const res = await fetch('/api/user/history', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user.id }) });
+        const data = await res.json();
+        if(data.history) setHistory(data.history);
+        setShowHistory(true);
+    } catch(e) { alert("Error cargando historial"); }
+  };
+
+  const handleLogin = async () => {
+    setMessage(''); if (!phone) return setMessage('❌ Teléfono requerido'); setLoading(true);
+    try { const res = await fetch('/api/user/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ phone, password }) }); const data = await res.json(); if (res.ok) { setUser(data); setName(data.name); setEmail(data.email||''); setGender(data.gender||''); if(data.birthDate) setBirthDate(data.birthDate.split('T')[0]); else setBirthDate(''); setView('APP'); } else setMessage('⚠️ ' + data.error); } catch (e) { setMessage('🔥 Error de conexión'); } setLoading(false);
+  };
+  const handleRegister = async () => {
+    setMessage(''); if (!name.trim()) return setMessage('❌ Nombre requerido'); if (!isValidPhone(phone)) return setMessage('❌ Teléfono 10 dígitos'); setLoading(true);
+    try { const res = await fetch('/api/user/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name, phone, email, password, gender, birthDate }) }); if (res.ok) handleLogin(); else { const d = await res.json(); setMessage('⚠️ ' + d.error); } } catch (e) { setMessage('🔥 Error de conexión'); } setLoading(false);
+  };
+  const handleUpdate = async () => { if (!user?.id) return; setMessage('Guardando...'); try { const res = await fetch('/api/user/update', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: user.id, name, email, gender, birthDate, phone }) }); if (res.ok) { setMessage('✅ Datos actualizados'); setUser({ ...user, name, email, gender, birthDate, phone }); } else setMessage('❌ Error'); } catch (e) { setMessage('🔥 Error de red'); } };
+  
+  const handleScan = async (result: string) => {
+    if (!result) return; setScanning(false); let finalCode = result; if (result.includes('code=')) finalCode = result.split('code=')[1].split('&')[0];
+    try { const res = await fetch('/api/check-in/scan', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user?.id, code: finalCode }) }); const data = await res.json(); if (res.ok) { alert(data.message); handleLogin(); setManualCode(''); } else alert('❌ ' + data.error); } catch (e) { if(user) alert('Error'); }
+  };
+  const getPrizeCode = async (tenantId: string, tenantName: string) => {
+    if(!confirm(`¿Canjear premio en ${tenantName}?`)) return;
+    try { const res = await fetch('/api/redeem/request', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user.id, tenantId }) }); const data = await res.json(); if(res.ok) setPrizeCode({ code: data.code, tenant: tenantName }); else alert(data.error); } catch(e) { alert('Error'); }
+  };
+  const goToBusinessMap = (tName: string) => { const target = tenants.find(t => t.name === tName); if (target && target.lat && target.lng) { setMapFocus([target.lat, target.lng]); setActiveTab('map'); } else { alert("Ubicación no disponible."); } };
+  const handleLogout = () => { if(confirm("¿Salir?")) { setUser(null); setView('WELCOME'); setPhone(''); setPassword(''); setMessage(''); } };
+  const toggleCard = (id: string) => { setExpandedId(expandedId === id ? null : id); };
+
+  const BrandLogo = () => (
+    <div className="flex items-center justify-center gap-1 mb-2 select-none scale-90">
+      <span className="text-6xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>punto</span>
+      <div className="relative h-12 w-12 mx-1"><div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200 via-orange-400 to-red-500 shadow-[0_0_25px_rgba(255,200,0,0.8)]"></div><div className="absolute top-2 left-3 w-3 h-3 bg-white rounded-full blur-[2px] opacity-90"></div></div>
+      <span className="text-6xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>IA</span>
+    </div>
+  );
+
+  if (view === 'WELCOME') return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 flex flex-col items-center justify-center p-6 text-white relative overflow-y-auto">
+      <div className="w-full max-w-sm flex flex-col items-center py-10">
+        <BrandLogo />
+        <p className="text-white text-xl font-medium mb-10 mt-0 tracking-wide drop-shadow-md text-center leading-tight">Premiamos tu lealtad,<br/><span className="font-extrabold italic">fácil y YA.</span></p>
         {pendingCode && <div className="bg-white/20 p-4 rounded-2xl mb-4 border border-white/30 backdrop-blur-sm animate-bounce w-full text-center"><p className="font-bold">🎉 ¡Código detectado!</p></div>}
         <div className="space-y-4 w-full mb-12">
           <button onClick={() => {setMessage(''); setView('LOGIN');}} className="w-full bg-white text-pink-600 py-4 rounded-2xl font-extrabold text-lg shadow-xl hover:bg-gray-50 active:scale-95 transition-all">Iniciar Sesión</button>
@@ -145,7 +250,36 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
+      {/* MODAL TUTORIAL */}
       {showTutorial && (<div className="fixed inset-0 bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 z-[60] flex flex-col items-center justify-center p-8 animate-fadeIn"><div className="w-full max-w-sm"><h2 className="text-white text-center font-black text-3xl mb-10">¿Cómo usar PuntoIA?</h2><Onboarding /><button onClick={() => setShowTutorial(false)} className="w-full bg-white text-purple-600 font-bold py-4 rounded-2xl mt-12 shadow-xl hover:bg-gray-100">¡Entendido!</button></div></div>)}
+      
+      {/* MODAL HISTORIAL */}
+      {showHistory && (
+        <div className="fixed inset-0 bg-black/90 z-[60] flex flex-col items-center justify-center p-6 animate-fadeIn">
+           <div className="bg-white p-6 rounded-[2rem] w-full max-w-md h-[70vh] flex flex-col shadow-2xl relative">
+              <button onClick={() => setShowHistory(false)} className="absolute top-4 right-4 text-gray-400 font-bold p-2 text-xl hover:text-gray-600">✕</button>
+              <h2 className="text-2xl font-black text-gray-900 mb-6 text-center">🏆 Mis Victorias</h2>
+              
+              <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                 {history.length > 0 ? history.map((h: any, i: number) => (
+                    <div key={i} className="bg-yellow-50 p-4 rounded-2xl border border-yellow-100 flex items-center gap-4">
+                       <div className="bg-yellow-200 text-yellow-700 h-12 w-12 rounded-xl flex items-center justify-center text-2xl">🎁</div>
+                       <div>
+                          <h3 className="font-bold text-gray-800">{h.prize}</h3>
+                          <p className="text-xs text-gray-500">{h.tenant} • {h.date}</p>
+                       </div>
+                    </div>
+                 )) : (
+                    <div className="text-center text-gray-400 py-10">
+                        <p className="text-4xl mb-2">🤷‍♂️</p>
+                        <p>Aún no has canjeado premios.</p>
+                    </div>
+                 )}
+              </div>
+           </div>
+        </div>
+      )}
+
       {prizeCode && (<div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-6 animate-fadeIn backdrop-blur-md"><div className="bg-white p-8 rounded-[2rem] text-center w-full max-w-sm relative shadow-2xl overflow-hidden"><div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-400 to-orange-500"></div><button onClick={() => { setPrizeCode(null); handleLogin(); }} className="absolute top-4 right-4 text-gray-400 font-bold p-2 text-xl hover:text-gray-600">✕</button><p className="text-pink-500 uppercase text-xs font-black tracking-widest mb-2 mt-4">¡PREMIO DESBLOQUEADO!</p><h2 className="text-3xl font-black text-gray-900 mb-6 leading-tight">{prizeCode.tenant}</h2><div className="bg-gray-50 border-2 border-dashed border-gray-200 p-8 rounded-3xl mb-6"><p className="text-5xl font-mono font-bold text-gray-800 tracking-widest">{prizeCode.code}</p></div><p className="text-sm text-gray-500 font-medium">Muestra este código al personal.</p></div></div>)}
 
       <div className="bg-white px-8 pt-16 pb-6 sticky top-0 z-20 shadow-sm flex justify-between items-center">
@@ -196,7 +330,13 @@ export default function Home() {
                <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Email</label><input type="email" className="w-full p-5 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-transparent focus:bg-white focus:border-pink-200 outline-none transition-all" value={email} onChange={e => setEmail(e.target.value)} /></div>
                <div className="flex gap-4"><div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Fecha</label><input type="date" className="w-full p-5 bg-gray-50 rounded-2xl text-gray-800 font-bold" value={birthDate} onChange={e => setBirthDate(e.target.value)} /></div><div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Género</label><select className="w-full p-5 bg-gray-50 rounded-2xl text-gray-800 font-bold appearance-none" value={gender} onChange={e => setGender(e.target.value)}><option value="Hombre">M</option><option value="Mujer">F</option></select></div></div>
              </div>
-             <button onClick={handleUpdate} className="w-full bg-gray-900 text-white p-5 rounded-2xl font-bold mt-10 shadow-xl active:scale-95 transition-all text-lg hover:bg-black">Guardar Cambios 💾</button>
+             
+             {/* 🆕 BOTÓN HISTORIAL */}
+             <button onClick={loadHistory} className="w-full bg-yellow-400 text-yellow-900 p-5 rounded-2xl font-bold mt-8 shadow-lg active:scale-95 transition-all text-lg hover:bg-yellow-300 flex items-center justify-center gap-2">
+                <span>📜</span> Ver Historial de Premios
+             </button>
+
+             <button onClick={handleUpdate} className="w-full bg-gray-900 text-white p-5 rounded-2xl font-bold mt-4 shadow-xl active:scale-95 transition-all text-lg hover:bg-black">Guardar Cambios 💾</button>
              {message && <p className="text-center text-green-600 mt-6 font-bold bg-green-50 p-4 rounded-2xl border border-green-100">{message}</p>}
            </div>
         )}
