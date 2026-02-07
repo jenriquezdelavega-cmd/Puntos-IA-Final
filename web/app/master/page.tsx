@@ -1,12 +1,5 @@
 'use client';
 import { useState } from 'react';
-import dynamic from 'next/dynamic';
-
-// Cargar Mapa
-const AdminMap = dynamic(() => import('../components/AdminMap'), { 
-  ssr: false, 
-  loading: () => <div className="h-40 bg-gray-100 animate-pulse flex items-center justify-center text-gray-500">Cargando Mapa...</div>
-});
 
 export default function MasterPage() {
   const [auth, setAuth] = useState(false);
@@ -26,18 +19,19 @@ export default function MasterPage() {
   const [uPass, setUPass] = useState('');
   const [uRole, setURole] = useState('ADMIN');
 
-  // 🛠️ EDIT MODE STATES
-  const [editingTenant, setEditingTenant] = useState<any>(null); // El negocio que estamos editando
-  const [editPrize, setEditPrize] = useState('');
-  const [editIg, setEditIg] = useState('');
-  const [editAddress, setEditAddress] = useState('');
-  const [editCoords, setEditCoords] = useState<[number, number]>([19.4326, -99.1332]);
+  // EDIT STATES
+  const [editingTenant, setEditingTenant] = useState<any>(null);
+  const [editingUser, setEditingUser] = useState<any>(null);
   
   const [msg, setMsg] = useState('');
 
   const handleAuth = (e: React.FormEvent) => { e.preventDefault(); if (masterPass === 'superadmin2026') { setAuth(true); loadTenants(); } else alert('No'); };
-  const loadTenants = async () => { try { const res = await fetch('/api/master/list-tenants', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ masterPassword: 'superadmin2026' }) }); const data = await res.json(); if(data.tenants) setTenants(data.tenants); } catch(e) {} };
+  
+  const loadTenants = async () => { 
+      try { const res = await fetch('/api/master/list-tenants', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ masterPassword: masterPass }) }); const data = await res.json(); if(data.tenants) setTenants(data.tenants); } catch(e) {} 
+  };
 
+  // --- ACCIONES NEGOCIO ---
   const createTenant = async () => {
     setMsg('Creando...');
     try {
@@ -46,6 +40,23 @@ export default function MasterPage() {
     } catch (e) { setMsg('Error'); }
   };
 
+  const deleteTenant = async (id: string, name: string) => {
+    if(!confirm(`¿BORRAR NEGOCIO "${name}" Y TODOS SUS DATOS?`)) return;
+    try {
+        await fetch('/api/master/manage-tenant', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'DELETE', tenantId: id }) });
+        loadTenants();
+    } catch(e) { alert('Error'); }
+  };
+
+  const updateTenant = async () => {
+    if(!editingTenant) return;
+    try {
+        await fetch('/api/master/manage-tenant', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'UPDATE', tenantId: editingTenant.id, data: editingTenant }) });
+        setEditingTenant(null); loadTenants();
+    } catch(e) { alert('Error'); }
+  };
+
+  // --- ACCIONES USUARIO ---
   const createUser = async () => {
     if(!selectedTenantId) return alert("Selecciona negocio");
     try {
@@ -54,141 +65,128 @@ export default function MasterPage() {
     } catch (e) { setMsg('Error'); }
   };
 
-  // 🛠️ ABRIR MODAL DE EDICIÓN
-  const openEdit = (t: any) => {
-    setEditingTenant(t);
-    setEditPrize(t.prize || '');
-    setEditIg(t.instagram || '');
-    setEditAddress(t.address || '');
-    if (t.lat && t.lng) setEditCoords([t.lat, t.lng]);
-    else setEditCoords([19.4326, -99.1332]); // Default
+  const deleteUser = async (id: string) => {
+    if(!confirm("¿Borrar empleado?")) return;
+    try {
+        await fetch('/api/master/manage-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'DELETE', userId: id }) });
+        loadTenants();
+    } catch(e) { alert('Error'); }
   };
 
-  // 🔍 BUSCAR DIRECCIÓN EN MODAL
-  const searchAddress = async () => {
-    if (!editAddress) return;
+  const updateUser = async () => {
+    if(!editingUser) return;
     try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(editAddress)}`);
-        const data = await res.json();
-        if (data && data.length > 0) setEditCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
-        else alert("No encontrado");
-    } catch (e) { alert("Error"); }
-  };
-
-  // 💾 GUARDAR CAMBIOS
-  const saveEdit = async () => {
-    if (!editingTenant) return;
-    try {
-        const res = await fetch('/api/tenant/settings', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                tenantId: editingTenant.id,
-                prize: editPrize,
-                instagram: editIg,
-                address: editAddress,
-                lat: editCoords[0],
-                lng: editCoords[1]
-            })
-        });
-        if (res.ok) {
-            alert('✅ Configuración Actualizada');
-            setEditingTenant(null); // Cerrar modal
-            loadTenants(); // Recargar lista
-        } else alert('Error al guardar');
-    } catch (e) { alert('Error de conexión'); }
+        await fetch('/api/master/manage-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'UPDATE', userId: editingUser.id, data: editingUser }) });
+        setEditingUser(null); loadTenants();
+    } catch(e) { alert('Error'); }
   };
 
   if (!auth) return <div className="min-h-screen bg-black flex justify-center items-center p-4"><form onSubmit={handleAuth} className="bg-gray-900 p-8 rounded-xl border border-red-900 text-center"><h1 className="text-red-500 font-bold mb-4">👑 MASTER</h1><input type="password" className="p-3 rounded bg-gray-800 text-white w-full mb-4" value={masterPass} onChange={e=>setMasterPass(e.target.value)}/><button className="bg-red-600 w-full py-3 rounded font-bold text-white">Entrar</button></form></div>;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8 overflow-y-auto relative">
-      <h1 className="text-3xl font-bold text-red-500 mb-8">👑 Panel de Super Admin</h1>
+    <div className="min-h-screen bg-gray-900 text-white p-8 overflow-y-auto">
+      <h1 className="text-3xl font-bold text-red-500 mb-8">👑 Gestión Total</h1>
       
-      {/* FORMULARIOS DE CREACIÓN */}
+      {/* CREACIÓN */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-          <h2 className="text-xl font-bold mb-4">🏭 Nuevo Negocio</h2>
+          <h2 className="text-xl font-bold mb-4 text-blue-400">🏭 Nuevo Negocio</h2>
           <input className="w-full p-3 bg-gray-700 rounded mb-2" placeholder="Nombre" value={tName} onChange={e=>setTName(e.target.value)} />
           <input className="w-full p-3 bg-gray-700 rounded mb-4" placeholder="Slug (url)" value={tSlug} onChange={e=>setTSlug(e.target.value)} />
-          <button onClick={createTenant} className="w-full bg-blue-600 py-3 rounded font-bold">Crear</button>
+          <button onClick={createTenant} className="w-full bg-blue-600 py-3 rounded font-bold hover:bg-blue-500">Crear</button>
         </div>
 
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-          <h2 className="text-xl font-bold mb-4">👤 Nuevo Empleado</h2>
-          <div className="bg-black p-2 rounded mb-2 text-yellow-400 font-mono text-sm">ID: {selectedTenantId || 'Selecciona abajo 👇'}</div>
+          <h2 className="text-xl font-bold mb-4 text-green-400">👤 Nuevo Empleado</h2>
+          <div className="bg-black p-2 rounded mb-2 text-yellow-400 font-mono text-xs">Para Negocio ID: {selectedTenantId || 'Selecciona abajo 👇'}</div>
           <div className="grid grid-cols-2 gap-2">
              <input className="p-2 bg-gray-700 rounded" placeholder="Nombre" value={uName} onChange={e=>setUName(e.target.value)} />
              <input className="p-2 bg-gray-700 rounded" placeholder="Tel" value={uPhone} onChange={e=>setUPhone(e.target.value)} />
-             <input className="p-2 bg-gray-700 rounded" placeholder="Email" value={uEmail} onChange={e=>setUEmail(e.target.value)} />
-             <select className="p-2 bg-gray-700 rounded" value={uRole} onChange={e=>setURole(e.target.value)}><option value="ADMIN">ADMIN</option><option value="STAFF">STAFF</option></select>
              <input className="p-2 bg-gray-700 rounded" placeholder="User" value={uUser} onChange={e=>setUUser(e.target.value)} />
              <input className="p-2 bg-gray-700 rounded" placeholder="Pass" value={uPass} onChange={e=>setUPass(e.target.value)} />
+             <select className="p-2 bg-gray-700 rounded col-span-2" value={uRole} onChange={e=>setURole(e.target.value)}><option value="ADMIN">ADMIN</option><option value="STAFF">STAFF</option></select>
           </div>
-          <button onClick={createUser} disabled={!selectedTenantId} className="w-full bg-green-600 py-3 rounded font-bold mt-4 disabled:opacity-50">Agregar</button>
+          <button onClick={createUser} disabled={!selectedTenantId} className="w-full bg-green-600 py-3 rounded font-bold mt-4 disabled:opacity-50 hover:bg-green-500">Agregar</button>
         </div>
       </div>
+      
       {msg && <div className="p-4 bg-white text-black font-bold rounded mt-4 text-center mb-8">{msg}</div>}
       
-      {/* LISTA DE NEGOCIOS */}
-      <h2 className="text-2xl font-bold mb-4">🏢 Negocios Activos</h2>
-      <div className="grid gap-4">
+      {/* LISTA MAESTRA */}
+      <h2 className="text-2xl font-bold mb-4">🏢 Directorio de Negocios</h2>
+      <div className="space-y-6">
         {tenants.map(t => (
-          <div key={t.id} className={`p-4 rounded-xl border ${selectedTenantId===t.id ? 'bg-gray-700 border-green-500 ring-1 ring-green-500' : 'bg-gray-800 border-gray-600'}`}>
-             <div className="flex justify-between items-start">
+          <div key={t.id} className={`p-6 rounded-xl border transition-all ${selectedTenantId===t.id ? 'bg-gray-800 border-green-500 ring-1 ring-green-500' : 'bg-gray-800 border-gray-700'}`}>
+             <div className="flex justify-between items-start mb-4">
                 <div onClick={() => setSelectedTenantId(t.id)} className="cursor-pointer flex-1">
-                    <h3 className="font-bold text-lg text-white">{t.name}</h3>
-                    <p className="text-xs text-gray-400">/{t.slug}</p>
-                    <div className="mt-2 text-xs text-gray-300">
-                        <span className="bg-gray-900 px-2 py-1 rounded mr-2">🏆 {t.prize}</span>
-                        {t.instagram && <span className="bg-pink-900 px-2 py-1 rounded text-pink-200 mr-2">📸 {t.instagram}</span>}
-                        {t.address && <span className="bg-blue-900 px-2 py-1 rounded text-blue-200">📍 {t.address.substring(0, 20)}...</span>}
-                    </div>
-                    <div className="mt-2 text-xs text-gray-500">
-                        Usuarios: {t.users.map((u:any)=>u.username).join(', ')}
-                    </div>
+                    <h3 className="font-bold text-2xl text-white flex items-center gap-2">{t.name} <span className="text-xs font-normal text-gray-500 bg-gray-900 px-2 rounded">{t.slug}</span></h3>
+                    <p className="text-sm text-gray-400 mt-1">🏆 {t.prize} | 📸 {t.instagram || 'No IG'}</p>
                 </div>
-                
-                {/* BOTÓN EDITAR */}
-                <button onClick={() => openEdit(t)} className="bg-yellow-600 text-black font-bold px-3 py-1 rounded hover:bg-yellow-500 text-sm ml-2">
-                    ✏️ Editar
-                </button>
+                <div className="flex gap-2">
+                    <button onClick={() => setEditingTenant(t)} className="bg-yellow-600 text-black px-3 py-1 rounded font-bold text-sm hover:bg-yellow-500">✏️ Editar Info</button>
+                    <button onClick={() => deleteTenant(t.id, t.name)} className="bg-red-600 text-white px-3 py-1 rounded font-bold text-sm hover:bg-red-500">🗑️ Borrar</button>
+                </div>
+             </div>
+
+             {/* TABLA DE USUARIOS */}
+             <div className="bg-gray-900 rounded-lg p-4">
+                <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Empleados ({t.users.length})</h4>
+                {t.users.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {t.users.map((u: any) => (
+                            <div key={u.id} className="bg-gray-800 p-3 rounded border border-gray-700 flex justify-between items-center group hover:border-gray-500">
+                                <div>
+                                    <p className="font-bold text-sm text-white">{u.name}</p>
+                                    <p className="text-xs text-blue-400 font-mono">{u.username}</p>
+                                    <span className={`text-[10px] px-1 rounded ${u.role==='ADMIN'?'bg-purple-900 text-purple-200':'bg-blue-900 text-blue-200'}`}>{u.role}</span>
+                                </div>
+                                <div className="flex gap-1">
+                                    <button onClick={() => setEditingUser(u)} className="text-gray-400 hover:text-white text-xs">✏️</button>
+                                    <button onClick={() => deleteUser(u.id)} className="text-red-400 hover:text-red-300 text-xs">🗑️</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : <p className="text-xs text-gray-600 italic">Sin empleados asignados.</p>}
              </div>
           </div>
         ))}
       </div>
 
-      {/* 🛠️ MODAL DE EDICIÓN */}
+      {/* MODAL EDITAR NEGOCIO */}
       {editingTenant && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4 backdrop-blur-sm">
-            <div className="bg-gray-800 p-6 rounded-2xl w-full max-w-lg border border-gray-600 shadow-2xl max-h-[90vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-white">Editar: {editingTenant.name}</h2>
-                    <button onClick={() => setEditingTenant(null)} className="text-gray-400 hover:text-white text-xl">✕</button>
+        <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4">
+            <div className="bg-gray-800 p-6 rounded-xl w-full max-w-md border border-gray-600">
+                <h2 className="text-xl font-bold mb-4">Editar Negocio</h2>
+                <div className="space-y-3">
+                    <input className="w-full p-3 bg-gray-700 rounded" value={editingTenant.name} onChange={e=>setEditingTenant({...editingTenant, name: e.target.value})} placeholder="Nombre" />
+                    <input className="w-full p-3 bg-gray-700 rounded" value={editingTenant.slug} onChange={e=>setEditingTenant({...editingTenant, slug: e.target.value})} placeholder="Slug" />
+                    <input className="w-full p-3 bg-gray-700 rounded" value={editingTenant.prize || ''} onChange={e=>setEditingTenant({...editingTenant, prize: e.target.value})} placeholder="Premio" />
+                    <input className="w-full p-3 bg-gray-700 rounded" value={editingTenant.instagram || ''} onChange={e=>setEditingTenant({...editingTenant, instagram: e.target.value})} placeholder="Instagram" />
                 </div>
-
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-1">Premio</label>
-                        <input className="w-full p-3 bg-gray-700 rounded text-white" value={editPrize} onChange={e=>setEditPrize(e.target.value)} />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-1">Instagram</label>
-                        <input className="w-full p-3 bg-gray-700 rounded text-white" value={editIg} onChange={e=>setEditIg(e.target.value)} placeholder="@usuario" />
-                    </div>
-                    
-                    <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-1">Ubicación</label>
-                        <div className="flex gap-2 mb-2">
-                            <input className="flex-1 p-3 bg-gray-700 rounded text-white text-sm" value={editAddress} onChange={e=>setEditAddress(e.target.value)} placeholder="Dirección..." />
-                            <button onClick={searchAddress} className="bg-blue-600 px-3 rounded">🔍</button>
-                        </div>
-                        <div className="h-48 w-full rounded border border-gray-600 overflow-hidden relative z-0">
-                            <AdminMap coords={editCoords} setCoords={setEditCoords} />
-                        </div>
-                    </div>
+                <div className="flex justify-end gap-2 mt-4">
+                    <button onClick={() => setEditingTenant(null)} className="px-4 py-2 text-gray-400">Cancelar</button>
+                    <button onClick={updateTenant} className="bg-green-600 px-4 py-2 rounded font-bold">Guardar</button>
                 </div>
+            </div>
+        </div>
+      )}
 
-                <button onClick={saveEdit} className="w-full bg-green-600 text-white font-bold py-3 rounded-xl mt-6 hover:bg-green-500">Guardar Cambios</button>
+      {/* MODAL EDITAR USUARIO */}
+      {editingUser && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4">
+            <div className="bg-gray-800 p-6 rounded-xl w-full max-w-md border border-gray-600">
+                <h2 className="text-xl font-bold mb-4">Editar Empleado</h2>
+                <div className="space-y-3">
+                    <input className="w-full p-3 bg-gray-700 rounded" value={editingUser.name} onChange={e=>setEditingUser({...editingUser, name: e.target.value})} placeholder="Nombre" />
+                    <input className="w-full p-3 bg-gray-700 rounded" value={editingUser.username} onChange={e=>setEditingUser({...editingUser, username: e.target.value})} placeholder="Usuario" />
+                    <input className="w-full p-3 bg-gray-700 rounded" value={editingUser.password} onChange={e=>setEditingUser({...editingUser, password: e.target.value})} placeholder="Contraseña" />
+                    <select className="w-full p-3 bg-gray-700 rounded" value={editingUser.role} onChange={e=>setEditingUser({...editingUser, role: e.target.value})}><option value="ADMIN">ADMIN</option><option value="STAFF">STAFF</option></select>
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                    <button onClick={() => setEditingUser(null)} className="px-4 py-2 text-gray-400">Cancelar</button>
+                    <button onClick={updateUser} className="bg-green-600 px-4 py-2 rounded font-bold">Guardar</button>
+                </div>
             </div>
         </div>
       )}
