@@ -15,8 +15,8 @@ model Tenant {
   password    String?   
   prize       String   @default("Premio Sorpresa")
   
-  // 🛠️ FIX: Opcional para no romper datos viejos
-  codePrefix  String?  @unique 
+  // 🔓 SIN UNIQUE POR AHORA PARA PASAR EL DEPLOY
+  codePrefix  String?  
   
   lat         Float?   @default(19.4326)
   lng         Float?   @default(-99.1332)
