@@ -3,13 +3,19 @@ import { useState, useEffect } from 'react';
 import QRCode from 'react-qr-code';
 import dynamic from 'next/dynamic';
 
-// Cargar Mapa sin SSR
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false });
 const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false });
 const useMapEvents = dynamic(() => import('react-leaflet').then(m => m.useMapEvents), { ssr: false });
+const useMap = dynamic(() => import('react-leaflet').then(m => m.useMap), { ssr: false });
 
-// Componente para capturar clics en el mapa
+// Control para mover mapa al pegar link
+function MapController({ coords }: { coords: [number, number] }) {
+  const map = useMap();
+  useEffect(() => { map.flyTo(coords, 16); }, [coords, map]);
+  return null;
+}
+
 function LocationMarker({ position, setPosition }: any) {
   const map = useMapEvents({
     click(e: any) {
@@ -31,10 +37,9 @@ export default function AdminPage() {
   const [tab, setTab] = useState('qr');
   const [userRole, setUserRole] = useState('');
 
-  // Configuración
   const [prizeName, setPrizeName] = useState('');
   const [googleLink, setGoogleLink] = useState('');
-  const [coords, setCoords] = useState<[number, number]>([19.4326, -99.1332]); // Default CDMX
+  const [coords, setCoords] = useState<[number, number]>([19.4326, -99.1332]);
   
   const [redeemCode, setRedeemCode] = useState('');
   const [msg, setMsg] = useState('');
@@ -48,13 +53,9 @@ export default function AdminPage() {
         setTenant(data.tenant);
         setUserRole(data.user.role);
         setPrizeName(data.tenant.prize || '');
-        // Cargar coordenadas guardadas o default
-        if (data.tenant.lat && data.tenant.lng) {
-            setCoords([data.tenant.lat, data.tenant.lng]);
-        }
+        if (data.tenant.lat && data.tenant.lng) setCoords([data.tenant.lat, data.tenant.lng]);
         if (typeof window !== 'undefined') setBaseUrl(window.location.origin);
-        if (data.user.role === 'ADMIN') { setTab('dashboard'); loadReports(data.tenant.id); } 
-        else setTab('qr');
+        if (data.user.role === 'ADMIN') { setTab('dashboard'); loadReports(data.tenant.id); } else setTab('qr');
       } else alert(data.error);
     } catch(e) { alert('Error'); }
   };
@@ -62,17 +63,23 @@ export default function AdminPage() {
   const loadReports = async (tid: string) => { try { const res = await fetch('/api/admin/reports', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tid }) }); setReportData(await res.json()); } catch(e) {} };
   const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch (e) {} };
   
-  // PARSEAR LINK DE GOOGLE MAPS
+  // 🧠 PARSER MEJORADO
   const handleGoogleLink = (link: string) => {
     setGoogleLink(link);
-    // Intentar extraer coordenadas de la URL (ej: @19.432,-99.133)
-    const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
-    const match = link.match(regex);
+    
+    // Caso 1: URL larga con @lat,lng
+    let match = link.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    
+    // Caso 2: URL con parámetros query ?q=lat,lng
+    if (!match) match = link.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    
+    // Caso 3: URL tipo /maps/place/.../data=!3m1!4b1!4m5!3m4!1s...!8m2!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/
+    if (!match) match = link.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+
     if (match) {
         const lat = parseFloat(match[1]);
         const lng = parseFloat(match[2]);
         setCoords([lat, lng]);
-        alert(`📍 Ubicación detectada: ${lat}, ${lng}`);
     }
   };
 
@@ -80,15 +87,9 @@ export default function AdminPage() {
     try {
       await fetch('/api/tenant/settings', { 
         method: 'POST', headers: {'Content-Type': 'application/json'}, 
-        body: JSON.stringify({ 
-            tenantId: tenant.id, 
-            prize: prizeName,
-            lat: coords[0],
-            lng: coords[1],
-            address: googleLink || 'Ubicación de Mapa'
-        }) 
+        body: JSON.stringify({ tenantId: tenant.id, prize: prizeName, lat: coords[0], lng: coords[1], address: googleLink }) 
       });
-      alert('✅ Configuración Guardada');
+      alert('Guardado');
     } catch(e) { alert('Error'); }
   };
 
@@ -126,13 +127,9 @@ export default function AdminPage() {
            <button onClick={() => setTenant(null)} className="text-xs text-red-400 mt-4 hover:text-red-300 border border-red-900 p-2 rounded w-full">Cerrar Sesión</button>
         </div>
       </div>
-      
-      {/* BOTÓN SALIR MÓVIL */}
       <button onClick={() => setTenant(null)} className="md:hidden fixed top-4 right-4 z-50 bg-red-600 text-white w-8 h-8 rounded-full font-bold flex items-center justify-center shadow-lg">✕</button>
 
       <div className="flex-1 p-8 overflow-y-auto mb-20 md:mb-0">
-        
-        {/* VISTA DASHBOARD */}
         {tab === 'dashboard' && userRole === 'ADMIN' && (
           <div className="space-y-8 animate-fadeIn">
             <h2 className="text-3xl font-bold text-gray-800">Resumen</h2>
@@ -144,7 +141,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* VISTA QR */}
         {tab === 'qr' && (
           <div className="flex flex-col items-center justify-center h-full animate-fadeIn">
              <div className="bg-white p-10 rounded-[3rem] shadow-xl text-center border border-gray-100 max-w-md w-full">
@@ -156,7 +152,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* VISTA CANJE */}
         {tab === 'redeem' && (
           <div className="max-w-md mx-auto mt-10 animate-fadeIn">
              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-pink-100 text-center">
@@ -168,42 +163,29 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* VISTA CONFIG (MAPA + PREMIO) */}
         {tab === 'settings' && userRole === 'ADMIN' && (
           <div className="max-w-lg mx-auto mt-10 animate-fadeIn space-y-6">
-             {/* TARJETA CONFIG BASICA */}
              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
-                <h2 className="text-xl font-bold text-gray-800">Datos del Negocio</h2>
+                <h2 className="text-xl font-bold text-gray-800">Datos</h2>
                 <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Nombre</label><input className="w-full p-4 bg-gray-100 rounded-2xl mt-1 text-gray-500 font-bold border border-transparent cursor-not-allowed" value={tenant.name} readOnly /></div>
                 <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Premio</label><input className="w-full p-4 bg-gray-50 rounded-2xl mt-1 font-medium text-gray-800 border border-transparent focus:bg-white focus:border-gray-200 outline-none transition-all" value={prizeName} onChange={e => setPrizeName(e.target.value)} /></div>
              </div>
 
-             {/* TARJETA MAPA */}
              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
                 <h2 className="text-xl font-bold text-gray-800">📍 Ubicación</h2>
-                <p className="text-sm text-gray-500">Pega un link de Google Maps o toca el mapa.</p>
-                
-                <input 
-                  className="w-full p-3 bg-blue-50 rounded-xl text-blue-800 text-xs font-mono border border-blue-100 mb-2" 
-                  placeholder="https://maps.google.com/?q=..."
-                  value={googleLink}
-                  onChange={(e) => handleGoogleLink(e.target.value)}
-                />
-
+                <input className="w-full p-3 bg-blue-50 rounded-xl text-blue-800 text-xs font-mono border border-blue-100 mb-2" placeholder="Pega el link de Google Maps aquí..." value={googleLink} onChange={(e) => handleGoogleLink(e.target.value)} />
                 <div className="h-[300px] w-full rounded-2xl overflow-hidden border border-gray-200 z-0">
                    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-                   {/* Importante: El mapa necesita renderizarse solo en cliente, si da error refrescar */}
                    {typeof window !== 'undefined' && (
                      <MapContainer center={coords} zoom={15} style={{ height: '100%', width: '100%' }}>
                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                       <MapController coords={coords} />
                        <LocationMarker position={coords} setPosition={setCoords} />
                      </MapContainer>
                    )}
                 </div>
-                
                 <p className="text-center text-xs text-gray-400 mt-2">Lat: {coords[0].toFixed(4)}, Lng: {coords[1].toFixed(4)}</p>
              </div>
-
              <button onClick={saveSettings} className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold hover:bg-black transition-all shadow-lg">Guardar Todo</button>
           </div>
         )}
