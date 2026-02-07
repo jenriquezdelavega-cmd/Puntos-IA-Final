@@ -7,10 +7,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { username, password } = body;
 
-    // Buscar en la tabla de empleados
+    // Buscar usuario del negocio
     const user = await prisma.tenantUser.findUnique({
       where: { username },
-      include: { tenant: true }
+      include: { tenant: true } // Traemos toda la info del negocio
     });
 
     if (!user || user.password !== password) {
@@ -27,7 +27,12 @@ export async function POST(request: Request) {
         id: user.tenant.id, 
         name: user.tenant.name, 
         slug: user.tenant.slug,
-        prize: user.tenant.prize
+        prize: user.tenant.prize,
+        // 🆕 AHORA SÍ ENVIAMOS ESTOS DATOS AL FRONTEND
+        instagram: user.tenant.instagram,
+        lat: user.tenant.lat,
+        lng: user.tenant.lng,
+        address: user.tenant.address
       }
     });
 
