@@ -25,10 +25,11 @@ model Tenant {
 
   createdAt   DateTime @default(now())
   
-  users       TenantUser[] @relation(onDelete: Cascade)
-  memberships Membership[] @relation(onDelete: Cascade)
-  dailyCodes  DailyCode[]  @relation(onDelete: Cascade)
-  redemptions Redemption[] @relation(onDelete: Cascade)
+  // CORRECCIÓN: Aquí NO va onDelete
+  users       TenantUser[] 
+  memberships Membership[] 
+  dailyCodes  DailyCode[]  
+  redemptions Redemption[] 
 }
 
 model TenantUser {
@@ -39,7 +40,9 @@ model TenantUser {
   username  String   @unique
   password  String
   role      String   
+  
   tenantId  String
+  // AQUÍ SÍ VA CASCADE
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
@@ -52,6 +55,7 @@ model User {
   gender    String?  
   birthDate DateTime? 
   createdAt DateTime @default(now()) 
+  
   memberships Membership[]
   redemptions Redemption[]
 }
@@ -62,6 +66,7 @@ model Membership {
   totalVisits    Int      @default(0)
   lastVisitAt    DateTime?
   tenantId       String
+  // CASCADE
   tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userId         String
   user           User     @relation(fields: [userId], references: [id])
@@ -75,6 +80,7 @@ model DailyCode {
   validDate DateTime @default(now())
   isActive  Boolean  @default(true)
   tenantId  String
+  // CASCADE
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   visits    Visit[]
 }
@@ -83,6 +89,7 @@ model Visit {
   id        String   @id @default(uuid())
   visitedAt DateTime @default(now())
   membershipId String
+  // CASCADE
   membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
   dailyCodeId String
   dailyCode   DailyCode @relation(fields: [dailyCodeId], references: [id])
@@ -95,6 +102,7 @@ model Redemption {
   isUsed    Boolean  @default(false)
   createdAt DateTime @default(now())
   tenantId  String
+  // CASCADE
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id])
