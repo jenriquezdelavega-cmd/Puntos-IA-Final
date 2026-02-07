@@ -88,7 +88,6 @@ export default function Home() {
     </div>
   );
 
-  // --- VISTAS ---
   if (view === 'WELCOME') return (
     <div className="min-h-screen bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 flex flex-col items-center justify-center p-6 text-white relative overflow-y-auto">
       <div className="w-full max-w-sm flex flex-col items-center py-10">
@@ -115,8 +114,8 @@ export default function Home() {
         </div>
         <div className="flex-1 px-6 -mt-12 pb-10 z-10">
           <div className="bg-white rounded-3xl shadow-2xl p-8 space-y-6 border border-gray-100">
-             {isReg && <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Nombre</label><input className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={name} onChange={e=>setName(e.target.value)} /></div>}
-             <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Teléfono</label><input type="tel" maxLength={10} className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,''))} placeholder="10 dígitos" /></div>
+             {isReg && <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Nombre Completo</label><input className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={name} onChange={e=>setName(e.target.value)} /></div>}
+             <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Teléfono Celular</label><input type="tel" maxLength={10} className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,''))} placeholder="10 dígitos" /></div>
              {isReg && (<><div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Email</label><input type="email" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={email} onChange={e=>setEmail(e.target.value)} /></div><div className="flex gap-4"><div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Fecha</label><input type="date" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium border border-gray-100 h-[58px]" value={birthDate} onChange={e=>setBirthDate(e.target.value)} /></div><div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Género</label><select className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium border border-gray-100 h-[58px]" value={gender} onChange={e=>setGender(e.target.value)}><option value="">-</option><option value="Hombre">M</option><option value="Mujer">F</option></select></div></div></>)}
              <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Contraseña</label><input type="password" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={password} onChange={e=>setPassword(e.target.value)} /></div>
              {message && <div className="p-4 bg-red-50 text-red-500 rounded-2xl text-center font-bold text-sm animate-fadeIn border border-red-100">{message}</div>}
@@ -134,97 +133,61 @@ export default function Home() {
 
       <div className="bg-white px-8 pt-16 pb-6 sticky top-0 z-20 shadow-sm flex justify-between items-center">
          <div><p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Hola,</p><h1 className="text-3xl font-black text-gray-900 tracking-tight">{user.name.split(' ')[0]}</h1></div>
-         <div className="flex gap-2">
-            <button onClick={() => setShowTutorial(true)} className="h-12 w-12 bg-blue-50 text-blue-500 rounded-full font-bold border border-blue-100 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Ayuda"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg></button>
-            <button onClick={handleLogout} className="h-12 w-12 bg-red-50 text-red-500 rounded-full font-bold border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm">✕</button>
-         </div>
+         <div className="flex gap-2"><button onClick={() => setShowTutorial(true)} className="h-12 w-12 bg-blue-50 text-blue-500 rounded-full font-bold border border-blue-100 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Ayuda"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg></button><button onClick={handleLogout} className="h-12 w-12 bg-red-50 text-red-500 rounded-full font-bold border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm">✕</button></div>
       </div>
 
       <div className="p-6">
         {activeTab === 'checkin' && !scanning && (
            <div className="flex flex-col gap-6">
-             <div className="space-y-6">
+             <div className="space-y-4">
                {user.memberships?.map((m: any, idx: number) => {
                    const progress = Math.min(m.points, 100);
                    const isWinner = m.points >= 100;
                    const isExpanded = expandedId === m.tenantId;
                    return (
-                     <div key={idx} onClick={() => toggleCard(m.tenantId)} className={`bg-white p-6 rounded-[2.5rem] relative overflow-hidden transition-all duration-500 cursor-pointer border border-gray-100 ${isExpanded ? 'shadow-2xl ring-4 ring-pink-50 scale-[1.02]' : 'shadow-lg hover:shadow-xl hover:scale-[1.01]'}`}>
-                       
-                       {/* FONDO DECORATIVO */}
+                     <div key={idx} onClick={() => toggleCard(m.tenantId)} className={`bg-white p-6 rounded-[2rem] relative overflow-hidden transition-all duration-500 cursor-pointer border border-gray-100 ${isExpanded ? 'shadow-2xl ring-4 ring-pink-50 scale-[1.02]' : 'shadow-lg hover:shadow-xl hover:scale-[1.01]'}`}>
                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-100 via-pink-100 to-purple-100 rounded-bl-full opacity-60 z-0"></div>
-                       
                        <div className="relative z-10">
-                         {/* ENCABEZADO TARJETA */}
                          <div className="flex justify-between items-start mb-6">
                             <div className="flex items-center gap-4">
-                                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-gray-900 to-gray-700 text-white flex items-center justify-center font-black text-2xl shadow-lg">
-                                    {m.name.charAt(0)}
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-gray-800 text-xl tracking-tight leading-none">{m.name}</h3>
-                                    <p className="text-xs text-gray-400 mt-1 font-medium tracking-wide">MIEMBRO VIP</p>
-                                </div>
+                                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-gray-900 to-gray-700 text-white flex items-center justify-center font-black text-2xl shadow-lg">{m.name.charAt(0)}</div>
+                                <div><h3 className="font-bold text-gray-800 text-xl tracking-tight leading-none">{m.name}</h3></div>
                             </div>
-                            {/* PUNTOS GRANDES */}
-                            <div className="text-right">
-                                <span className="block text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-600">{m.points}</span>
-                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">PUNTOS</span>
-                            </div>
+                            <div className="text-right"><span className="block text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-600">{m.points}</span><span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">PUNTOS</span></div>
                          </div>
-                         
-                         {/* BARRA PROGRESO O BOTÓN GANADOR */}
                          {!isWinner ? (
-                           <>
-                             <div className="relative w-full h-5 bg-gray-100 rounded-full overflow-hidden mb-3 shadow-inner">
-                               <div className="absolute inset-0 bg-gray-200/50"></div>
-                               <div 
-                                 className="h-full rounded-full bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 transition-all duration-1000 relative" 
-                                 style={{ width: `${progress}%` }}
-                               >
-                                  {/* EFECTO SHIMMER (BRILLO) */}
-                                  <div className="absolute top-0 left-0 bottom-0 right-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer w-full h-full"></div>
-                               </div>
-                             </div>
-                             <div className="flex justify-between items-center text-xs font-bold uppercase tracking-wide">
-                                <span className="text-gray-400 flex items-center gap-1">{isExpanded ? '🔽 Menos info' : '▶️ Ver opciones'}</span>
-                                <span className="text-purple-600 bg-purple-50 px-2 py-1 rounded-lg">🏆 Meta: {m.prize}</span>
-                             </div>
-                           </>
+                           <><div className="relative w-full h-5 bg-gray-100 rounded-full overflow-hidden mb-3 shadow-inner"><div className="absolute inset-0 bg-gray-200/50"></div><div className="h-full rounded-full bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 transition-all duration-1000 relative" style={{ width: `${progress}%` }}><div className="absolute top-0 left-0 bottom-0 right-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer w-full h-full"></div></div></div><div className="flex justify-between items-center text-xs font-bold uppercase tracking-wide"><span className="text-gray-400 flex items-center gap-1">{isExpanded ? '🔽 Menos info' : '▶️ Ver opciones'}</span><span className="text-purple-600 bg-purple-50 px-2 py-1 rounded-lg">🏆 Meta: {m.prize}</span></div></>
                          ) : (
-                           <button onClick={(e) => {e.stopPropagation(); getPrizeCode(m.tenantId, m.name);}} className="w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white font-black py-5 rounded-2xl shadow-xl animate-pulse tracking-wide text-lg relative z-20 hover:scale-[1.02] transition-transform border-4 border-white/20">
-                             🎁 CANJEAR PREMIO
-                           </button>
+                           <button onClick={(e) => {e.stopPropagation(); getPrizeCode(m.tenantId, m.name);}} className="w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white font-black py-5 rounded-2xl shadow-xl animate-pulse tracking-wide text-lg relative z-20 hover:scale-[1.02] transition-transform border-4 border-white/20">🎁 CANJEAR PREMIO</button>
                          )}
-                         
-                         {/* OPCIONES EXPANDIBLES */}
                          <div className={`grid grid-cols-2 gap-3 mt-4 overflow-hidden transition-all duration-500 ease-in-out ${isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
-                              <button onClick={(e) => { e.stopPropagation(); goToBusinessMap(m.name); }} className="bg-white border-2 border-blue-50 text-blue-600 py-4 rounded-2xl font-bold text-xs flex flex-col items-center hover:bg-blue-50 transition-colors shadow-sm group">
-                                <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">📍</span> Ver Mapa
-                              </button>
-                              
-                              {m.instagram ? (
-                                <a href={`https://instagram.com/${m.instagram.replace('@','')}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="bg-white border-2 border-pink-50 text-pink-600 py-4 rounded-2xl font-bold text-xs flex flex-col items-center hover:bg-pink-50 transition-colors no-underline shadow-sm group">
-                                  <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">📸</span> Instagram
-                                </a>
-                              ) : (
-                                <div className="bg-gray-50 border-2 border-gray-100 text-gray-300 py-4 rounded-2xl font-bold text-xs flex flex-col items-center grayscale opacity-50">
-                                  <span className="text-2xl mb-1">📸</span> No IG
-                                </div>
-                              )}
+                              <button onClick={(e) => { e.stopPropagation(); goToBusinessMap(m.name); }} className="bg-white border-2 border-blue-50 text-blue-600 py-4 rounded-2xl font-bold text-xs flex flex-col items-center hover:bg-blue-50 transition-colors shadow-sm group"><span className="text-2xl mb-1 group-hover:scale-110 transition-transform">📍</span> Ver Mapa</button>
+                              {m.instagram ? (<a href={`https://instagram.com/${m.instagram.replace('@','')}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="bg-white border-2 border-pink-50 text-pink-600 py-4 rounded-2xl font-bold text-xs flex flex-col items-center hover:bg-pink-50 transition-colors no-underline shadow-sm group"><span className="text-2xl mb-1 group-hover:scale-110 transition-transform">📸</span> Instagram</a>) : (<div className="bg-gray-50 border-2 border-gray-100 text-gray-300 py-4 rounded-2xl font-bold text-xs flex flex-col items-center grayscale opacity-50"><span className="text-2xl mb-1">📸</span> No IG</div>)}
                          </div>
                        </div>
                      </div>
                    );
                })}
              </div>
-             <button onClick={() => setScanning(true)} className="w-full bg-gray-900 text-white py-6 rounded-[2.5rem] font-bold shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all text-xl hover:bg-black group"><span className="group-hover:rotate-12 transition-transform duration-300">📷</span> Escanear Nuevo QR</button>
              
-             {/* CAMPO MANUAL DISCRETO */}
-             <div className="mt-8 flex justify-center">
-                <div className="flex bg-white p-2 rounded-full shadow-sm border border-gray-100 w-full max-w-xs">
-                   <input className="flex-1 p-2 bg-transparent text-gray-800 font-bold text-center tracking-[0.2em] uppercase text-sm outline-none placeholder-gray-300" placeholder="CÓDIGO MANUAL" value={manualCode} onChange={e => setManualCode(e.target.value.toUpperCase())} maxLength={7} />
-                   <button onClick={() => handleScan(manualCode)} disabled={!manualCode} className="bg-gray-200 text-gray-600 font-bold px-4 rounded-full disabled:opacity-50 hover:bg-gray-300 transition-all">OK</button>
+             {/* 🆕 SECCIÓN DE ESCANEO RENOVADA */}
+             <div className="mt-8">
+                {/* BOTÓN GIGANTE */}
+                <button onClick={() => setScanning(true)} className="w-full bg-gradient-to-r from-gray-900 via-purple-900 to-gray-900 text-white py-6 rounded-[2rem] font-black shadow-2xl flex items-center justify-center gap-4 active:scale-95 transition-all text-xl border border-white/20 relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+                    <span className="text-3xl animate-bounce">📸</span>
+                    <span className="tracking-widest">ESCANEAR</span>
+                </button>
+
+                {/* BLOQUE MANUAL MEJORADO */}
+                <div className="mt-6 bg-white/60 backdrop-blur-sm p-1 rounded-3xl border border-white/60">
+                    <div className="bg-white p-4 rounded-[1.5rem] shadow-sm flex flex-col gap-3">
+                       <p className="text-center text-xs font-bold text-gray-400 uppercase tracking-widest">¿No funciona la cámara?</p>
+                       <div className="flex gap-2">
+                          <input className="flex-1 p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold text-center tracking-[0.3em] uppercase border-2 border-gray-100 placeholder-gray-300 shadow-inner outline-none focus:border-purple-400 transition-all" placeholder="CÓDIGO" value={manualCode} onChange={e => setManualCode(e.target.value.toUpperCase())} maxLength={7} />
+                          <button onClick={() => handleScan(manualCode)} disabled={!manualCode} className="bg-purple-600 text-white font-bold px-6 rounded-2xl shadow-lg disabled:opacity-50 disabled:shadow-none hover:bg-purple-700 transition-all">OK</button>
+                       </div>
+                    </div>
                 </div>
              </div>
            </div>
