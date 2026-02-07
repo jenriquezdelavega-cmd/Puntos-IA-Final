@@ -14,6 +14,12 @@ export async function POST(request: Request) {
       where: { phone },
       include: {
         memberships: {
+          // 🔒 FILTRO CLAVE: Solo traer membresías de negocios ACTIVOS
+          where: {
+            tenant: {
+              isActive: true
+            }
+          },
           include: { tenant: true }
         }
       }
@@ -27,7 +33,7 @@ export async function POST(request: Request) {
       tenantId: m.tenantId,
       name: m.tenant.name,
       prize: m.tenant.prize,
-      instagram: m.tenant.instagram, // 🆕 AHORA ENVIAMOS EL IG
+      instagram: m.tenant.instagram,
       points: m.totalVisits * 10
     }));
 
