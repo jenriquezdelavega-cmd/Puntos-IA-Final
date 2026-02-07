@@ -3,21 +3,23 @@ import { useState, useEffect } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import dynamic from 'next/dynamic';
 
-const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false });
-const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false });
-const Popup = dynamic(() => import('react-leaflet').then(m => m.Popup), { ssr: false });
-const useMap = dynamic(() => import('react-leaflet').then(m => m.useMap), { ssr: false });
-
-function MapController({ coords }: { coords: [number, number] | null }) {
-  const map = useMap();
-  useEffect(() => { if (coords) map.flyTo(coords, 16); }, [coords, map]);
-  return null;
-}
+// 🛡️ CARGA DE MAPA BLINDADA (Solo Cliente)
+const BusinessMap = dynamic(
+  () => import('./components/BusinessMap'), 
+  { 
+    ssr: false, 
+    loading: () => (
+      <div className="h-full w-full bg-gray-50 flex flex-col items-center justify-center text-gray-400 animate-pulse">
+        <span className="text-4xl mb-2">🗺️</span>
+        <span className="text-xs font-bold uppercase tracking-widest">Cargando Mapa...</span>
+      </div>
+    )
+  }
+);
 
 type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
 
-// --- COMPONENTE TUTORIAL REUTILIZABLE ---
+// --- COMPONENTE TUTORIAL (Ajustado) ---
 const Onboarding = () => {
   const [slide, setSlide] = useState(0);
   const slides = [
@@ -33,12 +35,13 @@ const Onboarding = () => {
 
   return (
     <div className="flex flex-col items-center justify-center w-full transition-all duration-500 ease-in-out">
-      <div className="text-7xl mb-4 animate-bounce drop-shadow-md">{slides[slide].icon}</div>
-      <h2 className="text-2xl font-black text-white mb-2 tracking-tight drop-shadow-md">{slides[slide].title}</h2>
-      <p className="text-white/90 text-center font-medium text-sm leading-relaxed h-10 px-4">{slides[slide].text}</p>
-      <div className="flex gap-2 mt-6">
+      {/* EMOJIS MÁS PEQUEÑOS (text-5xl) */}
+      <div className="text-5xl mb-3 animate-bounce drop-shadow-md">{slides[slide].icon}</div>
+      <h2 className="text-xl font-black text-white mb-2 tracking-tight drop-shadow-md">{slides[slide].title}</h2>
+      <p className="text-white/90 text-center font-medium text-xs leading-relaxed h-8 px-4">{slides[slide].text}</p>
+      <div className="flex gap-2 mt-4">
         {slides.map((_, i) => (
-          <div key={i} onClick={() => setSlide(i)} className={`h-2 w-2 rounded-full cursor-pointer transition-all duration-300 ${i === slide ? 'bg-white w-6' : 'bg-white/40'}`} />
+          <div key={i} onClick={() => setSlide(i)} className={`h-1.5 w-1.5 rounded-full cursor-pointer transition-all duration-300 ${i === slide ? 'bg-white w-4' : 'bg-white/40'}`} />
         ))}
       </div>
     </div>
@@ -65,8 +68,6 @@ export default function Home() {
   const [prizeCode, setPrizeCode] = useState<{code: string, tenant: string} | null>(null);
   const [tenants, setTenants] = useState<any[]>([]);
   const [mapFocus, setMapFocus] = useState<[number, number] | null>(null);
-  
-  // 🆕 ESTADO PARA TUTORIAL MODAL
   const [showTutorial, setShowTutorial] = useState(false);
 
   const isValidPhone = (p: string) => /^\d{10}$/.test(p);
@@ -151,7 +152,7 @@ export default function Home() {
   const handleLogout = () => { if(confirm("¿Salir?")) { setUser(null); setView('WELCOME'); setPhone(''); setPassword(''); setMessage(''); } };
 
   const BrandLogo = () => (
-    <div className="flex items-center justify-center gap-1 mb-2 select-none">
+    <div className="flex items-center justify-center gap-1 mb-6 select-none scale-90">
       <span className="text-6xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>punto</span>
       <div className="relative h-12 w-12 mx-1"><div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200 via-orange-400 to-red-500 shadow-[0_0_25px_rgba(255,200,0,0.8)]"></div><div className="absolute top-2 left-3 w-3 h-3 bg-white rounded-full blur-[2px] opacity-90"></div></div>
       <span className="text-6xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>IA</span>
@@ -173,7 +174,6 @@ export default function Home() {
           <button onClick={() => {setMessage(''); setView('REGISTER');}} className="w-full bg-white/10 border-2 border-white/50 text-white py-4 rounded-2xl font-bold text-lg hover:bg-white/20 active:scale-95 transition-all backdrop-blur-sm">Crear Cuenta</button>
         </div>
 
-        {/* 🆕 TUTORIAL ABAJO DE BOTONES */}
         <div className="w-full pt-8 border-t border-white/20">
            <p className="text-center text-white/60 text-xs font-bold uppercase tracking-widest mb-6">¿CÓMO FUNCIONA?</p>
            <Onboarding />
@@ -193,11 +193,11 @@ export default function Home() {
         </div>
         <div className="flex-1 px-6 -mt-12 pb-10 z-10">
           <div className="bg-white rounded-3xl shadow-2xl p-8 space-y-6 border border-gray-100">
-             {isReg && <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Nombre</label><input className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={name} onChange={e=>setName(e.target.value)} /></div>}
-             <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Teléfono</label><input type="tel" maxLength={10} className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,''))} placeholder="10 dígitos" /></div>
+             {isReg && <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Nombre Completo</label><input className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={name} onChange={e=>setName(e.target.value)} /></div>}
+             <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Teléfono Celular</label><input type="tel" maxLength={10} className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,''))} placeholder="10 dígitos" /></div>
              {isReg && (
                <>
-                 <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Email</label><input type="email" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={email} onChange={e=>setEmail(e.target.value)} /></div>
+                 <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Email (Opcional)</label><input type="email" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={email} onChange={e=>setEmail(e.target.value)} /></div>
                  <div className="flex gap-4">
                     <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Fecha</label><input type="date" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium border border-gray-100 h-[58px]" value={birthDate} onChange={e=>setBirthDate(e.target.value)} /></div>
                     <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Género</label><select className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium border border-gray-100 h-[58px]" value={gender} onChange={e=>setGender(e.target.value)}><option value="">-</option><option value="Hombre">M</option><option value="Mujer">F</option></select></div>
@@ -215,7 +215,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
-      {/* 🆕 MODAL DE TUTORIAL (AYUDA) */}
+      {/* MODAL TUTORIAL */}
       {showTutorial && (
         <div className="fixed inset-0 bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 z-[60] flex flex-col items-center justify-center p-8 animate-fadeIn">
            <div className="w-full max-w-sm">
@@ -226,7 +226,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* MODAL PREMIO */}
       {prizeCode && (
         <div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-6 animate-fadeIn backdrop-blur-md">
           <div className="bg-white p-8 rounded-[2rem] text-center w-full max-w-sm relative shadow-2xl overflow-hidden">
@@ -243,10 +242,18 @@ export default function Home() {
       <div className="bg-white px-8 pt-16 pb-6 sticky top-0 z-20 shadow-sm flex justify-between items-center">
          <div><p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Hola,</p><h1 className="text-3xl font-black text-gray-900 tracking-tight">{user.name.split(' ')[0]}</h1></div>
          
-         {/* BOTONES DE HEADER (AYUDA + SALIR) */}
          <div className="flex gap-2">
-            <button onClick={() => setShowTutorial(true)} className="h-12 w-12 bg-blue-50 text-blue-500 rounded-full font-bold border border-blue-100 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all text-xl" title="Ayuda">❓</button>
-            <button onClick={handleLogout} className="h-12 w-12 bg-red-50 text-red-500 rounded-full font-bold border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all text-xl" title="Salir">✕</button>
+            {/* 🆕 BOTÓN AYUDA MEJORADO */}
+            <button 
+              onClick={() => setShowTutorial(true)} 
+              className="h-12 w-12 bg-blue-50 text-blue-500 rounded-full font-bold border border-blue-100 flex items-center justify-center hover:bg-blue-500 hover:text-white transition-all shadow-sm"
+              title="Ayuda"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+              </svg>
+            </button>
+            <button onClick={handleLogout} className="h-12 w-12 bg-red-50 text-red-500 rounded-full font-bold border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm">✕</button>
          </div>
       </div>
 
@@ -262,7 +269,7 @@ export default function Home() {
                        <div className="relative z-10">
                          <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-gray-800 text-xl tracking-tight">{m.name}</h3><span className="bg-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">{m.points} pts</span></div>
                          {!isWinner ? (<><div className="w-full bg-gray-100 rounded-full h-4 mb-3 overflow-hidden border border-gray-100"><div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-pink-500 transition-all duration-1000 shadow-[0_0_15px_rgba(236,72,153,0.4)]" style={{ width: `${progress}%` }}></div></div><div className="flex justify-between text-xs font-bold uppercase tracking-wide">
-                            <button onClick={() => goToBusinessMap(m.name)} className="text-blue-500 hover:text-blue-700 transition-colors flex items-center gap-1">📍 Ver en Mapa</button>
+                            <button onClick={() => goToBusinessMap(m.name)} className="text-blue-500 hover:text-blue-700 transition-colors flex items-center gap-1 font-bold text-[10px]">📍 UBICACIÓN</button>
                             <span className="text-pink-500">Meta: {m.prize}</span>
                          </div></>) : 
                          (<button onClick={() => getPrizeCode(m.tenantId, m.name)} className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-black py-4 rounded-2xl shadow-xl transform hover:scale-[1.02] transition-all animate-pulse tracking-wide text-lg">🏆 CANJEAR AHORA</button>)}
@@ -276,8 +283,9 @@ export default function Home() {
            </div>
         )}
 
+        {/* 🛡️ MAPA BLINDADO */}
         {activeTab === 'map' && (
-           <div className="h-[65vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white">
+           <div className="h-[65vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white relative z-0">
              <BusinessMap tenants={tenants} focusCoords={mapFocus} />
            </div>
         )}
