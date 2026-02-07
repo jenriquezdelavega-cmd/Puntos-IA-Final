@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id, name, email, gender, birthDate } = body; // 🆕 email
+    const { id, name, email, gender, birthDate, phone } = body; // 🆕 phone
 
     if (!id) return NextResponse.json({ error: 'Falta ID' }, { status: 400 });
 
@@ -19,12 +19,17 @@ export async function POST(request: Request) {
       where: { id: id },
       data: {
         name,
-        email, // 🆕 Actualizar email
+        email,
+        phone, // 🆕 Actualizar teléfono
         gender,
         birthDate: finalDate
       }
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) { return NextResponse.json({ error: 'Error' }, { status: 500 }); }
+  } catch (error: any) {
+    // Si el teléfono ya existe en otro usuario, Prisma lanza error P2002
+    if (error.code === 'P2002') return NextResponse.json({ error: 'Ese teléfono ya está registrado' }, { status: 400 });
+    return NextResponse.json({ error: 'Error al actualizar' }, { status: 500 });
+  }
 }
