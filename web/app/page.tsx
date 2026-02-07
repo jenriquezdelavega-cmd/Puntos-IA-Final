@@ -66,8 +66,6 @@ export default function Home() {
     setMessage(''); if (!name.trim()) return setMessage('❌ Nombre requerido'); if (!isValidPhone(phone)) return setMessage('❌ Teléfono 10 dígitos'); setLoading(true);
     try { const res = await fetch('/api/user/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name, phone, email, password, gender, birthDate }) }); if (res.ok) handleLogin(); else { const d = await res.json(); setMessage('⚠️ ' + d.error); } } catch (e) { setMessage('🔥 Error de conexión'); } setLoading(false);
   };
-  
-  // 🆕 UPDATE INCLUYENDO TELÉFONO
   const handleUpdate = async () => { 
     if (!user?.id) return; 
     if (!isValidPhone(phone)) return setMessage('❌ Teléfono inválido');
@@ -75,7 +73,7 @@ export default function Home() {
     try { 
       const res = await fetch('/api/user/update', { 
         method: 'POST', headers: {'Content-Type':'application/json'}, 
-        body: JSON.stringify({ id: user.id, name, email, gender, birthDate, phone }) // Enviamos phone
+        body: JSON.stringify({ id: user.id, name, email, gender, birthDate, phone }) 
       }); 
       if (res.ok) { setMessage('✅ Datos actualizados'); setUser({ ...user, name, email, gender, birthDate, phone }); } 
       else { const d = await res.json(); setMessage('❌ ' + d.error); }
@@ -102,12 +100,15 @@ export default function Home() {
     </div>
   );
 
-  // --- VISTAS ---
   if (view === 'WELCOME') return (
     <div className="min-h-screen bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 flex flex-col items-center justify-center p-6 text-white relative overflow-y-auto">
       <div className="w-full max-w-sm flex flex-col items-center py-10">
         <BrandLogo />
-        <p className="text-white text-xl font-medium mb-8 tracking-wide drop-shadow-md">Tu lealtad, fácil y ya.</p>
+        {/* 🆕 SLOGAN ACTUALIZADO */}
+        <p className="text-white text-xl font-medium mb-8 tracking-wide drop-shadow-md text-center">
+          Premiamos tu lealtad,<br/><span className="font-extrabold italic">fácil y YA.</span>
+        </p>
+        
         {pendingCode && <div className="bg-white/20 p-4 rounded-2xl mb-4 border border-white/30 backdrop-blur-sm animate-bounce w-full text-center"><p className="font-bold">🎉 ¡Código detectado!</p></div>}
         <div className="space-y-4 w-full mb-12">
           <button onClick={() => {setMessage(''); setView('LOGIN');}} className="w-full bg-white text-pink-600 py-4 rounded-2xl font-extrabold text-lg shadow-xl hover:bg-gray-50 active:scale-95 transition-all">Iniciar Sesión</button>
@@ -125,7 +126,8 @@ export default function Home() {
         <div className="bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 p-8 pb-20 pt-16 rounded-b-[3rem] shadow-xl text-white text-center relative z-0">
            <button onClick={() => setView('WELCOME')} className="absolute top-12 left-6 text-white/80 hover:text-white font-bold text-2xl transition-colors">←</button>
            <h2 className="text-3xl font-extrabold mt-2 tracking-tight">{isReg ? 'Únete al Club' : 'Bienvenido'}</h2>
-           <p className="text-white/90 text-sm mt-1 font-medium">{isReg ? 'Tu lealtad, fácil y ya.' : 'Tus premios te esperan'}</p>
+           {/* SLOGAN TAMBIÉN AQUÍ */}
+           <p className="text-white/90 text-sm mt-1 font-medium">{isReg ? 'Premiamos tu lealtad, fácil y YA.' : 'Tus premios te esperan'}</p>
         </div>
         <div className="flex-1 px-6 -mt-12 pb-10 z-10">
           <div className="bg-white rounded-3xl shadow-2xl p-8 space-y-6 border border-gray-100">
