@@ -31,23 +31,13 @@ export default function BusinessMap({ tenants, focusCoords }: { tenants: any[], 
          t.lat && t.lng ? (
            <Marker key={t.id} position={[t.lat, t.lng]}>
               <Popup>
-                 <div className="text-center min-w-[160px]">
+                 <div className="text-center min-w-[150px]">
                      <strong className="text-base text-gray-900 block mb-1">{t.name}</strong>
                      <span className="text-xs text-gray-500 block mb-3">{t.address || 'Ubicación'}</span>
                      
-                     <div className="grid gap-2">
-                       {/* BOTÓN GOOGLE MAPS */}
-                       <a href={`https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}`} target="_blank" rel="noopener noreferrer" className="bg-blue-600 text-white text-xs px-4 py-2 rounded-full font-bold block hover:bg-blue-700 no-underline shadow-md">
-                         🚗 Cómo llegar
-                       </a>
-                       
-                       {/* 🆕 BOTÓN INSTAGRAM */}
-                       {t.instagram && (
-                         <a href={`https://instagram.com/${t.instagram.replace('@','')}`} target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-4 py-2 rounded-full font-bold block hover:opacity-90 no-underline shadow-md">
-                           📸 Ver en Instagram
-                         </a>
-                       )}
-                     </div>
+                     <a href={`https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}`} target="_blank" rel="noopener noreferrer" className="bg-blue-600 text-white text-xs px-4 py-2 rounded-full font-bold block hover:bg-blue-700 no-underline shadow-md">
+                       🚗 Cómo llegar
+                     </a>
                  </div>
               </Popup>
            </Marker>
