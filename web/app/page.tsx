@@ -10,6 +10,43 @@ const BusinessMap = dynamic(() => import('./components/BusinessMap'), {
 
 type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
 
+// --- COMPONENTE DE TUTORIAL (ONBOARDING) ---
+const Onboarding = () => {
+  const [slide, setSlide] = useState(0);
+  const slides = [
+    { icon: "📸", title: "Escanea", text: "Visita tus lugares favoritos y escanea el código QR en caja." },
+    { icon: "🔥", title: "Suma Puntos", text: "Acumula puntos en cada visita automáticamente." },
+    { icon: "🏆", title: "Gana Premios", text: "Llega a la meta y canjea tus puntos por recompensas reales." }
+  ];
+
+  // Auto-play
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSlide((prev) => (prev + 1) % slides.length);
+    }, 3500); // Cambia cada 3.5 segundos
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center justify-center w-full max-w-xs mb-8 transition-all duration-500 ease-in-out">
+      <div className="text-8xl mb-4 animate-bounce drop-shadow-lg filter">{slides[slide].icon}</div>
+      <h2 className="text-3xl font-black text-white mb-2 tracking-tight drop-shadow-md">{slides[slide].title}</h2>
+      <p className="text-white/90 text-center font-medium leading-relaxed h-12">{slides[slide].text}</p>
+      
+      {/* Indicadores (Puntitos) */}
+      <div className="flex gap-2 mt-6">
+        {slides.map((_, i) => (
+          <div 
+            key={i} 
+            onClick={() => setSlide(i)}
+            className={`h-2 w-2 rounded-full cursor-pointer transition-all duration-300 ${i === slide ? 'bg-white w-6' : 'bg-white/40'}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export default function Home() {
   const [view, setView] = useState<ViewState>('WELCOME');
   const [activeTab, setActiveTab] = useState('checkin');
@@ -119,13 +156,13 @@ export default function Home() {
 
   // --- LOGO FIEL A LA IMAGEN ---
   const BrandLogo = () => (
-    <div className="flex items-center justify-center gap-1 mb-4 select-none">
-      <span className="text-7xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>punto</span>
-      <div className="relative h-14 w-14 mx-1">
+    <div className="flex items-center justify-center gap-1 mb-8 select-none scale-90">
+      <span className="text-6xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>punto</span>
+      <div className="relative h-12 w-12 mx-1">
         <div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200 via-orange-400 to-red-500 shadow-[0_0_25px_rgba(255,200,0,0.8)]"></div>
-        <div className="absolute top-2 left-3 w-4 h-4 bg-white rounded-full blur-[2px] opacity-90"></div>
+        <div className="absolute top-2 left-3 w-3 h-3 bg-white rounded-full blur-[2px] opacity-90"></div>
       </div>
-      <span className="text-7xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>IA</span>
+      <span className="text-6xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>IA</span>
     </div>
   );
 
@@ -135,9 +172,15 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 flex flex-col items-center justify-center p-8 text-white relative overflow-hidden">
       <div className="absolute top-10 left-10 w-1 bg-white h-1 rounded-full shadow-[0_0_10px_white] animate-pulse"></div>
       <div className="absolute bottom-20 right-20 w-2 bg-white h-2 rounded-full shadow-[0_0_15px_white] animate-pulse delay-100"></div>
-      <div className="z-10 text-center w-full max-w-sm flex flex-col items-center">
+      
+      <div className="z-10 text-center w-full max-w-sm flex flex-col items-center h-full justify-between py-10">
         <BrandLogo />
-        <p className="text-white text-xl font-medium mb-12 tracking-wide drop-shadow-md">Tu lealtad, fácil y ya.</p>
+        
+        {/* 🆕 AQUÍ ESTÁ EL ONBOARDING */}
+        <Onboarding />
+
+        {pendingCode && <div className="bg-white/20 p-4 rounded-2xl mb-4 border border-white/30 backdrop-blur-sm animate-bounce w-full"><p className="font-bold">🎉 ¡Código detectado!</p></div>}
+
         <div className="space-y-4 w-full">
           <button onClick={() => {setMessage(''); setView('LOGIN');}} className="w-full bg-white text-pink-600 py-4 rounded-2xl font-extrabold text-lg shadow-xl hover:bg-gray-50 active:scale-95 transition-all">Iniciar Sesión</button>
           <button onClick={() => {setMessage(''); setView('REGISTER');}} className="w-full bg-white/10 border-2 border-white/50 text-white py-4 rounded-2xl font-bold text-lg hover:bg-white/20 active:scale-95 transition-all backdrop-blur-sm">Crear Cuenta</button>
