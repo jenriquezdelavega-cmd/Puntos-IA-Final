@@ -17,7 +17,13 @@ export async function POST(request: Request) {
     if (action === 'UPDATE') {
       const updated = await prisma.tenant.update({
         where: { id: tenantId },
-        data: { name: data.name, slug: data.slug, prize: data.prize, instagram: data.instagram }
+        data: { 
+            name: data.name, 
+            slug: data.slug, 
+            prize: data.prize, 
+            instagram: data.instagram,
+            isActive: data.isActive // 🆕 Actualizar estado
+        }
       });
       return NextResponse.json({ success: true, tenant: updated });
     }

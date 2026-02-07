@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 export async function GET() {
   try {
     const tenants = await prisma.tenant.findMany({
+      where: { isActive: true }, // 🔒 Solo activos
       select: {
         id: true,
         name: true,
@@ -12,7 +13,7 @@ export async function GET() {
         lng: true,
         address: true,
         prize: true,
-        instagram: true // 🆕 Enviar IG
+        instagram: true
       }
     });
     return NextResponse.json({ tenants });

@@ -31,7 +31,6 @@ export default function MasterPage() {
       try { const res = await fetch('/api/master/list-tenants', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ masterPassword: masterPass }) }); const data = await res.json(); if(data.tenants) setTenants(data.tenants); } catch(e) {} 
   };
 
-  // --- ACCIONES NEGOCIO ---
   const createTenant = async () => {
     setMsg('Creando...');
     try {
@@ -48,6 +47,7 @@ export default function MasterPage() {
     } catch(e) { alert('Error'); }
   };
 
+  // 🔄 UPDATE INCLUYENDO ESTADO
   const updateTenant = async () => {
     if(!editingTenant) return;
     try {
@@ -56,7 +56,6 @@ export default function MasterPage() {
     } catch(e) { alert('Error'); }
   };
 
-  // --- ACCIONES USUARIO ---
   const createUser = async () => {
     if(!selectedTenantId) return alert("Selecciona negocio");
     try {
@@ -67,18 +66,12 @@ export default function MasterPage() {
 
   const deleteUser = async (id: string) => {
     if(!confirm("¿Borrar empleado?")) return;
-    try {
-        await fetch('/api/master/manage-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'DELETE', userId: id }) });
-        loadTenants();
-    } catch(e) { alert('Error'); }
+    try { await fetch('/api/master/manage-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'DELETE', userId: id }) }); loadTenants(); } catch(e) { alert('Error'); }
   };
 
   const updateUser = async () => {
     if(!editingUser) return;
-    try {
-        await fetch('/api/master/manage-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'UPDATE', userId: editingUser.id, data: editingUser }) });
-        setEditingUser(null); loadTenants();
-    } catch(e) { alert('Error'); }
+    try { await fetch('/api/master/manage-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'UPDATE', userId: editingUser.id, data: editingUser }) }); setEditingUser(null); loadTenants(); } catch(e) { alert('Error'); }
   };
 
   if (!auth) return <div className="min-h-screen bg-black flex justify-center items-center p-4"><form onSubmit={handleAuth} className="bg-gray-900 p-8 rounded-xl border border-red-900 text-center"><h1 className="text-red-500 font-bold mb-4">👑 MASTER</h1><input type="password" className="p-3 rounded bg-gray-800 text-white w-full mb-4" value={masterPass} onChange={e=>setMasterPass(e.target.value)}/><button className="bg-red-600 w-full py-3 rounded font-bold text-white">Entrar</button></form></div>;
@@ -87,7 +80,6 @@ export default function MasterPage() {
     <div className="min-h-screen bg-gray-900 text-white p-8 overflow-y-auto">
       <h1 className="text-3xl font-bold text-red-500 mb-8">👑 Gestión Total</h1>
       
-      {/* CREACIÓN */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
           <h2 className="text-xl font-bold mb-4 text-blue-400">🏭 Nuevo Negocio</h2>
@@ -112,23 +104,25 @@ export default function MasterPage() {
       
       {msg && <div className="p-4 bg-white text-black font-bold rounded mt-4 text-center mb-8">{msg}</div>}
       
-      {/* LISTA MAESTRA */}
       <h2 className="text-2xl font-bold mb-4">🏢 Directorio de Negocios</h2>
       <div className="space-y-6">
         {tenants.map(t => (
           <div key={t.id} className={`p-6 rounded-xl border transition-all ${selectedTenantId===t.id ? 'bg-gray-800 border-green-500 ring-1 ring-green-500' : 'bg-gray-800 border-gray-700'}`}>
              <div className="flex justify-between items-start mb-4">
                 <div onClick={() => setSelectedTenantId(t.id)} className="cursor-pointer flex-1">
-                    <h3 className="font-bold text-2xl text-white flex items-center gap-2">{t.name} <span className="text-xs font-normal text-gray-500 bg-gray-900 px-2 rounded">{t.slug}</span></h3>
-                    <p className="text-sm text-gray-400 mt-1">🏆 {t.prize} | 📸 {t.instagram || 'No IG'}</p>
+                    <div className="flex items-center gap-3">
+                        <h3 className="font-bold text-2xl text-white">{t.name}</h3>
+                        {/* INDICADOR DE ESTADO */}
+                        {t.isActive === false && <span className="bg-red-600 text-white text-xs px-2 py-1 rounded font-bold">SUSPENDIDO</span>}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">/{t.slug}</p>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={() => setEditingTenant(t)} className="bg-yellow-600 text-black px-3 py-1 rounded font-bold text-sm hover:bg-yellow-500">✏️ Editar Info</button>
-                    <button onClick={() => deleteTenant(t.id, t.name)} className="bg-red-600 text-white px-3 py-1 rounded font-bold text-sm hover:bg-red-500">🗑️ Borrar</button>
+                    <button onClick={() => setEditingTenant(t)} className="bg-yellow-600 text-black px-3 py-1 rounded font-bold text-sm hover:bg-yellow-500">✏️ Editar</button>
+                    <button onClick={() => deleteTenant(t.id, t.name)} className="bg-red-600 text-white px-3 py-1 rounded font-bold text-sm hover:bg-red-500">🗑️</button>
                 </div>
              </div>
 
-             {/* TABLA DE USUARIOS */}
              <div className="bg-gray-900 rounded-lg p-4">
                 <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Empleados ({t.users.length})</h4>
                 {t.users.length > 0 ? (
@@ -138,7 +132,6 @@ export default function MasterPage() {
                                 <div>
                                     <p className="font-bold text-sm text-white">{u.name}</p>
                                     <p className="text-xs text-blue-400 font-mono">{u.username}</p>
-                                    <span className={`text-[10px] px-1 rounded ${u.role==='ADMIN'?'bg-purple-900 text-purple-200':'bg-blue-900 text-blue-200'}`}>{u.role}</span>
                                 </div>
                                 <div className="flex gap-1">
                                     <button onClick={() => setEditingUser(u)} className="text-gray-400 hover:text-white text-xs">✏️</button>
@@ -159,10 +152,25 @@ export default function MasterPage() {
             <div className="bg-gray-800 p-6 rounded-xl w-full max-w-md border border-gray-600">
                 <h2 className="text-xl font-bold mb-4">Editar Negocio</h2>
                 <div className="space-y-3">
-                    <input className="w-full p-3 bg-gray-700 rounded" value={editingTenant.name} onChange={e=>setEditingTenant({...editingTenant, name: e.target.value})} placeholder="Nombre" />
-                    <input className="w-full p-3 bg-gray-700 rounded" value={editingTenant.slug} onChange={e=>setEditingTenant({...editingTenant, slug: e.target.value})} placeholder="Slug" />
-                    <input className="w-full p-3 bg-gray-700 rounded" value={editingTenant.prize || ''} onChange={e=>setEditingTenant({...editingTenant, prize: e.target.value})} placeholder="Premio" />
-                    <input className="w-full p-3 bg-gray-700 rounded" value={editingTenant.instagram || ''} onChange={e=>setEditingTenant({...editingTenant, instagram: e.target.value})} placeholder="Instagram" />
+                    <div>
+                        <label className="text-xs text-gray-400 block mb-1">Nombre</label>
+                        <input className="w-full p-3 bg-gray-700 rounded" value={editingTenant.name} onChange={e=>setEditingTenant({...editingTenant, name: e.target.value})} />
+                    </div>
+                    <div>
+                        <label className="text-xs text-gray-400 block mb-1">Slug</label>
+                        <input className="w-full p-3 bg-gray-700 rounded" value={editingTenant.slug} onChange={e=>setEditingTenant({...editingTenant, slug: e.target.value})} />
+                    </div>
+                    
+                    {/* 🆕 SWITCH DE ESTADO */}
+                    <div className="flex items-center gap-3 bg-gray-700 p-3 rounded">
+                        <label className="text-sm font-bold">Estado del Negocio:</label>
+                        <button 
+                            onClick={() => setEditingTenant({...editingTenant, isActive: !editingTenant.isActive})}
+                            className={`px-4 py-1 rounded font-bold text-xs ${editingTenant.isActive !== false ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}
+                        >
+                            {editingTenant.isActive !== false ? 'ACTIVO ✅' : 'SUSPENDIDO ⛔'}
+                        </button>
+                    </div>
                 </div>
                 <div className="flex justify-end gap-2 mt-4">
                     <button onClick={() => setEditingTenant(null)} className="px-4 py-2 text-gray-400">Cancelar</button>
@@ -178,9 +186,9 @@ export default function MasterPage() {
             <div className="bg-gray-800 p-6 rounded-xl w-full max-w-md border border-gray-600">
                 <h2 className="text-xl font-bold mb-4">Editar Empleado</h2>
                 <div className="space-y-3">
-                    <input className="w-full p-3 bg-gray-700 rounded" value={editingUser.name} onChange={e=>setEditingUser({...editingUser, name: e.target.value})} placeholder="Nombre" />
-                    <input className="w-full p-3 bg-gray-700 rounded" value={editingUser.username} onChange={e=>setEditingUser({...editingUser, username: e.target.value})} placeholder="Usuario" />
-                    <input className="w-full p-3 bg-gray-700 rounded" value={editingUser.password} onChange={e=>setEditingUser({...editingUser, password: e.target.value})} placeholder="Contraseña" />
+                    <input className="w-full p-3 bg-gray-700 rounded" value={editingUser.name} onChange={e=>setEditingUser({...editingUser, name: e.target.value})} />
+                    <input className="w-full p-3 bg-gray-700 rounded" value={editingUser.username} onChange={e=>setEditingUser({...editingUser, username: e.target.value})} />
+                    <input className="w-full p-3 bg-gray-700 rounded" value={editingUser.password} onChange={e=>setEditingUser({...editingUser, password: e.target.value})} />
                     <select className="w-full p-3 bg-gray-700 rounded" value={editingUser.role} onChange={e=>setEditingUser({...editingUser, role: e.target.value})}><option value="ADMIN">ADMIN</option><option value="STAFF">STAFF</option></select>
                 </div>
                 <div className="flex justify-end gap-2 mt-4">
