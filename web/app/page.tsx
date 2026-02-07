@@ -3,20 +3,11 @@ import { useState, useEffect } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import dynamic from 'next/dynamic';
 
-const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false });
-const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false });
-const Popup = dynamic(() => import('react-leaflet').then(m => m.Popup), { ssr: false });
-const useMap = dynamic(() => import('react-leaflet').then(m => m.useMap), { ssr: false });
-
-// Componente para mover el mapa programáticamente
-function MapController({ coords }: { coords: [number, number] | null }) {
-  const map = useMap();
-  useEffect(() => {
-    if (coords) map.flyTo(coords, 16);
-  }, [coords, map]);
-  return null;
-}
+// 🔄 IMPORTACIÓN DINÁMICA SEGURA DEL MAPA
+const BusinessMap = dynamic(() => import('./components/BusinessMap'), { 
+  ssr: false, // Desactivar renderizado en servidor
+  loading: () => <div className="h-full w-full bg-gray-100 animate-pulse flex items-center justify-center text-gray-400">Cargando Mapa...</div>
+});
 
 type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
 
@@ -39,8 +30,6 @@ export default function Home() {
   const [pendingCode, setPendingCode] = useState<string | null>(null);
   const [prizeCode, setPrizeCode] = useState<{code: string, tenant: string} | null>(null);
   const [tenants, setTenants] = useState<any[]>([]);
-  
-  // 🆕 ESTADO PARA ENFOCAR NEGOCIO EN MAPA
   const [mapFocus, setMapFocus] = useState<[number, number] | null>(null);
 
   const isValidPhone = (p: string) => /^\d{10}$/.test(p);
@@ -117,9 +106,6 @@ export default function Home() {
     } catch(e) { alert('Error'); }
   };
 
-  const handleLogout = () => { if(confirm("¿Salir?")) { setUser(null); setView('WELCOME'); setPhone(''); setPassword(''); setMessage(''); } };
-
-  // 📍 IR AL NEGOCIO DESDE PUNTOS
   const goToBusinessMap = (tName: string) => {
     const target = tenants.find(t => t.name === tName);
     if (target && target.lat && target.lng) {
@@ -130,11 +116,176 @@ export default function Home() {
     }
   };
 
-  // --- LOGO ---
+  const handleLogout = () => { if(confirm("¿Salir?")) { setUser(null); setView('WELCOME'); setPhone(''); setPassword(''); setMessage(''); } };
+
+  // --- LOGO FIEL A LA IMAGEN ---
   const BrandLogo = () => (
     <div className="flex items-center justify-center gap-1 mb-4 select-none">
       <span className="text-7xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>punto</span>
-      <div className="relative h-14 w-14 mx-1"><div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200 via-orange-400 to-red-500 shadow-[0_0_25px_rgba(255,200,0,0.8)]"></div><div className="absolute top-2 left-3 w-4 h-4 bg-white rounded-full blur-[2px] opacity-90"></div></div>
+      <div className="relative h-14 w-14 mx-1">
+        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200 via-orange-400 to-red-500 shadow-[0_0_25px_rgba(255,200,0,0.8)]"></div>
+        <div className="absolute top-2 left-3 w-4 h-4 bg-white rounded-full blur-[2px] opacity-90"></div>
+      </div>
+      <span className="text-7xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>IA</span>
+    </div>
+  );
+
+  // --- VISTAS ---
+
+  if (view === 'WELCOME') return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 flex flex-col items-center justify-center p-8 text-white relative overflow-hidden">
+      <div className="absolute top-10 left-10 w-1 bg-white h-1 rounded-full shadow-[0_0_10px_white] animate-pulse"></div>
+      <div className="absolute bottom-20 right-20 w-2 bg-white h-2 rounded-full shadow-[0_0_15px_white] animate-pulse delay-100"></div>
+      <div className="z-10 text-center w-full max-w-sm flex flex-col items-center">
+        <BrandLogo />
+        <p className="text-white text-xl font-medium mb-12 tracking-wide drop-shadow-md">Tu lealtad, fácil y ya.</p>
+        <div className="space-y-4 w-full">
+          <button onClick={() => {setMessage(''); setView('LOGIN');}} className="w-full bg-white text-pink-600 py-4 rounded-2xl font-extrabold text-lg shadow-xl hover:bg-gray-50 active:scale-95 transition-all">Iniciar Sesión</button>
+          <button onClick={() => {setMessage(''); setView('REGISTER');}} className="w-full bg-white/10 border-2 border-white/50 text-white py-4 rounded-2xl font-bold text-lg hover:bg-white/20 active:scale-95 transition-all backdrop-blur-sm">Crear Cuenta</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (view === 'LOGIN' || view === 'REGISTER') {
+    const isReg = view === 'REGISTER';
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 p-8 pb-20 pt-16 rounded-b-[3rem] shadow-xl text-white text-center relative z-0">
+           <button onClick={() => setView('WELCOME')} className="absolute top-12 left-6 text-white/80 hover:text-white font-bold text-2xl transition-colors">←</button>
+           <h2 className="text-3xl font-extrabold mt-2 tracking-tight">{isReg ? 'Únete al Club' : 'Bienvenido'}</h2>
+           <p className="text-white/90 text-sm mt-1 font-medium">{isReg ? 'Tu lealtad, fácil y ya.' : 'Tus premios te esperan'}</p>
+ 
+
+cat <<'EOF' > app/page.tsx
+'use client';
+import { useState, useEffect } from 'react';
+import { Scanner } from '@yudiel/react-qr-scanner';
+import dynamic from 'next/dynamic';
+
+// 🔄 IMPORTACIÓN DINÁMICA SEGURA DEL MAPA
+const BusinessMap = dynamic(() => import('./components/BusinessMap'), { 
+  ssr: false, // Desactivar renderizado en servidor
+  loading: () => <div className="h-full w-full bg-gray-100 animate-pulse flex items-center justify-center text-gray-400">Cargando Mapa...</div>
+});
+
+type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
+
+export default function Home() {
+  const [view, setView] = useState<ViewState>('WELCOME');
+  const [activeTab, setActiveTab] = useState('checkin');
+  const [user, setUser] = useState<any>(null);
+  
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [gender, setGender] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  
+  const [scanning, setScanning] = useState(false);
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [manualCode, setManualCode] = useState('');
+  const [pendingCode, setPendingCode] = useState<string | null>(null);
+  const [prizeCode, setPrizeCode] = useState<{code: string, tenant: string} | null>(null);
+  const [tenants, setTenants] = useState<any[]>([]);
+  const [mapFocus, setMapFocus] = useState<[number, number] | null>(null);
+
+  const isValidPhone = (p: string) => /^\d{10}$/.test(p);
+  const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      const c = p.get('code');
+      if (c) { setPendingCode(c); if(!user) setMessage('👋 Código detectado.'); }
+    }
+    loadMapData();
+  }, []);
+
+  useEffect(() => { if (user && pendingCode) { handleScan(pendingCode); setPendingCode(null); window.history.replaceState({}, '', '/'); } }, [user, pendingCode]);
+
+  const loadMapData = async () => { try { const res = await fetch('/api/map/tenants'); const d = await res.json(); if(d.tenants) setTenants(d.tenants); } catch(e){} };
+
+  const handleLogin = async () => {
+    setMessage('');
+    if (!phone) return setMessage('❌ Ingresa tu teléfono');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/user/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ phone, password }) });
+      const data = await res.json();
+      if (res.ok) {
+        setUser(data); setName(data.name); setEmail(data.email||''); setGender(data.gender||'');
+        if (data.birthDate) setBirthDate(data.birthDate.split('T')[0]); else setBirthDate('');
+        setView('APP');
+      } else setMessage('⚠️ ' + data.error);
+    } catch (e) { setMessage('🔥 Error de conexión'); }
+    setLoading(false);
+  };
+
+  const handleRegister = async () => {
+    setMessage('');
+    if (!name.trim()) return setMessage('❌ Falta nombre');
+    if (!isValidPhone(phone)) return setMessage('❌ Teléfono inválido (10 dígitos)');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/user/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name, phone, email, password, gender, birthDate }) });
+      if (res.ok) handleLogin(); else { const d = await res.json(); setMessage('⚠️ ' + d.error); }
+    } catch (e) { setMessage('🔥 Error de conexión'); }
+    setLoading(false);
+  };
+
+  const handleUpdate = async () => {
+    if (!user?.id) return;
+    setMessage('Guardando...');
+    try {
+      const res = await fetch('/api/user/update', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: user.id, name, email, gender, birthDate }) });
+      if (res.ok) { setMessage('✅ Datos actualizados'); setUser({ ...user, name, email, gender, birthDate }); } else setMessage('❌ Error');
+    } catch (e) { setMessage('🔥 Error de red'); }
+  };
+
+  const handleScan = async (result: string) => {
+    if (!result) return;
+    setScanning(false);
+    let finalCode = result;
+    if (result.includes('code=')) finalCode = result.split('code=')[1].split('&')[0];
+    try {
+      const res = await fetch('/api/check-in/scan', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user?.id, code: finalCode }) });
+      const data = await res.json();
+      if (res.ok) { alert(data.message); handleLogin(); setManualCode(''); } else alert('❌ ' + data.error);
+    } catch (e) { if(user) alert('Error'); }
+  };
+
+  const getPrizeCode = async (tenantId: string, tenantName: string) => {
+    if(!confirm(`¿Canjear premio en ${tenantName}?`)) return;
+    try {
+      const res = await fetch('/api/redeem/request', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user.id, tenantId }) });
+      const data = await res.json();
+      if(res.ok) setPrizeCode({ code: data.code, tenant: tenantName }); else alert(data.error);
+    } catch(e) { alert('Error'); }
+  };
+
+  const goToBusinessMap = (tName: string) => {
+    const target = tenants.find(t => t.name === tName);
+    if (target && target.lat && target.lng) {
+        setMapFocus([target.lat, target.lng]);
+        setActiveTab('map');
+    } else {
+        alert("Este negocio no tiene ubicación registrada.");
+    }
+  };
+
+  const handleLogout = () => { if(confirm("¿Salir?")) { setUser(null); setView('WELCOME'); setPhone(''); setPassword(''); setMessage(''); } };
+
+  // --- LOGO FIEL A LA IMAGEN ---
+  const BrandLogo = () => (
+    <div className="flex items-center justify-center gap-1 mb-4 select-none">
+      <span className="text-7xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>punto</span>
+      <div className="relative h-14 w-14 mx-1">
+        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200 via-orange-400 to-red-500 shadow-[0_0_25px_rgba(255,200,0,0.8)]"></div>
+        <div className="absolute top-2 left-3 w-4 h-4 bg-white rounded-full blur-[2px] opacity-90"></div>
+      </div>
       <span className="text-7xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>IA</span>
     </div>
   );
@@ -217,13 +368,8 @@ export default function Home() {
                    return (
                      <div key={idx} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-all">
                        <div className="relative z-10">
-                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="font-bold text-gray-800 text-xl tracking-tight">{m.name}</h3>
-                            <span className="bg-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">{m.points} pts</span>
-                         </div>
-                         {!isWinner ? (<><div className="w-full bg-gray-100 rounded-full h-4 mb-3 overflow-hidden border border-gray-100"><div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-pink-500 transition-all duration-1000 shadow-[0_0_15px_rgba(236,72,153,0.4)]" style={{ width: `${progress}%` }}></div></div>
-                         <div className="flex justify-between text-xs font-bold uppercase tracking-wide">
-                            {/* 🆕 BOTÓN "VER EN MAPA" */}
+                         <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-gray-800 text-xl tracking-tight">{m.name}</h3><span className="bg-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">{m.points} pts</span></div>
+                         {!isWinner ? (<><div className="w-full bg-gray-100 rounded-full h-4 mb-3 overflow-hidden border border-gray-100"><div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-pink-500 transition-all duration-1000 shadow-[0_0_15px_rgba(236,72,153,0.4)]" style={{ width: `${progress}%` }}></div></div><div className="flex justify-between text-xs font-bold uppercase tracking-wide">
                             <button onClick={() => goToBusinessMap(m.name)} className="text-blue-500 hover:text-blue-700 transition-colors flex items-center gap-1">📍 Ver en Mapa</button>
                             <span className="text-pink-500">Meta: {m.prize}</span>
                          </div></>) : 
@@ -238,35 +384,10 @@ export default function Home() {
            </div>
         )}
 
-        {/* 🆕 MAPA CON NAVEGACIÓN */}
+        {/* 🆕 MAPA CON COMPONENTE SEPARADO */}
         {activeTab === 'map' && (
            <div className="h-[65vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white">
-             <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-             <MapContainer center={[19.4326, -99.1332]} zoom={13} style={{ height: '100%', width: '100%' }}>
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
-                <MapController coords={mapFocus} />
-                {tenants.map(t => (
-                   t.lat && t.lng ? (
-                     <Marker key={t.id} position={[t.lat, t.lng]}>
-                        <Popup>
-                           <div className="text-center">
-                               <strong className="text-base text-gray-800 block mb-1">{t.name}</strong>
-                               <span className="text-xs text-gray-500 block mb-2">{t.address}</span>
-                               <span className="text-pink-600 font-bold text-xs mb-2 block">🏆 {t.prize}</span>
-                               <a 
-                                 href={`https://www.google.com/maps/dir/?api=1&destination=${t.lat},${t.lng}`} 
-                                 target="_blank" 
-                                 rel="noopener noreferrer"
-                                 className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-full font-bold inline-block hover:bg-blue-700"
-                               >
-                                 🚗 Cómo llegar
-                               </a>
-                           </div>
-                        </Popup>
-                     </Marker>
-                   ) : null
-                ))}
-             </MapContainer>
+             <BusinessMap tenants={tenants} focusCoords={mapFocus} />
            </div>
         )}
 
