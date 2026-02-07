@@ -7,6 +7,16 @@ const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContai
 const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false });
 const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false });
 const Popup = dynamic(() => import('react-leaflet').then(m => m.Popup), { ssr: false });
+const useMap = dynamic(() => import('react-leaflet').then(m => m.useMap), { ssr: false });
+
+// Componente para mover el mapa programáticamente
+function MapController({ coords }: { coords: [number, number] | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (coords) map.flyTo(coords, 16);
+  }, [coords, map]);
+  return null;
+}
 
 type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
 
@@ -29,6 +39,9 @@ export default function Home() {
   const [pendingCode, setPendingCode] = useState<string | null>(null);
   const [prizeCode, setPrizeCode] = useState<{code: string, tenant: string} | null>(null);
   const [tenants, setTenants] = useState<any[]>([]);
+  
+  // 🆕 ESTADO PARA ENFOCAR NEGOCIO EN MAPA
+  const [mapFocus, setMapFocus] = useState<[number, number] | null>(null);
 
   const isValidPhone = (p: string) => /^\d{10}$/.test(p);
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -106,14 +119,22 @@ export default function Home() {
 
   const handleLogout = () => { if(confirm("¿Salir?")) { setUser(null); setView('WELCOME'); setPhone(''); setPassword(''); setMessage(''); } };
 
-  // --- LOGO FIEL A LA IMAGEN ---
+  // 📍 IR AL NEGOCIO DESDE PUNTOS
+  const goToBusinessMap = (tName: string) => {
+    const target = tenants.find(t => t.name === tName);
+    if (target && target.lat && target.lng) {
+        setMapFocus([target.lat, target.lng]);
+        setActiveTab('map');
+    } else {
+        alert("Este negocio no tiene ubicación registrada.");
+    }
+  };
+
+  // --- LOGO ---
   const BrandLogo = () => (
     <div className="flex items-center justify-center gap-1 mb-4 select-none">
       <span className="text-7xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>punto</span>
-      <div className="relative h-14 w-14 mx-1">
-        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200 via-orange-400 to-red-500 shadow-[0_0_25px_rgba(255,200,0,0.8)]"></div>
-        <div className="absolute top-2 left-3 w-4 h-4 bg-white rounded-full blur-[2px] opacity-90"></div>
-      </div>
+      <div className="relative h-14 w-14 mx-1"><div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200 via-orange-400 to-red-500 shadow-[0_0_25px_rgba(255,200,0,0.8)]"></div><div className="absolute top-2 left-3 w-4 h-4 bg-white rounded-full blur-[2px] opacity-90"></div></div>
       <span className="text-7xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>IA</span>
     </div>
   );
@@ -196,8 +217,16 @@ export default function Home() {
                    return (
                      <div key={idx} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 relative overflow-hidden group hover:shadow-md transition-all">
                        <div className="relative z-10">
-                         <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-gray-800 text-xl tracking-tight">{m.name}</h3><span className="bg-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">{m.points} pts</span></div>
-                         {!isWinner ? (<><div className="w-full bg-gray-100 rounded-full h-4 mb-3 overflow-hidden border border-gray-100"><div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-pink-500 transition-all duration-1000 shadow-[0_0_15px_rgba(236,72,153,0.4)]" style={{ width: `${progress}%` }}></div></div><div className="flex justify-between text-xs font-bold uppercase tracking-wide"><span className="text-gray-400">Progreso</span><span className="text-pink-500">Meta: {m.prize}</span></div></>) : 
+                         <div className="flex justify-between items-center mb-6">
+                            <h3 className="font-bold text-gray-800 text-xl tracking-tight">{m.name}</h3>
+                            <span className="bg-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">{m.points} pts</span>
+                         </div>
+                         {!isWinner ? (<><div className="w-full bg-gray-100 rounded-full h-4 mb-3 overflow-hidden border border-gray-100"><div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-pink-500 transition-all duration-1000 shadow-[0_0_15px_rgba(236,72,153,0.4)]" style={{ width: `${progress}%` }}></div></div>
+                         <div className="flex justify-between text-xs font-bold uppercase tracking-wide">
+                            {/* 🆕 BOTÓN "VER EN MAPA" */}
+                            <button onClick={() => goToBusinessMap(m.name)} className="text-blue-500 hover:text-blue-700 transition-colors flex items-center gap-1">📍 Ver en Mapa</button>
+                            <span className="text-pink-500">Meta: {m.prize}</span>
+                         </div></>) : 
                          (<button onClick={() => getPrizeCode(m.tenantId, m.name)} className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-black py-4 rounded-2xl shadow-xl transform hover:scale-[1.02] transition-all animate-pulse tracking-wide text-lg">🏆 CANJEAR AHORA</button>)}
                        </div>
                      </div>
@@ -209,15 +238,31 @@ export default function Home() {
            </div>
         )}
 
+        {/* 🆕 MAPA CON NAVEGACIÓN */}
         {activeTab === 'map' && (
            <div className="h-[65vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white">
              <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
              <MapContainer center={[19.4326, -99.1332]} zoom={13} style={{ height: '100%', width: '100%' }}>
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' />
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
+                <MapController coords={mapFocus} />
                 {tenants.map(t => (
                    t.lat && t.lng ? (
                      <Marker key={t.id} position={[t.lat, t.lng]}>
-                        <Popup><strong className="text-base text-gray-800">{t.name}</strong><br/><span className="text-xs text-gray-500">{t.address}</span><br/><span className="text-pink-600 font-bold text-xs mt-1 block">🏆 {t.prize}</span></Popup>
+                        <Popup>
+                           <div className="text-center">
+                               <strong className="text-base text-gray-800 block mb-1">{t.name}</strong>
+                               <span className="text-xs text-gray-500 block mb-2">{t.address}</span>
+                               <span className="text-pink-600 font-bold text-xs mb-2 block">🏆 {t.prize}</span>
+                               <a 
+                                 href={`https://www.google.com/maps/dir/?api=1&destination=${t.lat},${t.lng}`} 
+                                 target="_blank" 
+                                 rel="noopener noreferrer"
+                                 className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-full font-bold inline-block hover:bg-blue-700"
+                               >
+                                 🚗 Cómo llegar
+                               </a>
+                           </div>
+                        </Popup>
                      </Marker>
                    ) : null
                 ))}
@@ -233,8 +278,6 @@ export default function Home() {
              <div className="space-y-6">
                <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Nombre</label><input className="w-full p-5 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-transparent focus:bg-white focus:border-pink-200 outline-none transition-all" value={name} onChange={e => setName(e.target.value)} /></div>
                <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Email</label><input type="email" className="w-full p-5 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-transparent focus:bg-white focus:border-pink-200 outline-none transition-all" value={email} onChange={e => setEmail(e.target.value)} /></div>
-               
-               {/* 🛠️ CAMPOS RESTAURADOS AQUÍ 👇 */}
                <div className="flex gap-4">
                   <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Fecha</label><input type="date" className="w-full p-5 bg-gray-50 rounded-2xl text-gray-800 font-bold" value={birthDate} onChange={e => setBirthDate(e.target.value)} /></div>
                   <div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Género</label><select className="w-full p-5 bg-gray-50 rounded-2xl text-gray-800 font-bold appearance-none" value={gender} onChange={e => setGender(e.target.value)}><option value="Hombre">M</option><option value="Mujer">F</option></select></div>
