@@ -15,19 +15,18 @@ model Tenant {
   password    String?   
   prize       String   @default("Premio Sorpresa")
   
-  // Ubicación
   lat         Float?   @default(19.4326)
   lng         Float?   @default(-99.1332)
   address     String?  @default("Dirección pendiente")
-  
-  // 🆕 REDES SOCIALES
-  instagram   String?  // Ej: @tacoselrey
+  instagram   String?
 
   createdAt   DateTime @default(now())
-  users       TenantUser[]
-  memberships Membership[]
-  dailyCodes  DailyCode[]
-  redemptions Redemption[]
+  
+  // En el padre NO ponemos onDelete
+  users       TenantUser[] 
+  memberships Membership[] 
+  dailyCodes  DailyCode[]  
+  redemptions Redemption[] 
 }
 
 model TenantUser {
@@ -38,8 +37,10 @@ model TenantUser {
   username  String   @unique
   password  String
   role      String   
+  
   tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  // AQUÍ SÍ VA EL CASCADE (El hijo decide borrarse si el padre muere)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model User {
@@ -51,6 +52,7 @@ model User {
   gender    String?  
   birthDate DateTime? 
   createdAt DateTime @default(now()) 
+  
   memberships Membership[]
   redemptions Redemption[]
 }
@@ -61,7 +63,8 @@ model Membership {
   totalVisits    Int      @default(0)
   lastVisitAt    DateTime?
   tenantId       String
-  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  // AQUÍ TAMBIÉN CASCADE
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userId         String
   user           User     @relation(fields: [userId], references: [id])
   visits         Visit[]
@@ -74,7 +77,8 @@ model DailyCode {
   validDate DateTime @default(now())
   isActive  Boolean  @default(true)
   tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  // CASCADE
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   visits    Visit[]
 }
 
@@ -82,7 +86,8 @@ model Visit {
   id        String   @id @default(uuid())
   visitedAt DateTime @default(now())
   membershipId String
-  membership   Membership @relation(fields: [membershipId], references: [id])
+  // Si borras la membresía, se borran las visitas
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
   dailyCodeId String
   dailyCode   DailyCode @relation(fields: [dailyCodeId], references: [id])
   @@unique([membershipId, dailyCodeId])
@@ -94,7 +99,8 @@ model Redemption {
   isUsed    Boolean  @default(false)
   createdAt DateTime @default(now())
   tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  // CASCADE
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id])
 }
