@@ -7,18 +7,19 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { masterPassword, tenantId, name, phone, email, username, password, role } = body;
 
-    if (masterPassword !== 'superadmin2026') return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    if (!tenantId || !username || !password || !role) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
+    if (masterPassword !== 'superadmin2026') return NextResponse.json({ error: 'No' }, { status: 401 });
+
+    // Buscar prefijo del negocio
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) return NextResponse.json({ error: 'Negocio no existe' }, { status: 400 });
+
+    // CONCATENAR PREFIJO
+    const fullUsername = `${tenant.codePrefix}.${username}`;
 
     const newUser = await prisma.tenantUser.create({
-      data: {
-        tenantId, name, phone, email, username, password, role
-      }
+      data: { tenantId, name, phone, email, password, role, username: fullUsername }
     });
 
     return NextResponse.json({ success: true, user: newUser });
-  } catch (error: any) {
-    if(error.code === 'P2002') return NextResponse.json({ error: 'El usuario ya existe' }, { status: 400 });
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  } catch (error: any) { return NextResponse.json({ error: 'Usuario duplicado o error' }, { status: 500 }); }
 }
