@@ -15,8 +15,8 @@ model Tenant {
   password    String?   
   prize       String   @default("Premio Sorpresa")
   
-  // 🆕 PREFIJO DE EMPRESA (Ej: "PIZZA")
-  codePrefix  String   @unique @default("DEMO") 
+  // 🛠️ FIX: Opcional para no romper datos viejos
+  codePrefix  String?  @unique 
   
   lat         Float?   @default(19.4326)
   lng         Float?   @default(-99.1332)

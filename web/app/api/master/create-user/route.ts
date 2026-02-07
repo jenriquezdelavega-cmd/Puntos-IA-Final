@@ -9,12 +9,12 @@ export async function POST(request: Request) {
 
     if (masterPassword !== 'superadmin2026') return NextResponse.json({ error: 'No' }, { status: 401 });
 
-    // Buscar prefijo del negocio
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) return NextResponse.json({ error: 'Negocio no existe' }, { status: 400 });
 
-    // CONCATENAR PREFIJO
-    const fullUsername = `${tenant.codePrefix}.${username}`;
+    // 🛡️ FALLBACK
+    const prefix = tenant.codePrefix || tenant.slug.substring(0,4).toUpperCase();
+    const fullUsername = `${prefix}.${username}`;
 
     const newUser = await prisma.tenantUser.create({
       data: { tenantId, name, phone, email, password, role, username: fullUsername }
