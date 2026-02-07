@@ -93,7 +93,8 @@ export default function Home() {
   const toggleCard = (id: string) => { setExpandedId(expandedId === id ? null : id); };
 
   const BrandLogo = () => (
-    <div className="flex items-center justify-center gap-1 mb-6 select-none scale-90">
+    // 🤏 MARGIN BOTTOM REDUCIDO (mb-2 en vez de mb-6)
+    <div className="flex items-center justify-center gap-1 mb-2 select-none scale-90">
       <span className="text-6xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>punto</span>
       <div className="relative h-12 w-12 mx-1"><div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200 via-orange-400 to-red-500 shadow-[0_0_25px_rgba(255,200,0,0.8)]"></div><div className="absolute top-2 left-3 w-3 h-3 bg-white rounded-full blur-[2px] opacity-90"></div></div>
       <span className="text-6xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>IA</span>
@@ -104,8 +105,8 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 flex flex-col items-center justify-center p-6 text-white relative overflow-y-auto">
       <div className="w-full max-w-sm flex flex-col items-center py-10">
         <BrandLogo />
-        {/* 🆕 SLOGAN ACTUALIZADO */}
-        <p className="text-white text-xl font-medium mb-8 tracking-wide drop-shadow-md text-center">
+        {/* SLOGAN MÁS PEGADO (mt-0) */}
+        <p className="text-white text-xl font-medium mb-10 mt-0 tracking-wide drop-shadow-md text-center leading-tight">
           Premiamos tu lealtad,<br/><span className="font-extrabold italic">fácil y YA.</span>
         </p>
         
@@ -126,7 +127,6 @@ export default function Home() {
         <div className="bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 p-8 pb-20 pt-16 rounded-b-[3rem] shadow-xl text-white text-center relative z-0">
            <button onClick={() => setView('WELCOME')} className="absolute top-12 left-6 text-white/80 hover:text-white font-bold text-2xl transition-colors">←</button>
            <h2 className="text-3xl font-extrabold mt-2 tracking-tight">{isReg ? 'Únete al Club' : 'Bienvenido'}</h2>
-           {/* SLOGAN TAMBIÉN AQUÍ */}
            <p className="text-white/90 text-sm mt-1 font-medium">{isReg ? 'Premiamos tu lealtad, fácil y YA.' : 'Tus premios te esperan'}</p>
         </div>
         <div className="flex-1 px-6 -mt-12 pb-10 z-10">
