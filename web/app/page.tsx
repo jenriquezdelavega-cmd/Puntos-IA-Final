@@ -3,7 +3,10 @@ import { useState, useEffect } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import dynamic from 'next/dynamic';
 
-const BusinessMap = dynamic(() => import('./components/BusinessMap'), { ssr: false, loading: () => <div className="h-full w-full bg-gray-50 flex items-center justify-center text-gray-400">Cargando...</div> });
+const BusinessMap = dynamic(() => import('./components/BusinessMap'), { 
+  ssr: false, 
+  loading: () => <div className="h-full w-full bg-gray-50 flex items-center justify-center text-gray-400">Cargando...</div>
+});
 
 type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
 
@@ -42,8 +45,6 @@ export default function Home() {
   const [tenants, setTenants] = useState<any[]>([]);
   const [mapFocus, setMapFocus] = useState<[number, number] | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
-  
-  // 🆕 ESTADO PARA TARJETA EXPANDIDA
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const isValidPhone = (p: string) => /^\d{10}$/.test(p);
@@ -100,169 +101,7 @@ export default function Home() {
   };
 
   const handleLogout = () => { if(confirm("¿Salir?")) { setUser(null); setView('WELCOME'); setPhone(''); setPassword(''); setMessage(''); } };
-
-  const toggleCard = (id: string) => {
-    setExpandedId(expandedId === id ? null : id);
-  };
-
-  const BrandLogo = () => (
-    <div className="flex items-center justify-center gap-1 mb-6 select-none scale-90">
-      <span className="text-6xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>punto</span>
-      <div className="relative h-12 w-12 mx-1"><div className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200 via-orange-400 to-red-500 shadow-[0_0_25px_rgba(255,200,0,0.8)]"></div><div className="absolute top-2 left-3 w-3 h-3 bg-white rounded-full blur-[2px] opacity-90"></div></div>
-      <span className="text-6xl font-black tracking-tight text-white drop-shadow-lg" style={{fontFamily: 'sans-serif'}}>IA</span>
-    </div>
-  );
-
-  if (view === 'WELCOME') return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600 flex flex-col items-center justify-center p-6 text-white relative overflow-y-auto">
-      <div className="w-full max-w-sm flex flex-col items-center py-10">
-        <BrandLogo />
-        <p className="text-white text-xl font-medium mb-8 tracking-wide drop-shadow-md">Tu lealtad, fácil y ya.</p>
-        {pendingCode && <div className="bg-white/20 p-4 rounded-2xl mb-4 border border-white/30 backdrop-blur-sm animate-bounce w-full text-center"><p className="font-bold">🎉 ¡Código detectado!</p></div>}
-        <div className="space-y-4 w-full mb-12">
-          <button onClick={() => {setMessage(''); setView('LOGIN');}} className="w-full bg-white text-pink-600 py-4 rounded-2xl font-extrabold text-lg shadow-xl hover:bg-gray-50 active:scale-95 transition-all">Iniciar Sesión</button>
-          <button onClick={() => {setMessage(''); setView('REGISTER');}} className="w-full bg-white/10 border-2 border-white/50 text-white py-4 rounded-2xl font-bold text-lg hover:bg-white/20 active:scale-95 transition-all backdrop-blur-sm">Crear Cuenta</button>
-        </div>
-        <div className="w-full pt-8 border-t border-white/20"><p className="text-center text-white/60 text-xs font-bold uppercase tracking-widest mb-6">¿CÓMO FUNCIONA?</p><Onboarding /></div>
-      </div>
-    </div>
-  );
-
-  if (view === 'LOGIN' || view === 'REGISTER') {
-    const isReg = view === 'REGISTER';
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <div className="bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 p-8 pb-20 pt-16 rounded-b-[3rem] shadow-xl text-white text-center relative z-0">
-           <button onClick={() => setView('WELCOME')} className="absolute top-12 left-6 text-white/80 hover:text-white font-bold text-2xl transition-colors">←</button>
-           <h2 className="text-3xl font-extrabold mt-2 tracking-tight">{isReg ? 'Únete al Club' : 'Bienvenido'}</h2>
-           <p className="text-white/90 text-sm mt-1 font-medium">{isReg ? 'Tu lealtad, fácil y ya.' : 'Tus premios te esperan'}</p>
-        </div>
-        <div className="flex-1 px-6 -mt-12 pb-10 z-10">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 space-y-6 border border-gray-100">
-             {isReg && <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Nombre</label><input className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={name} onChange={e=>setName(e.target.value)} /></div>}
-             <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Teléfono</label><input type="tel" maxLength={10} className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,''))} placeholder="10 dígitos" /></div>
-             {isReg && (<><div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Email</label><input type="email" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={email} onChange={e=>setEmail(e.target.value)} /></div><div className="flex gap-4"><div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Fecha</label><input type="date" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium border border-gray-100 h-[58px]" value={birthDate} onChange={e=>setBirthDate(e.target.value)} /></div><div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Género</label><select className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-medium border border-gray-100 h-[58px]" value={gender} onChange={e=>setGender(e.target.value)}><option value="">-</option><option value="Hombre">M</option><option value="Mujer">F</option></select></div></div></>)}
-             <div><label className="text-xs font-bold text-gray-400 uppercase ml-1 block mb-2 tracking-wider">Contraseña</label><input type="password" className="w-full p-4 bg-gray-50 rounded-2xl text-gray-800 font-bold border border-gray-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={password} onChange={e=>setPassword(e.target.value)} /></div>
-             {message && <div className="p-4 bg-red-50 text-red-500 rounded-2xl text-center font-bold text-sm animate-fadeIn border border-red-100">{message}</div>}
-             <button onClick={isReg ? handleRegister : handleLogin} disabled={loading} className="w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white py-4 rounded-2xl font-bold shadow-xl hover:shadow-2xl active:scale-95 transition-all text-lg mt-4">{loading ? 'Procesando...' : isReg ? 'Crear Cuenta' : 'Entrar'}</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50 pb-32">
-      {showTutorial && (<div className="fixed inset-0 bg-gradient-to-br from-ora
-
-
-cat <<'EOF' > app/page.tsx
-'use client';
-import { useState, useEffect } from 'react';
-import { Scanner } from '@yudiel/react-qr-scanner';
-import dynamic from 'next/dynamic';
-
-const BusinessMap = dynamic(() => import('./components/BusinessMap'), { ssr: false, loading: () => <div className="h-full w-full bg-gray-50 flex items-center justify-center text-gray-400">Cargando...</div> });
-
-type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
-
-const Onboarding = () => {
-  const [slide, setSlide] = useState(0);
-  const slides = [{icon:"📸",title:"Escanea",text:"Visita y escanea el código QR."},{icon:"🔥",title:"Suma Puntos",text:"Acumula puntos en cada visita."},{icon:"🏆",title:"Gana Premios",text:"Canjea tus puntos por recompensas."}];
-  useEffect(() => { const i = setInterval(() => setSlide(p => (p+1)%3), 3500); return () => clearInterval(i); }, []);
-  return (
-    <div className="flex flex-col items-center w-full transition-all duration-500">
-      <div className="text-5xl mb-3 animate-bounce drop-shadow-md">{slides[slide].icon}</div>
-      <h2 className="text-xl font-black text-white mb-2 drop-shadow-md">{slides[slide].title}</h2>
-      <p className="text-white/90 text-center text-xs h-8 px-4">{slides[slide].text}</p>
-      <div className="flex gap-2 mt-4">{slides.map((_,i)=><div key={i} className={`h-1.5 w-1.5 rounded-full transition-all ${i===slide?'bg-white w-4':'bg-white/40'}`}/>)}</div>
-    </div>
-  );
-};
-
-export default function Home() {
-  const [view, setView] = useState<ViewState>('WELCOME');
-  const [activeTab, setActiveTab] = useState('checkin');
-  const [user, setUser] = useState<any>(null);
-  
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [gender, setGender] = useState('');
-  const [birthDate, setBirthDate] = useState('');
-  
-  const [scanning, setScanning] = useState(false);
-  const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [manualCode, setManualCode] = useState('');
-  const [pendingCode, setPendingCode] = useState<string | null>(null);
-  const [prizeCode, setPrizeCode] = useState<{code: string, tenant: string} | null>(null);
-  const [tenants, setTenants] = useState<any[]>([]);
-  const [mapFocus, setMapFocus] = useState<[number, number] | null>(null);
-  const [showTutorial, setShowTutorial] = useState(false);
-  
-  // 🆕 ESTADO PARA TARJETA EXPANDIDA
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  const isValidPhone = (p: string) => /^\d{10}$/.test(p);
-  const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') { const p = new URLSearchParams(window.location.search); const c = p.get('code'); if (c) { setPendingCode(c); if(!user) setMessage('👋 Código detectado.'); } }
-    loadMapData();
-  }, []);
-  useEffect(() => { if (user && pendingCode) { handleScan(pendingCode); setPendingCode(null); window.history.replaceState({}, '', '/'); } }, [user, pendingCode]);
-
-  const loadMapData = async () => { try { const res = await fetch('/api/map/tenants'); const d = await res.json(); if(d.tenants) setTenants(d.tenants); } catch(e){} };
-
-  const handleLogin = async () => {
-    setMessage(''); if (!phone) return setMessage('❌ Teléfono requerido');
-    setLoading(true);
-    try {
-      const res = await fetch('/api/user/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ phone, password }) });
-      const data = await res.json();
-      if (res.ok) { setUser(data); setName(data.name); setEmail(data.email||''); setGender(data.gender||''); if(data.birthDate) setBirthDate(data.birthDate.split('T')[0]); else setBirthDate(''); setView('APP'); } else setMessage('⚠️ ' + data.error);
-    } catch (e) { setMessage('🔥 Error de conexión'); }
-    setLoading(false);
-  };
-
-  const handleRegister = async () => {
-    setMessage(''); if (!name.trim()) return setMessage('❌ Nombre requerido'); if (!isValidPhone(phone)) return setMessage('❌ Teléfono 10 dígitos');
-    setLoading(true);
-    try {
-      const res = await fetch('/api/user/register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name, phone, email, password, gender, birthDate }) });
-      if (res.ok) handleLogin(); else { const d = await res.json(); setMessage('⚠️ ' + d.error); }
-    } catch (e) { setMessage('🔥 Error de conexión'); }
-    setLoading(false);
-  };
-
-  const handleUpdate = async () => {
-    if (!user?.id) return; setMessage('Guardando...');
-    try { const res = await fetch('/api/user/update', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ id: user.id, name, email, gender, birthDate }) }); if (res.ok) { setMessage('✅ Datos actualizados'); setUser({ ...user, name, email, gender, birthDate }); } else setMessage('❌ Error'); } catch (e) { setMessage('🔥 Error de red'); }
-  };
-
-  const handleScan = async (result: string) => {
-    if (!result) return; setScanning(false);
-    let finalCode = result; if (result.includes('code=')) finalCode = result.split('code=')[1].split('&')[0];
-    try { const res = await fetch('/api/check-in/scan', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user?.id, code: finalCode }) }); const data = await res.json(); if (res.ok) { alert(data.message); handleLogin(); setManualCode(''); } else alert('❌ ' + data.error); } catch (e) { if(user) alert('Error'); }
-  };
-
-  const getPrizeCode = async (tenantId: string, tenantName: string) => {
-    if(!confirm(`¿Canjear premio en ${tenantName}?`)) return;
-    try { const res = await fetch('/api/redeem/request', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ userId: user.id, tenantId }) }); const data = await res.json(); if(res.ok) setPrizeCode({ code: data.code, tenant: tenantName }); else alert(data.error); } catch(e) { alert('Error'); }
-  };
-
-  const goToBusinessMap = (tName: string) => {
-    const target = tenants.find(t => t.name === tName);
-    if (target && target.lat && target.lng) { setMapFocus([target.lat, target.lng]); setActiveTab('map'); } else { alert("Ubicación no disponible."); }
-  };
-
-  const handleLogout = () => { if(confirm("¿Salir?")) { setUser(null); setView('WELCOME'); setPhone(''); setPassword(''); setMessage(''); } };
-
-  const toggleCard = (id: string) => {
-    setExpandedId(expandedId === id ? null : id);
-  };
+  const toggleCard = (id: string) => { setExpandedId(expandedId === id ? null : id); };
 
   const BrandLogo = () => (
     <div className="flex items-center justify-center gap-1 mb-6 select-none scale-90">
@@ -327,76 +166,24 @@ export default function Home() {
                {user.memberships?.map((m: any, idx: number) => {
                    const progress = Math.min(m.points, 100);
                    const isWinner = m.points >= 100;
-                   const isExpanded = expandedId === m.tenantId; // ¿Está expandida?
-
+                   const isExpanded = expandedId === m.tenantId;
                    return (
-                     <div 
-                        key={idx} 
-                        onClick={() => toggleCard(m.tenantId)} // 👈 CLICK PARA EXPANDIR
-                        className={`bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 relative overflow-hidden transition-all duration-300 cursor-pointer ${isExpanded ? 'shadow-xl ring-2 ring-pink-100' : 'hover:shadow-md'}`}
-                     >
+                     <div key={idx} onClick={() => toggleCard(m.tenantId)} className={`bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 relative overflow-hidden transition-all duration-300 cursor-pointer ${isExpanded ? 'shadow-xl ring-2 ring-pink-100' : 'hover:shadow-md'}`}>
                        <div className="relative z-10">
-                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="font-bold text-gray-800 text-xl tracking-tight">{m.name}</h3>
-                            <span className="bg-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">{m.points} pts</span>
-                         </div>
-                         
-                         {/* BARRA (Siempre visible) */}
-                         {!isWinner ? (
-                           <>
-                             <div className="w-full bg-gray-100 rounded-full h-4 mb-3 overflow-hidden border border-gray-100">
-                               <div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-pink-500 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
-                             </div>
-                             <div className="flex justify-between text-xs font-bold uppercase tracking-wide">
-                                <span className="text-gray-400">{isExpanded ? 'Menos' : 'Ver más...'}</span>
-                                <span className="text-pink-500">Meta: {m.prize}</span>
-                             </div>
-                           </>
-                         ) : (
-                           <button onClick={(e) => {e.stopPropagation(); getPrizeCode(m.tenantId, m.name);}} className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-black py-4 rounded-2xl shadow-xl animate-pulse tracking-wide text-lg relative z-20">🏆 CANJEAR AHORA</button>
-                         )}
-
-                         {/* 🆕 CONTENIDO EXPANDIDO (MAPA & IG) */}
-                         {isExpanded && (
-                           <div className="mt-6 pt-6 border-t border-gray-100 grid grid-cols-2 gap-3 animate-fadeIn">
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); goToBusinessMap(m.name); }} 
-                                className="bg-blue-50 text-blue-600 py-3 rounded-xl font-bold text-xs flex flex-col items-center hover:bg-blue-100 transition-colors"
-                              >
-                                <span className="text-lg mb-1">📍</span> Ubicación
-                              </button>
-                              
-                              {m.instagram ? (
-                                <a 
-                                  href={`https://instagram.com/${m.instagram.replace('@','')}`} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="bg-pink-50 text-pink-600 py-3 rounded-xl font-bold text-xs flex flex-col items-center hover:bg-pink-100 transition-colors no-underline"
-                                >
-                                  <span className="text-lg mb-1">📸</span> Instagram
-                                </a>
-                              ) : (
-                                <div className="bg-gray-50 text-gray-300 py-3 rounded-xl font-bold text-xs flex flex-col items-center">
-                                  <span className="text-lg mb-1">📸</span> No IG
-                                </div>
-                              )}
-                           </div>
-                         )}
+                         <div className="flex justify-between items-center mb-6"><h3 className="font-bold text-gray-800 text-xl tracking-tight">{m.name}</h3><span className="bg-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">{m.points} pts</span></div>
+                         {!isWinner ? (<><div className="w-full bg-gray-100 rounded-full h-4 mb-3 overflow-hidden border border-gray-100"><div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-pink-500 transition-all duration-1000" style={{ width: `${progress}%` }}></div></div><div className="flex justify-between text-xs font-bold uppercase tracking-wide"><span className="text-gray-400">{isExpanded ? 'Menos' : 'Ver más...'}</span><span className="text-pink-500">Meta: {m.prize}</span></div></>) : (<button onClick={(e) => {e.stopPropagation(); getPrizeCode(m.tenantId, m.name);}} className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-black py-4 rounded-2xl shadow-xl animate-pulse tracking-wide text-lg relative z-20">🏆 CANJEAR AHORA</button>)}
+                         {isExpanded && (<div className="mt-6 pt-6 border-t border-gray-100 grid grid-cols-2 gap-3 animate-fadeIn"><button onClick={(e) => { e.stopPropagation(); goToBusinessMap(m.name); }} className="bg-blue-50 text-blue-600 py-3 rounded-xl font-bold text-xs flex flex-col items-center hover:bg-blue-100 transition-colors"><span className="text-lg mb-1">📍</span> Ubicación</button>{m.instagram ? (<a href={`https://instagram.com/${m.instagram.replace('@','')}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="bg-pink-50 text-pink-600 py-3 rounded-xl font-bold text-xs flex flex-col items-center hover:bg-pink-100 transition-colors no-underline"><span className="text-lg mb-1">📸</span> Instagram</a>) : (<div className="bg-gray-50 text-gray-300 py-3 rounded-xl font-bold text-xs flex flex-col items-center"><span className="text-lg mb-1">📸</span> No IG</div>)}</div>)}
                        </div>
                      </div>
                    );
                })}
              </div>
-             
              <button onClick={() => setScanning(true)} className="w-full bg-gray-900 text-white py-5 rounded-[2rem] font-bold shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all text-lg hover:bg-black"><span className="text-2xl">📷</span> Escanear QR</button>
              <div className="mt-6 flex gap-3"><input className="flex-1 p-5 bg-white rounded-2xl text-gray-800 font-bold text-center tracking-[0.3em] uppercase border-2 border-gray-100 placeholder-gray-300 shadow-sm outline-none focus:border-pink-400 transition-all" placeholder="AB-12" value={manualCode} onChange={e => setManualCode(e.target.value.toUpperCase())} maxLength={7} /><button onClick={() => handleScan(manualCode)} disabled={!manualCode} className="bg-pink-500 text-white font-bold px-8 rounded-2xl shadow-lg disabled:opacity-50 disabled:shadow-none hover:bg-pink-600 transition-all">OK</button></div>
            </div>
         )}
 
-        {activeTab === 'map' && (
-           <div className="h-[65vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white relative z-0"><BusinessMap tenants={tenants} focusCoords={mapFocus} /></div>
-        )}
+        {activeTab === 'map' && (<div className="h-[65vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white relative z-0"><BusinessMap tenants={tenants} focusCoords={mapFocus} /></div>)}
 
         {scanning && (<div className="fixed inset-0 bg-black z-50 flex flex-col"><Scanner onScan={(r) => r[0] && handleScan(r[0].rawValue)} onError={(e) => console.log(e)} /><button onClick={() => setScanning(false)} className="absolute bottom-12 left-8 right-8 bg-white/20 backdrop-blur-md text-white p-5 rounded-3xl font-bold border border-white/20 shadow-2xl">Cancelar Escaneo</button></div>)}
 
