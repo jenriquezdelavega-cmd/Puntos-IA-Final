@@ -1,30 +1,13 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import QRCode from 'react-qr-code';
 import dynamic from 'next/dynamic';
 
-const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false });
-const Marker = dynamic(() => import('react-leaflet').then(m => m.Marker), { ssr: false });
-const useMapEvents = dynamic(() => import('react-leaflet').then(m => m.useMapEvents), { ssr: false });
-const useMap = dynamic(() => import('react-leaflet').then(m => m.useMap), { ssr: false });
-
-// Control para mover mapa al pegar link
-function MapController({ coords }: { coords: [number, number] }) {
-  const map = useMap();
-  useEffect(() => { map.flyTo(coords, 16); }, [coords, map]);
-  return null;
-}
-
-function LocationMarker({ position, setPosition }: any) {
-  const map = useMapEvents({
-    click(e: any) {
-      setPosition([e.latlng.lat, e.latlng.lng]);
-      map.flyTo(e.latlng, map.getZoom());
-    },
-  });
-  return position ? <Marker position={position} /> : null;
-}
+// 🔄 IMPORTACIÓN DINÁMICA SEGURA DEL MAPA ADMIN
+const AdminMap = dynamic(() => import('../components/AdminMap'), { 
+  ssr: false, 
+  loading: () => <div className="h-full w-full bg-gray-100 animate-pulse flex items-center justify-center text-gray-400">Cargando Mapa...</div>
+});
 
 export default function AdminPage() {
   const [tenant, setTenant] = useState<any>(null);
@@ -63,17 +46,11 @@ export default function AdminPage() {
   const loadReports = async (tid: string) => { try { const res = await fetch('/api/admin/reports', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tid }) }); setReportData(await res.json()); } catch(e) {} };
   const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch (e) {} };
   
-  // 🧠 PARSER MEJORADO
+  // PARSER DE LINKS
   const handleGoogleLink = (link: string) => {
     setGoogleLink(link);
-    
-    // Caso 1: URL larga con @lat,lng
     let match = link.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-    
-    // Caso 2: URL con parámetros query ?q=lat,lng
     if (!match) match = link.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
-    
-    // Caso 3: URL tipo /maps/place/.../data=!3m1!4b1!4m5!3m4!1s...!8m2!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/
     if (!match) match = link.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
 
     if (match) {
@@ -89,7 +66,7 @@ export default function AdminPage() {
         method: 'POST', headers: {'Content-Type': 'application/json'}, 
         body: JSON.stringify({ tenantId: tenant.id, prize: prizeName, lat: coords[0], lng: coords[1], address: googleLink }) 
       });
-      alert('Guardado');
+      alert('✅ Guardado');
     } catch(e) { alert('Error'); }
   };
 
@@ -173,17 +150,13 @@ export default function AdminPage() {
 
              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
                 <h2 className="text-xl font-bold text-gray-800">📍 Ubicación</h2>
-                <input className="w-full p-3 bg-blue-50 rounded-xl text-blue-800 text-xs font-mono border border-blue-100 mb-2" placeholder="Pega el link de Google Maps aquí..." value={googleLink} onChange={(e) => handleGoogleLink(e.target.value)} />
-                <div className="h-[300px] w-full rounded-2xl overflow-hidden border border-gray-200 z-0">
-                   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-                   {typeof window !== 'undefined' && (
-                     <MapContainer center={coords} zoom={15} style={{ height: '100%', width: '100%' }}>
-                       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                       <MapController coords={coords} />
-                       <LocationMarker position={coords} setPosition={setCoords} />
-                     </MapContainer>
-                   )}
+                <input className="w-full p-3 bg-blue-50 rounded-xl text-blue-800 text-xs font-mono border border-blue-100 mb-2" placeholder="Pega el link de Google Maps..." value={googleLink} onChange={(e) => handleGoogleLink(e.target.value)} />
+                
+                <div className="h-[300px] w-full rounded-2xl overflow-hidden border border-gray-200 z-0 relative">
+                   {/* MAPA ADMIN SEGURO */}
+                   <AdminMap coords={coords} setCoords={setCoords} />
                 </div>
+                
                 <p className="text-center text-xs text-gray-400 mt-2">Lat: {coords[0].toFixed(4)}, Lng: {coords[1].toFixed(4)}</p>
              </div>
              <button onClick={saveSettings} className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold hover:bg-black transition-all shadow-lg">Guardar Todo</button>
