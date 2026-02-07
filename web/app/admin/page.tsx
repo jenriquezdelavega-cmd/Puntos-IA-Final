@@ -17,13 +17,17 @@ export default function AdminPage() {
   const [userRole, setUserRole] = useState('');
 
   const [prizeName, setPrizeName] = useState('');
-  const [instagram, setInstagram] = useState(''); 
+  const [instagram, setInstagram] = useState('');
   const [addressSearch, setAddressSearch] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [coords, setCoords] = useState<[number, number]>([19.4326, -99.1332]);
   
   const [redeemCode, setRedeemCode] = useState('');
   const [msg, setMsg] = useState('');
+
+  // 🆕 ESTADOS EQUIPO
+  const [team, setTeam] = useState<any[]>([]);
+  const [newStaff, setNewStaff] = useState({ name: '', username: '', password: '', role: 'STAFF' });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,12 +44,46 @@ export default function AdminPage() {
             if (data.tenant.address) setAddressSearch(data.tenant.address);
         }
         if (typeof window !== 'undefined') setBaseUrl(window.location.origin);
-        if (data.user.role === 'ADMIN') { setTab('dashboard'); loadReports(data.tenant.id); } else setTab('qr');
+        
+        if (data.user.role === 'ADMIN') { 
+            setTab('dashboard'); 
+            loadReports(data.tenant.id); 
+            loadTeam(data.tenant.id); // Cargar equipo
+        } else setTab('qr');
+        
       } else alert(data.error);
     } catch(e) { alert('Error'); }
   };
 
   const loadReports = async (tid: string) => { try { const res = await fetch('/api/admin/reports', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tid }) }); setReportData(await res.json()); } catch(e) {} };
+  
+  // 🆕 CARGAR EQUIPO
+  const loadTeam = async (tid: string) => {
+    try { const res = await fetch(`/api/tenant/users?tenantId=${tid}`); const data = await res.json(); if(data.users) setTeam(data.users); } catch(e) {}
+  };
+
+  // 🆕 CREAR STAFF
+  const createStaff = async () => {
+    if(!newStaff.name || !newStaff.username || !newStaff.password) return alert("Faltan datos");
+    try {
+        const res = await fetch('/api/tenant/users', { 
+            method: 'POST', headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ tenantId: tenant.id, ...newStaff }) 
+        });
+        if(res.ok) { 
+            alert("Empleado creado ✅"); 
+            setNewStaff({ name: '', username: '', password: '', role: 'STAFF' }); 
+            loadTeam(tenant.id); 
+        } else { const d = await res.json(); alert(d.error); }
+    } catch(e) { alert("Error"); }
+  };
+
+  // 🆕 BORRAR STAFF
+  const deleteStaff = async (id: string) => {
+    if(!confirm("¿Eliminar empleado?")) return;
+    try { await fetch('/api/tenant/users', { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) }); loadTeam(tenant.id); } catch(e) {}
+  };
+
   const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch (e) {} };
   
   const searchLocation = async () => {
@@ -54,21 +92,13 @@ export default function AdminPage() {
     try {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressSearch)}`);
         const data = await res.json();
-        if (data && data.length > 0) {
-            setCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
-        } else alert("No encontrado");
+        if (data && data.length > 0) { setCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]); } else alert("No encontrado");
     } catch (e) { alert("Error"); }
     setIsSearching(false);
   };
 
   const saveSettings = async () => {
-    try {
-      await fetch('/api/tenant/settings', { 
-        method: 'POST', headers: {'Content-Type': 'application/json'}, 
-        body: JSON.stringify({ tenantId: tenant.id, prize: prizeName, lat: coords[0], lng: coords[1], address: addressSearch, instagram: instagram }) 
-      });
-      alert('✅ Guardado');
-    } catch(e) { alert('Error'); }
+    try { await fetch('/api/tenant/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, prize: prizeName, lat: coords[0], lng: coords[1], address: addressSearch, instagram: instagram }) }); alert('✅ Guardado'); } catch(e) { alert('Error'); }
   };
 
   const validateRedeem = async () => { setMsg('Validando...'); try { const res = await fetch('/api/redeem/validate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, code: redeemCode }) }); const data = await res.json(); if (res.ok) { setMsg(`✅ ENTREGAR A: ${data.user}`); setRedeemCode(''); if(userRole==='ADMIN') loadReports(tenant.id); } else setMsg('❌ ' + data.error); } catch(e) { setMsg('Error'); } };
@@ -85,6 +115,7 @@ export default function AdminPage() {
         <div className="hidden md:block mb-6"><span className={`px-2 py-1 rounded text-xs font-bold ${userRole==='ADMIN'?'bg-purple-500':'bg-blue-500'}`}>{userRole}</span></div>
         <nav className="flex md:flex-col gap-2 w-full justify-around md:justify-start">
           {userRole === 'ADMIN' && <button onClick={()=>setTab('dashboard')} className={`p-3 rounded-xl ${tab==='dashboard'?'bg-gray-800 text-white':'text-gray-400'}`}>📊 <span className="hidden md:inline ml-2">Dashboard</span></button>}
+          {userRole === 'ADMIN' && <button onClick={()=>setTab('team')} className={`p-3 rounded-xl ${tab==='team'?'bg-gray-800 text-white':'text-gray-400'}`}>👥 <span className="hidden md:inline ml-2">Equipo</span></button>}
           <button onClick={()=>setTab('qr')} className={`p-3 rounded-xl ${tab==='qr'?'bg-gray-800 text-white':'text-gray-400'}`}>🎲 <span className="hidden md:inline ml-2">QR</span></button>
           <button onClick={()=>setTab('redeem')} className={`p-3 rounded-xl ${tab==='redeem'?'bg-gray-800 text-white':'text-gray-400'}`}>🎁 <span className="hidden md:inline ml-2">Canjear</span></button>
           {userRole === 'ADMIN' && <button onClick={()=>setTab('settings')} className={`p-3 rounded-xl ${tab==='settings'?'bg-gray-800 text-white':'text-gray-400'}`}>⚙️ <span className="hidden md:inline ml-2">Config</span></button>}
@@ -94,6 +125,7 @@ export default function AdminPage() {
       <button onClick={() => setTenant(null)} className="md:hidden fixed top-4 right-4 z-50 bg-red-600 text-white w-8 h-8 rounded-full font-bold flex items-center justify-center shadow-lg">✕</button>
 
       <div className="flex-1 p-8 overflow-y-auto mb-20 md:mb-0">
+        {/* DASHBOARD */}
         {tab === 'dashboard' && userRole === 'ADMIN' && (
           <div className="space-y-8 animate-fadeIn">
             <h2 className="text-3xl font-bold text-gray-800">Resumen</h2>
@@ -105,6 +137,40 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* 🆕 PESTAÑA EQUIPO */}
+        {tab === 'team' && userRole === 'ADMIN' && (
+          <div className="max-w-4xl mx-auto space-y-8 animate-fadeIn">
+             <div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
+                <h2 className="text-xl font-bold text-gray-800">Agregar Personal</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input className="p-4 bg-gray-50 rounded-xl" placeholder="Nombre (ej: Pedro)" value={newStaff.name} onChange={e=>setNewStaff({...newStaff, name: e.target.value})} />
+                    <input className="p-4 bg-gray-50 rounded-xl" placeholder="Usuario (Login)" value={newStaff.username} onChange={e=>setNewStaff({...newStaff, username: e.target.value})} />
+                    <input className="p-4 bg-gray-50 rounded-xl" placeholder="Contraseña" value={newStaff.password} onChange={e=>setNewStaff({...newStaff, password: e.target.value})} />
+                    <select className="p-4 bg-gray-50 rounded-xl" value={newStaff.role} onChange={e=>setNewStaff({...newStaff, role: e.target.value})}>
+                        <option value="STAFF">Operativo (Solo QR/Canje)</option>
+                        <option value="ADMIN">Administrador (Total)</option>
+                    </select>
+                </div>
+                <button onClick={createStaff} className="w-full bg-black text-white font-bold py-4 rounded-xl hover:bg-gray-800">Agregar Empleado</button>
+             </div>
+
+             <h2 className="text-xl font-bold text-gray-800 ml-2">Mi Equipo</h2>
+             <div className="grid gap-4">
+                {team.map((u: any) => (
+                    <div key={u.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
+                        <div>
+                            <h3 className="font-bold text-lg">{u.name}</h3>
+                            <p className="text-sm text-gray-500">Usuario: <span className="font-mono bg-gray-100 px-1 rounded">{u.username}</span></p>
+                            <span className={`text-[10px] px-2 py-1 rounded font-bold mt-1 inline-block ${u.role==='ADMIN'?'bg-purple-100 text-purple-600':'bg-blue-100 text-blue-600'}`}>{u.role}</span>
+                        </div>
+                        <button onClick={() => deleteStaff(u.id)} className="bg-red-50 text-red-500 px-4 py-2 rounded-xl font-bold text-sm hover:bg-red-100">Eliminar</button>
+                    </div>
+                ))}
+             </div>
+          </div>
+        )}
+
+        {/* QR */}
         {tab === 'qr' && (
           <div className="flex flex-col items-center justify-center h-full animate-fadeIn">
              <div className="bg-white p-10 rounded-[3rem] shadow-xl text-center border border-gray-100 max-w-md w-full">
@@ -116,6 +182,7 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* CANJE */}
         {tab === 'redeem' && (
           <div className="max-w-md mx-auto mt-10 animate-fadeIn">
              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-pink-100 text-center">
@@ -127,44 +194,20 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* CONFIG */}
         {tab === 'settings' && userRole === 'ADMIN' && (
           <div className="max-w-lg mx-auto mt-10 animate-fadeIn space-y-6">
              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
                 <h2 className="text-xl font-bold text-gray-800">Datos del Negocio</h2>
-                
-                {/* NOMBRE (READ ONLY) */}
-                <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">Nombre</label>
-                    <input className="w-full p-4 bg-gray-100 rounded-2xl mt-1 text-gray-500 font-bold border border-transparent cursor-not-allowed" value={tenant.name} readOnly />
-                </div>
-                
-                {/* PREMIO */}
-                <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">Premio (Meta 100 pts)</label>
-                    <input className="w-full p-4 bg-gray-50 rounded-2xl mt-1 font-medium text-gray-800 border border-transparent focus:bg-white focus:border-gray-200 outline-none transition-all" value={prizeName} onChange={e => setPrizeName(e.target.value)} />
-                </div>
-
-                {/* 🆕 INSTAGRAM AQUÍ, BIEN VISIBLE */}
-                <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">Instagram</label>
-                    <input 
-                      className="w-full p-4 bg-pink-50 rounded-2xl mt-1 font-medium text-pink-600 border border-pink-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all placeholder-pink-300" 
-                      value={instagram} 
-                      onChange={e => setInstagram(e.target.value)} 
-                      placeholder="@usuario"
-                    />
-                </div>
+                <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Nombre</label><input className="w-full p-4 bg-gray-100 rounded-2xl mt-1 text-gray-500 font-bold border border-transparent cursor-not-allowed" value={tenant.name} readOnly /></div>
+                <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Premio</label><input className="w-full p-4 bg-gray-50 rounded-2xl mt-1 font-medium text-gray-800 border border-transparent focus:bg-white focus:border-gray-200 outline-none transition-all" value={prizeName} onChange={e => setPrizeName(e.target.value)} /></div>
+                <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Instagram</label><input className="w-full p-4 bg-pink-50 rounded-2xl mt-1 font-medium text-pink-600 border border-pink-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="@usuario" /></div>
              </div>
-
              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
                 <h2 className="text-xl font-bold text-gray-800">📍 Ubicación</h2>
-                <div className="flex gap-2 mb-2">
-                    <input className="flex-1 p-3 bg-blue-50 rounded-xl text-gray-800 text-sm border border-blue-100 outline-none focus:ring-2 focus:ring-blue-300" placeholder="Dirección..." value={addressSearch} onChange={(e) => setAddressSearch(e.target.value)} />
-                    <button onClick={searchLocation} disabled={isSearching} className="bg-blue-600 text-white px-4 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50">🔍</button>
-                </div>
+                <div className="flex gap-2 mb-2"><input className="flex-1 p-3 bg-blue-50 rounded-xl text-gray-800 text-sm border border-blue-100 outline-none focus:ring-2 focus:ring-blue-300" placeholder="Dirección..." value={addressSearch} onChange={(e) => setAddressSearch(e.target.value)} /><button onClick={searchLocation} disabled={isSearching} className="bg-blue-600 text-white px-4 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50">🔍</button></div>
                 <div className="h-[300px] w-full rounded-2xl overflow-hidden border border-gray-200 z-0 relative"><AdminMap coords={coords} setCoords={setCoords} /></div>
              </div>
-             
              <button onClick={saveSettings} className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold hover:bg-black transition-all shadow-lg">Guardar Todo</button>
           </div>
         )}
