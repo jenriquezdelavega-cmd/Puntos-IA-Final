@@ -9,7 +9,7 @@ export default function AdminPage() {
   const [tenant, setTenant] = useState<any>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  
+
   const [code, setCode] = useState('');
   const [reportData, setReportData] = useState<any>(null);
   const [baseUrl, setBaseUrl] = useState('');
@@ -21,11 +21,10 @@ export default function AdminPage() {
   const [addressSearch, setAddressSearch] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [coords, setCoords] = useState<[number, number]>([19.4326, -99.1332]);
-  
+
   const [redeemCode, setRedeemCode] = useState('');
   const [msg, setMsg] = useState('');
 
-  // 🆕 ESTADOS EQUIPO
   const [team, setTeam] = useState<any[]>([]);
   const [newStaff, setNewStaff] = useState({ name: '', username: '', password: '', role: 'STAFF' });
 
@@ -44,25 +43,23 @@ export default function AdminPage() {
             if (data.tenant.address) setAddressSearch(data.tenant.address);
         }
         if (typeof window !== 'undefined') setBaseUrl(window.location.origin);
-        
+
         if (data.user.role === 'ADMIN') { 
             setTab('dashboard'); 
             loadReports(data.tenant.id); 
-            loadTeam(data.tenant.id); // Cargar equipo
+            loadTeam(data.tenant.id);
         } else setTab('qr');
-        
+
       } else alert(data.error);
     } catch(e) { alert('Error'); }
   };
 
   const loadReports = async (tid: string) => { try { const res = await fetch('/api/admin/reports', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tid }) }); setReportData(await res.json()); } catch(e) {} };
-  
-  // 🆕 CARGAR EQUIPO
+
   const loadTeam = async (tid: string) => {
     try { const res = await fetch(`/api/tenant/users?tenantId=${tid}`); const data = await res.json(); if(data.users) setTeam(data.users); } catch(e) {}
   };
 
-  // 🆕 CREAR STAFF
   const createStaff = async () => {
     if(!newStaff.name || !newStaff.username || !newStaff.password) return alert("Faltan datos");
     try {
@@ -78,14 +75,13 @@ export default function AdminPage() {
     } catch(e) { alert("Error"); }
   };
 
-  // 🆕 BORRAR STAFF
   const deleteStaff = async (id: string) => {
     if(!confirm("¿Eliminar empleado?")) return;
     try { await fetch('/api/tenant/users', { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) }); loadTeam(tenant.id); } catch(e) {}
   };
 
   const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch (e) {} };
-  
+
   const searchLocation = async () => {
     if (!addressSearch) return;
     setIsSearching(true);
@@ -104,7 +100,7 @@ export default function AdminPage() {
   const validateRedeem = async () => { setMsg('Validando...'); try { const res = await fetch('/api/redeem/validate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, code: redeemCode }) }); const data = await res.json(); if (res.ok) { setMsg(`✅ ENTREGAR A: ${data.user}`); setRedeemCode(''); if(userRole==='ADMIN') loadReports(tenant.id); } else setMsg('❌ ' + data.error); } catch(e) { setMsg('Error'); } };
   const downloadCSV = () => { if (!reportData?.csvData) return; const headers = Object.keys(reportData.csvData[0]).join(','); const rows = reportData.csvData.map((obj: any) => Object.values(obj).join(',')).join('\n'); const encodedUri = encodeURI("data:text/csv;charset=utf-8," + headers + "\n" + rows); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `clientes_${tenant.slug}.csv`); document.body.appendChild(link); link.click(); };
 
-  if (!tenant) return <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4"><div className="bg-gray-800 p-8 rounded-2xl w-full max-w-sm shadow-2xl border border-gray-700"><div className="text-center mb-8"><h1 className="text-3xl font-black text-white tracking-tighter">punto<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500">IA</span></h1><p className="text-gray-400 text-sm mt-2">Acceso de Personal</p></div><form onSubmit={handleLogin} className="space-y-4"><input className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Usuario" value={username} onChange={e=>setUsername(e.target.value)} /><input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Contraseña" value={password} onChange={e=>setPassword(e.target.value)} /><button className="w-full bg-gradient-to-r from-orange-500 to-pink-600 font-bold py-4 rounded-xl text-white shadow-lg">Iniciar Sesión</button></form></div></div>;
+  if (!tenant) return <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4"><div className="bg-gray-800 p-8 rounded-2xl w-full max-w-sm shadow-2xl border border-gray-700"><div className="text-center mb-8"><h1 className="text-3xl font-black text-white tracking-tighter">punto<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500">IA</span></h1><p className="text-gray-400 text-sm mt-2">Acceso de Personal</p></div><form onSubmit={handleLogin} className="space-y-4"><input className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Usuario (Ej: PIZZA.juan)" value={username} onChange={e=>setUsername(e.target.value)} /><input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Contraseña" value={password} onChange={e=>setPassword(e.target.value)} /><button className="w-full bg-gradient-to-r from-orange-500 to-pink-600 font-bold py-4 rounded-xl text-white shadow-lg">Iniciar Sesión</button></form></div></div>;
 
   const qrValue = code ? `${baseUrl}/?code=${code}` : '';
 
@@ -125,7 +121,6 @@ export default function AdminPage() {
       <button onClick={() => setTenant(null)} className="md:hidden fixed top-4 right-4 z-50 bg-red-600 text-white w-8 h-8 rounded-full font-bold flex items-center justify-center shadow-lg">✕</button>
 
       <div className="flex-1 p-8 overflow-y-auto mb-20 md:mb-0">
-        {/* DASHBOARD */}
         {tab === 'dashboard' && userRole === 'ADMIN' && (
           <div className="space-y-8 animate-fadeIn">
             <h2 className="text-3xl font-bold text-gray-800">Resumen</h2>
@@ -137,21 +132,32 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 🆕 PESTAÑA EQUIPO */}
+        {/* 🆕 PESTAÑA EQUIPO CON PREFIJO VISUAL */}
         {tab === 'team' && userRole === 'ADMIN' && (
           <div className="max-w-4xl mx-auto space-y-8 animate-fadeIn">
              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
                 <h2 className="text-xl font-bold text-gray-800">Agregar Personal</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input className="p-4 bg-gray-50 rounded-xl" placeholder="Nombre (ej: Pedro)" value={newStaff.name} onChange={e=>setNewStaff({...newStaff, name: e.target.value})} />
-                    <input className="p-4 bg-gray-50 rounded-xl" placeholder="Usuario (Login)" value={newStaff.username} onChange={e=>setNewStaff({...newStaff, username: e.target.value})} />
-                    <input className="p-4 bg-gray-50 rounded-xl" placeholder="Contraseña" value={newStaff.password} onChange={e=>setNewStaff({...newStaff, password: e.target.value})} />
-                    <select className="p-4 bg-gray-50 rounded-xl" value={newStaff.role} onChange={e=>setNewStaff({...newStaff, role: e.target.value})}>
+                    <input className="p-4 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-blue-200" placeholder="Nombre (ej: Pedro)" value={newStaff.name} onChange={e=>setNewStaff({...newStaff, name: e.target.value})} />
+
+                    {/* INPUT CON PREFIJO */}
+                    <div className="flex items-center bg-gray-50 rounded-xl px-4 border border-gray-100">
+                        <span className="text-gray-400 font-mono text-sm font-bold mr-1 select-none">{tenant.codePrefix || '???'}.</span>
+                        <input 
+                            className="bg-transparent w-full p-4 outline-none font-medium text-gray-800" 
+                            placeholder="ej: juan" 
+                            value={newStaff.username} 
+                            onChange={e=>setNewStaff({...newStaff, username: e.target.value})} 
+                        />
+                    </div>
+
+                    <input className="p-4 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-blue-200" placeholder="Contraseña" value={newStaff.password} onChange={e=>setNewStaff({...newStaff, password: e.target.value})} />
+                    <select className="p-4 bg-gray-50 rounded-xl outline-none" value={newStaff.role} onChange={e=>setNewStaff({...newStaff, role: e.target.value})}>
                         <option value="STAFF">Operativo (Solo QR/Canje)</option>
                         <option value="ADMIN">Administrador (Total)</option>
                     </select>
                 </div>
-                <button onClick={createStaff} className="w-full bg-black text-white font-bold py-4 rounded-xl hover:bg-gray-800">Agregar Empleado</button>
+                <button onClick={createStaff} className="w-full bg-black text-white font-bold py-4 rounded-xl hover:bg-gray-800 transition-all shadow-lg">Agregar Empleado</button>
              </div>
 
              <h2 className="text-xl font-bold text-gray-800 ml-2">Mi Equipo</h2>
@@ -160,7 +166,7 @@ export default function AdminPage() {
                     <div key={u.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
                         <div>
                             <h3 className="font-bold text-lg">{u.name}</h3>
-                            <p className="text-sm text-gray-500">Usuario: <span className="font-mono bg-gray-100 px-1 rounded">{u.username}</span></p>
+                            <p className="text-sm text-gray-500">Login: <span className="font-mono bg-gray-100 px-2 py-0.5 rounded text-gray-800 font-bold">{u.username}</span></p>
                             <span className={`text-[10px] px-2 py-1 rounded font-bold mt-1 inline-block ${u.role==='ADMIN'?'bg-purple-100 text-purple-600':'bg-blue-100 text-blue-600'}`}>{u.role}</span>
                         </div>
                         <button onClick={() => deleteStaff(u.id)} className="bg-red-50 text-red-500 px-4 py-2 rounded-xl font-bold text-sm hover:bg-red-100">Eliminar</button>
@@ -170,7 +176,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* QR */}
         {tab === 'qr' && (
           <div className="flex flex-col items-center justify-center h-full animate-fadeIn">
              <div className="bg-white p-10 rounded-[3rem] shadow-xl text-center border border-gray-100 max-w-md w-full">
@@ -182,7 +187,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* CANJE */}
         {tab === 'redeem' && (
           <div className="max-w-md mx-auto mt-10 animate-fadeIn">
              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-pink-100 text-center">
@@ -194,7 +198,6 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* CONFIG */}
         {tab === 'settings' && userRole === 'ADMIN' && (
           <div className="max-w-lg mx-auto mt-10 animate-fadeIn space-y-6">
              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
@@ -215,3 +218,4 @@ export default function AdminPage() {
     </div>
   );
 }
+EOF
