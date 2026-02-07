@@ -9,6 +9,7 @@ export default function AdminPage() {
   const [tenant, setTenant] = useState<any>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  
   const [code, setCode] = useState('');
   const [reportData, setReportData] = useState<any>(null);
   const [baseUrl, setBaseUrl] = useState('');
@@ -16,7 +17,7 @@ export default function AdminPage() {
   const [userRole, setUserRole] = useState('');
 
   const [prizeName, setPrizeName] = useState('');
-  const [instagram, setInstagram] = useState(''); // 🆕 IG Estado
+  const [instagram, setInstagram] = useState(''); 
   const [addressSearch, setAddressSearch] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [coords, setCoords] = useState<[number, number]>([19.4326, -99.1332]);
@@ -33,7 +34,7 @@ export default function AdminPage() {
         setTenant(data.tenant);
         setUserRole(data.user.role);
         setPrizeName(data.tenant.prize || '');
-        setInstagram(data.tenant.instagram || ''); // 🆕 Cargar IG
+        setInstagram(data.tenant.instagram || '');
         if (data.tenant.lat && data.tenant.lng) {
             setCoords([data.tenant.lat, data.tenant.lng]);
             if (data.tenant.address) setAddressSearch(data.tenant.address);
@@ -129,18 +130,28 @@ export default function AdminPage() {
         {tab === 'settings' && userRole === 'ADMIN' && (
           <div className="max-w-lg mx-auto mt-10 animate-fadeIn space-y-6">
              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
-                <h2 className="text-xl font-bold text-gray-800">Datos</h2>
-                <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Nombre</label><input className="w-full p-4 bg-gray-100 rounded-2xl mt-1 text-gray-500 font-bold border border-transparent cursor-not-allowed" value={tenant.name} readOnly /></div>
-                <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Premio</label><input className="w-full p-4 bg-gray-50 rounded-2xl mt-1 font-medium text-gray-800 border border-transparent focus:bg-white focus:border-gray-200 outline-none transition-all" value={prizeName} onChange={e => setPrizeName(e.target.value)} /></div>
+                <h2 className="text-xl font-bold text-gray-800">Datos del Negocio</h2>
                 
-                {/* 🆕 CAMPO INSTAGRAM */}
+                {/* NOMBRE (READ ONLY) */}
+                <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">Nombre</label>
+                    <input className="w-full p-4 bg-gray-100 rounded-2xl mt-1 text-gray-500 font-bold border border-transparent cursor-not-allowed" value={tenant.name} readOnly />
+                </div>
+                
+                {/* PREMIO */}
+                <div>
+                    <label className="text-xs font-bold text-gray-400 uppercase ml-1">Premio (Meta 100 pts)</label>
+                    <input className="w-full p-4 bg-gray-50 rounded-2xl mt-1 font-medium text-gray-800 border border-transparent focus:bg-white focus:border-gray-200 outline-none transition-all" value={prizeName} onChange={e => setPrizeName(e.target.value)} />
+                </div>
+
+                {/* 🆕 INSTAGRAM AQUÍ, BIEN VISIBLE */}
                 <div>
                     <label className="text-xs font-bold text-gray-400 uppercase ml-1">Instagram</label>
                     <input 
-                      className="w-full p-4 bg-pink-50 rounded-2xl mt-1 font-medium text-pink-600 border border-pink-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" 
+                      className="w-full p-4 bg-pink-50 rounded-2xl mt-1 font-medium text-pink-600 border border-pink-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all placeholder-pink-300" 
                       value={instagram} 
                       onChange={e => setInstagram(e.target.value)} 
-                      placeholder="@tu_negocio"
+                      placeholder="@usuario"
                     />
                 </div>
              </div>
@@ -153,6 +164,7 @@ export default function AdminPage() {
                 </div>
                 <div className="h-[300px] w-full rounded-2xl overflow-hidden border border-gray-200 z-0 relative"><AdminMap coords={coords} setCoords={setCoords} /></div>
              </div>
+             
              <button onClick={saveSettings} className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold hover:bg-black transition-all shadow-lg">Guardar Todo</button>
           </div>
         )}
