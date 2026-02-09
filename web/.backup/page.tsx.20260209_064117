@@ -544,10 +544,10 @@ export default function Home() {
 
                   <div className="flex gap-4">
                     <div className="flex-1">
-                      <label className={clsLabel}>Fecha de nacimiento</label>
+                      <label className={clsLabel}>Fecha</label>
                       <input
                         type="date"
-                        className={`${clsInput} h-[58px]`}
+                        className={clsInput}
                         value={birthDate}
                         onChange={(e) => setBirthDate(e.target.value)}
                       />
@@ -556,13 +556,13 @@ export default function Home() {
                     <div className="flex-1">
                       <label className={clsLabel}>Género</label>
                       <select
-                        className={`${clsInput} h-[58px]`}
+                        className={clsInput}
                         value={gender}
                         onChange={(e) => setGender(e.target.value)}
                       >
                         <option value="">-</option>
-                        <option value="Hombre">Masculino</option>
-                        <option value="Mujer">Femenino</option>
+                        <option value="Hombre">M</option>
+                        <option value="Mujer">F</option>
                       </select>
                     </div>
                   </div>
@@ -1041,10 +1041,10 @@ export default function Home() {
 
                   <div className="flex gap-4">
                     <div className="flex-1">
-                      <label className={clsLabel}>Fecha de nacimiento</label>
+                      <label className={clsLabel}>Fecha</label>
                       <input
                         type="date"
-                        className={`${clsInput} h-[58px]`}
+                        className={clsInput}
                         value={birthDate}
                         onChange={(e) => setBirthDate(e.target.value)}
                       />
@@ -1053,8 +1053,8 @@ export default function Home() {
                     <div className="flex-1">
                       <label className={clsLabel}>Género</label>
                       <select className={clsInput} value={gender} onChange={(e) => setGender(e.target.value)}>
-                        <option value="Hombre">Masculino</option>
-                        <option value="Mujer">Femenino</option>
+                        <option value="Hombre">M</option>
+                        <option value="Mujer">F</option>
                       </select>
                     </div>
                   </div>
