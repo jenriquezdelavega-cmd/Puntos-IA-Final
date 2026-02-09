@@ -24,7 +24,6 @@ model Tenant {
   lng       Float?  @default(-99.1332)
   address   String? @default("Dirección pendiente")
   instagram String?
-  logoData String?
   isActive  Boolean @default(true)
 
   createdAt DateTime @default(now())

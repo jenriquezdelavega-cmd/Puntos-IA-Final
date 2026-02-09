@@ -20,7 +20,6 @@ const [userRole, setUserRole] = useState('');
 const [prizeName, setPrizeName] = useState('');
 const [requiredVisits, setRequiredVisits] = useState('10');
 const [rewardPeriod, setRewardPeriod] = useState('OPEN');
-const [logoData, setLogoData] = useState<string>('');
 const [instagram, setInstagram] = useState('');
 const [addressSearch, setAddressSearch] = useState('');
 const [isSearching, setIsSearching] = useState(false);
@@ -45,7 +44,6 @@ setPrizeName(data.tenant.prize || '');
 setInstagram(data.tenant.instagram || '');
 setRequiredVisits(String(data.tenant.requiredVisits ?? 10));
 setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
-setLogoData(String(data.tenant.logoData ?? ''));
 if (data.tenant.lat && data.tenant.lng) {
 setCoords([data.tenant.lat, data.tenant.lng]);
 if (data.tenant.address) setAddressSearch(data.tenant.address);

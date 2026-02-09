@@ -34,8 +34,8 @@ export async function POST(request: Request) {
         lng: user.tenant.lng,
         address: user.tenant.address,
         requiredVisits: user.tenant.requiredVisits,
-        rewardPeriod: user.tenant.rewardPeriod,
-        logoData: user.tenant.logoData
+        rewardPeriod: user.tenant.rewardPeriod
+
       }
     });
 

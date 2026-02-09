@@ -87,7 +87,6 @@ export async function POST(request: Request) {
       return {
         tenantId: m.tenantId,
         name: m.tenant.name,
-        logoData: m.tenant.logoData,
         prize: m.tenant.prize,
         instagram: m.tenant.instagram,
         rewardPeriod: m.tenant.rewardPeriod,
