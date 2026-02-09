@@ -7,7 +7,6 @@ const AdminMap = dynamic(() => import('../components/AdminMap'), { ssr: false, l
 
 export default function AdminPage() {
 const [tenant, setTenant] = useState<any>(null);
-const [tenantUserId, setTenantUserId] = useState<string>('');
 const [username, setUsername] = useState('');
 const [password, setPassword] = useState('');
 
@@ -37,7 +36,6 @@ const data = await res.json();
 if(res.ok) {
 setTenant(data.tenant);
 setUserRole(data.user.role);
-setTenantUserId(data.user.id || '');
 setPrizeName(data.tenant.prize || '');
 setInstagram(data.tenant.instagram || '');
 if (data.tenant.lat && data.tenant.lng) {
@@ -82,7 +80,7 @@ if(!confirm("¿Eliminar empleado?")) return;
 try { await fetch('/api/tenant/users', { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) }); loadTeam(tenant.id); } catch(e) {}
 };
 
-const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, tenantUserId }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch (e) {} };
+const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch (e) {} };
 
 const searchLocation = async () => {
 if (!addressSearch) return;

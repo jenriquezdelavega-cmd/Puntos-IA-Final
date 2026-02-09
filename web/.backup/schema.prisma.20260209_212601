@@ -71,38 +71,23 @@ model Membership {
 }
 
 model DailyCode {
-  id            String   @id @default(uuid())
-  code          String
-  day           String   // YYYY-MM-DD (para reglas/uniques)
-  validDate     DateTime @default(now())
-  isActive      Boolean  @default(true)
-
-  tenantId      String
-  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  generatedById String
-  generatedBy   TenantUser @relation(fields: [generatedById], references: [id], onDelete: Cascade)
-
-  visits        Visit[]
-
-  @@unique([tenantId, generatedById, day])
+  id        String   @id @default(uuid())
+  code      String
+  validDate DateTime @default(now())
+  isActive  Boolean  @default(true)
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  visits    Visit[]
 }
 
 model Visit {
-  id           String   @id @default(uuid())
-  visitedAt    DateTime @default(now())
-
-  // para evitar múltiples scans en el mismo día por negocio
-  visitDay     String   // YYYY-MM-DD
-  tenantId     String
-
+  id        String   @id @default(uuid())
+  visitedAt DateTime @default(now())
   membershipId String
   membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
-
-  dailyCodeId  String
-  dailyCode    DailyCode @relation(fields: [dailyCodeId], references: [id])
-
-  @@unique([membershipId, tenantId, visitDay])
+  dailyCodeId String
+  dailyCode   DailyCode @relation(fields: [dailyCodeId], references: [id])
+  @@unique([membershipId, dailyCodeId])
 }
 
 model Redemption {
