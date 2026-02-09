@@ -38,10 +38,6 @@ const clsInput =
   'w-full p-4 bg-white rounded-2xl text-gray-900 font-semibold border border-gray-200 ' +
   'shadow-sm outline-none placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400';
 
-const clsInputFixed =
-  'block w-full h-[60px] px-4 bg-white rounded-2xl text-gray-900 font-semibold border border-gray-200 ' +
-  'shadow-sm outline-none placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400 appearance-none';
-
 const clsLabel =
   'text-xs font-black text-gray-400 uppercase ml-1 block mb-2 tracking-widest';
 
@@ -491,10 +487,7 @@ export default function Home() {
             >
               ←
             </button>
-            <div className="mt-4 mb-4 flex justify-center scale-[0.75]">
-            <BrandLogo animate={false} />
-          </div>
-          <h2 className="text-3xl font-black mt-2 tracking-tight">
+            <h2 className="text-3xl font-black mt-2 tracking-tight">
               {view === 'REGISTER' ? 'Únete al Club' : 'Bienvenido'}
             </h2>
             <p className="text-white/90 text-sm mt-1 font-semibold">
@@ -549,12 +542,12 @@ export default function Home() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 items-end">
+                  <div className="flex gap-4">
                     <div className="flex-1">
                       <label className={clsLabel}>Fecha de nacimiento</label>
                       <input
                         type="date"
-                        className={clsInputFixed}
+                        className={`${clsInput} h-[58px]`}
                         value={birthDate}
                         onChange={(e) => setBirthDate(e.target.value)}
                       />
@@ -1046,12 +1039,12 @@ export default function Home() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 items-end">
+                  <div className="flex gap-4">
                     <div className="flex-1">
                       <label className={clsLabel}>Fecha de nacimiento</label>
                       <input
                         type="date"
-                        className={clsInputFixed}
+                        className={`${clsInput} h-[58px]`}
                         value={birthDate}
                         onChange={(e) => setBirthDate(e.target.value)}
                       />
