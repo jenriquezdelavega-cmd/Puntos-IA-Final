@@ -106,61 +106,21 @@ const qrValue = code ? `${baseUrl}/?code=${code}` : '';
 
 return (
 <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
-<div className="w-full md:w-64 bg-gray-950/95 text-white flex md:flex-col p-3 md:p-6 fixed inset-x-4 bottom-4 md:inset-x-0 md:bottom-auto md:relative z-50 md:h-full justify-between md:justify-start border border-gray-800/80 md:border-t-0 md:border-l-0 md:border-b-0 md:border-r rounded-[2rem] md:rounded-none shadow-[0_-10px_30px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+<div className="w-full md:w-64 bg-gray-900 text-white flex md:flex-col p-6 fixed bottom-0 md:relative z-50 md:h-full justify-between md:justify-start border-t md:border-t-0 md:border-r border-gray-800">
 <h1 className="text-2xl font-black tracking-tighter mb-4 hidden md:block">punto<span className="text-pink-500">IA</span></h1>
-<div className="hidden md:block mb-6"><span className={`px-3 py-1 rounded-full text-xs font-black tracking-wider shadow-sm ring-1 ring-white/10 ${userRole==='ADMIN'?'bg-gradient-to-r from-purple-600 to-pink-600':'bg-gradient-to-r from-sky-600 to-blue-700'}`}>{userRole}</span></div>
+<div className="hidden md:block mb-6"><span className={`px-2 py-1 rounded text-xs font-bold ${userRole==='ADMIN'?'bg-purple-500':'bg-blue-500'}`}>{userRole}</span></div>
 <nav className="flex md:flex-col gap-2 w-full justify-around md:justify-start">
-  {userRole === 'ADMIN' && (
-    <button
-      onClick={()=>setTab('dashboard')}
-      className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab==='dashboard'?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
-    >
-      <span className="text-xl leading-none">📊</span>
-      <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">Dashboard</span>
-    </button>
-  )}
-
-  {userRole === 'ADMIN' && (
-    <button
-      onClick={()=>setTab('team')}
-      className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab==='team'?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
-    >
-      <span className="text-xl leading-none">👥</span>
-      <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">Equipo</span>
-    </button>
-  )}
-
-  <button
-    onClick={()=>setTab('qr')}
-    className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab==='qr'?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
-  >
-    <span className="text-xl leading-none">📷</span>
-    <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">QR</span>
-  </button>
-
-  <button
-    onClick={()=>setTab('redeem')}
-    className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab==='redeem'?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
-  >
-    <span className="text-xl leading-none">🎁</span>
-    <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">Canje</span>
-  </button>
-
-  {userRole === 'ADMIN' && (
-    <button
-      onClick={()=>setTab('settings')}
-      className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab==='settings'?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
-    >
-      <span className="text-xl leading-none">⚙️</span>
-      <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">Config</span>
-    </button>
-  )}
+{userRole === 'ADMIN' && <button onClick={()=>setTab('dashboard')} className={`p-3 rounded-xl ${tab==='dashboard'?'bg-gray-800 text-white':'text-gray-200'}`}> <span className="hidden md:inline ml-2">Dashboard</span></button>}
+{userRole === 'ADMIN' && <button onClick={()=>setTab('team')} className={`p-3 rounded-xl ${tab==='team'?'bg-gray-800 text-white':'text-gray-200'}`}> <span className="hidden md:inline ml-2">Equipo</span></button>}
+<button onClick={()=>setTab('qr')} className={`p-3 rounded-xl ${tab==='qr'?'bg-gray-800 text-white':'text-gray-200'}`}> <span className="hidden md:inline ml-2">QR</span></button>
+<button onClick={()=>setTab('redeem')} className={`p-3 rounded-xl ${tab==='redeem'?'bg-gray-800 text-white':'text-gray-200'}`}> <span className="hidden md:inline ml-2">Canjear</span></button>
+{userRole === 'ADMIN' && <button onClick={()=>setTab('settings')} className={`p-3 rounded-xl ${tab==='settings'?'bg-gray-800 text-white':'text-gray-200'}`}> <span className="hidden md:inline ml-2">Config</span></button>}
 </nav>
 <div className="hidden md:block mt-auto pt-6 border-t border-gray-800"><p className="font-bold text-sm truncate">{tenant.name}</p><button onClick={() => setTenant(null)} className="text-xs text-red-400 mt-4 hover:text-red-300 border border-red-900 p-2 rounded w-full">Cerrar Sesión</button></div>
 </div>
 <button onClick={() => setTenant(null)} className="md:hidden fixed top-4 right-4 z-50 bg-red-600 text-white w-8 h-8 rounded-full font-bold flex items-center justify-center shadow-lg">✕</button>
 
-<div className="flex-1 p-6 md:p-8 overflow-y-auto pb-32 md:pb-0">
+<div className="flex-1 p-8 overflow-y-auto mb-20 md:mb-0">
 {tab === 'dashboard' && userRole === 'ADMIN' && (
 <div className="space-y-8 animate-fadeIn">
 <h2 className="text-3xl font-bold text-gray-800">Resumen</h2>
@@ -189,7 +149,7 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
 />
 </div>
 
-<input className="p-4 bg-white rounded-2xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400 shadow-sm" placeholder="Contraseña" value={newStaff.password} onChange={e=>setNewStaff({...newStaff, password: e.target.value})} />
+<input className="p-4 bg-gray-50 rounded-xl outline-none border border-transparent focus:border-blue-200" placeholder="Contraseña" value={newStaff.password} onChange={e=>setNewStaff({...newStaff, password: e.target.value})} />
 <select className="p-4 bg-white rounded-2xl outline-none border border-gray-200 text-gray-900 focus:ring-2 focus:ring-pink-400" value={newStaff.role} onChange={e=>setNewStaff({...newStaff, role: e.target.value})}>
 <option value="STAFF">Operativo (Solo QR/Canje)</option>
 <option value="ADMIN">Administrador (Total)</option>
@@ -241,7 +201,7 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
 <div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
 <h2 className="text-xl font-bold text-gray-800">Datos del Negocio</h2>
 <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Nombre</label><input className="w-full p-4 bg-gray-100 rounded-2xl mt-1 text-gray-500 font-bold border border-transparent cursor-not-allowed" value={tenant.name} readOnly /></div>
-<div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Premio</label><input className="w-full p-4 bg-white rounded-2xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-pink-400 outline-none transition-all shadow-sm placeholder:text-gray-400" value={prizeName} onChange={e => setPrizeName(e.target.value)} /></div>
+<div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Premio</label><input className="w-full p-4 bg-gray-50 rounded-2xl mt-1 font-medium text-gray-800 border border-transparent focus:bg-white focus:border-gray-200 outline-none transition-all" value={prizeName} onChange={e => setPrizeName(e.target.value)} /></div>
 <div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Instagram</label><input className="w-full p-4 bg-pink-50 rounded-2xl mt-1 font-medium text-pink-600 border border-pink-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="@usuario" /></div>
 </div>
 <div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
