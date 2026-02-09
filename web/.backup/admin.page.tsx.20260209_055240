@@ -110,11 +110,11 @@ return (
 <h1 className="text-2xl font-black tracking-tighter mb-4 hidden md:block">punto<span className="text-pink-500">IA</span></h1>
 <div className="hidden md:block mb-6"><span className={`px-2 py-1 rounded text-xs font-bold ${userRole==='ADMIN'?'bg-purple-500':'bg-blue-500'}`}>{userRole}</span></div>
 <nav className="flex md:flex-col gap-2 w-full justify-around md:justify-start">
-{userRole === 'ADMIN' && <button onClick={()=>setTab('dashboard')} className={`p-3 rounded-xl ${tab==='dashboard'?'bg-gray-800 text-white':'text-gray-200'}`}> <span className="hidden md:inline ml-2">Dashboard</span></button>}
-{userRole === 'ADMIN' && <button onClick={()=>setTab('team')} className={`p-3 rounded-xl ${tab==='team'?'bg-gray-800 text-white':'text-gray-200'}`}> <span className="hidden md:inline ml-2">Equipo</span></button>}
-<button onClick={()=>setTab('qr')} className={`p-3 rounded-xl ${tab==='qr'?'bg-gray-800 text-white':'text-gray-200'}`}> <span className="hidden md:inline ml-2">QR</span></button>
-<button onClick={()=>setTab('redeem')} className={`p-3 rounded-xl ${tab==='redeem'?'bg-gray-800 text-white':'text-gray-200'}`}> <span className="hidden md:inline ml-2">Canjear</span></button>
-{userRole === 'ADMIN' && <button onClick={()=>setTab('settings')} className={`p-3 rounded-xl ${tab==='settings'?'bg-gray-800 text-white':'text-gray-200'}`}> <span className="hidden md:inline ml-2">Config</span></button>}
+{userRole === 'ADMIN' && <button onClick={()=>setTab('dashboard')} className={`p-3 rounded-xl ${tab==='dashboard'?'bg-gray-800 text-white':'text-gray-400'}`}> <span className="hidden md:inline ml-2">Dashboard</span></button>}
+{userRole === 'ADMIN' && <button onClick={()=>setTab('team')} className={`p-3 rounded-xl ${tab==='team'?'bg-gray-800 text-white':'text-gray-400'}`}> <span className="hidden md:inline ml-2">Equipo</span></button>}
+<button onClick={()=>setTab('qr')} className={`p-3 rounded-xl ${tab==='qr'?'bg-gray-800 text-white':'text-gray-400'}`}> <span className="hidden md:inline ml-2">QR</span></button>
+<button onClick={()=>setTab('redeem')} className={`p-3 rounded-xl ${tab==='redeem'?'bg-gray-800 text-white':'text-gray-400'}`}> <span className="hidden md:inline ml-2">Canjear</span></button>
+{userRole === 'ADMIN' && <button onClick={()=>setTab('settings')} className={`p-3 rounded-xl ${tab==='settings'?'bg-gray-800 text-white':'text-gray-400'}`}> <span className="hidden md:inline ml-2">Config</span></button>}
 </nav>
 <div className="hidden md:block mt-auto pt-6 border-t border-gray-800"><p className="font-bold text-sm truncate">{tenant.name}</p><button onClick={() => setTenant(null)} className="text-xs text-red-400 mt-4 hover:text-red-300 border border-red-900 p-2 rounded w-full">Cerrar Sesión</button></div>
 </div>
