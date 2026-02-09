@@ -9,6 +9,7 @@ function tzParts(d: Date) {
     timeZone: TZ,
     year: 'numeric',
     month: '2-digit',
+    day: '2-digit',
   });
   const parts = fmt.formatToParts(d);
   const get = (t: string) => parts.find(p => p.type === t)?.value || '';
@@ -33,49 +34,37 @@ export async function POST(request: Request) {
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) return NextResponse.json({ error: 'Negocio no encontrado' }, { status: 404 });
 
-    let membership = await prisma.membership.findUnique({
+    const membership = await prisma.membership.findUnique({
       where: { tenantId_userId: { tenantId, userId } }
     });
 
     if (!membership) return NextResponse.json({ error: 'No tienes membresía' }, { status: 400 });
 
-    const now = new Date();
-    const tenantPeriod = (tenant.rewardPeriod as RewardPeriod) || 'OPEN';
-    const appliedType = (membership.periodType as RewardPeriod) || 'OPEN';
+    // Reset “lazy” también aquí
+    const key = periodKey(tenant.rewardPeriod as RewardPeriod, new Date());
+    let currentVisits = membership.currentVisits ?? 0;
 
-    // cambio de regla: adoptar sin reset
-    if (appliedType !== tenantPeriod) {
-      const newKey = periodKey(tenantPeriod, now);
-      membership = await prisma.membership.update({
+    if ((membership.periodKey || 'OPEN') !== key) {
+      const up = await prisma.membership.update({
         where: { id: membership.id },
-        data: { periodType: tenantPeriod, periodKey: newKey },
+        data: { currentVisits: 0, periodKey: key }
       });
-    }
-
-    // expiración natural
-    const curType = (membership.periodType as RewardPeriod) || 'OPEN';
-    const curKey = periodKey(curType, now);
-
-    if ((membership.periodKey || 'OPEN') !== curKey) {
-      membership = await prisma.membership.update({
-        where: { id: membership.id },
-        data: { currentVisits: 0, periodKey: curKey },
-      });
+      currentVisits = up.currentVisits;
     }
 
     const requiredVisits = tenant.requiredVisits ?? 10;
-    const currentVisits = membership.currentVisits ?? 0;
-
     if (currentVisits < requiredVisits) {
       return NextResponse.json({ error: `Te faltan ${requiredVisits - currentVisits} visita(s) para canjear` }, { status: 400 });
     }
 
+    // Código de canje (puede seguir siendo corto porque se valida en backend)
     const code = Math.floor(1000 + Math.random() * 9000).toString();
 
     await prisma.$transaction([
       prisma.redemption.create({
         data: { code, userId, tenantId, isUsed: false }
       }),
+      // ✅ Reset de visitas del periodo tras canje (para que “vuelva a juntar”)
       prisma.membership.update({
         where: { id: membership.id },
         data: { currentVisits: 0 }

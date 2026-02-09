@@ -61,16 +61,15 @@ model User {
 }
 
 model Membership {
-  id            String       @id @default(uuid())
-  currentVisits Int          @default(0)
-  periodKey     String       @default("OPEN")
-  periodType    RewardPeriod @default(OPEN)
-  totalVisits   Int          @default(0)
+  id            String    @id @default(uuid())
+  currentVisits Int       @default(0)
+  periodKey     String    @default("OPEN")
+  totalVisits   Int       @default(0)
   lastVisitAt   DateTime?
   tenantId      String
-  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userId        String
-  user          User         @relation(fields: [userId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
   visits        Visit[]
 
   @@unique([tenantId, userId])

@@ -807,10 +807,9 @@ export default function Home() {
               <div className="flex flex-col gap-6">
                 <div className="space-y-4">
                   {user?.memberships?.map((m: any, idx: number) => {
-                    const requiredVisits = (m.requiredVisits ?? 10);
-                    const visits = (m.visits ?? Math.round((m.points ?? 0) / 10));
-                    const progress = Math.min(Math.round((visits / requiredVisits) * 100), 100);
-                    const isWinner = visits >= requiredVisits;
+                    const requiredPoints = (m.requiredPoints ?? ((m.requiredVisits ?? 10) * 10) ?? 100);
+                    const progress = Math.min(Math.round((m.points / requiredPoints) * 100), 100);
+                    const isWinner = m.points >= requiredPoints;
                     const isExpanded = expandedId === m.tenantId;
 
                     return (
@@ -845,10 +844,10 @@ export default function Home() {
 
                             <div className="text-right">
                               <span className="block text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-600">
-                                {m.visits ?? Math.round((m.points ?? 0) / 10)}
+                                {m.points}
                               </span>
                               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                VISITAS
+                                PUNTOS
                               </span>
                             </div>
                           </div>

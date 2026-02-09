@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 const TZ = 'America/Monterrey';
 
 function todayKeyUTC() {
-  return new Date().toISOString().slice(0, 10); // para DailyCode.day
+  return new Date().toISOString().slice(0, 10); // para validación de DailyCode.day ya existente
 }
 
 function tzParts(d: Date) {
@@ -59,41 +59,28 @@ export async function POST(request: Request) {
           currentVisits: 0,
           totalVisits: 0,
           periodKey: 'OPEN',
-          periodType: 'OPEN',
         },
       });
     }
 
-    // anti duplicado por día/negocio
-    const visitDay = dayUTC;
+    // Bloqueo por día/negocio (tu regla actual)
+    const dayKey = dayUTC; // mismo criterio que ya usabas para Visit.visitDay
     const alreadyToday = await prisma.visit.findFirst({
-      where: { membershipId: membership.id, tenantId: validCode.tenantId, visitDay },
+      where: { membershipId: membership.id, tenantId: validCode.tenantId, visitDay: dayKey },
     });
     if (alreadyToday) {
       return NextResponse.json({ error: '¡Ya registraste tu visita hoy!' }, { status: 400 });
     }
 
+    // ✅ Reset por periodo (Monterrey) antes de sumar
     const now = new Date();
-    const tenantPeriod = (validCode.tenant.rewardPeriod as RewardPeriod) || 'OPEN';
-    const appliedType = (membership.periodType as RewardPeriod) || 'OPEN';
+    const tPeriod = validCode.tenant.rewardPeriod as RewardPeriod;
+    const key = periodKey(tPeriod, now);
 
-    // cambio de regla: adoptar sin reset
-    if (appliedType !== tenantPeriod) {
-      const newKey = periodKey(tenantPeriod, now);
+    if ((membership.periodKey || 'OPEN') !== key) {
       membership = await prisma.membership.update({
         where: { id: membership.id },
-        data: { periodType: tenantPeriod, periodKey: newKey },
-      });
-    }
-
-    // expiración natural
-    const curType = (membership.periodType as RewardPeriod) || 'OPEN';
-    const curKey = periodKey(curType, now);
-
-    if ((membership.periodKey || 'OPEN') !== curKey) {
-      membership = await prisma.membership.update({
-        where: { id: membership.id },
-        data: { currentVisits: 0, periodKey: curKey },
+        data: { currentVisits: 0, periodKey: key },
       });
     }
 
@@ -103,7 +90,7 @@ export async function POST(request: Request) {
           membershipId: membership.id,
           dailyCodeId: validCode.id,
           tenantId: validCode.tenantId,
-          visitDay,
+          visitDay: dayKey,
         },
       }),
       prisma.membership.update({
@@ -116,10 +103,13 @@ export async function POST(request: Request) {
       }),
     ]);
 
+    const requiredVisits = validCode.tenant.requiredVisits ?? 10;
+
     return NextResponse.json({
       success: true,
-      visits: updatedMembership.currentVisits,
-      requiredVisits: validCode.tenant.requiredVisits ?? 10,
+      points: updatedMembership.currentVisits * 10,
+      requiredPoints: requiredVisits * 10,
+      requiredVisits,
       rewardPeriod: validCode.tenant.rewardPeriod,
       message: `¡Visita registrada en ${validCode.tenant.name}!`,
     });
