@@ -923,7 +923,7 @@ export default function Home() {
 
                               <div className="flex justify-between items-center text-xs font-black uppercase tracking-wide">
                                 <span className="text-gray-400 flex items-center gap-1">
-                                  {isExpanded ? '🔽 Menos info' : '▶️ Ver +'}
+                                  {isExpanded ? '🔽 Menos info' : '▶️ Ver opciones'}
                                 </span>
                                 <span className="text-purple-700 bg-purple-50 px-2 py-1 rounded-lg">
                                 </span>
