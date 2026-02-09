@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id             String       @id @default(uuid())
+  name           String
+  slug           String       @unique
+  username       String?      @unique
+  password       String?
+  prize          String       @default("Premio Sorpresa")
+  requiredVisits Int          @default(10)
+  rewardPeriod   RewardPeriod @default(OPEN)
+
+  // 🔓 SIN UNIQUE POR AHORA PARA PASAR EL DEPLOY
+  codePrefix String?
+
+  lat       Float?  @default(19.4326)
+  lng       Float?  @default(-99.1332)
+  address   String? @default("Dirección pendiente")
+  instagram String?
+  logoData String?
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  users       TenantUser[]
+  memberships Membership[]
+  dailyCodes  DailyCode[]
+  redemptions Redemption[]
+}
+
+model TenantUser {
+  id             String      @id @default(uuid())
+  name           String
+  phone          String
+  email          String
+  username       String      @unique
+  password       String
+  role           String
+  tenantId       String
+  tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  generatedCodes DailyCode[] @relation("DailyCodeGeneratedBy")
+}
+
+model User {
+  id          String       @id @default(uuid())
+  phone       String       @unique
+  email       String?
+  password    String       @default("1234")
+  name        String?
+  gender      String?
+  birthDate   DateTime?
+  createdAt   DateTime     @default(now())
+  memberships Membership[]
+  redemptions Redemption[]
+}
+
+model Membership {
+  id            String       @id @default(uuid())
+  currentVisits Int          @default(0)
+  periodKey     String       @default("OPEN")
+  periodType    RewardPeriod @default(OPEN)
+  totalVisits   Int          @default(0)
+  lastVisitAt   DateTime?
+  tenantId      String
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User         @relation(fields: [userId], references: [id])
+  visits        Visit[]
+
+  @@unique([tenantId, userId])
+}
+
+model DailyCode {
+  id        String   @id @default(uuid())
+  code      String
+  day       String // YYYY-MM-DD (para reglas/uniques)
+  validDate DateTime @default(now())
+  isActive  Boolean  @default(true)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  generatedById String
+  generatedBy   TenantUser @relation("DailyCodeGeneratedBy", fields: [generatedById], references: [id], onDelete: Cascade)
+
+  visits Visit[]
+
+  @@unique([tenantId, generatedById, day])
+}
+
+model Visit {
+  id        String   @id @default(uuid())
+  visitedAt DateTime @default(now())
+
+  // para evitar múltiples scans en el mismo día por negocio
+  visitDay String // YYYY-MM-DD
+  tenantId String
+
+  membershipId String
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  dailyCodeId String
+  dailyCode   DailyCode @relation(fields: [dailyCodeId], references: [id])
+
+  @@unique([membershipId, tenantId, visitDay])
+}
+
+model Redemption {
+  id        String   @id @default(uuid())
+  code      String
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+enum RewardPeriod {
+  OPEN
+  MONTHLY
+  QUARTERLY
+  SEMESTER
+  ANNUAL
+}
