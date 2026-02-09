@@ -957,20 +957,10 @@ export default function Home() {
                   <div className="flex bg-white p-2 rounded-full shadow-sm border border-gray-100 w-full max-w-xs">
                     <input
                       className="flex-1 p-2 bg-transparent text-gray-900 font-black text-center tracking-[0.2em] uppercase text-sm outline-none placeholder-gray-300"
-                      placeholder="ABCD-EFGH-JKLM"
+                      placeholder="CÓDIGO MANUAL"
                       value={manualCode}
-                      onChange={(e) => {
-                      const raw = e.target.value.toUpperCase();
-                      // deja solo A-Z, 2-9 y guión
-                      const cleaned = raw.replace(/[^A-Z2-9-]/g, '').replace(/-/g, '');
-                      // formatea XXXX-XXXX-XXXX (máximo 12 chars + 2 guiones = 14)
-                      const part1 = cleaned.slice(0, 4);
-                      const part2 = cleaned.slice(4, 8);
-                      const part3 = cleaned.slice(8, 12);
-                      const formatted = [part1, part2, part3].filter(Boolean).join('-').slice(0, 14);
-                      setManualCode(formatted);
-                    }}
-                      maxLength={14}
+                      onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+                      maxLength={7}
                     />
                     <motion.button
                       whileTap={canAnim ? { scale: 0.95 } : undefined}
