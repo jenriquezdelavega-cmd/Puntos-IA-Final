@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, RewardPeriod } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
@@ -14,21 +14,20 @@ export async function POST(request: Request) {
         ? undefined
         : Math.max(1, parseInt(requiredVisits, 10));
 
+    const parsedPeriod: RewardPeriod | undefined =
+      rewardPeriod ? (rewardPeriod as RewardPeriod) : undefined;
+
     const updated = await prisma.tenant.update({
       where: { id: tenantId },
       data: {
         prize: prize,
-        instagram: instagram,
+        requiredVisits: parsedVisits,
+        rewardPeriod: parsedPeriod,
+        lat: lat ? parseFloat(lat) : undefined,
+        lng: lng ? parseFloat(lng) : undefined,
         address: address,
-        lat: lat !== undefined && lat !== null && lat !== '' ? parseFloat(lat) : undefined,
-        lng: lng !== undefined && lng !== null && lng !== '' ? parseFloat(lng) : undefined,
-        // si tu tenant ya trae estos campos, los guardamos; si no existen en tu schema, Prisma los ignora? (no, fallaría)
-        // por eso solo mandamos si viene definido
-        ...(parsedVisits !== undefined ? { requiredVisits: parsedVisits } : {}),
-        ...(rewardPeriod ? { rewardPeriod } : {}),
-        // logoData: DataURL base64 (MVP)
-        ...(logoData !== undefined ? { logoData } : {}),
-      } as any
+        instagram: instagram,
+      },
     });
 
     return NextResponse.json({ success: true, tenant: updated });
