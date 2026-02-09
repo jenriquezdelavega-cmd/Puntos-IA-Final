@@ -8,14 +8,12 @@ datasource db {
 }
 
 model Tenant {
-  id             String       @id @default(uuid())
-  name           String
-  slug           String       @unique
-  username       String?      @unique
-  password       String?
-  prize          String       @default("Premio Sorpresa")
-  requiredVisits Int          @default(10)
-  rewardPeriod   RewardPeriod @default(OPEN)
+  id       String  @id @default(uuid())
+  name     String
+  slug     String  @unique
+  username String? @unique
+  password String?
+  prize    String  @default("Premio Sorpresa")
 
   // 🔓 SIN UNIQUE POR AHORA PARA PASAR EL DEPLOY
   codePrefix String?
@@ -63,7 +61,6 @@ model User {
 model Membership {
   id            String    @id @default(uuid())
   currentVisits Int       @default(0)
-  periodKey     String    @default("OPEN")
   totalVisits   Int       @default(0)
   lastVisitAt   DateTime?
   tenantId      String
@@ -119,12 +116,4 @@ model Redemption {
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id])
-}
-
-enum RewardPeriod {
-  OPEN
-  MONTHLY
-  QUARTERLY
-  SEMESTER
-  ANNUAL
 }

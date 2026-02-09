@@ -1,10 +1,32 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, RewardPeriod } from '@prisma/client';
 
 const prisma = new PrismaClient();
+const TZ = 'America/Monterrey';
 
 function todayKeyUTC() {
-  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  return new Date().toISOString().slice(0, 10); // para validación de DailyCode.day ya existente
+}
+
+function tzParts(d: Date) {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = fmt.formatToParts(d);
+  const get = (t: string) => parts.find(p => p.type === t)?.value || '';
+  return { y: parseInt(get('year'), 10), m: parseInt(get('month'), 10), day: parseInt(get('day'), 10) };
+}
+
+function periodKey(period: RewardPeriod, now = new Date()) {
+  if (period === 'OPEN') return 'OPEN';
+  const { y, m } = tzParts(now);
+  if (period === 'MONTHLY') return `${y}-M${String(m).padStart(2, '0')}`;
+  if (period === 'QUARTERLY') return `${y}-Q${Math.floor((m - 1) / 3) + 1}`;
+  if (period === 'SEMESTER') return `${y}-S${m <= 6 ? 1 : 2}`;
+  return `${y}-Y`;
 }
 
 export async function POST(request: Request) {
@@ -14,11 +36,10 @@ export async function POST(request: Request) {
 
     if (!userId || !code) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
 
-    const day = todayKeyUTC();
+    const dayUTC = todayKeyUTC();
 
-    // 1) Buscar el código (activo y del día)
     const validCode = await prisma.dailyCode.findFirst({
-      where: { code, isActive: true, day },
+      where: { code, isActive: true, day: dayUTC },
       include: { tenant: true },
     });
 
@@ -26,34 +47,50 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Código inválido o no es de hoy' }, { status: 404 });
     }
 
-    // 2) Buscar o crear membresía
     let membership = await prisma.membership.findFirst({
       where: { userId, tenantId: validCode.tenantId },
     });
 
     if (!membership) {
       membership = await prisma.membership.create({
-        data: { userId, tenantId: validCode.tenantId, currentVisits: 0, totalVisits: 0 },
+        data: {
+          userId,
+          tenantId: validCode.tenantId,
+          currentVisits: 0,
+          totalVisits: 0,
+          periodKey: 'OPEN',
+        },
       });
     }
 
-    // 3) Bloqueo anti-duplicado por día/negocio (aunque existan muchos códigos hoy)
+    // Bloqueo por día/negocio (tu regla actual)
+    const dayKey = dayUTC; // mismo criterio que ya usabas para Visit.visitDay
     const alreadyToday = await prisma.visit.findFirst({
-      where: { membershipId: membership.id, tenantId: validCode.tenantId, visitDay: day },
+      where: { membershipId: membership.id, tenantId: validCode.tenantId, visitDay: dayKey },
     });
-
     if (alreadyToday) {
       return NextResponse.json({ error: '¡Ya registraste tu visita hoy!' }, { status: 400 });
     }
 
-    // 4) Registrar visita + actualizar contadores
+    // ✅ Reset por periodo (Monterrey) antes de sumar
+    const now = new Date();
+    const tPeriod = validCode.tenant.rewardPeriod as RewardPeriod;
+    const key = periodKey(tPeriod, now);
+
+    if ((membership.periodKey || 'OPEN') !== key) {
+      membership = await prisma.membership.update({
+        where: { id: membership.id },
+        data: { currentVisits: 0, periodKey: key },
+      });
+    }
+
     const [, updatedMembership] = await prisma.$transaction([
       prisma.visit.create({
         data: {
           membershipId: membership.id,
           dailyCodeId: validCode.id,
           tenantId: validCode.tenantId,
-          visitDay: day,
+          visitDay: dayKey,
         },
       }),
       prisma.membership.update({
@@ -66,11 +103,14 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    const pointsDisplay = updatedMembership.totalVisits * 10;
+    const requiredVisits = validCode.tenant.requiredVisits ?? 10;
 
     return NextResponse.json({
       success: true,
-      points: pointsDisplay,
+      points: updatedMembership.currentVisits * 10,
+      requiredPoints: requiredVisits * 10,
+      requiredVisits,
+      rewardPeriod: validCode.tenant.rewardPeriod,
       message: `¡Visita registrada en ${validCode.tenant.name}!`,
     });
 

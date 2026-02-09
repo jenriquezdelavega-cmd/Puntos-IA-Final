@@ -32,10 +32,7 @@ export async function POST(request: Request) {
         instagram: user.tenant.instagram,
         lat: user.tenant.lat,
         lng: user.tenant.lng,
-        address: user.tenant.address,
-        requiredVisits: user.tenant.requiredVisits,
-        rewardPeriod: user.tenant.rewardPeriod
-
+        address: user.tenant.address
       }
     });
 

@@ -1,25 +1,37 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, RewardPeriod } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { tenantId, prize, lat, lng, address, instagram } = body; // 🆕 IG
+    const { tenantId, prize, lat, lng, address, instagram, requiredVisits, rewardPeriod } = body;
 
     if (!tenantId) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
 
+    const parsedVisits =
+      requiredVisits === undefined || requiredVisits === null || requiredVisits === ''
+        ? undefined
+        : Math.max(1, parseInt(requiredVisits, 10));
+
+    const parsedPeriod: RewardPeriod | undefined =
+      rewardPeriod ? (rewardPeriod as RewardPeriod) : undefined;
+
     const updated = await prisma.tenant.update({
       where: { id: tenantId },
-      data: { 
+      data: {
         prize: prize,
+        requiredVisits: parsedVisits,
+        rewardPeriod: parsedPeriod,
         lat: lat ? parseFloat(lat) : undefined,
         lng: lng ? parseFloat(lng) : undefined,
         address: address,
-        instagram: instagram // 🆕 Guardar IG
-      }
+        instagram: instagram,
+      },
     });
 
     return NextResponse.json({ success: true, tenant: updated });
-  } catch (error) { return NextResponse.json({ error: 'Error' }, { status: 500 }); }
+  } catch (error: any) {
+    return NextResponse.json({ error: 'Error: ' + (error.message || 'interno') }, { status: 500 });
+  }
 }

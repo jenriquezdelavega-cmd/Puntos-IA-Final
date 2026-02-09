@@ -807,9 +807,8 @@ export default function Home() {
               <div className="flex flex-col gap-6">
                 <div className="space-y-4">
                   {user?.memberships?.map((m: any, idx: number) => {
-                    const requiredPoints = (m.requiredPoints ?? ((m.requiredVisits ?? 10) * 10) ?? 100);
-                    const progress = Math.min(Math.round((m.points / requiredPoints) * 100), 100);
-                    const isWinner = m.points >= requiredPoints;
+                    const progress = Math.min(m.points, 100);
+                    const isWinner = m.points >= 100;
                     const isExpanded = expandedId === m.tenantId;
 
                     return (
@@ -882,7 +881,7 @@ export default function Home() {
                                   {isExpanded ? '🔽 Menos info' : '▶️ Ver opciones'}
                                 </span>
                                 <span className="text-purple-700 bg-purple-50 px-2 py-1 rounded-lg">
-                                  🏆 Meta: {m.requiredVisits ?? 10} visitas
+                                  🏆 Meta: {m.prize}
                                 </span>
                               </div>
                             </>
