@@ -1,114 +1,61 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient, RewardPeriod } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
-const TZ = 'America/Monterrey';
 
-function tzParts(d: Date) {
-  const fmt = new Intl.DateTimeFormat('en-CA', {
-    timeZone: TZ,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  const parts = fmt.formatToParts(d);
-  const get = (t: string) => parts.find(p => p.type === t)?.value || '';
-  return { y: parseInt(get('year'), 10), m: parseInt(get('month'), 10) };
-}
-
-function periodKey(period: RewardPeriod, now = new Date()) {
-  if (period === 'OPEN') return 'OPEN';
-  const { y, m } = tzParts(now);
-  if (period === 'MONTHLY') return `${y}-M${String(m).padStart(2, '0')}`;
-  if (period === 'QUARTERLY') return `${y}-Q${Math.floor((m - 1) / 3) + 1}`; // Ene arranca
-  if (period === 'SEMESTER') return `${y}-S${m <= 6 ? 1 : 2}`; // Ene arranca
-  return `${y}-Y`; // ANNUAL Ene-Dic
-}
-
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const { phone, password } = body;
-
-    if (!phone || !password) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
+    const { phone, password } = await req.json();
+    if (!phone) return NextResponse.json({ error: 'Teléfono requerido' }, { status: 400 });
 
     const user = await prisma.user.findUnique({
       where: { phone },
       include: {
         memberships: {
-          where: { tenant: { isActive: true } },
-          include: { tenant: true }
-        }
-      }
+          include: {
+            tenant: true, // ✅ incluye logoData, prize, requiredVisits, rewardPeriod, instagram, etc.
+          },
+        },
+      },
     });
 
-    if (!user || user.password !== password) {
-      return NextResponse.json({ error: 'Credenciales incorrectas' }, { status: 401 });
+    if (!user) return NextResponse.json({ error: 'Usuario no existe' }, { status: 401 });
+
+    // Auth MVP (si tienes password simple)
+    if (user.password && password !== undefined && user.password !== password) {
+      return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
     }
 
-    const now = new Date();
+    const memberships = (user.memberships || [])
+      .filter((m: any) => m?.tenant?.isActive !== false)
+      .map((m: any) => {
+        // compatibilidad: algunos builds usan currentVisits/points/visits
+        const visits = Number(m.visits ?? m.currentVisits ?? 0);
+        const points = Number(m.points ?? visits * 10);
 
-    // Regla:
-    // 1) Si el negocio cambió rewardPeriod -> adoptamos la nueva regla (periodType/periodKey),
-    //    pero NO reseteamos currentVisits.
-    // 2) Solo reseteamos cuando el periodo "vence" (periodKey cambia por calendario).
-    for (const m of user.memberships) {
-      const tenantPeriod = (m.tenant.rewardPeriod as RewardPeriod) || 'OPEN';
-      const appliedType = (m.periodType as RewardPeriod) || 'OPEN';
-
-      // cambio de regla: actualizar periodType + periodKey, sin reset
-      if (appliedType !== tenantPeriod) {
-        const newKey = periodKey(tenantPeriod, now);
-        await prisma.membership.update({
-          where: { id: m.id },
-          data: { periodType: tenantPeriod, periodKey: newKey },
-        });
-        m.periodType = tenantPeriod as any;
-        m.periodKey = newKey;
-      }
-
-      // expiración natural (corte calendario) según regla aplicada
-      const curType = (m.periodType as RewardPeriod) || 'OPEN';
-      const curKey = periodKey(curType, now);
-
-      if ((m.periodKey || 'OPEN') !== curKey) {
-        await prisma.membership.update({
-          where: { id: m.id },
-          data: { currentVisits: 0, periodKey: curKey },
-        });
-        m.currentVisits = 0;
-        m.periodKey = curKey;
-      }
-    }
-
-    const memberships = user.memberships.map(m => {
-      const requiredVisits = m.tenant.requiredVisits ?? 10;
-      const visits = m.currentVisits ?? 0;
-      return {
-        tenantId: m.tenantId,
-        name: m.tenant.name,
-        logoData: m.tenant.logoData,
-        prize: m.tenant.prize,
-        instagram: m.tenant.instagram,
-        rewardPeriod: m.tenant.rewardPeriod,
-        requiredVisits,
-        visits,
-        // dejamos puntos por compatibilidad (si algo aún lo usa)
-        points: visits * 10,
-      };
-    });
+        return {
+          tenantId: m.tenantId,
+          name: m.tenant?.name,
+          prize: m.tenant?.prize ?? 'Premio Sorpresa',
+          instagram: m.tenant?.instagram ?? '',
+          requiredVisits: m.tenant?.requiredVisits ?? 10,
+          rewardPeriod: m.tenant?.rewardPeriod ?? 'OPEN',
+          logoData: m.tenant?.logoData ?? '', // ✅ aquí va el logo para el cliente
+          visits,
+          points,
+        };
+      });
 
     return NextResponse.json({
       id: user.id,
-      name: user.name,
       phone: user.phone,
-      email: user.email,
-      gender: user.gender,
-      birthDate: user.birthDate,
-      memberships
+      name: (user as any).name ?? '',
+      email: (user as any).email ?? '',
+      gender: (user as any).gender ?? '',
+      birthDate: (user as any).birthDate ?? null,
+      memberships,
     });
-
-  } catch (error: any) {
-    return NextResponse.json({ error: 'Error interno: ' + (error.message || '') }, { status: 500 });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
   }
 }
