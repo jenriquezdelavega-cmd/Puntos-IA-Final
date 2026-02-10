@@ -2,22 +2,14 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
+// ✅ QR scanner debe ser client-only para evitar errores en build/prerender
 const QRScanner = dynamic(
   () => import('@yudiel/react-qr-scanner').then((m) => m.Scanner),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="fixed inset-0 bg-black z-50 flex items-center justify-center text-white font-black">
-        Cargando cámara...
-      </div>
-    ),
-  }
+  { ssr: false }
 );
 
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-const [selectedTenant, setSelectedTenant] = useState<any | null>(null);
-const [mapRadiusKm, setMapRadiusKm] = useState(50);
 const BusinessMap = dynamic(() => import('./components/BusinessMap'), {
   ssr: false,
   loading: () => (
@@ -27,22 +19,6 @@ const BusinessMap = dynamic(() => import('./components/BusinessMap'), {
     </div>
   ),
 });
-
-const QRScanner = dynamic(
-  () => import('@yudiel/react-qr-scanner').then((m) => m.Scanner),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="fixed inset-0 bg-black z-50 flex items-center justify-center text-white">
-        <div className="text-center">
-          <div className="text-4xl mb-2">📷</div>
-          <div className="text-xs font-black uppercase tracking-widest opacity-80">Abriendo cámara...</div>
-        </div>
-      </div>
-    ),
-  }
-);
-
 
 type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
 
@@ -85,7 +61,7 @@ function formatRewardPeriod(period?: string) {
 
   const y = parseInt(parts.find((p) => p.type === 'year')?.value || String(now.getFullYear()), 10);
   const mStr = parts.find((p) => p.type === 'month')?.value || String(now.getMonth() + 1).padStart(2, '0');
-  const month = parseInt(mStr, 10);
+  const month = parseInt(mStr, 10); // 1-12
 
   const fmtEnd = (d: Date) =>
     new Intl.DateTimeFormat('es-MX', {
@@ -272,15 +248,16 @@ export default function Home() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Manual code (arriba)
   const [codeInput, setCodeInput] = useState('');
   const [lastScanMsg, setLastScanMsg] = useState<string>('');
-
   const [pendingCode, setPendingCode] = useState<string | null>(null);
+
   const [prizeCode, setPrizeCode] = useState<{ code: string; tenant: string } | null>(null);
 
   const [tenants, setTenants] = useState<any[]>([]);
   const [mapFocus, setMapFocus] = useState<[number, number] | null>(null);
+  const [selectedTenant, setSelectedTenant] = useState<any | null>(null);
+  const [mapRadiusKm, setMapRadiusKm] = useState<number>(100);
 
   const [showTutorial, setShowTutorial] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -320,7 +297,7 @@ export default function Home() {
       if (d.tenants) {
         setTenants(d.tenants);
 
-        // centrar donde hay negocios
+        // ✅ Centrar el mapa donde realmente hay negocios (y no en CDMX)
         if (!mapFocus) {
           const coords = (d.tenants as any[])
             .filter((t) => typeof t?.lat === 'number' && typeof t?.lng === 'number')
@@ -330,7 +307,6 @@ export default function Home() {
             const avgLat = coords.reduce((acc, c) => acc + c[0], 0) / coords.length;
             const avgLng = coords.reduce((acc, c) => acc + c[1], 0) / coords.length;
             setMapFocus([avgLat, avgLng]);
-            setMapRadiusKm(100);
           }
         }
       }
@@ -443,21 +419,17 @@ export default function Home() {
       const data = await res.json();
       if (res.ok) {
         setLastScanMsg(data.message || '✅ Check-in registrado');
-        alert(data.message);
-        setCodeInput('');
         handleLogin();
-      } else {
-        alert('❌ ' + data.error);
-        setLastScanMsg('❌ ' + data.error);
-      }
+        setCodeInput('');
+      } else alert('❌ ' + data.error);
     } catch {
       if (user) alert('Error');
     }
   };
 
-  const redeemCodeForCheckIn = () => {
+  const redeemCodeForCheckIn = async () => {
     if (!codeInput.trim()) return;
-    handleScan(codeInput.trim());
+    await handleScan(codeInput.trim());
   };
 
   const getPrizeCode = async (tenantId: string, tenantName: string) => {
@@ -478,10 +450,10 @@ export default function Home() {
 
   const goToBusinessMap = (tName: string) => {
     const target = tenants.find((t) => t.name === tName);
-    if (target && typeof target.lat === 'number' && typeof target.lng === 'number') {
+    if (target && target.lat && target.lng) {
       setMapFocus([target.lat, target.lng]);
-      setSelectedTenant(target);
       setMapRadiusKm(50);
+      setSelectedTenant(target);
       setActiveTab('map');
     } else {
       alert('Ubicación no disponible.');
@@ -495,12 +467,12 @@ export default function Home() {
       setPhone('');
       setPassword('');
       setMessage('');
-      setLastScanMsg('');
-      setCodeInput('');
     }
   };
 
-  const toggleCard = (id: string) => setExpandedId(expandedId === id ? null : id);
+  const toggleCard = (id: string) => {
+    setExpandedId(expandedId === id ? null : id);
+  };
 
   return (
     <AnimatePresence mode="wait">
@@ -711,7 +683,6 @@ export default function Home() {
           transition={canAnim ? { ...spring } : undefined}
           className="min-h-screen bg-gray-50 pb-32"
         >
-          {/* Overlays */}
           <AnimatePresence>
             {showTutorial && (
               <motion.div
@@ -854,7 +825,6 @@ export default function Home() {
             )}
           </AnimatePresence>
 
-          {/* Header */}
           <div className="bg-white px-8 pt-16 pb-6 sticky top-0 z-20 shadow-sm flex justify-between items-center">
             <div>
               <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Hola,</p>
@@ -882,12 +852,9 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Body */}
           <div className="p-6">
-            {/* TAB: CHECKIN */}
             {activeTab === 'checkin' && !scanning && (
               <div className="flex flex-col gap-6">
-                {/* CHECK-IN (arriba) */}
                 <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-6 shadow-sm">
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -908,11 +875,12 @@ export default function Home() {
                   {lastScanMsg && <div className="mt-4 text-sm font-semibold text-gray-700">{lastScanMsg}</div>}
                 </div>
 
-                {/* ESCRIBIR MANUAL (arriba) */}
                 <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-6 shadow-sm">
-                  <div>
-                    <h3 className="text-base font-black text-gray-900">Escribir manual</h3>
-                    <p className="text-sm text-gray-600 mt-1">Si no puedes escanear, escribe el código del QR.</p>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-base font-black text-gray-900">Escribir manual</h3>
+                      <p className="text-sm text-gray-600 mt-1">Si no puedes escanear, escribe el código del QR.</p>
+                    </div>
                   </div>
 
                   <div className="mt-4 flex flex-col sm:flex-row gap-3">
@@ -932,7 +900,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Tarjetas de membresías */}
                 <div className="space-y-4">
                   {user?.memberships?.map((m: any, idx: number) => {
                     const logo = (m.logoData ?? m.tenant?.logoData ?? '') as string;
@@ -941,8 +908,6 @@ export default function Home() {
                     const progress = Math.min(Math.round((visits / requiredVisits) * 100), 100);
                     const isWinner = visits >= requiredVisits;
                     const isExpanded = expandedId === m.tenantId;
-
-                    const rp = formatRewardPeriod(m.rewardPeriod);
 
                     return (
                       <motion.div
@@ -971,29 +936,14 @@ export default function Home() {
                               </div>
                               <div>
                                 <h3 className="font-black text-gray-900 text-xl tracking-tight leading-none">{m.name}</h3>
-
                                 <div className="mt-2 flex flex-wrap items-center gap-2">
                                   <motion.span
                                     initial={{ scale: 1 }}
-                                    animate={
-                                      canAnim
-                                        ? {
-                                            y: [0, -1, 0],
-                                            scale: [1, 1.03, 1],
-                                          }
-                                        : undefined
-                                    }
-                                    transition={
-                                      canAnim
-                                        ? {
-                                            duration: 2.2,
-                                            repeat: Infinity,
-                                            ease: 'easeInOut',
-                                          }
-                                        : undefined
-                                    }
-                                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 text-white shadow-md border border-white/30"
+                                    animate={canAnim ? { y: [0, -1, 0], scale: [1, 1.03, 1] } : undefined}
+                                    transition={canAnim ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : undefined}
+                                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 text-white shadow-md border border-white/30 relative overflow-hidden"
                                   >
+                                    <ShineSweep className="opacity-80" />
                                     <span className="text-[10px] font-black uppercase tracking-widest opacity-90">Premio</span>
                                     <span className="text-sm font-black leading-none">{m.prize}</span>
                                     <span className="ml-0.5 text-base leading-none">🎁</span>
@@ -1052,13 +1002,12 @@ export default function Home() {
                               <div className="flex justify-between items-center text-xs font-black uppercase tracking-wide">
                                 <span className="text-gray-400 flex items-center gap-1">{isExpanded ? '🔽 Menos info' : '▶️ Ver +'}</span>
 
-                                {/* ✅ Contador/Vigencia relajado, sin fondo y sin spans raros */}
                                 <div className="text-right leading-tight">
                                   <div className="text-[11px] font-extrabold text-gray-800 whitespace-nowrap">
-                                    Contador: <span className="font-black text-gray-900">{rp.counter}</span>
+                                    Contador: {formatRewardPeriod(m.rewardPeriod).counter}
                                   </div>
                                   <div className="text-[11px] font-semibold text-gray-500 whitespace-nowrap mt-0.5">
-                                    Vigencia: <span className="font-semibold text-gray-600">{rp.window}</span>
+                                    Vigencia: {formatRewardPeriod(m.rewardPeriod).window}
                                   </div>
                                 </div>
                               </div>
@@ -1123,7 +1072,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* TAB: MAP */}
             {activeTab === 'map' && (
               <motion.div
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
@@ -1131,21 +1079,51 @@ export default function Home() {
                 transition={canAnim ? { ...spring } : undefined}
                 className="h-[65vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white"
               >
-                <BusinessMap
-                  tenants={tenants}
-                  focusCoords={mapFocus}
-                  radiusKm={mapRadiusKm}
-                  selectedTenant={selectedTenant}
-                  onSelectTenant={(t: any) => {
-                    setSelectedTenant(t);
-                    if (t?.lat && t?.lng) setMapFocus([t.lat, t.lng]);
-                    setMapRadiusKm(50);
-                  }}
-                />
+                <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={mapRadiusKm} />
               </motion.div>
             )}
 
-            {/* TAB: PROFILE */}
+            {selectedTenant?.lat && selectedTenant?.lng && (
+              <div className="fixed bottom-24 left-6 right-6 z-30">
+                <div className="bg-white/90 backdrop-blur-xl border border-white/50 shadow-2xl rounded-[2rem] p-4 flex items-center justify-between gap-3 ring-1 ring-black/5">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Seleccionado</p>
+                    <p className="text-base font-black text-gray-900 truncate">{selectedTenant.name ?? 'Negocio'}</p>
+                    <p className="text-xs text-gray-500 font-semibold truncate">{selectedTenant.address ?? selectedTenant.city ?? ''}</p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <a
+                      className="px-4 py-3 rounded-2xl bg-gray-950 text-white font-black text-sm shadow-lg no-underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      href={`https://www.google.com/maps/search/?api=1&query=${selectedTenant.lat},${selectedTenant.lng}`}
+                    >
+                      Google Maps
+                    </a>
+                    <button
+                      onClick={() => setSelectedTenant(null)}
+                      className="px-4 py-3 rounded-2xl bg-gray-100 text-gray-700 font-black text-sm border border-gray-200"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {scanning && (
+              <div className="fixed inset-0 bg-black z-50 flex flex-col">
+                <QRScanner onScan={(r: any) => r?.[0] && handleScan(r[0].rawValue)} onError={() => {}} />
+                <motion.button
+                  whileTap={canAnim ? { scale: 0.98 } : undefined}
+                  onClick={() => setScanning(false)}
+                  className="absolute bottom-12 left-8 right-8 bg-white/20 backdrop-blur-md text-white p-5 rounded-3xl font-black border border-white/20 shadow-2xl"
+                >
+                  Cancelar Escaneo
+                </motion.button>
+              </div>
+            )}
+
             {activeTab === 'profile' && (
               <motion.div
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
@@ -1230,22 +1208,6 @@ export default function Home() {
             )}
           </div>
 
-          {/* Scanner overlay */}
-          {scanning && (
-            <div className="fixed inset-0 bg-black z-50 flex flex-col">
-              <QRScanner onScan={(r: any) => r?.[0] && handleScan(r[0].rawValue)} onError={() => {}} />
-
-              <motion.button
-                whileTap={canAnim ? { scale: 0.98 } : undefined}
-                onClick={() => setScanning(false)}
-                className="absolute bottom-12 left-8 right-8 bg-white/20 backdrop-blur-md text-white p-5 rounded-3xl font-black border border-white/20 shadow-2xl"
-              >
-                Cancelar Escaneo
-              </motion.button>
-            </div>
-          )}
-
-          {/* Bottom Tabs */}
           <div className="fixed bottom-6 left-6 right-6 bg-white/80 backdrop-blur-xl border border-white/40 p-2 rounded-[2.5rem] shadow-2xl flex justify-between items-center z-40 ring-1 ring-black/5">
             {[
               { key: 'checkin', icon: '🔥', label: 'Puntos' },
@@ -1257,7 +1219,13 @@ export default function Home() {
                 <motion.button
                   key={t.key}
                   whileTap={canAnim ? { scale: 0.98 } : undefined}
-                  onClick={() => setActiveTab(t.key as any)}
+                  onClick={() => {
+                    setActiveTab(t.key as any);
+                    if (t.key !== 'map') {
+                      setSelectedTenant(null);
+                      setMapRadiusKm(100);
+                    }
+                  }}
                   className={`flex-1 flex flex-col items-center py-4 rounded-[2rem] transition-all duration-300 ${
                     active ? 'bg-gray-950 text-white shadow-lg' : 'text-gray-400 hover:bg-white hover:text-gray-700'
                   }`}
