@@ -81,26 +81,27 @@ function formatRewardPeriod(period?: string) {
 
   const p = (period || 'OPEN').toUpperCase();
   let counter = 'Sin vigencia';
-  let window = 'Sin vigencia';
+  // Avoid shadowing the global `validityWindow` object (can confuse bundlers / minifiers).
+  let validityWindow = 'Sin vigencia';
 
   if (p === 'MONTHLY') {
     counter = 'Mensual';
-    window = `Hasta ${fmtEnd(endOfMonth(y, month))}`;
+    validityWindow = `Hasta ${fmtEnd(endOfMonth(y, month))}`;
   } else if (p === 'QUARTERLY') {
     counter = 'Trimestral';
     const q = Math.floor((month - 1) / 3) + 1;
     const endMonth = q * 3;
-    window = `Hasta ${fmtEnd(endOfMonth(y, endMonth))}`;
+    validityWindow = `Hasta ${fmtEnd(endOfMonth(y, endMonth))}`;
   } else if (p === 'SEMESTER') {
     counter = 'Semestral';
     const endMonth = month <= 6 ? 6 : 12;
-    window = `Hasta ${fmtEnd(endOfMonth(y, endMonth))}`;
+    validityWindow = `Hasta ${fmtEnd(endOfMonth(y, endMonth))}`;
   } else if (p === 'ANNUAL') {
     counter = 'Anual';
-    window = `Hasta ${fmtEnd(endOfMonth(y, 12))}`;
+    validityWindow = `Hasta ${fmtEnd(endOfMonth(y, 12))}`;
   }
 
-  return { counter, window };
+  return { counter, window: validityWindow };
 }
 
 function Shine() {
