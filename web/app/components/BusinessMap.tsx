@@ -14,7 +14,6 @@ type Tenant = {
 };
 
 function zoomForRadiusKm(radiusKm: number) {
-  // Aproximación práctica (Leaflet): 50km ~ zoom 11, 100km ~ 10, 500km ~ 7
   if (radiusKm <= 10) return 13;
   if (radiusKm <= 20) return 12;
   if (radiusKm <= 50) return 11;
@@ -44,7 +43,7 @@ function MapController({
   return null;
 }
 
-// Icono default (Leaflet en Next)
+// Fix icon paths (Leaflet en Next)
 const DefaultIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -52,6 +51,7 @@ const DefaultIcon = L.icon({
   iconSize: [25, 41],
   iconAnchor: [12, 41],
 });
+L.Marker.prototype.options.icon = DefaultIcon;
 
 export default function BusinessMap({
   tenants,
@@ -74,7 +74,7 @@ export default function BusinessMap({
     [tenants]
   );
 
-  // Centro “inteligente”: focusCoords → promedio negocios → fallback Monterrey
+  // Centro “inteligente”
   const autoCenter = useMemo<[number, number]>(() => {
     if (focusCoords) return focusCoords;
     if (valid.length) {
@@ -82,53 +82,56 @@ export default function BusinessMap({
       const avgLng = valid.reduce((a, t) => a + t.lng, 0) / valid.length;
       return [avgLat, avgLng];
     }
-    return [25.6866, -100.3161];
+    return [25.6866, -100.3161]; // Monterrey fallback
   }, [focusCoords, valid]);
 
   const [center, setCenter] = useState<[number, number]>(autoCenter);
   const [fly, setFly] = useState(false);
+
+  // ✅ radio efectivo (para que al tocar un negocio se acerque a 50km)
+  const [activeRadiusKm, setActiveRadiusKm] = useState<number>(radiusKm);
+
   const [selected, setSelected] = useState<Tenant | null>(null);
 
-  // 👇 Radio “dinámico” para que al seleccionar negocio se acerque a 50km
-  const [viewRadiusKm, setViewRadiusKm] = useState<number>(radiusKm);
-
-  // Cuando cambia el foco externo (desde tarjeta), usamos el radio normal (prop)
+  // Cuando cambia el focus externo, regresa al radio base y centra
   useEffect(() => {
     setCenter(autoCenter);
     setFly(false);
-    setSelected(null);
-    setViewRadiusKm(radiusKm);
+    setActiveRadiusKm(radiusKm);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoCenter?.[0], autoCenter?.[1], radiusKm]);
 
-  // Click a negocio: acercar a 50km y abrir opciones (popup + barra)
   const onPick = (t: Tenant) => {
     setSelected(t);
     setCenter([t.lat, t.lng]);
-    setViewRadiusKm(50);
+    setActiveRadiusKm(50); // 👈 aquí el “acercamiento”
     setFly(true);
   };
 
   return (
-    <div className="relative h-full w-full">
+    // ✅ relative para overlays + overflow hidden para verse “app-like”
+    <div className="relative h-full w-full overflow-hidden">
       <MapContainer
         center={center}
-        zoom={zoomForRadiusKm(viewRadiusKm)}
+        zoom={zoomForRadiusKm(activeRadiusKm)}
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom={true}
       >
-        <MapController center={center} radiusKm={viewRadiusKm} fly={fly} />
+        <MapController center={center} radiusKm={activeRadiusKm} fly={fly} />
 
         <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-        {/* Zona visible para que no se vea vacío */}
-        <Circle center={center} radius={viewRadiusKm * 1000} pathOptions={{ opacity: 0.25, fillOpacity: 0.08 }} />
+        {/* “Zona” visible */}
+        <Circle
+          center={center}
+          radius={activeRadiusKm * 1000}
+          pathOptions={{ opacity: 0.25, fillOpacity: 0.08 }}
+        />
 
         {valid.map((t) => (
           <Marker
             key={t.id || `${t.name}-${t.lat}-${t.lng}`}
             position={[t.lat, t.lng]}
-            icon={DefaultIcon}
             eventHandlers={{ click: () => onPick(t) }}
           >
             <Popup>
@@ -157,10 +160,10 @@ export default function BusinessMap({
         ))}
       </MapContainer>
 
-      {/* Barra inferior cuando seleccionas un negocio */}
+      {/* ✅ Barra inferior “floating” pero SIN encimarse con tabs (subida) */}
       {selected && (
-        <div className="pointer-events-none absolute bottom-4 left-4 right-4">
-          <div className="pointer-events-auto bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl px-4 py-3 shadow-xl flex items-center justify-between gap-3">
+        <div className="pointer-events-none absolute left-4 right-4 bottom-24 sm:bottom-6">
+          <div className="pointer-events-auto mx-auto max-w-md bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl px-4 py-3 shadow-xl flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="text-sm font-black text-gray-900 truncate">{selected.name}</div>
               <div className="text-xs text-gray-500 truncate">
@@ -170,14 +173,23 @@ export default function BusinessMap({
               </div>
             </div>
 
-            <a
-              className="shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-black text-white font-black text-xs no-underline"
-              target="_blank"
-              rel="noopener noreferrer"
-              href={`https://www.google.com/maps/search/?api=1&query=${selected.lat},${selected.lng}`}
-            >
-              Google Maps
-            </a>
+            <div className="flex items-center gap-2 shrink-0">
+              <a
+                className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-black text-white font-black text-xs no-underline"
+                target="_blank"
+                rel="noopener noreferrer"
+                href={`https://www.google.com/maps/search/?api=1&query=${selected.lat},${selected.lng}`}
+              >
+                Google Maps
+              </a>
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                className="inline-flex items-center justify-center px-3 py-2 rounded-xl bg-gray-100 text-gray-700 font-black text-xs"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
