@@ -103,95 +103,17 @@ function formatRewardPeriod(period?: string) {
   return { counter, window };
 }
 
-function Shine() {
-  return (
-    <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
-      <span className="absolute -inset-x-24 -top-24 h-48 w-48 rotate-12 bg-white/25 blur-2xl" />
-    </span>
-  );
-}
 
-function BrandLogo({ animate = true }: { animate?: boolean }) {
-  const reduce = useReducedMotion();
-  const canAnim = animate && !reduce;
-
-  return (
-    <div className="flex items-center justify-center gap-1 mb-2 select-none scale-90">
-      <motion.span
-        initial={canAnim ? { opacity: 0, y: 8 } : false}
-        animate={canAnim ? { opacity: 1, y: 0 } : false}
-        transition={canAnim ? { ...spring } : undefined}
-        className="text-6xl font-black tracking-tight text-white drop-shadow-lg"
-        style={{ fontFamily: 'sans-serif' }}
-      >
-        punto
-      </motion.span>
-
-      <motion.div
-        initial={canAnim ? { scale: 0.9, opacity: 0 } : false}
-        animate={canAnim ? { scale: 1, opacity: 1 } : false}
-        transition={canAnim ? { ...spring, delay: 0.05 } : undefined}
-        className="relative h-12 w-12 mx-1"
-      >
-        <motion.div
-          animate={
-            canAnim
-              ? {
-                  boxShadow: [
-                    '0 0 25px rgba(255,200,0,0.55)',
-                    '0 0 35px rgba(255,120,200,0.55)',
-                    '0 0 25px rgba(255,200,0,0.55)',
-                  ],
-                }
-              : undefined
-          }
-          transition={canAnim ? { duration: 2.8, repeat: Infinity } : undefined}
-          className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200 via-orange-400 to-red-500"
-        />
-        <div className="absolute top-2 left-3 w-3 h-3 bg-white rounded-full blur-[2px] opacity-90" />
-      </motion.div>
-
-      <motion.span
-        initial={canAnim ? { opacity: 0, y: 8 } : false}
-        animate={canAnim ? { opacity: 1, y: 0 } : false}
-        transition={canAnim ? { ...spring, delay: 0.08 } : undefined}
-        className="text-6xl font-black tracking-tight text-white drop-shadow-lg"
-        style={{ fontFamily: 'sans-serif' }}
-      >
-        IA
-      </motion.span>
-    </div>
-  );
-}
-
-function Onboarding() {
-  const reduce = useReducedMotion();
-  const canAnim = !reduce;
-
-  const [slide, setSlide] = useState(0);
-  const slides = useMemo(
-    () => [
-      { icon: '📸', title: '1. Escanea', text: 'Visita y escanea el código QR.' },
-      { icon: '🔥', title: '2. Suma', text: 'Acumula puntos automáticamente.' },
-      { icon: '🎁', title: '3. Canjea', text: 'Genera tu código de premio.' },
-      { icon: '🏆', title: '4. Gana', text: 'Recibe tu recompensa.' },
-    ],
-    []
-  );
-
-  
-
-async function safeJson(res: Response) {
-  // Evita que una respuesta no-JSON rompa la app (típico en 500/HTML en Vercel)
-  const text = await res.text();
+async function safeJson(res: Response): Promise<any> {
+  // Evita crashes cuando la API responde vacío / no-JSON / HTML (por ejemplo, un error intermedio).
   try {
-    return text ? JSON.parse(text) : {};
+    return await res.json();
   } catch {
-    return { error: text || 'Respuesta no válida del servidor' };
+    return {};
   }
 }
 
-useEffect(() => {
+  useEffect(() => {
     const i = setInterval(() => setSlide((p) => (p + 1) % slides.length), 3500);
     return () => clearInterval(i);
   }, [slides.length]);
@@ -299,7 +221,7 @@ export default function Home() {
 
   const loadMapData = async () => {
     try {
-      const res = await fetch('api/map/tenants');
+      const res = await fetch('/api/map/tenants');
       const d = await safeJson(res);
       if (d.tenants) {
         setTenants(d.tenants);
@@ -322,7 +244,7 @@ export default function Home() {
   const loadHistory = async () => {
     if (!user?.id) return;
     try {
-      const res = await fetch('api/user/history', {
+      const res = await fetch('/api/user/history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
@@ -341,7 +263,7 @@ export default function Home() {
     if (!phone) return setMessage('❌ Teléfono requerido');
     setLoading(true);
     try {
-      const res = await fetch('api/user/login', {
+      const res = await fetch('/api/user/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, password }),
@@ -374,7 +296,7 @@ export default function Home() {
 
     setLoading(true);
     try {
-      const res = await fetch('api/user/register', {
+      const res = await fetch('/api/user/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, phone, email, password, gender, birthDate }),
@@ -397,7 +319,7 @@ export default function Home() {
 
     setMessage('Guardando...');
     try {
-      const res = await fetch('api/user/update', {
+      const res = await fetch('/api/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: user.id, name, email, gender, birthDate, phone }),
@@ -424,7 +346,7 @@ export default function Home() {
     if (result.includes('code=')) finalCode = result.split('code=')[1].split('&')[0];
 
     try {
-      const res = await fetch('api/check-in/scan', {
+      const res = await fetch('/api/check-in/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user?.id, code: finalCode }),
@@ -444,7 +366,7 @@ export default function Home() {
   const getPrizeCode = async (tenantId: string, tenantName: string) => {
     if (!confirm(`¿Canjear premio en ${tenantName}?`)) return;
     try {
-      const res = await fetch('api/redeem/request', {
+      const res = await fetch('/api/redeem/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, tenantId }),
