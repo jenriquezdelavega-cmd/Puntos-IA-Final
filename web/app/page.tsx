@@ -43,6 +43,7 @@ const modalFx = {
   exit: { opacity: 0, scale: 0.96, y: 14 },
 };
 
+// Framer Motion transitions
 const spring = { type: 'spring', stiffness: 420, damping: 30 };
 
 const clsInput =
@@ -103,7 +104,6 @@ function formatRewardPeriod(period?: string) {
   return { counter, window };
 }
 
-
 async function safeJson(res: Response): Promise<any> {
   // Evita crashes cuando la API responde vacío / no-JSON / HTML (por ejemplo, un error intermedio).
   try {
@@ -116,10 +116,11 @@ async function safeJson(res: Response): Promise<any> {
 const slides = [
   { icon: '🎁', title: 'Tus premios te esperan', text: 'Acumula puntos y cámbialos por recompensas.' },
   { icon: '📍', title: 'Encuentra negocios', text: 'Explora el mapa y descubre aliados cerca de ti.' },
-  { icon: '📲', title: 'Check‑in rápido', text: 'Escanea un QR o ingresa un código para sumar puntos.' },
+  { icon: '📲', title: 'Check-in rápido', text: 'Escanea un QR o ingresa un código para sumar puntos.' },
 ] as const;
 
-const spring = { type: 'spring', stiffness: 350, damping: 30 };
+// 👇 Renombrado para evitar "defined multiple times"
+const springOnboarding = { type: 'spring', stiffness: 350, damping: 30 };
 
 function Onboarding({ canAnim }: { canAnim: boolean }) {
   const [slide, setSlide] = useState(0);
@@ -138,7 +139,7 @@ function Onboarding({ canAnim }: { canAnim: boolean }) {
             initial={canAnim ? { opacity: 0, y: 10 } : false}
             animate={canAnim ? { opacity: 1, y: 0 } : false}
             exit={canAnim ? { opacity: 0, y: -10 } : false}
-            transition={canAnim ? { ...spring } : undefined}
+            transition={canAnim ? { ...springOnboarding } : undefined}
             className="flex flex-col items-center"
           >
             <motion.div
@@ -172,10 +173,8 @@ export default function Home() {
   const reduce = useReducedMotion();
   const canAnim = !reduce;
 
-  // ✅ ESTE ERA EL QUE TE FALTABA (y por eso truena el build)
   const [view, setView] = useState<ViewState>('WELCOME');
 
-  // ✅ Tabs separados: Check-In (primero), Puntos, Mapa, Perfil
   const [activeTab, setActiveTab] = useState<'checkin' | 'points' | 'map' | 'profile'>('checkin');
 
   const [user, setUser] = useState<any>(null);
@@ -287,22 +286,24 @@ export default function Home() {
         setGender(data.gender || '');
         if (data.birthDate) setBirthDate(data.birthDate.split('T')[0]);
         else setBirthDate('');
-
-        // ✅ Entra a Cliente y abre CHECK-IN primero
-        setActiveTab('checkin');
         setView('APP');
-      } else setMessage('⚠️ ' + data.error);
-    } catch (err) {
-      console.error('Login fetch error', err);
-      setMessage('🔥 ' + (err instanceof Error ? err.message : 'Error de conexión'));
+        setActiveTab('checkin');
+        setMessage('✅ Sesión iniciada');
+      } else {
+        setMessage(data.error || '❌ Error al iniciar sesión');
+      }
+    } catch {
+      setMessage('❌ Error al iniciar sesión');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleRegister = async () => {
     setMessage('');
-    if (!name.trim()) return setMessage('❌ Nombre requerido');
-    if (!isValidPhone(phone)) return setMessage('❌ Teléfono 10 dígitos');
+    if (!name) return setMessage('❌ Nombre requerido');
+    if (!isValidPhone(phone)) return setMessage('❌ Teléfono debe tener 10 dígitos');
+    if (!password || password.length < 4) return setMessage('❌ Contraseña muy corta');
     if (email && !isValidEmail(email)) return setMessage('❌ Email inválido');
 
     setLoading(true);
@@ -310,707 +311,600 @@ export default function Home() {
       const res = await fetch('/api/user/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, email, password, gender, birthDate }),
+        body: JSON.stringify({ phone, password, name, email, gender, birthDate }),
       });
-      if (res.ok) handleLogin();
-      else {
-        const d = await safeJson(res);
-        setMessage('⚠️ ' + d.error);
+      const data = await safeJson(res);
+
+      if (res.ok) {
+        setUser(data);
+        setView('APP');
+        setActiveTab('checkin');
+        setMessage('✅ Registro exitoso');
+      } else {
+        setMessage(data.error || '❌ Error al registrar');
       }
-    } catch (err) {
-      console.error('Register fetch error', err);
-      setMessage('🔥 ' + (err instanceof Error ? err.message : 'Error de conexión'));
+    } catch {
+      setMessage('❌ Error al registrar');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleUpdate = async () => {
     if (!user?.id) return;
-    if (!isValidPhone(phone)) return setMessage('❌ Teléfono inválido');
-
-    setMessage('Guardando...');
+    setLoading(true);
+    setMessage('');
     try {
       const res = await fetch('/api/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: user.id, name, email, gender, birthDate, phone }),
-      });
-
-      if (res.ok) {
-        setMessage('✅ Datos actualizados');
-        setUser({ ...user, name, email, gender, birthDate, phone });
-      } else {
-        const d = await safeJson(res);
-        setMessage('❌ ' + d.error);
-      }
-    } catch (err) {
-      console.error('Update fetch error', err);
-      setMessage('🔥 ' + (err instanceof Error ? err.message : 'Error de red'));
-    }
-  };
-
-  const handleScan = async (result: string) => {
-    if (!result) return;
-    setScanning(false);
-
-    let finalCode = result;
-    if (result.includes('code=')) finalCode = result.split('code=')[1].split('&')[0];
-
-    try {
-      const res = await fetch('/api/check-in/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user?.id, code: finalCode }),
+        body: JSON.stringify({
+          userId: user.id,
+          phone,
+          name,
+          email,
+          gender,
+          birthDate,
+        }),
       });
       const data = await safeJson(res);
       if (res.ok) {
-        alert(data.message);
-        handleLogin();
-        setManualCode('');
-      } else alert('❌ ' + data.error);
-    } catch (err) {
-      console.error('Scan fetch error', err);
-      if (user) alert('Error: ' + (err instanceof Error ? err.message : 'Error'));
+        setUser((u: any) => ({ ...u, ...data.user }));
+        setMessage('✅ Cambios guardados');
+      } else {
+        setMessage(data.error || '❌ Error guardando');
+      }
+    } catch {
+      setMessage('❌ Error guardando');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setPassword('');
+    setView('WELCOME');
+    setActiveTab('checkin');
+    setMessage('');
+    setPrizeCode(null);
+    setHistory([]);
+    setShowHistory(false);
+  };
+
+  const handleScan = async (code: string) => {
+    if (!user?.id) {
+      setMessage('⚠️ Inicia sesión para registrar');
+      return;
+    }
+    if (!code) return;
+
+    setLoading(true);
+    setMessage('');
+    try {
+      const res = await fetch('/api/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, code }),
+      });
+      const data = await safeJson(res);
+
+      if (res.ok) {
+        setUser((u: any) => ({
+          ...u,
+          points: data.points,
+          balance: data.balance,
+          latestMilestones: data.latestMilestones,
+        }));
+        setMessage(`✅ +${data.addedPoints} pts`);
+      } else {
+        setMessage(data.error || '❌ No se pudo registrar');
+      }
+    } catch (e) {
+      console.error(e);
+      setMessage('❌ Error registrando');
+    } finally {
+      setLoading(false);
+      setScanning(false);
+      setManualCode('');
     }
   };
 
   const getPrizeCode = async (tenantId: string, tenantName: string) => {
-    if (!confirm(`¿Canjear premio en ${tenantName}?`)) return;
+    if (!user?.id) return;
+    setLoading(true);
     try {
-      const res = await fetch('/api/redeem/request', {
+      const res = await fetch('/api/prize/code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, tenantId }),
       });
       const data = await safeJson(res);
-      if (res.ok) setPrizeCode({ code: data.code, tenant: tenantName });
-      else alert(data.error);
+      if (res.ok) {
+        setPrizeCode({ code: data.code, tenant: tenantName });
+      } else {
+        alert(data.error || 'No se pudo generar código');
+      }
     } catch {
-      alert('Error');
+      alert('Error generando código');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const goToBusinessMap = (tName: string) => {
-    const target = tenants.find((t) => t.name === tName);
-    if (target && target.lat && target.lng) {
-      setMapFocus([target.lat, target.lng]);
+  const goToBusinessMap = (businessName: string) => {
+    const t = tenants.find((x) => x.name?.toLowerCase?.() === businessName.toLowerCase());
+    if (t && typeof t.lat === 'number' && typeof t.lng === 'number') {
+      setMapFocus([t.lat, t.lng]);
       setActiveTab('map');
     } else {
-      alert('Ubicación no disponible.');
+      setActiveTab('map');
     }
   };
 
-  const handleLogout = () => {
-    if (confirm('¿Salir?')) {
-      setUser(null);
-      setView('WELCOME');
-      setPhone('');
-      setPassword('');
-      setMessage('');
-    }
-  };
+  function Shine() {
+    return (
+      <span className="pointer-events-none absolute inset-0">
+        <span className="absolute -left-1/2 top-0 h-full w-1/2 bg-white/10 rotate-12 blur-md animate-[shine_1.6s_ease-in-out_infinite]" />
+        <style jsx>{`
+          @keyframes shine {
+            0% {
+              transform: translateX(-120%) rotate(12deg);
+            }
+            100% {
+              transform: translateX(260%) rotate(12deg);
+            }
+          }
+        `}</style>
+      </span>
+    );
+  }
 
-  const toggleCard = (id: string) => {
-    setExpandedId(expandedId === id ? null : id);
-  };
+  const milestones = useMemo(() => user?.latestMilestones || [], [user]);
+
+  const showPrizeBanner =
+    Array.isArray(milestones) && milestones.some((m: any) => m?.status === 'EARNED');
+
+  const points = user?.points ?? 0;
+  const balance = user?.balance ?? 0;
+
+  const periodInfo = formatRewardPeriod(user?.rewardPeriod);
 
   return (
     <AnimatePresence mode="wait">
-      {view === 'WELCOME' && (
-        <motion.div
-          key="welcome"
-          initial={canAnim ? screenFx.initial : false}
-          animate={canAnim ? screenFx.animate : false}
-          exit={canAnim ? screenFx.exit : false}
-          transition={canAnim ? { ...spring } : undefined}
-          className={`min-h-screen ${glow} flex flex-col items-center justify-center p-6 text-white relative overflow-hidden`}
-        >
-          <motion.div
-            aria-hidden
-            className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/15 blur-3xl"
-            animate={canAnim ? { x: [0, 20, 0], y: [0, 12, 0] } : undefined}
-            transition={canAnim ? { duration: 6, repeat: Infinity } : undefined}
-          />
-          <motion.div
-            aria-hidden
-            className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-white/10 blur-3xl"
-            animate={canAnim ? { x: [0, -18, 0], y: [0, -14, 0] } : undefined}
-            transition={canAnim ? { duration: 7, repeat: Infinity } : undefined}
-          />
-
-          <div className="w-full max-w-sm flex flex-col items-center py-10 relative">
-            <BrandLogo />
-
-            <p className="text-white text-xl font-medium mb-10 mt-0 tracking-wide drop-shadow-md text-center leading-tight">
-              Premiamos tu lealtad,
-              <br />
-              <span className="font-extrabold italic">fácil y YA.</span>
-            </p>
-
-            {pendingCode && (
-              <motion.div
-                initial={canAnim ? { opacity: 0, y: 10 } : false}
-                animate={canAnim ? { opacity: 1, y: 0 } : false}
-                transition={canAnim ? { ...spring } : undefined}
-                className="bg-white/20 p-4 rounded-2xl mb-4 border border-white/30 backdrop-blur-sm w-full text-center"
-              >
-                <p className="font-black">🎉 ¡Código detectado!</p>
-              </motion.div>
-            )}
-
-            <div className="space-y-4 w-full mb-12">
-              <motion.button
-                whileTap={canAnim ? { scale: 0.97 } : undefined}
-                whileHover={canAnim ? { y: -2 } : undefined}
-                onClick={() => {
-                  setMessage('');
-                  setView('LOGIN');
-                }}
-                className="relative w-full bg-white text-pink-600 py-4 rounded-2xl font-extrabold text-lg shadow-2xl hover:bg-gray-50 transition-all overflow-hidden"
-              >
-                <Shine />
-                Iniciar Sesión
-              </motion.button>
-
-              <motion.button
-                whileTap={canAnim ? { scale: 0.97 } : undefined}
-                whileHover={canAnim ? { y: -2 } : undefined}
-                onClick={() => {
-                  setMessage('');
-                  setView('REGISTER');
-                }}
-                className="w-full bg-white/10 border-2 border-white/50 text-white py-4 rounded-2xl font-black text-lg hover:bg-white/20 transition-all backdrop-blur-sm"
-              >
-                Crear Cuenta
-              </motion.button>
-            </div>
-
-            <div className="w-full pt-8 border-t border-white/20">
-              <p className="text-center text-white/70 text-xs font-black uppercase tracking-widest mb-6">
-                ¿CÓMO FUNCIONA?
-              </p>
-              <Onboarding />
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {(view === 'LOGIN' || view === 'REGISTER') && (
+      {view !== 'APP' ? (
         <motion.div
           key={view}
           initial={canAnim ? screenFx.initial : false}
           animate={canAnim ? screenFx.animate : false}
           exit={canAnim ? screenFx.exit : false}
           transition={canAnim ? { ...spring } : undefined}
-          className="min-h-screen bg-gray-50 flex flex-col"
+          className={`min-h-screen ${glow} flex items-center justify-center p-6`}
         >
-          <div className={`${glow} p-8 pb-20 pt-16 rounded-b-[3rem] shadow-xl text-white text-center relative`}>
-            <button
-              onClick={() => setView('WELCOME')}
-              className="absolute top-12 left-6 text-white/80 hover:text-white font-black text-2xl transition-colors"
-            >
-              ←
-            </button>
-            <div className="mt-4 mb-4 flex justify-center scale-[0.75]">
-              <BrandLogo animate={false} />
-            </div>
-            <h2 className="text-3xl font-black mt-2 tracking-tight">
-              {view === 'REGISTER' ? 'Únete al Club' : 'Bienvenido'}
-            </h2>
-            <p className="text-white/90 text-sm mt-1 font-semibold">
-              {view === 'REGISTER' ? 'Premiamos tu lealtad, fácil y YA.' : 'Tus premios te esperan'}
-            </p>
-          </div>
+          <div className="w-full max-w-md">
+            <div className="bg-white/15 backdrop-blur-xl border border-white/25 rounded-[2.5rem] p-8 shadow-2xl">
+              <div className="text-center mb-6">
+                <h1 className="text-3xl font-black text-white drop-shadow">Puntos IA</h1>
+                <p className="text-white/85 text-sm font-semibold mt-1">Gana puntos. Canjea premios.</p>
+              </div>
 
-          <div className="flex-1 px-6 -mt-12 pb-10">
-            <motion.div
-              initial={canAnim ? { opacity: 0, y: 14 } : false}
-              animate={canAnim ? { opacity: 1, y: 0 } : false}
-              transition={canAnim ? { ...spring } : undefined}
-              className="bg-white rounded-3xl shadow-2xl p-8 space-y-6 border border-gray-100 relative overflow-hidden"
-            >
-              <span className="pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full bg-pink-200/35 blur-3xl" />
-              <span className="pointer-events-none absolute -bottom-24 -left-24 h-48 w-48 rounded-full bg-orange-200/35 blur-3xl" />
+              {view === 'WELCOME' && (
+                <>
+                  <Onboarding canAnim={canAnim} />
 
-              {view === 'REGISTER' && (
-                <div className="relative">
-                  <label className={clsLabel}>Nombre Completo</label>
-                  <input className={clsInput} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Pedro" />
+                  <div className="mt-8 space-y-3">
+                    <motion.button
+                      whileTap={canAnim ? { scale: 0.98 } : undefined}
+                      onClick={() => setView('LOGIN')}
+                      className="w-full bg-white text-gray-900 py-4 rounded-2xl font-black shadow-lg"
+                    >
+                      Iniciar sesión
+                    </motion.button>
+
+                    <motion.button
+                      whileTap={canAnim ? { scale: 0.98 } : undefined}
+                      onClick={() => setView('REGISTER')}
+                      className="w-full bg-white/20 text-white py-4 rounded-2xl font-black border border-white/20"
+                    >
+                      Crear cuenta
+                    </motion.button>
+                  </div>
+                </>
+              )}
+
+              {view === 'LOGIN' && (
+                <div className="space-y-5">
+                  <div>
+                    <label className="text-xs font-black text-white/80 uppercase ml-1 block mb-2 tracking-widest">
+                      Teléfono
+                    </label>
+                    <input
+                      type="tel"
+                      maxLength={10}
+                      className={clsInput}
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                      placeholder="10 dígitos"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black text-white/80 uppercase ml-1 block mb-2 tracking-widest">
+                      Contraseña
+                    </label>
+                    <input
+                      type="password"
+                      className={clsInput}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••"
+                    />
+                  </div>
+
+                  <motion.button
+                    whileTap={canAnim ? { scale: 0.98 } : undefined}
+                    onClick={handleLogin}
+                    disabled={loading}
+                    className="w-full bg-gray-950 text-white py-4 rounded-2xl font-black shadow-xl disabled:opacity-60"
+                  >
+                    {loading ? 'Cargando…' : 'Entrar'}
+                  </motion.button>
+
+                  <button onClick={() => setView('WELCOME')} className="w-full text-white/70 font-black text-sm">
+                    Volver
+                  </button>
+
+                  {message && <p className="text-center text-white font-black">{message}</p>}
                 </div>
               )}
 
-              <div className="relative">
-                <label className={clsLabel}>Teléfono Celular</label>
-                <input
-                  type="tel"
-                  maxLength={10}
-                  className={clsInput}
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                  placeholder="10 dígitos"
-                />
-              </div>
-
               {view === 'REGISTER' && (
-                <>
-                  <div className="relative">
-                    <label className={clsLabel}>Email (Opcional)</label>
-                    <input type="email" className={clsInput} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" />
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-black text-white/80 uppercase ml-1 block mb-2 tracking-widest">
+                      Nombre
+                    </label>
+                    <input
+                      className={clsInput}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Tu nombre"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black text-white/80 uppercase ml-1 block mb-2 tracking-widest">
+                      Teléfono
+                    </label>
+                    <input
+                      type="tel"
+                      maxLength={10}
+                      className={clsInput}
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                      placeholder="10 dígitos"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black text-white/80 uppercase ml-1 block mb-2 tracking-widest">
+                      Contraseña
+                    </label>
+                    <input
+                      type="password"
+                      className={clsInput}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Mínimo 4 caracteres"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black text-white/80 uppercase ml-1 block mb-2 tracking-widest">
+                      Email (opcional)
+                    </label>
+                    <input
+                      type="email"
+                      className={clsInput}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="correo@ejemplo.com"
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 items-end">
                     <div className="flex-1">
-                      <label className={clsLabel}>Fecha de nacimiento</label>
-                      <input type="date" className={clsInputFixed} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+                      <label className="text-xs font-black text-white/80 uppercase ml-1 block mb-2 tracking-widest">
+                        Nacimiento
+                      </label>
+                      <input
+                        type="date"
+                        className={clsInputFixed}
+                        value={birthDate}
+                        onChange={(e) => setBirthDate(e.target.value)}
+                      />
                     </div>
 
                     <div className="flex-1">
-                      <label className={clsLabel}>Género</label>
-                      <select className={`${clsInput} h-[58px]`} value={gender} onChange={(e) => setGender(e.target.value)}>
-                        <option value="">-</option>
+                      <label className="text-xs font-black text-white/80 uppercase ml-1 block mb-2 tracking-widest">
+                        Género
+                      </label>
+                      <select className={clsInput} value={gender} onChange={(e) => setGender(e.target.value)}>
+                        <option value="">Selecciona</option>
                         <option value="Hombre">Masculino</option>
                         <option value="Mujer">Femenino</option>
                       </select>
                     </div>
                   </div>
-                </>
-              )}
 
-              <div className="relative">
-                <label className={clsLabel}>Contraseña</label>
-                <input type="password" className={clsInput} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••" />
+                  <motion.button
+                    whileTap={canAnim ? { scale: 0.98 } : undefined}
+                    onClick={handleRegister}
+                    disabled={loading}
+                    className="w-full bg-gray-950 text-white py-4 rounded-2xl font-black shadow-xl disabled:opacity-60"
+                  >
+                    {loading ? 'Cargando…' : 'Crear cuenta'}
+                  </motion.button>
+
+                  <button onClick={() => setView('WELCOME')} className="w-full text-white/70 font-black text-sm">
+                    Volver
+                  </button>
+
+                  {message && <p className="text-center text-white font-black">{message}</p>}
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      ) : (
+        <motion.div
+          key="app"
+          initial={canAnim ? { opacity: 0 } : false}
+          animate={canAnim ? { opacity: 1 } : false}
+          exit={canAnim ? { opacity: 0 } : false}
+          className={`min-h-screen ${glow} pb-28`}
+        >
+          {/* Header */}
+          <div className="sticky top-0 z-40 p-6 pb-4 backdrop-blur-xl bg-black/10 border-b border-white/10">
+            <div className="max-w-3xl mx-auto flex items-center justify-between">
+              <div>
+                <div className="text-xs font-black uppercase tracking-widest text-white/70">Bienvenido</div>
+                <div className="text-2xl font-black text-white drop-shadow">{user?.name || 'Usuario'}</div>
+              </div>
+              <motion.button
+                whileTap={canAnim ? { scale: 0.98 } : undefined}
+                onClick={handleLogout}
+                className="bg-white/15 text-white font-black px-5 py-3 rounded-2xl border border-white/20 shadow-lg"
+              >
+                Salir
+              </motion.button>
+            </div>
+          </div>
+
+          <div className="max-w-3xl mx-auto px-6 pt-6 space-y-6">
+            {/* Points Card */}
+            <motion.div
+              initial={canAnim ? { opacity: 0, y: 10 } : false}
+              animate={canAnim ? { opacity: 1, y: 0 } : false}
+              transition={canAnim ? { ...spring } : undefined}
+              className="bg-white p-7 rounded-[2.5rem] shadow-2xl border border-gray-100 relative overflow-hidden"
+            >
+              <span className="pointer-events-none absolute -top-24 -right-24 h-56 w-56 rounded-full bg-pink-200/40 blur-3xl" />
+              <span className="pointer-events-none absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-orange-200/40 blur-3xl" />
+
+              <div className="flex items-start justify-between relative">
+                <div>
+                  <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Puntos</div>
+                  <div className="text-4xl font-black text-gray-950">{points}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Saldo</div>
+                  <div className="text-2xl font-black text-gray-950">{balance}</div>
+                </div>
               </div>
 
-              {message && (
-                <motion.div
-                  initial={canAnim ? { opacity: 0, y: 8 } : false}
-                  animate={canAnim ? { opacity: 1, y: 0 } : false}
-                  className="p-4 bg-red-50 text-red-500 rounded-2xl text-center font-black text-sm border border-red-100"
-                >
-                  {message}
-                </motion.div>
-              )}
+              <div className="mt-4 flex items-center justify-between text-xs font-black text-gray-500 uppercase tracking-widest relative">
+                <span>{periodInfo.counter}</span>
+                <span>{periodInfo.window}</span>
+              </div>
 
               <motion.button
                 whileTap={canAnim ? { scale: 0.98 } : undefined}
-                whileHover={canAnim ? { y: -2 } : undefined}
-                onClick={view === 'REGISTER' ? handleRegister : handleLogin}
-                disabled={loading}
-                className={`relative w-full ${glow} text-white py-4 rounded-2xl font-black shadow-2xl transition-all text-lg mt-2 overflow-hidden`}
+                onClick={() => setShowTutorial(true)}
+                className="mt-6 w-full bg-gray-950 text-white py-4 rounded-2xl font-black shadow-xl"
               >
-                <Shine />
-                {loading ? 'Procesando...' : view === 'REGISTER' ? 'Crear Cuenta' : 'Entrar'}
+                ¿Cómo funciona? 🤔
               </motion.button>
             </motion.div>
-          </div>
-        </motion.div>
-      )}
 
-      {view === 'APP' && (
-        <motion.div
-          key="app"
-          initial={canAnim ? screenFx.initial : false}
-          animate={canAnim ? screenFx.animate : false}
-          exit={canAnim ? screenFx.exit : false}
-          transition={canAnim ? { ...spring } : undefined}
-          className="min-h-screen bg-gray-50 pb-32"
-        >
-          {/* Overlays */}
-          <AnimatePresence>
-            {showTutorial && (
-              <motion.div
-                key="tutorial"
-                initial={canAnim ? { opacity: 0 } : false}
-                animate={canAnim ? { opacity: 1 } : false}
-                exit={canAnim ? { opacity: 0 } : false}
-                className={`fixed inset-0 ${glow} z-[60] flex flex-col items-center justify-center p-8`}
-              >
-                <motion.div
-                  initial={canAnim ? modalFx.initial : false}
-                  animate={canAnim ? modalFx.animate : false}
-                  exit={canAnim ? modalFx.exit : false}
-                  transition={canAnim ? { ...spring } : undefined}
-                  className="w-full max-w-sm"
-                >
-                  <h2 className="text-white text-center font-black text-3xl mb-10">¿Cómo usar PuntoIA?</h2>
-                  <Onboarding />
-                  <motion.button
-                    whileTap={canAnim ? { scale: 0.98 } : undefined}
-                    onClick={() => setShowTutorial(false)}
-                    className="w-full bg-white text-purple-600 font-black py-4 rounded-2xl mt-12 shadow-2xl hover:bg-gray-100"
-                  >
-                    ¡Entendido!
-                  </motion.button>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence>
-            {showHistory && (
-              <motion.div
-                key="history"
-                initial={canAnim ? { opacity: 0 } : false}
-                animate={canAnim ? { opacity: 1 } : false}
-                exit={canAnim ? { opacity: 0 } : false}
-                className="fixed inset-0 bg-black/90 z-[60] flex flex-col items-center justify-center p-6"
-              >
-                <motion.div
-                  initial={canAnim ? modalFx.initial : false}
-                  animate={canAnim ? modalFx.animate : false}
-                  exit={canAnim ? modalFx.exit : false}
-                  transition={canAnim ? { ...spring } : undefined}
-                  className="bg-white p-6 rounded-[2rem] w-full max-w-md h-[70vh] flex flex-col shadow-2xl relative"
-                >
-                  <button onClick={() => setShowHistory(false)} className="absolute top-4 right-4 text-gray-400 font-black p-2 text-xl hover:text-gray-600">
-                    ✕
-                  </button>
-
-                  <h2 className="text-2xl font-black text-gray-900 mb-6 text-center">🏆 Mis Victorias</h2>
-
-                  <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-                    {history.length > 0 ? (
-                      history.map((h: any, i: number) => (
-                        <motion.div
-                          key={i}
-                          initial={canAnim ? { opacity: 0, y: 10 } : false}
-                          animate={canAnim ? { opacity: 1, y: 0 } : false}
-                          transition={canAnim ? { ...spring, delay: i * 0.03 } : undefined}
-                          className="bg-yellow-50 p-4 rounded-2xl border border-yellow-100 flex items-center gap-4"
-                        >
-                          <div className="bg-yellow-200 text-yellow-700 h-12 w-12 rounded-xl flex items-center justify-center text-2xl">🎁</div>
-                          <div>
-                            <h3 className="font-black text-gray-800">{h.prize}</h3>
-                            <p className="text-xs text-gray-500 font-semibold">
-                              {h.tenant} • {h.date}
-                            </p>
-                          </div>
-                        </motion.div>
-                      ))
-                    ) : (
-                      <div className="text-center text-gray-400 py-10">
-                        <p className="text-4xl mb-2">🤷‍♂️</p>
-                        <p>Aún no has canjeado premios.</p>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence>
-            {prizeCode && (
-              <motion.div
-                key="prize"
-                initial={canAnim ? { opacity: 0 } : false}
-                animate={canAnim ? { opacity: 1 } : false}
-                exit={canAnim ? { opacity: 0 } : false}
-                className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-6 backdrop-blur-md"
-              >
-                <motion.div
-                  initial={canAnim ? modalFx.initial : false}
-                  animate={canAnim ? modalFx.animate : false}
-                  exit={canAnim ? modalFx.exit : false}
-                  transition={canAnim ? { ...spring } : undefined}
-                  className="bg-white p-8 rounded-[2rem] text-center w-full max-w-sm relative shadow-2xl overflow-hidden"
-                >
-                  <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-400 to-orange-500" />
-
-                  <button
-                    onClick={() => {
-                      setPrizeCode(null);
-                      handleLogin();
-                    }}
-                    className="absolute top-4 right-4 text-gray-400 font-black p-2 text-xl hover:text-gray-600"
-                  >
-                    ✕
-                  </button>
-
-                  <p className="text-pink-500 uppercase text-xs font-black tracking-widest mb-2 mt-4">¡PREMIO DESBLOQUEADO!</p>
-
-                  <h2 className="text-3xl font-black text-gray-900 mb-6 leading-tight">{prizeCode.tenant}</h2>
-
-                  <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-8 rounded-3xl mb-6 relative overflow-hidden">
-                    {canAnim && (
-                      <motion.div
-                        aria-hidden
-                        className="absolute inset-0"
-                        animate={{ opacity: [0.2, 0.35, 0.2] }}
-                        transition={{ duration: 2.2, repeat: Infinity }}
-                        style={{
-                          background: 'linear-gradient(120deg, transparent 0%, rgba(255,255,255,.5) 40%, transparent 70%)',
-                          transform: 'translateX(-30%)',
-                        }}
-                      />
-                    )}
-                    <p className="text-5xl font-mono font-black text-gray-800 tracking-widest relative">{prizeCode.code}</p>
-                  </div>
-
-                  <p className="text-sm text-gray-500 font-semibold">Muestra este código al personal.</p>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Header */}
-          <div className="bg-white px-8 pt-16 pb-6 sticky top-0 z-20 shadow-sm flex justify-between items-center">
-            <div>
-              <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Hola,</p>
-              <h1 className="text-3xl font-black text-gray-900 tracking-tight">{user?.name?.split(' ')?.[0] ?? '👋'}</h1>
-            </div>
-
-            <div className="flex gap-2">
-              <motion.button
-                whileTap={canAnim ? { scale: 0.95 } : undefined}
-                onClick={() => setShowTutorial(true)}
-                className="h-12 w-12 bg-blue-50 text-blue-600 rounded-full font-black border border-blue-100 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                title="Ayuda"
-              >
-                ?
-              </motion.button>
-
-              <motion.button
-                whileTap={canAnim ? { scale: 0.95 } : undefined}
-                onClick={handleLogout}
-                className="h-12 w-12 bg-red-50 text-red-500 rounded-full font-black border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                title="Salir"
-              >
-                ✕
-              </motion.button>
-            </div>
-          </div>
-
-          {/* Body */}
-          <div className="p-6">
-            {/* TAB: CHECK-IN */}
-
-            {activeTab === 'checkin' && !scanning && (
-              <div className="flex flex-col gap-6">
-                {/* CHECK-IN (PuntoIA look) */}
-                <div className="relative overflow-hidden rounded-[2rem] border border-white/40 shadow-xl">
-                  <div className={`${glow} px-6 py-6 text-white relative`}>
-                    {canAnim && <ShineSweep className="opacity-60" />}
-                    <div className="relative z-10 flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-[11px] font-black uppercase tracking-widest text-white/80">Check-In</p>
-                        <h2 className="text-2xl font-black leading-tight">Hacer Check-In</h2>
-                        <p className="text-white/90 text-sm mt-1 font-semibold">
-                          Escanea el QR del negocio para registrar tu visita.
-                        </p>
-                      </div>
-
-                      <motion.button
-                        whileTap={canAnim ? { scale: 0.98 } : undefined}
-                        whileHover={canAnim ? { y: -1 } : undefined}
-                        onClick={() => setScanning(true)}
-                        className="shrink-0 bg-white text-pink-600 font-black px-5 py-3 rounded-2xl shadow-2xl hover:bg-gray-50 transition-all"
-                      >
-                        Escanear QR
-                      </motion.button>
-                    </div>
-
-                    {lastScanMsg && (
-                      <div className="relative z-10 mt-4 text-sm font-semibold text-white/95 bg-white/15 border border-white/25 rounded-2xl px-4 py-3 backdrop-blur-sm">
-                        {lastScanMsg}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="bg-white px-6 py-5">
-                    <div>
-                      <p className="text-[11px] font-black uppercase tracking-widest text-gray-400">Escribir manual</p>
-                      <p className="text-sm text-gray-600 mt-1 font-semibold">
-                        Si no puedes escanear, escribe el código del QR.
-                      </p>
-                    </div>
-
-                    <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                      <input
-                        value={codeInput}
-                        onChange={(e) => setCodeInput(e.target.value)}
-                        placeholder="Ej. ABCD-1234-EFGH"
-                        className="w-full sm:flex-1 px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50/60 font-semibold text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-400"
-                      />
-                      <motion.button
-                        whileTap={canAnim ? { scale: 0.98 } : undefined}
-                        onClick={() => redeemCodeForCheckIn()}
-                        className={`relative ${glow} text-white font-black px-6 py-3 rounded-2xl shadow-xl overflow-hidden`}
-                      >
-                        <Shine />
-                        OK
-                      </motion.button>
-                    </div>
-
-                    <div className="mt-4 flex items-start gap-3 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
-                      <div className="text-lg leading-none">ℹ️</div>
-                      <p className="text-xs font-semibold text-gray-600 leading-relaxed">
-                        Solo puedes hacer <span className="font-black text-gray-800">check-in una vez al día por negocio</span>.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB: PUNTOS */}
-            {activeTab === 'points' && (
-              <div className="space-y-4">
-                {user?.memberships?.map((m: any, idx: number) => {
-                  const logo = (m.logoData ?? m.tenant?.logoData ?? '') as string;
-                  const requiredVisits = m.requiredVisits ?? 10;
-                  const visits = m.visits ?? Math.round((m.points ?? 0) / 10);
-                  const progress = Math.min(Math.round((visits / requiredVisits) * 100), 100);
-                  const isWinner = visits >= requiredVisits;
-                  const isExpanded = expandedId === m.tenantId;
-
-                  return (
-                    <motion.div
-                      key={idx}
-                      layout
-                      transition={canAnim ? spring : undefined}
-                      onClick={() => toggleCard(m.tenantId)}
-                      whileTap={canAnim ? { scale: 0.99 } : undefined}
-                      className={`bg-white p-6 rounded-[2rem] relative overflow-hidden cursor-pointer border border-gray-100 ${
-                        isExpanded ? 'shadow-2xl ring-4 ring-pink-50' : 'shadow-lg hover:shadow-xl'
-                      }`}
-                    >
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-100 via-pink-100 to-purple-100 rounded-bl-full opacity-70" />
-                      <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-orange-100/50 blur-3xl rounded-full" />
-
-                      <div className="relative z-10">
-                        <div className="flex justify-between items-start mb-6">
-                          <div className="flex items-center gap-4">
-                            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-gray-950 to-gray-700 text-white flex items-center justify-center font-black text-2xl shadow-lg overflow-hidden">
-                              {logo ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={logo} alt="Logo" className="w-full h-full object-cover" />
-                              ) : (
-                                <span>{m.name?.charAt(0)}</span>
-                              )}
-                            </div>
-
-                            <div>
-                              <h3 className="font-black text-gray-900 text-xl tracking-tight leading-none">{m.name}</h3>
-                              <div className="mt-2 flex flex-wrap items-center gap-2">
-                                <motion.span
-                                  initial={{ scale: 1 }}
-                                  animate={canAnim ? { y: [0, -1, 0], scale: [1, 1.03, 1] } : undefined}
-                                  transition={canAnim ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : undefined}
-                                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 text-white shadow-md border border-white/30"
-                                >
-                                  <span className="text-[10px] font-black uppercase tracking-widest opacity-90">Premio</span>
-                                  <span className="text-sm font-black leading-none">{m.prize}</span>
-                                  <span className="ml-0.5 text-base leading-none">🎁</span>
-                                </motion.span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="text-right">
-                            <span className="block text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-600">
-                              {visits}
-                            </span>
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">VISITAS</span>
-                          </div>
-                        </div>
-
-                        {!isWinner ? (
-                          <>
-                            <div className="relative w-full h-5 bg-gray-100 rounded-full overflow-hidden mb-3 shadow-inner">
-                              <motion.div
-                                className="h-full rounded-full bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600"
-                                initial={canAnim ? { width: 0 } : false}
-                                animate={canAnim ? { width: `${progress}%` } : false}
-                                transition={canAnim ? { duration: 0.9, ease: 'easeOut' } : undefined}
-                              />
-                            </div>
-
-                            <div className="flex justify-between items-center">
-                              <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest">
-                                {isExpanded ? '🔽 Menos info' : '▶️ Ver +'}
-                              </span>
-
-                              <div className="text-right leading-tight">
-                                <div className="text-[11px] font-extrabold text-gray-800 whitespace-nowrap">
-                                  Contador: {formatRewardPeriod(m.rewardPeriod).counter}
-                                </div>
-                                <div className="text-[11px] font-semibold text-gray-500 whitespace-nowrap mt-0.5">
-                                  Vigencia: {formatRewardPeriod(m.rewardPeriod).window}
-                                </div>
-                              </div>
-                            </div>
-                          </>
-                        ) : (
-                          <motion.button
-                            whileTap={canAnim ? { scale: 0.98 } : undefined}
-                            whileHover={canAnim ? { y: -2 } : undefined}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              getPrizeCode(m.tenantId, m.name);
-                            }}
-                            className="relative w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white font-black py-5 rounded-2xl shadow-2xl tracking-wide text-lg overflow-hidden border-4 border-white/20"
-                          >
-                            <Shine />
-                            🎁 CANJEAR PREMIO
-                            <span className="block text-[11px] font-black text-white/80 mt-1">Listo para canjear</span>
-                          </motion.button>
-                        )}
-
-                        <motion.div
-                          layout
-                          className={`grid grid-cols-2 gap-3 mt-4 overflow-hidden ${
-                            isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
-                          } transition-all duration-500`}
-                        >
-                          <motion.button
-                            whileTap={canAnim ? { scale: 0.98 } : undefined}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              goToBusinessMap(m.name);
-                            }}
-                            className="bg-white border-2 border-blue-50 text-blue-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-blue-50 transition-colors shadow-sm"
-                          >
-                            <span className="text-2xl mb-1">📍</span>
-                            Ver Mapa
-                          </motion.button>
-
-                          {m.instagram ? (
-                            <a
-                              href={`https://instagram.com/${m.instagram.replace('@', '')}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="bg-white border-2 border-pink-50 text-pink-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-pink-50 transition-colors no-underline shadow-sm"
-                            >
-                              <span className="text-2xl mb-1">📸</span>
-                              Instagram
-                            </a>
-                          ) : (
-                            <div className="bg-gray-50 border-2 border-gray-100 text-gray-300 py-4 rounded-2xl font-black text-xs flex flex-col items-center opacity-70">
-                              <span className="text-2xl mb-1">📸</span>
-                              No IG
-                            </div>
-                          )}
-                        </motion.div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* TAB: MAPA */}
-            {activeTab === 'map' && (
+            {/* Prize banner */}
+            {showPrizeBanner && (
               <motion.div
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
                 animate={canAnim ? { opacity: 1, y: 0 } : false}
                 transition={canAnim ? { ...spring } : undefined}
-                className="h-[52vh] md:h-[58vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white relative"
+                className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white rounded-[2.5rem] p-6 shadow-2xl border border-white/20"
               >
-                <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={50} />
+                <div className="font-black text-xl">🎉 ¡Tienes premios disponibles!</div>
+                <div className="text-white/90 text-sm font-semibold mt-1">
+                  Ve a <b>Puntos</b> y toca <b>CANJEAR PREMIO</b>.
+                </div>
               </motion.div>
             )}
+
+            {/* Tabs content */}
+            <div className="space-y-6">
+              {/* TAB: CHECKIN */}
+              {activeTab === 'checkin' && (
+                <motion.div
+                  initial={canAnim ? { opacity: 0, y: 10 } : false}
+                  animate={canAnim ? { opacity: 1, y: 0 } : false}
+                  transition={canAnim ? { ...spring } : undefined}
+                  className="bg-white p-7 rounded-[2.5rem] shadow-2xl border border-gray-100"
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 className="text-xl font-black text-gray-950">Check-in</h2>
+                      <p className="text-sm text-gray-400 font-semibold">Escanea QR o ingresa código</p>
+                    </div>
+                    <div className="text-3xl">✅</div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <motion.button
+                      whileTap={canAnim ? { scale: 0.98 } : undefined}
+                      onClick={() => setScanning(true)}
+                      className="w-full bg-gray-950 text-white py-5 rounded-2xl font-black shadow-xl text-lg"
+                    >
+                      Escanear QR 📷
+                    </motion.button>
+
+                    <div className="grid grid-cols-1 gap-3">
+                      <input
+                        className={clsInput}
+                        value={manualCode}
+                        onChange={(e) => setManualCode(e.target.value)}
+                        placeholder="Ingresa código manual"
+                      />
+                      <motion.button
+                        whileTap={canAnim ? { scale: 0.98 } : undefined}
+                        onClick={() => handleScan(manualCode.trim())}
+                        disabled={loading || !manualCode.trim()}
+                        className="w-full bg-pink-600 text-white py-4 rounded-2xl font-black shadow-xl disabled:opacity-60"
+                      >
+                        Registrar código
+                      </motion.button>
+                    </div>
+
+                    {message && (
+                      <p className="text-center text-gray-900 font-black bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        {message}
+                      </p>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* TAB: POINTS */}
+              {activeTab === 'points' && (
+                <div className="space-y-4">
+                  <motion.div
+                    initial={canAnim ? { opacity: 0, y: 10 } : false}
+                    animate={canAnim ? { opacity: 1, y: 0 } : false}
+                    transition={canAnim ? { ...spring } : undefined}
+                    className="bg-white p-7 rounded-[2.5rem] shadow-2xl border border-gray-100"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-xl font-black text-gray-950">Puntos</h2>
+                        <p className="text-sm text-gray-400 font-semibold">Tus metas y premios</p>
+                      </div>
+                      <div className="text-3xl">🔥</div>
+                    </div>
+                  </motion.div>
+
+                  <div className="space-y-4">
+                    {milestones.map((m: any) => {
+                      const isExpanded = expandedId === m.id;
+                      const earned = m.status === 'EARNED';
+
+                      return (
+                        <motion.div
+                          key={m.id}
+                          layout
+                          className="bg-white p-6 rounded-[2.5rem] shadow-xl border border-gray-100 overflow-hidden"
+                          onClick={() => setExpandedId((x) => (x === m.id ? null : m.id))}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="min-w-0">
+                              <div className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                                {m.tenantName}
+                              </div>
+                              <div className="text-lg font-black text-gray-950 truncate">{m.name}</div>
+                              <div className="text-sm text-gray-500 font-semibold mt-1">
+                                Meta: <b>{m.targetPoints}</b> pts
+                              </div>
+                            </div>
+
+                            <div
+                              className={`px-4 py-2 rounded-2xl font-black text-xs uppercase tracking-widest ${
+                                earned ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                              }`}
+                            >
+                              {earned ? 'Ganado' : 'En progreso'}
+                            </div>
+                          </div>
+
+                          {earned && (
+                            <motion.button
+                              whileTap={canAnim ? { scale: 0.98 } : undefined}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                getPrizeCode(m.tenantId, m.name);
+                              }}
+                              className="relative w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white font-black py-5 rounded-2xl shadow-2xl tracking-wide text-lg overflow-hidden border-4 border-white/20 mt-5"
+                            >
+                              <Shine />
+                              🎁 CANJEAR PREMIO
+                              <span className="block text-[11px] font-black text-white/80 mt-1">Listo para canjear</span>
+                            </motion.button>
+                          )}
+
+                          <motion.div
+                            layout
+                            className={`grid grid-cols-2 gap-3 mt-4 overflow-hidden ${
+                              isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
+                            } transition-all duration-500`}
+                          >
+                            <motion.button
+                              whileTap={canAnim ? { scale: 0.98 } : undefined}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                goToBusinessMap(m.name);
+                              }}
+                              className="bg-white border-2 border-blue-50 text-blue-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-blue-50 transition-colors shadow-sm"
+                            >
+                              <span className="text-2xl mb-1">📍</span>
+                              Ver Mapa
+                            </motion.button>
+
+                            {m.instagram ? (
+                              <a
+                                href={`https://instagram.com/${m.instagram.replace('@', '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="bg-white border-2 border-pink-50 text-pink-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-pink-50 transition-colors no-underline shadow-sm"
+                              >
+                                <span className="text-2xl mb-1">📸</span>
+                                Instagram
+                              </a>
+                            ) : (
+                              <div className="bg-gray-50 border-2 border-gray-100 text-gray-300 py-4 rounded-2xl font-black text-xs flex flex-col items-center opacity-70">
+                                <span className="text-2xl mb-1">📸</span>
+                                No IG
+                              </div>
+                            )}
+                          </motion.div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB: MAPA */}
+              {activeTab === 'map' && (
+                <motion.div
+                  initial={canAnim ? { opacity: 0, y: 10 } : false}
+                  animate={canAnim ? { opacity: 1, y: 0 } : false}
+                  transition={canAnim ? { ...spring } : undefined}
+                  className="h-[52vh] md:h-[58vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white relative"
+                >
+                  <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={50} />
+                </motion.div>
+              )}
+            </div>
           </div>
 
           {/* Scanner Overlay */}
@@ -1074,7 +968,12 @@ export default function Home() {
                   <div className="grid grid-cols-2 gap-4 items-end">
                     <div className="flex-1">
                       <label className={clsLabel}>Fecha de nacimiento</label>
-                      <input type="date" className={clsInputFixed} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+                      <input
+                        type="date"
+                        className={clsInputFixed}
+                        value={birthDate}
+                        onChange={(e) => setBirthDate(e.target.value)}
+                      />
                     </div>
 
                     <div className="flex-1">
@@ -1143,6 +1042,143 @@ export default function Home() {
               );
             })}
           </div>
+
+          {/* Prize Code Modal */}
+          <AnimatePresence>
+            {prizeCode && (
+              <motion.div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
+                initial={canAnim ? { opacity: 0 } : false}
+                animate={canAnim ? { opacity: 1 } : false}
+                exit={canAnim ? { opacity: 0 } : false}
+                onClick={() => setPrizeCode(null)}
+              >
+                <motion.div
+                  initial={canAnim ? modalFx.initial : false}
+                  animate={canAnim ? modalFx.animate : false}
+                  exit={canAnim ? modalFx.exit : false}
+                  transition={canAnim ? { ...spring } : undefined}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full max-w-md bg-white rounded-[2.5rem] p-8 shadow-2xl border border-gray-100"
+                >
+                  <div className="text-center">
+                    <div className="text-5xl mb-3">🎁</div>
+                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Código de canje</div>
+                    <div className="text-2xl font-black text-gray-950 mt-1">{prizeCode.tenant}</div>
+
+                    <div className="mt-6 bg-gray-950 text-white rounded-2xl p-6 font-black text-3xl tracking-widest">
+                      {prizeCode.code}
+                    </div>
+
+                    <p className="text-sm text-gray-500 font-semibold mt-4">
+                      Muéstralo al negocio para canjear tu premio.
+                    </p>
+
+                    <motion.button
+                      whileTap={canAnim ? { scale: 0.98 } : undefined}
+                      onClick={() => setPrizeCode(null)}
+                      className="mt-6 w-full bg-gray-950 text-white py-4 rounded-2xl font-black shadow-xl"
+                    >
+                      Cerrar
+                    </motion.button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Tutorial Modal */}
+          <AnimatePresence>
+            {showTutorial && (
+              <motion.div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
+                initial={canAnim ? { opacity: 0 } : false}
+                animate={canAnim ? { opacity: 1 } : false}
+                exit={canAnim ? { opacity: 0 } : false}
+                onClick={() => setShowTutorial(false)}
+              >
+                <motion.div
+                  initial={canAnim ? modalFx.initial : false}
+                  animate={canAnim ? modalFx.animate : false}
+                  exit={canAnim ? modalFx.exit : false}
+                  transition={canAnim ? { ...spring } : undefined}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full max-w-md bg-white rounded-[2.5rem] p-8 shadow-2xl border border-gray-100"
+                >
+                  <div className="text-center">
+                    <div className="text-5xl mb-3">🤝</div>
+                    <div className="text-2xl font-black text-gray-950">¿Cómo funciona?</div>
+                    <p className="text-sm text-gray-500 font-semibold mt-3">
+                      1) Haz check-in con QR/código<br />
+                      2) Acumula puntos<br />
+                      3) Completa metas y canjea premios
+                    </p>
+
+                    <motion.button
+                      whileTap={canAnim ? { scale: 0.98 } : undefined}
+                      onClick={() => setShowTutorial(false)}
+                      className="mt-6 w-full bg-gray-950 text-white py-4 rounded-2xl font-black shadow-xl"
+                    >
+                      Entendido
+                    </motion.button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* History Modal */}
+          <AnimatePresence>
+            {showHistory && (
+              <motion.div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
+                initial={canAnim ? { opacity: 0 } : false}
+                animate={canAnim ? { opacity: 1 } : false}
+                exit={canAnim ? { opacity: 0 } : false}
+                onClick={() => setShowHistory(false)}
+              >
+                <motion.div
+                  initial={canAnim ? modalFx.initial : false}
+                  animate={canAnim ? modalFx.animate : false}
+                  exit={canAnim ? modalFx.exit : false}
+                  transition={canAnim ? { ...spring } : undefined}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-full max-w-md bg-white rounded-[2.5rem] p-8 shadow-2xl border border-gray-100"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-xl font-black text-gray-950">Historial</div>
+                    <button className="text-gray-400 font-black" onClick={() => setShowHistory(false)}>
+                      ✕
+                    </button>
+                  </div>
+
+                  <div className="max-h-[50vh] overflow-auto space-y-3">
+                    {history.length ? (
+                      history.map((h: any) => (
+                        <div key={h.id} className="bg-gray-50 border border-gray-100 rounded-2xl p-4">
+                          <div className="text-xs font-black text-gray-400 uppercase tracking-widest">{h.tenantName}</div>
+                          <div className="text-sm font-black text-gray-900">{h.milestoneName}</div>
+                          <div className="text-xs text-gray-500 font-semibold mt-1">
+                            {new Date(h.redeemedAt).toLocaleString('es-MX')}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-sm text-gray-500 font-semibold">Sin historial todavía.</div>
+                    )}
+                  </div>
+
+                  <motion.button
+                    whileTap={canAnim ? { scale: 0.98 } : undefined}
+                    onClick={() => setShowHistory(false)}
+                    className="mt-6 w-full bg-gray-950 text-white py-4 rounded-2xl font-black shadow-xl"
+                  >
+                    Cerrar
+                  </motion.button>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       )}
     </AnimatePresence>
