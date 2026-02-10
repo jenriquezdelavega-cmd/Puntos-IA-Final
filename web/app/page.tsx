@@ -232,8 +232,9 @@ export default function Home() {
   const reduce = useReducedMotion();
   const canAnim = !reduce;
 
-  const [view, setView] = useState<ViewState>('WELCOME');
-  const [activeTab, setActiveTab] = useState<'checkin' | 'map' | 'profile'>('checkin');
+  const [activeTab, setActiveTab] =
+  useState<'checkin' | 'points' | 'map' | 'profile'>('checkin');
+
 
   const [user, setUser] = useState<any>(null);
 
@@ -345,6 +346,7 @@ export default function Home() {
         setName(data.name);
         setEmail(data.email || '');
         setGender(data.gender || '');
+        setActiveTab('checkin');
         if (data.birthDate) setBirthDate(data.birthDate.split('T')[0]);
         else setBirthDate('');
         setView('APP');
@@ -1077,7 +1079,8 @@ export default function Home() {
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
                 animate={canAnim ? { opacity: 1, y: 0 } : false}
                 transition={canAnim ? { ...spring } : undefined}
-                className="h-[52vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white"
+                className="h-[52vh] md:h-[58vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white"
+
               >
                 <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={100} />
               </motion.div>
