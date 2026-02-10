@@ -102,43 +102,7 @@ setIsSearching(false);
 };
 
 const saveSettings = async () => {
-  try {
-    const res = await fetch('/api/tenant/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tenantId: tenant.id,
-        prize: prizeName,
-        requiredVisits,
-        rewardPeriod,
-        logoData, // ✅ AHORA SÍ SE ENVÍA
-        lat: coords[0],
-        lng: coords[1],
-        address: addressSearch,
-        instagram
-      }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      alert(data.error || 'Error guardando');
-      return;
-    }
-
-    // ✅ Persistencia: actualiza tenant en UI con lo que regresa el backend
-    if (data?.tenant) {
-      setTenant(data.tenant);
-      setLogoData(String(data.tenant.logoData ?? ''));
-      setPrizeName(data.tenant.prize || '');
-      setInstagram(data.tenant.instagram || '');
-      setRequiredVisits(String(data.tenant.requiredVisits ?? 10));
-      setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
-    }
-
-    alert('✅ Guardado');
-  } catch (e) {
-    alert('Error');
-  }
+try { await fetch('/api/tenant/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, prize: prizeName, requiredVisits, rewardPeriod, lat: coords[0], lng: coords[1], address: addressSearch, instagram }) }); alert(' Guardado'); } catch(e) { alert('Error'); }
 };
 
 const validateRedeem = async () => { setMsg('Validando...'); try { const res = await fetch('/api/redeem/validate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, code: redeemCode }) }); const data = await res.json(); if (res.ok) { setMsg(` ENTREGAR A: ${data.user}`); setRedeemCode(''); if(userRole==='ADMIN') loadReports(tenant.id); } else setMsg(' ' + data.error); } catch(e) { setMsg('Error'); } };
