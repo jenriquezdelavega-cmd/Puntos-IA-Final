@@ -1280,3 +1280,4 @@ export default function Home() {
       )}
     </AnimatePresence>
   );
+}
