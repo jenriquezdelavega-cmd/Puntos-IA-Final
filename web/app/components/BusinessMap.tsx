@@ -118,7 +118,7 @@ export default function BusinessMap({
     <div className="w-full h-full">
       <MapContainer
         center={initialCenter}
-        zoom={6}
+        zoom={4}
         scrollWheelZoom
         className="w-full h-full rounded-2xl"
         style={{ minHeight: 360 }}
