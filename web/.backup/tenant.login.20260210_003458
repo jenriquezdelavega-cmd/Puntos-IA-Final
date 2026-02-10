@@ -1,0 +1,45 @@
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { username, password } = body;
+
+    const user = await prisma.tenantUser.findUnique({
+      where: { username },
+      include: { tenant: true }
+    });
+
+    if (!user || user.password !== password) {
+      return NextResponse.json({ error: 'Credenciales incorrectas' }, { status: 401 });
+    }
+
+    // 🔒 BLOQUEO SI ESTÁ INACTIVO
+    if (user.tenant.isActive === false) {
+        return NextResponse.json({ error: 'Este negocio ha sido suspendido. Contacta a soporte.' }, { status: 403 });
+    }
+
+    return NextResponse.json({ 
+      success: true,
+      user: { id: user.id, name: user.name, role: user.role },
+      tenant: { 
+        id: user.tenant.id, 
+        name: user.tenant.name, 
+        slug: user.tenant.slug,
+        prize: user.tenant.prize,
+        instagram: user.tenant.instagram,
+        lat: user.tenant.lat,
+        lng: user.tenant.lng,
+        address: user.tenant.address,
+        requiredVisits: user.tenant.requiredVisits,
+        rewardPeriod: user.tenant.rewardPeriod,
+        logoData: user.tenant.logoData
+      }
+    });
+
+  } catch (error: any) {
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
+  }
+}

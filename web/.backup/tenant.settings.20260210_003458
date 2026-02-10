@@ -1,0 +1,38 @@
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { tenantId, prize, lat, lng, address, instagram, requiredVisits, rewardPeriod, logoData } = body;
+
+    if (!tenantId) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
+
+    const parsedVisits =
+      requiredVisits === undefined || requiredVisits === null || requiredVisits === ''
+        ? undefined
+        : Math.max(1, parseInt(requiredVisits, 10));
+
+    const updated = await prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        prize: prize,
+        instagram: instagram,
+        address: address,
+        lat: lat !== undefined && lat !== null && lat !== '' ? parseFloat(lat) : undefined,
+        lng: lng !== undefined && lng !== null && lng !== '' ? parseFloat(lng) : undefined,
+        // si tu tenant ya trae estos campos, los guardamos; si no existen en tu schema, Prisma los ignora? (no, fallaría)
+        // por eso solo mandamos si viene definido
+        ...(parsedVisits !== undefined ? { requiredVisits: parsedVisits } : {}),
+        ...(rewardPeriod ? { rewardPeriod } : {}),
+        // logoData: DataURL base64 (MVP)
+        ...(logoData !== undefined ? { logoData } : {}),
+      } as any
+    });
+
+    return NextResponse.json({ success: true, tenant: updated });
+  } catch (error: any) {
+    return NextResponse.json({ error: 'Error: ' + (error.message || 'interno') }, { status: 500 });
+  }
+}
