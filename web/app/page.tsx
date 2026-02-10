@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 
-const QRScanner = dynamic(() => import('@yudiel/react-qr-scanner').then((m) => m.Scanner), { ssr: false });
 const QRScanner = dynamic(
   () => import('@yudiel/react-qr-scanner').then((m) => m.Scanner),
   {
@@ -28,6 +27,22 @@ const BusinessMap = dynamic(() => import('./components/BusinessMap'), {
     </div>
   ),
 });
+
+const QRScanner = dynamic(
+  () => import('@yudiel/react-qr-scanner').then((m) => m.Scanner),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="fixed inset-0 bg-black z-50 flex items-center justify-center text-white">
+        <div className="text-center">
+          <div className="text-4xl mb-2">📷</div>
+          <div className="text-xs font-black uppercase tracking-widest opacity-80">Abriendo cámara...</div>
+        </div>
+      </div>
+    ),
+  }
+);
+
 
 type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
 
