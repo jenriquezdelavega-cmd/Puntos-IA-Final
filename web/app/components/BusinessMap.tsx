@@ -11,7 +11,6 @@ type Tenant = {
   lat: number;
   lng: number;
   address?: string;
-  instagram?: string;
 };
 
 function zoomForRadiusKm(radiusKm: number) {
@@ -75,6 +74,7 @@ export default function BusinessMap({
     [tenants]
   );
 
+  // Centro “inteligente”
   const autoCenter = useMemo<[number, number]>(() => {
     if (focusCoords) return focusCoords;
     if (valid.length) {
@@ -88,37 +88,45 @@ export default function BusinessMap({
   const [center, setCenter] = useState<[number, number]>(autoCenter);
   const [fly, setFly] = useState(false);
 
-  // ✅ Radio local: al tocar un negocio, acercamos a 50km para que no se vea vacío
-  const [localRadiusKm, setLocalRadiusKm] = useState<number>(radiusKm);
+  // ✅ radio efectivo (para que al tocar un negocio se acerque a 50km)
+  const [activeRadiusKm, setActiveRadiusKm] = useState<number>(radiusKm);
 
   const [selected, setSelected] = useState<Tenant | null>(null);
 
+  // Cuando cambia el focus externo, regresa al radio base y centra
   useEffect(() => {
     setCenter(autoCenter);
     setFly(false);
-    setLocalRadiusKm(radiusKm);
-  }, [autoCenter, radiusKm]);
+    setActiveRadiusKm(radiusKm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoCenter?.[0], autoCenter?.[1], radiusKm]);
 
   const onPick = (t: Tenant) => {
     setSelected(t);
     setCenter([t.lat, t.lng]);
-    setLocalRadiusKm(50);
+    setActiveRadiusKm(50); // 👈 aquí el “acercamiento”
     setFly(true);
   };
 
   return (
-    <div className="relative h-full w-full">
+    // ✅ relative para overlays + overflow hidden para verse “app-like”
+    <div className="relative h-full w-full overflow-hidden">
       <MapContainer
         center={center}
-        zoom={zoomForRadiusKm(localRadiusKm)}
+        zoom={zoomForRadiusKm(activeRadiusKm)}
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom={true}
       >
-        <MapController center={center} radiusKm={localRadiusKm} fly={fly} />
+        <MapController center={center} radiusKm={activeRadiusKm} fly={fly} />
 
         <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-        <Circle center={center} radius={localRadiusKm * 1000} pathOptions={{ opacity: 0.25, fillOpacity: 0.08 }} />
+        {/* “Zona” visible */}
+        <Circle
+          center={center}
+          radius={activeRadiusKm * 1000}
+          pathOptions={{ opacity: 0.25, fillOpacity: 0.08 }}
+        />
 
         {valid.map((t) => (
           <Marker
@@ -138,36 +146,24 @@ export default function BusinessMap({
                   </div>
                 )}
 
-                <div className="mt-3 flex gap-2">
-  <a
-    className="inline-flex items-center justify-center flex-1 px-3 py-2 rounded-xl bg-black text-white font-black text-sm no-underline"
-    target="_blank"
-    rel="noopener noreferrer"
-    href={`https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}`}
-  >
-    Google Maps
-  </a>
-
-  {t.instagram ? (
-    <a
-      className="inline-flex items-center justify-center flex-1 px-3 py-2 rounded-xl bg-pink-600 text-white font-black text-sm no-underline"
-      target="_blank"
-      rel="noopener noreferrer"
-      href={`https://instagram.com/${String(t.instagram).replace('@', '')}`}
-    >
-      Instagram
-    </a>
-  ) : null}
-</div>
+                <a
+                  className="mt-3 inline-flex items-center justify-center w-full px-3 py-2 rounded-xl bg-black text-white font-black text-sm no-underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  href={`https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}`}
+                >
+                  Abrir en Google Maps
+                </a>
               </div>
             </Popup>
           </Marker>
         ))}
       </MapContainer>
 
+      {/* ✅ Barra inferior “floating” pero SIN encimarse con tabs (subida) */}
       {selected && (
-        <div className="pointer-events-none absolute bottom-4 left-4 right-4">
-          <div className="pointer-events-auto bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl px-4 py-3 shadow-xl flex items-center justify-between gap-3">
+        <div className="pointer-events-none absolute left-4 right-4 bottom-24 sm:bottom-6">
+          <div className="pointer-events-auto mx-auto max-w-md bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl px-4 py-3 shadow-xl flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="text-sm font-black text-gray-900 truncate">{selected.name}</div>
               <div className="text-xs text-gray-500 truncate">
@@ -176,27 +172,24 @@ export default function BusinessMap({
                   : `${selected.lat.toFixed(5)}, ${selected.lng.toFixed(5)}`}
               </div>
             </div>
-            <div className="shrink-0 flex gap-2">
-  <a
-    className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-black text-white font-black text-xs no-underline"
-    target="_blank"
-    rel="noopener noreferrer"
-    href={`https://www.google.com/maps/search/?api=1&query=${selected.lat},${selected.lng}`}
-  >
-    Google Maps
-  </a>
 
-  {selected.instagram ? (
-    <a
-      className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-pink-600 text-white font-black text-xs no-underline"
-      target="_blank"
-      rel="noopener noreferrer"
-      href={`https://instagram.com/${String(selected.instagram).replace('@', '')}`}
-    >
-      Instagram
-    </a>
-  ) : null}
-</div>
+            <div className="flex items-center gap-2 shrink-0">
+              <a
+                className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-black text-white font-black text-xs no-underline"
+                target="_blank"
+                rel="noopener noreferrer"
+                href={`https://www.google.com/maps/search/?api=1&query=${selected.lat},${selected.lng}`}
+              >
+                Google Maps
+              </a>
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                className="inline-flex items-center justify-center px-3 py-2 rounded-xl bg-gray-100 text-gray-700 font-black text-xs"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
