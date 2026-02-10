@@ -902,185 +902,179 @@ export default function Home() {
                   </div>
                 </div>
 
-                
+                <div className="space-y-4">
+                  {user?.memberships?.map((m: any, idx: number) => {
+                    const logo = (m.logoData ?? m.tenant?.logoData ?? '') as string;
+                    const requiredVisits = m.requiredVisits ?? 10;
+                    const visits = m.visits ?? Math.round((m.points ?? 0) / 10);
+                    const progress = Math.min(Math.round((visits / requiredVisits) * 100), 100);
+                    const isWinner = visits >= requiredVisits;
+                    const isExpanded = expandedId === m.tenantId;
 
-            {activeTab === 'points' && (
-              <div className="space-y-4">
-<div className="space-y-4">
-                                  {user?.memberships?.map((m: any, idx: number) => {
-                                    const logo = (m.logoData ?? m.tenant?.logoData ?? '') as string;
-                                    const requiredVisits = m.requiredVisits ?? 10;
-                                    const visits = m.visits ?? Math.round((m.points ?? 0) / 10);
-                                    const progress = Math.min(Math.round((visits / requiredVisits) * 100), 100);
-                                    const isWinner = visits >= requiredVisits;
-                                    const isExpanded = expandedId === m.tenantId;
-                
-                                    return (
-                                      <motion.div
-                                        key={idx}
-                                        layout
-                                        transition={canAnim ? spring : undefined}
-                                        onClick={() => toggleCard(m.tenantId)}
-                                        whileTap={canAnim ? { scale: 0.99 } : undefined}
-                                        className={`bg-white p-6 rounded-[2rem] relative overflow-hidden cursor-pointer border border-gray-100 ${
-                                          isExpanded ? 'shadow-2xl ring-4 ring-pink-50' : 'shadow-lg hover:shadow-xl'
-                                        }`}
-                                      >
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-100 via-pink-100 to-purple-100 rounded-bl-full opacity-70" />
-                                        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-orange-100/50 blur-3xl rounded-full" />
-                
-                                        <div className="relative z-10">
-                                          <div className="flex justify-between items-start mb-6">
-                                            <div className="flex items-center gap-4">
-                                              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-gray-950 to-gray-700 text-white flex items-center justify-center font-black text-2xl shadow-lg overflow-hidden">
-                                                {logo ? (
-                                                  // eslint-disable-next-line @next/next/no-img-element
-                                                  <img src={logo} alt="Logo" className="w-full h-full object-cover" />
-                                                ) : (
-                                                  <span>{m.name?.charAt(0)}</span>
-                                                )}
-                                              </div>
-                                              <div>
-                                                <h3 className="font-black text-gray-900 text-xl tracking-tight leading-none">{m.name}</h3>
-                                                <div className="mt-2 flex flex-wrap items-center gap-2">
-                                                  <motion.span
-                                                    initial={{ scale: 1 }}
-                                                    animate={canAnim ? { y: [0, -1, 0], scale: [1, 1.03, 1] } : undefined}
-                                                    transition={canAnim ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : undefined}
-                                                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 text-white shadow-md border border-white/30 relative overflow-hidden"
-                                                  >
-                                                    <ShineSweep className="opacity-80" />
-                                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-90">Premio</span>
-                                                    <span className="text-sm font-black leading-none">{m.prize}</span>
-                                                    <span className="ml-0.5 text-base leading-none">🎁</span>
-                                                  </motion.span>
-                                                </div>
-                                              </div>
-                                            </div>
-                
-                                            <div className="text-right">
-                                              <span className="block text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-600">
-                                                {visits}
-                                              </span>
-                                              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">VISITAS</span>
-                                            </div>
-                                          </div>
-                
-                                          <div className="relative z-10 mb-4">
-                                            <div className="bg-white/70 backdrop-blur-sm border border-gray-100 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
-                                              <div className="min-w-0">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Meta</p>
-                                                <p className="text-sm font-black text-gray-900 truncate">
-                                                  {visits} / {requiredVisits} visitas
-                                                </p>
-                                              </div>
-                                              <div className="text-right shrink-0">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Te faltan</p>
-                                                <p className="text-sm font-black text-pink-600">{Math.max(0, requiredVisits - visits)} visitas</p>
-                                              </div>
-                                            </div>
-                                          </div>
-                
-                                          {!isWinner ? (
-                                            <>
-                                              <div className="relative w-full h-5 bg-gray-100 rounded-full overflow-hidden mb-3 shadow-inner">
-                                                <div className="absolute inset-0 bg-gray-200/50" />
-                                                <motion.div
-                                                  className="h-full rounded-full bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 relative"
-                                                  initial={canAnim ? { width: 0 } : false}
-                                                  animate={canAnim ? { width: `${progress}%` } : false}
-                                                  transition={canAnim ? { duration: 0.9, ease: 'easeOut' } : undefined}
-                                                >
-                                                  {canAnim && (
-                                                    <motion.div
-                                                      aria-hidden
-                                                      className="absolute inset-0"
-                                                      animate={{ opacity: [0.25, 0.5, 0.25] }}
-                                                      transition={{ duration: 1.8, repeat: Infinity }}
-                                                      style={{
-                                                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent)',
-                                                      }}
-                                                    />
-                                                  )}
-                                                </motion.div>
-                                              </div>
-                
-                                              <div className="flex justify-between items-center text-xs font-black uppercase tracking-wide">
-                                                <span className="text-gray-400 flex items-center gap-1">{isExpanded ? '🔽 Menos info' : '▶️ Ver +'}</span>
-                
-                                                <div className="text-right leading-tight">
-                                                  <div className="text-[11px] font-extrabold text-gray-800 whitespace-nowrap">
-                                                    Contador: {formatRewardPeriod(m.rewardPeriod).counter}
-                                                  </div>
-                                                  <div className="text-[11px] font-semibold text-gray-500 whitespace-nowrap mt-0.5">
-                                                    Vigencia: {formatRewardPeriod(m.rewardPeriod).window}
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </>
-                                          ) : (
-                                            <motion.button
-                                              whileTap={canAnim ? { scale: 0.98 } : undefined}
-                                              whileHover={canAnim ? { y: -2 } : undefined}
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                getPrizeCode(m.tenantId, m.name);
-                                              }}
-                                              className="relative w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white font-black py-5 rounded-2xl shadow-2xl tracking-wide text-lg overflow-hidden border-4 border-white/20"
-                                            >
-                                              <Shine />
-                                              🎁 CANJEAR PREMIO
-                                              <span className="block text-[11px] font-black text-white/80 mt-1">Listo para canjear</span>
-                                            </motion.button>
-                                          )}
-                
-                                          <motion.div
-                                            layout
-                                            className={`grid grid-cols-2 gap-3 mt-4 overflow-hidden ${
-                                              isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
-                                            } transition-all duration-500`}
-                                          >
-                                            <motion.button
-                                              whileTap={canAnim ? { scale: 0.98 } : undefined}
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                goToBusinessMap(m.name);
-                                              }}
-                                              className="bg-white border-2 border-blue-50 text-blue-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-blue-50 transition-colors shadow-sm"
-                                            >
-                                              <span className="text-2xl mb-1">📍</span>
-                                              Ver Mapa
-                                            </motion.button>
-                
-                                            {m.instagram ? (
-                                              <a
-                                                href={`https://instagram.com/${m.instagram.replace('@', '')}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                onClick={(e) => e.stopPropagation()}
-                                                className="bg-white border-2 border-pink-50 text-pink-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-pink-50 transition-colors no-underline shadow-sm"
-                                              >
-                                                <span className="text-2xl mb-1">📸</span>
-                                                Instagram
-                                              </a>
-                                            ) : (
-                                              <div className="bg-gray-50 border-2 border-gray-100 text-gray-300 py-4 rounded-2xl font-black text-xs flex flex-col items-center opacity-70">
-                                                <span className="text-2xl mb-1">📸</span>
-                                                No IG
-                                              </div>
-                                            )}
-                                          </motion.div>
-                                        </div>
-                                      </motion.div>
-                                    );
-                                  })}
+                    return (
+                      <motion.div
+                        key={idx}
+                        layout
+                        transition={canAnim ? spring : undefined}
+                        onClick={() => toggleCard(m.tenantId)}
+                        whileTap={canAnim ? { scale: 0.99 } : undefined}
+                        className={`bg-white p-6 rounded-[2rem] relative overflow-hidden cursor-pointer border border-gray-100 ${
+                          isExpanded ? 'shadow-2xl ring-4 ring-pink-50' : 'shadow-lg hover:shadow-xl'
+                        }`}
+                      >
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-100 via-pink-100 to-purple-100 rounded-bl-full opacity-70" />
+                        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-orange-100/50 blur-3xl rounded-full" />
+
+                        <div className="relative z-10">
+                          <div className="flex justify-between items-start mb-6">
+                            <div className="flex items-center gap-4">
+                              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-gray-950 to-gray-700 text-white flex items-center justify-center font-black text-2xl shadow-lg overflow-hidden">
+                                {logo ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={logo} alt="Logo" className="w-full h-full object-cover" />
+                                ) : (
+                                  <span>{m.name?.charAt(0)}</span>
+                                )}
+                              </div>
+                              <div>
+                                <h3 className="font-black text-gray-900 text-xl tracking-tight leading-none">{m.name}</h3>
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  <motion.span
+                                    initial={{ scale: 1 }}
+                                    animate={canAnim ? { y: [0, -1, 0], scale: [1, 1.03, 1] } : undefined}
+                                    transition={canAnim ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : undefined}
+                                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 text-white shadow-md border border-white/30 relative overflow-hidden"
+                                  >
+                                    <ShineSweep className="opacity-80" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-90">Premio</span>
+                                    <span className="text-sm font-black leading-none">{m.prize}</span>
+                                    <span className="ml-0.5 text-base leading-none">🎁</span>
+                                  </motion.span>
                                 </div>
                               </div>
+                            </div>
+
+                            <div className="text-right">
+                              <span className="block text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-600">
+                                {visits}
+                              </span>
+                              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">VISITAS</span>
+                            </div>
+                          </div>
+
+                          <div className="relative z-10 mb-4">
+                            <div className="bg-white/70 backdrop-blur-sm border border-gray-100 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
+                              <div className="min-w-0">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Meta</p>
+                                <p className="text-sm font-black text-gray-900 truncate">
+                                  {visits} / {requiredVisits} visitas
+                                </p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Te faltan</p>
+                                <p className="text-sm font-black text-pink-600">{Math.max(0, requiredVisits - visits)} visitas</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {!isWinner ? (
+                            <>
+                              <div className="relative w-full h-5 bg-gray-100 rounded-full overflow-hidden mb-3 shadow-inner">
+                                <div className="absolute inset-0 bg-gray-200/50" />
+                                <motion.div
+                                  className="h-full rounded-full bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 relative"
+                                  initial={canAnim ? { width: 0 } : false}
+                                  animate={canAnim ? { width: `${progress}%` } : false}
+                                  transition={canAnim ? { duration: 0.9, ease: 'easeOut' } : undefined}
+                                >
+                                  {canAnim && (
+                                    <motion.div
+                                      aria-hidden
+                                      className="absolute inset-0"
+                                      animate={{ opacity: [0.25, 0.5, 0.25] }}
+                                      transition={{ duration: 1.8, repeat: Infinity }}
+                                      style={{
+                                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent)',
+                                      }}
+                                    />
+                                  )}
+                                </motion.div>
+                              </div>
+
+                              <div className="flex justify-between items-center text-xs font-black uppercase tracking-wide">
+                                <span className="text-gray-400 flex items-center gap-1">{isExpanded ? '🔽 Menos info' : '▶️ Ver +'}</span>
+
+                                <div className="text-right leading-tight">
+                                  <div className="text-[11px] font-extrabold text-gray-800 whitespace-nowrap">
+                                    Contador: {formatRewardPeriod(m.rewardPeriod).counter}
+                                  </div>
+                                  <div className="text-[11px] font-semibold text-gray-500 whitespace-nowrap mt-0.5">
+                                    Vigencia: {formatRewardPeriod(m.rewardPeriod).window}
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <motion.button
+                              whileTap={canAnim ? { scale: 0.98 } : undefined}
+                              whileHover={canAnim ? { y: -2 } : undefined}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                getPrizeCode(m.tenantId, m.name);
+                              }}
+                              className="relative w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white font-black py-5 rounded-2xl shadow-2xl tracking-wide text-lg overflow-hidden border-4 border-white/20"
+                            >
+                              <Shine />
+                              🎁 CANJEAR PREMIO
+                              <span className="block text-[11px] font-black text-white/80 mt-1">Listo para canjear</span>
+                            </motion.button>
+                          )}
+
+                          <motion.div
+                            layout
+                            className={`grid grid-cols-2 gap-3 mt-4 overflow-hidden ${
+                              isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
+                            } transition-all duration-500`}
+                          >
+                            <motion.button
+                              whileTap={canAnim ? { scale: 0.98 } : undefined}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                goToBusinessMap(m.name);
+                              }}
+                              className="bg-white border-2 border-blue-50 text-blue-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-blue-50 transition-colors shadow-sm"
+                            >
+                              <span className="text-2xl mb-1">📍</span>
+                              Ver Mapa
+                            </motion.button>
+
+                            {m.instagram ? (
+                              <a
+                                href={`https://instagram.com/${m.instagram.replace('@', '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="bg-white border-2 border-pink-50 text-pink-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-pink-50 transition-colors no-underline shadow-sm"
+                              >
+                                <span className="text-2xl mb-1">📸</span>
+                                Instagram
+                              </a>
+                            ) : (
+                              <div className="bg-gray-50 border-2 border-gray-100 text-gray-300 py-4 rounded-2xl font-black text-xs flex flex-col items-center opacity-70">
+                                <span className="text-2xl mb-1">📸</span>
+                                No IG
+                              </div>
                             )}
+                          </motion.div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
-{activeTab === 'map' && (
+            {activeTab === 'map' && (
               <motion.div
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
                 animate={canAnim ? { opacity: 1, y: 0 } : false}
