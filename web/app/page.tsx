@@ -1077,15 +1077,12 @@ export default function Home() {
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
                 animate={canAnim ? { opacity: 1, y: 0 } : false}
                 transition={canAnim ? { ...spring } : undefined}
-                className="
-                  w-full overflow-hidden
-                  rounded-[2.5rem] shadow-2xl border-4 border-white
-                  h-[calc(100vh-260px)] min-h-[420px]
-                "
+                className="h-[52vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white"
               >
                 <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={100} />
               </motion.div>
             )}
+
 
             {selectedTenant?.lat && selectedTenant?.lng && (
               <div className="fixed bottom-24 left-6 right-6 z-30">
