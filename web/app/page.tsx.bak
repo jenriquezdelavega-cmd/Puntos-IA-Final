@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-
-const QRScanner = dynamic(() => import('@yudiel/react-qr-scanner').then((m) => m.Scanner), { ssr: false });
 const QRScanner = dynamic(
   () => import('@yudiel/react-qr-scanner').then((m) => m.Scanner),
   {
@@ -315,7 +313,6 @@ export default function Home() {
             const avgLat = coords.reduce((acc, c) => acc + c[0], 0) / coords.length;
             const avgLng = coords.reduce((acc, c) => acc + c[1], 0) / coords.length;
             setMapFocus([avgLat, avgLng]);
-            setMapRadiusKm(100);
           }
         }
       }
