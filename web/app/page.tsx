@@ -109,6 +109,21 @@ function Shine() {
   );
 }
 
+function ShineSweep({ className = '' }: { className?: string }) {
+  return (
+    <motion.span
+      aria-hidden
+      className={
+        "pointer-events-none absolute -left-1/3 top-0 h-full w-1/2 rotate-12 bg-white/35 blur-xl " +
+        className
+      }
+      animate={{ x: ['-130%', '230%'] }}
+      transition={{ duration: 3.2, repeat: Infinity, ease: 'linear' }}
+    />
+  );
+}
+
+
 function BrandLogo({ animate = true }: { animate?: boolean }) {
   const reduce = useReducedMotion();
   const canAnim = animate && !reduce;
@@ -1001,14 +1016,15 @@ export default function Home() {
                                   {isExpanded ? '🔽 Menos info' : '▶️ Ver +'}
                                 </span>
 
-                                <span className="bg-purple-50 border border-purple-100 px-3 py-2 rounded-xl shadow-sm">
-                                  <span className="block text-[10px] font-black text-purple-700 leading-none whitespace-nowrap">
-                                    {`Contador: ${formatRewardPeriod(m.rewardPeriod).counter}`}
-                                  </span>
-                                  <span className="block text-[10px] font-black text-purple-700/80 leading-none mt-1 whitespace-nowrap">
-                                    {`Vigencia: ${formatRewardPeriod(m.rewardPeriod).window}`}
-                                  </span>
-                                </span>
+                                <span className="relative overflow-hidden px-3 py-2 rounded-xl shadow-lg border border-white/20 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500">
+  <ShineSweep className="opacity-70" />
+  <span className="relative block text-[10px] font-black text-white leading-none whitespace-nowrap drop-shadow">
+    {`Contador: ${formatRewardPeriod(m.rewardPeriod).counter}`}
+  </span>
+  <span className="relative block text-[10px] font-black text-white/90 leading-none mt-1 whitespace-nowrap drop-shadow">
+    {`Vigencia: ${formatRewardPeriod(m.rewardPeriod).window}`}
+  </span>
+</span>
                               </div>
                             </>
                           ) : (
@@ -1120,7 +1136,7 @@ export default function Home() {
                 transition={canAnim ? { ...spring } : undefined}
                 className="h-[65vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white"
               >
-            <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={500} />
+            <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={100} />
               </motion.div>
             )}
 
@@ -1264,4 +1280,3 @@ export default function Home() {
       )}
     </AnimatePresence>
   );
-}
