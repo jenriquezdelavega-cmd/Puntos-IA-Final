@@ -17,8 +17,7 @@ const BusinessMap = dynamic(() => import('./components/BusinessMap'), {
 
 type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
 
-const glow =
-  'bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600';
+const glow = 'bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600';
 
 const screenFx = {
   initial: { opacity: 0, y: 16, filter: 'blur(6px)' },
@@ -42,17 +41,12 @@ const clsInputFixed =
   'block w-full h-[60px] px-4 bg-white rounded-2xl text-gray-900 font-semibold border border-gray-200 ' +
   'shadow-sm outline-none placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400 appearance-none';
 
-const clsLabel =
-  'text-xs font-black text-gray-400 uppercase ml-1 block mb-2 tracking-widest';
+const clsLabel = 'text-xs font-black text-gray-400 uppercase ml-1 block mb-2 tracking-widest';
 
 const TZ = 'America/Monterrey';
 function formatRewardPeriod(period?: string) {
-  // Devuelve:
-  // - counter: cómo se reinicia el contador (mensual, trimestral, etc.)
-  // - window: hasta cuándo es válido el periodo actual
   const now = new Date();
 
-  // Tomamos año/mes desde Monterrey para que el "fin de mes" sea consistente
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: TZ,
     year: 'numeric',
@@ -60,9 +54,9 @@ function formatRewardPeriod(period?: string) {
     day: '2-digit',
   }).formatToParts(now);
 
-  const y = parseInt(parts.find(p => p.type === 'year')?.value || String(now.getFullYear()), 10);
-  const mStr = parts.find(p => p.type === 'month')?.value || String(now.getMonth() + 1).padStart(2, '0');
-  const month = parseInt(mStr, 10); // 1-12
+  const y = parseInt(parts.find((p) => p.type === 'year')?.value || String(now.getFullYear()), 10);
+  const mStr = parts.find((p) => p.type === 'month')?.value || String(now.getMonth() + 1).padStart(2, '0');
+  const month = parseInt(mStr, 10);
 
   const fmtEnd = (d: Date) =>
     new Intl.DateTimeFormat('es-MX', {
@@ -72,9 +66,7 @@ function formatRewardPeriod(period?: string) {
       year: 'numeric',
     }).format(d);
 
-  const endOfMonth = (year: number, month1to12: number) =>
-    // 12:00 UTC para evitar problemas de cambio de día por zona horaria
-    new Date(Date.UTC(year, month1to12, 0, 12));
+  const endOfMonth = (year: number, month1to12: number) => new Date(Date.UTC(year, month1to12, 0, 12));
 
   const p = (period || 'OPEN').toUpperCase();
   let counter = 'Sin vigencia';
@@ -86,7 +78,7 @@ function formatRewardPeriod(period?: string) {
   } else if (p === 'QUARTERLY') {
     counter = 'Trimestral';
     const q = Math.floor((month - 1) / 3) + 1;
-    const endMonth = q * 3; // 3,6,9,12
+    const endMonth = q * 3;
     window = `Hasta ${fmtEnd(endOfMonth(y, endMonth))}`;
   } else if (p === 'SEMESTER') {
     counter = 'Semestral';
@@ -100,7 +92,6 @@ function formatRewardPeriod(period?: string) {
   return { counter, window };
 }
 
-
 function Shine() {
   return (
     <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
@@ -113,16 +104,12 @@ function ShineSweep({ className = '' }: { className?: string }) {
   return (
     <motion.span
       aria-hidden
-      className={
-        "pointer-events-none absolute -left-1/3 top-0 h-full w-1/2 rotate-12 bg-white/35 blur-xl " +
-        className
-      }
+      className={'pointer-events-none absolute -left-1/3 top-0 h-full w-1/2 rotate-12 bg-white/35 blur-xl ' + className}
       animate={{ x: ['-130%', '230%'] }}
       transition={{ duration: 3.2, repeat: Infinity, ease: 'linear' }}
     />
   );
 }
-
 
 function BrandLogo({ animate = true }: { animate?: boolean }) {
   const reduce = useReducedMotion();
@@ -216,12 +203,8 @@ function Onboarding() {
             >
               {slides[slide].icon}
             </motion.div>
-            <h2 className="text-xl font-black text-white mb-2 drop-shadow-md">
-              {slides[slide].title}
-            </h2>
-            <p className="text-white/90 text-center text-xs h-8 px-4">
-              {slides[slide].text}
-            </p>
+            <h2 className="text-xl font-black text-white mb-2 drop-shadow-md">{slides[slide].title}</h2>
+            <p className="text-white/90 text-center text-xs h-8 px-4">{slides[slide].text}</p>
           </motion.div>
         </AnimatePresence>
       </div>
@@ -231,9 +214,7 @@ function Onboarding() {
           <button
             key={i}
             onClick={() => setSlide(i)}
-            className={`h-1.5 rounded-full transition-all ${
-              i === slide ? 'bg-white w-6' : 'bg-white/40 w-2'
-            }`}
+            className={`h-1.5 rounded-full transition-all ${i === slide ? 'bg-white w-6' : 'bg-white/40 w-2'}`}
             aria-label={`Slide ${i + 1}`}
           />
         ))}
@@ -262,9 +243,11 @@ export default function Home() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const [manualCode, setManualCode] = useState('');
-  const [pendingCode, setPendingCode] = useState<string | null>(null);
+  // Manual code (arriba)
+  const [codeInput, setCodeInput] = useState('');
+  const [lastScanMsg, setLastScanMsg] = useState<string>('');
 
+  const [pendingCode, setPendingCode] = useState<string | null>(null);
   const [prizeCode, setPrizeCode] = useState<{ code: string; tenant: string } | null>(null);
 
   const [tenants, setTenants] = useState<any[]>([]);
@@ -308,8 +291,7 @@ export default function Home() {
       if (d.tenants) {
         setTenants(d.tenants);
 
-        // ✅ Centrar el mapa donde realmente hay negocios (y no en CDMX)
-        // Solo fijamos un foco inicial si todavía no hay uno.
+        // centrar donde hay negocios
         if (!mapFocus) {
           const coords = (d.tenants as any[])
             .filter((t) => typeof t?.lat === 'number' && typeof t?.lng === 'number')
@@ -430,13 +412,22 @@ export default function Home() {
       });
       const data = await res.json();
       if (res.ok) {
+        setLastScanMsg(data.message || '✅ Check-in registrado');
         alert(data.message);
+        setCodeInput('');
         handleLogin();
-        setManualCode('');
-      } else alert('❌ ' + data.error);
+      } else {
+        alert('❌ ' + data.error);
+        setLastScanMsg('❌ ' + data.error);
+      }
     } catch {
       if (user) alert('Error');
     }
+  };
+
+  const redeemCodeForCheckIn = () => {
+    if (!codeInput.trim()) return;
+    handleScan(codeInput.trim());
   };
 
   const getPrizeCode = async (tenantId: string, tenantName: string) => {
@@ -472,14 +463,13 @@ export default function Home() {
       setPhone('');
       setPassword('');
       setMessage('');
+      setLastScanMsg('');
+      setCodeInput('');
     }
   };
 
-  const toggleCard = (id: string) => {
-    setExpandedId(expandedId === id ? null : id);
-  };
+  const toggleCard = (id: string) => setExpandedId(expandedId === id ? null : id);
 
-  // ----------- SCREEN WRAPPER -----------
   return (
     <AnimatePresence mode="wait">
       {view === 'WELCOME' && (
@@ -491,7 +481,6 @@ export default function Home() {
           transition={canAnim ? { ...spring } : undefined}
           className={`min-h-screen ${glow} flex flex-col items-center justify-center p-6 text-white relative overflow-hidden`}
         >
-          {/* Subtle moving blobs */}
           <motion.div
             aria-hidden
             className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/15 blur-3xl"
@@ -553,9 +542,7 @@ export default function Home() {
             </div>
 
             <div className="w-full pt-8 border-t border-white/20">
-              <p className="text-center text-white/70 text-xs font-black uppercase tracking-widest mb-6">
-                ¿CÓMO FUNCIONA?
-              </p>
+              <p className="text-center text-white/70 text-xs font-black uppercase tracking-widest mb-6">¿CÓMO FUNCIONA?</p>
               <Onboarding />
             </div>
           </div>
@@ -579,11 +566,9 @@ export default function Home() {
               ←
             </button>
             <div className="mt-4 mb-4 flex justify-center scale-[0.75]">
-            <BrandLogo animate={false} />
-          </div>
-          <h2 className="text-3xl font-black mt-2 tracking-tight">
-              {view === 'REGISTER' ? 'Únete al Club' : 'Bienvenido'}
-            </h2>
+              <BrandLogo animate={false} />
+            </div>
+            <h2 className="text-3xl font-black mt-2 tracking-tight">{view === 'REGISTER' ? 'Únete al Club' : 'Bienvenido'}</h2>
             <p className="text-white/90 text-sm mt-1 font-semibold">
               {view === 'REGISTER' ? 'Premiamos tu lealtad, fácil y YA.' : 'Tus premios te esperan'}
             </p>
@@ -602,12 +587,7 @@ export default function Home() {
               {view === 'REGISTER' && (
                 <div className="relative">
                   <label className={clsLabel}>Nombre Completo</label>
-                  <input
-                    className={clsInput}
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Ej. Pedro"
-                  />
+                  <input className={clsInput} value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej. Pedro" />
                 </div>
               )}
 
@@ -639,21 +619,12 @@ export default function Home() {
                   <div className="grid grid-cols-2 gap-4 items-end">
                     <div className="flex-1">
                       <label className={clsLabel}>Fecha de nacimiento</label>
-                      <input
-                        type="date"
-                        className={clsInputFixed}
-                        value={birthDate}
-                        onChange={(e) => setBirthDate(e.target.value)}
-                      />
+                      <input type="date" className={clsInputFixed} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
                     </div>
 
                     <div className="flex-1">
                       <label className={clsLabel}>Género</label>
-                      <select
-                        className={`${clsInput} h-[58px]`}
-                        value={gender}
-                        onChange={(e) => setGender(e.target.value)}
-                      >
+                      <select className={`${clsInput} h-[58px]`} value={gender} onChange={(e) => setGender(e.target.value)}>
                         <option value="">-</option>
                         <option value="Hombre">Masculino</option>
                         <option value="Mujer">Femenino</option>
@@ -825,13 +796,9 @@ export default function Home() {
                     ✕
                   </button>
 
-                  <p className="text-pink-500 uppercase text-xs font-black tracking-widest mb-2 mt-4">
-                    ¡PREMIO DESBLOQUEADO!
-                  </p>
+                  <p className="text-pink-500 uppercase text-xs font-black tracking-widest mb-2 mt-4">¡PREMIO DESBLOQUEADO!</p>
 
-                  <h2 className="text-3xl font-black text-gray-900 mb-6 leading-tight">
-                    {prizeCode.tenant}
-                  </h2>
+                  <h2 className="text-3xl font-black text-gray-900 mb-6 leading-tight">{prizeCode.tenant}</h2>
 
                   <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-8 rounded-3xl mb-6 relative overflow-hidden">
                     {canAnim && (
@@ -841,15 +808,12 @@ export default function Home() {
                         animate={{ opacity: [0.2, 0.35, 0.2] }}
                         transition={{ duration: 2.2, repeat: Infinity }}
                         style={{
-                          background:
-                            'linear-gradient(120deg, transparent 0%, rgba(255,255,255,.5) 40%, transparent 70%)',
+                          background: 'linear-gradient(120deg, transparent 0%, rgba(255,255,255,.5) 40%, transparent 70%)',
                           transform: 'translateX(-30%)',
                         }}
                       />
                     )}
-                    <p className="text-5xl font-mono font-black text-gray-800 tracking-widest relative">
-                      {prizeCode.code}
-                    </p>
+                    <p className="text-5xl font-mono font-black text-gray-800 tracking-widest relative">{prizeCode.code}</p>
                   </div>
 
                   <p className="text-sm text-gray-500 font-semibold">Muestra este código al personal.</p>
@@ -862,9 +826,7 @@ export default function Home() {
           <div className="bg-white px-8 pt-16 pb-6 sticky top-0 z-20 shadow-sm flex justify-between items-center">
             <div>
               <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Hola,</p>
-              <h1 className="text-3xl font-black text-gray-900 tracking-tight">
-                {user?.name?.split(' ')?.[0] ?? '👋'}
-              </h1>
+              <h1 className="text-3xl font-black text-gray-900 tracking-tight">{user?.name?.split(' ')?.[0] ?? '👋'}</h1>
             </div>
 
             <div className="flex gap-2">
@@ -890,71 +852,65 @@ export default function Home() {
 
           {/* Body */}
           <div className="p-6">
+            {/* TAB: CHECKIN */}
             {activeTab === 'checkin' && !scanning && (
               <div className="flex flex-col gap-6">
-            {/* CHECK-IN (arriba) */}
-            <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-6 shadow-sm">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-black text-gray-900">Hacer Check-In</h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Escanea el QR del negocio para registrar tu visita.
-                  </p>
+                {/* CHECK-IN (arriba) */}
+                <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-6 shadow-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-lg font-black text-gray-900">Hacer Check-In</h2>
+                      <p className="text-sm text-gray-600 mt-1">Escanea el QR del negocio para registrar tu visita.</p>
+                    </div>
+
+                    <motion.button
+                      whileTap={canAnim ? { scale: 0.98 } : undefined}
+                      whileHover={canAnim ? { y: -1 } : undefined}
+                      onClick={() => setScanning(true)}
+                      className="shrink-0 bg-black text-white font-black px-5 py-3 rounded-2xl shadow-md"
+                    >
+                      Escanear QR
+                    </motion.button>
+                  </div>
+
+                  {lastScanMsg && <div className="mt-4 text-sm font-semibold text-gray-700">{lastScanMsg}</div>}
                 </div>
 
-                <motion.button
-                  whileTap={canAnim ? { scale: 0.98 } : undefined}
-                  whileHover={canAnim ? { y: -1 } : undefined}
-                  onClick={() => setScanning(true)}
-                  className="shrink-0 bg-black text-white font-black px-5 py-3 rounded-2xl shadow-md"
-                >
-                  Escanear QR
-                </motion.button>
-              </div>
+                {/* ESCRIBIR MANUAL (arriba) */}
+                <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-6 shadow-sm">
+                  <div>
+                    <h3 className="text-base font-black text-gray-900">Escribir manual</h3>
+                    <p className="text-sm text-gray-600 mt-1">Si no puedes escanear, escribe el código del QR.</p>
+                  </div>
 
-              {lastScanMsg && (
-                <div className="mt-4 text-sm font-semibold text-gray-700">
-                  {lastScanMsg}
+                  <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                    <input
+                      value={codeInput}
+                      onChange={(e) => setCodeInput(e.target.value)}
+                      placeholder="Ej. ABCD-1234-EFGH"
+                      className="w-full sm:flex-1 px-4 py-3 rounded-2xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black/20"
+                    />
+                    <motion.button
+                      whileTap={canAnim ? { scale: 0.98 } : undefined}
+                      onClick={redeemCodeForCheckIn}
+                      className="bg-black text-white font-black px-6 py-3 rounded-2xl"
+                    >
+                      OK
+                    </motion.button>
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {/* ESCRIBIR MANUAL (arriba) */}
-            <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-6 shadow-sm">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="text-base font-black text-gray-900">Escribir manual</h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Si no puedes escanear, escribe el código del QR.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                <input
-                  value={codeInput}
-                  onChange={(e) => setCodeInput(e.target.value)}
-                  placeholder="Ej. ABCD-1234-EFGH"
-                  className="w-full sm:flex-1 px-4 py-3 rounded-2xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black/20"
-                />
-                <motion.button
-                  whileTap={canAnim ? { scale: 0.98 } : undefined}
-                  onClick={() => redeemCodeForCheckIn()}
-                  className="bg-black text-white font-black px-6 py-3 rounded-2xl"
-                >
-                  OK
-                </motion.button>
-              </div>
-            </div>
-
+                {/* Tarjetas de membresías */}
                 <div className="space-y-4">
                   {user?.memberships?.map((m: any, idx: number) => {
                     const logo = (m.logoData ?? m.tenant?.logoData ?? '') as string;
-                    const requiredVisits = (m.requiredVisits ?? 10);
-                    const visits = (m.visits ?? Math.round((m.points ?? 0) / 10));
+                    const requiredVisits = m.requiredVisits ?? 10;
+                    const visits = m.visits ?? Math.round((m.points ?? 0) / 10);
                     const progress = Math.min(Math.round((visits / requiredVisits) * 100), 100);
                     const isWinner = visits >= requiredVisits;
                     const isExpanded = expandedId === m.tenantId;
+
+                    const rp = formatRewardPeriod(m.rewardPeriod);
 
                     return (
                       <motion.div
@@ -982,9 +938,8 @@ export default function Home() {
                                 )}
                               </div>
                               <div>
-                                <h3 className="font-black text-gray-900 text-xl tracking-tight leading-none">
-                                  {m.name}
-                                </h3>
+                                <h3 className="font-black text-gray-900 text-xl tracking-tight leading-none">{m.name}</h3>
+
                                 <div className="mt-2 flex flex-wrap items-center gap-2">
                                   <motion.span
                                     initial={{ scale: 1 }}
@@ -1017,26 +972,23 @@ export default function Home() {
 
                             <div className="text-right">
                               <span className="block text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-600">
-                                {m.visits ?? Math.round((m.points ?? 0) / 10)}
+                                {visits}
                               </span>
-                              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                VISITAS
-                              </span>
+                              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">VISITAS</span>
                             </div>
                           </div>
+
                           <div className="relative z-10 mb-4">
                             <div className="bg-white/70 backdrop-blur-sm border border-gray-100 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
                               <div className="min-w-0">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Meta</p>
                                 <p className="text-sm font-black text-gray-900 truncate">
-                                  {m.visits ?? Math.round((m.points ?? 0) / 10)} / {m.requiredVisits ?? 10} visitas
+                                  {visits} / {requiredVisits} visitas
                                 </p>
                               </div>
                               <div className="text-right shrink-0">
                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Te faltan</p>
-                                <p className="text-sm font-black text-pink-600">
-                                  {Math.max(0, (m.requiredVisits ?? 10) - (m.visits ?? Math.round((m.points ?? 0) / 10)))} visitas
-                                </p>
+                                <p className="text-sm font-black text-pink-600">{Math.max(0, requiredVisits - visits)} visitas</p>
                               </div>
                             </div>
                           </div>
@@ -1058,8 +1010,7 @@ export default function Home() {
                                       animate={{ opacity: [0.25, 0.5, 0.25] }}
                                       transition={{ duration: 1.8, repeat: Infinity }}
                                       style={{
-                                        background:
-                                          'linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent)',
+                                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent)',
                                       }}
                                     />
                                   )}
@@ -1067,36 +1018,17 @@ export default function Home() {
                               </div>
 
                               <div className="flex justify-between items-center text-xs font-black uppercase tracking-wide">
-  <span className="text-gray-400 flex items-center gap-1">
-    {isExpanded ? '🔽 Menos info' : '▶️ Ver +'}
-  </span>
+                                <span className="text-gray-400 flex items-center gap-1">{isExpanded ? '🔽 Menos info' : '▶️ Ver +'}</span>
 
-  <div className="text-right leading-tight">
-    <div className="text-[11px] font-extrabold text-gray-800 whitespace-nowrap">
-      Contador: {formatRewardPeriod(m.rewardPeriod).counter}
-    </div>
-    <div className="text-[11px] font-semibold text-gray-500 whitespace-nowrap mt-0.5">
-      Vigencia: {formatRewardPeriod(m.rewardPeriod).window}
-    </div>
-  </div>
-</div>
-
-                                <span className="text-gray-400 flex items-center gap-1">
-                                  {isExpanded ? '🔽 Menos info' : '▶️ Ver +'}
-                                </span>
-
+                                {/* ✅ Contador/Vigencia relajado, sin fondo y sin spans raros */}
                                 <div className="text-right leading-tight">
-                                    <div className="text-[11px] font-extrabold text-gray-800 whitespace-nowrap">
-                                      Contador: {formatRewardPeriod(m.rewardPeriod).counter}
-                                    </div>
-                                    <div className="text-[11px] font-semibold text-gray-500 whitespace-nowrap mt-0.5">
-                                      Vigencia: {formatRewardPeriod(m.rewardPeriod).window}
-                                    </div>
+                                  <div className="text-[11px] font-extrabold text-gray-800 whitespace-nowrap">
+                                    Contador: <span className="font-black text-gray-900">{rp.counter}</span>
                                   </div>
-  <span className="relative block text-[10px] font-black text-white/90 leading-none mt-1 whitespace-nowrap drop-shadow">
-    {`Vigencia: ${formatRewardPeriod(m.rewardPeriod).window}`}
-  </span>
-</span>
+                                  <div className="text-[11px] font-semibold text-gray-500 whitespace-nowrap mt-0.5">
+                                    Vigencia: <span className="font-semibold text-gray-600">{rp.window}</span>
+                                  </div>
+                                </div>
                               </div>
                             </>
                           ) : (
@@ -1111,7 +1043,6 @@ export default function Home() {
                             >
                               <Shine />
                               🎁 CANJEAR PREMIO
-                              
                               <span className="block text-[11px] font-black text-white/80 mt-1">Listo para canjear</span>
                             </motion.button>
                           )}
@@ -1157,31 +1088,22 @@ export default function Home() {
                     );
                   })}
                 </div>
+              </div>
+            )}
 
-                {activeTab === 'map' && (
+            {/* TAB: MAP */}
+            {activeTab === 'map' && (
               <motion.div
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
                 animate={canAnim ? { opacity: 1, y: 0 } : false}
                 transition={canAnim ? { ...spring } : undefined}
                 className="h-[65vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white"
               >
-            <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={100} />
+                <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={100} />
               </motion.div>
             )}
 
-            {scanning && (
-              <div className="fixed inset-0 bg-black z-50 flex flex-col">
-                <Scanner onScan={(r) => r[0] && handleScan(r[0].rawValue)} onError={() => {}} />
-                <motion.button
-                  whileTap={canAnim ? { scale: 0.98 } : undefined}
-                  onClick={() => setScanning(false)}
-                  className="absolute bottom-12 left-8 right-8 bg-white/20 backdrop-blur-md text-white p-5 rounded-3xl font-black border border-white/20 shadow-2xl"
-                >
-                  Cancelar Escaneo
-                </motion.button>
-              </div>
-            )}
-
+            {/* TAB: PROFILE */}
             {activeTab === 'profile' && (
               <motion.div
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
@@ -1221,23 +1143,13 @@ export default function Home() {
 
                   <div>
                     <label className={clsLabel}>Email</label>
-                    <input
-                      type="email"
-                      className={clsInput}
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
+                    <input type="email" className={clsInput} value={email} onChange={(e) => setEmail(e.target.value)} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 items-end">
                     <div className="flex-1">
                       <label className={clsLabel}>Fecha de nacimiento</label>
-                      <input
-                        type="date"
-                        className={clsInputFixed}
-                        value={birthDate}
-                        onChange={(e) => setBirthDate(e.target.value)}
-                      />
+                      <input type="date" className={clsInputFixed} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
                     </div>
 
                     <div className="flex-1">
@@ -1275,6 +1187,20 @@ export default function Home() {
               </motion.div>
             )}
           </div>
+
+          {/* Scanner overlay */}
+          {scanning && (
+            <div className="fixed inset-0 bg-black z-50 flex flex-col">
+              <Scanner onScan={(r) => r[0] && handleScan(r[0].rawValue)} onError={() => {}} />
+              <motion.button
+                whileTap={canAnim ? { scale: 0.98 } : undefined}
+                onClick={() => setScanning(false)}
+                className="absolute bottom-12 left-8 right-8 bg-white/20 backdrop-blur-md text-white p-5 rounded-3xl font-black border border-white/20 shadow-2xl"
+              >
+                Cancelar Escaneo
+              </motion.button>
+            </div>
+          )}
 
           {/* Bottom Tabs */}
           <div className="fixed bottom-6 left-6 right-6 bg-white/80 backdrop-blur-xl border border-white/40 p-2 rounded-[2.5rem] shadow-2xl flex justify-between items-center z-40 ring-1 ring-black/5">
