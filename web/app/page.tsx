@@ -299,7 +299,7 @@ export default function Home() {
 
   const loadMapData = async () => {
     try {
-      const res = await fetch('/api/map/tenants');
+      const res = await fetch('api/map/tenants');
       const d = await safeJson(res);
       if (d.tenants) {
         setTenants(d.tenants);
@@ -322,7 +322,7 @@ export default function Home() {
   const loadHistory = async () => {
     if (!user?.id) return;
     try {
-      const res = await fetch('/api/user/history', {
+      const res = await fetch('api/user/history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
@@ -330,7 +330,8 @@ export default function Home() {
       const data = await safeJson(res);
       if (data.history) setHistory(data.history);
       setShowHistory(true);
-    } catch {
+    } catch (err) {
+      console.error('History fetch error', err);
       alert('Error cargando historial');
     }
   };
@@ -340,7 +341,7 @@ export default function Home() {
     if (!phone) return setMessage('❌ Teléfono requerido');
     setLoading(true);
     try {
-      const res = await fetch('/api/user/login', {
+      const res = await fetch('api/user/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, password }),
@@ -358,8 +359,9 @@ export default function Home() {
         setActiveTab('checkin');
         setView('APP');
       } else setMessage('⚠️ ' + data.error);
-    } catch {
-      setMessage('🔥 Error de conexión');
+    } catch (err) {
+      console.error('Login fetch error', err);
+      setMessage('🔥 ' + (err instanceof Error ? err.message : 'Error de conexión'));
     }
     setLoading(false);
   };
@@ -372,7 +374,7 @@ export default function Home() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/user/register', {
+      const res = await fetch('api/user/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, phone, email, password, gender, birthDate }),
@@ -382,8 +384,9 @@ export default function Home() {
         const d = await safeJson(res);
         setMessage('⚠️ ' + d.error);
       }
-    } catch {
-      setMessage('🔥 Error de conexión');
+    } catch (err) {
+      console.error('Register fetch error', err);
+      setMessage('🔥 ' + (err instanceof Error ? err.message : 'Error de conexión'));
     }
     setLoading(false);
   };
@@ -394,7 +397,7 @@ export default function Home() {
 
     setMessage('Guardando...');
     try {
-      const res = await fetch('/api/user/update', {
+      const res = await fetch('api/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: user.id, name, email, gender, birthDate, phone }),
@@ -407,8 +410,9 @@ export default function Home() {
         const d = await safeJson(res);
         setMessage('❌ ' + d.error);
       }
-    } catch {
-      setMessage('🔥 Error de red');
+    } catch (err) {
+      console.error('Update fetch error', err);
+      setMessage('🔥 ' + (err instanceof Error ? err.message : 'Error de red'));
     }
   };
 
@@ -420,7 +424,7 @@ export default function Home() {
     if (result.includes('code=')) finalCode = result.split('code=')[1].split('&')[0];
 
     try {
-      const res = await fetch('/api/check-in/scan', {
+      const res = await fetch('api/check-in/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user?.id, code: finalCode }),
@@ -431,15 +435,16 @@ export default function Home() {
         handleLogin();
         setManualCode('');
       } else alert('❌ ' + data.error);
-    } catch {
-      if (user) alert('Error');
+    } catch (err) {
+      console.error('Scan fetch error', err);
+      if (user) alert('Error: ' + (err instanceof Error ? err.message : 'Error'));
     }
   };
 
   const getPrizeCode = async (tenantId: string, tenantName: string) => {
     if (!confirm(`¿Canjear premio en ${tenantName}?`)) return;
     try {
-      const res = await fetch('/api/redeem/request', {
+      const res = await fetch('api/redeem/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, tenantId }),
