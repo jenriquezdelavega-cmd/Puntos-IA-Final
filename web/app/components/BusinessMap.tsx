@@ -96,7 +96,7 @@ function Fitter({
 export default function BusinessMap({
   tenants,
   focusCoords,
-  radiusKm = 500,
+  radiusKm = 100,
 }: {
   tenants: Tenant[];
   focusCoords?: Coords | null;
