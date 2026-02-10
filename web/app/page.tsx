@@ -4,18 +4,25 @@ import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
-// ✅ QR scanner debe ser client-only para evitar errores en build/prerender
-const QRScanner = dynamic(
-  () => import('@yudiel/react-qr-scanner').then((m) => m.Scanner),
-  { ssr: false }
-);
-
 const BusinessMap = dynamic(() => import('./components/BusinessMap'), {
   ssr: false,
   loading: () => (
     <div className="h-full w-full bg-gray-50 flex flex-col items-center justify-center text-gray-400 animate-pulse">
       <span className="text-4xl mb-2">🗺️</span>
       <span className="text-xs font-black uppercase tracking-widest">Cargando...</span>
+    </div>
+  ),
+});
+
+// Scanner: dinámica para evitar broncas en build/SSR
+const QRScanner = dynamic(() => import('@yudiel/react-qr-scanner').then((m) => m.Scanner), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 flex items-center justify-center text-white/80">
+      <div className="text-center">
+        <div className="text-4xl mb-3">📷</div>
+        <div className="text-xs font-black uppercase tracking-widest">Cargando cámara…</div>
+      </div>
     </div>
   ),
 });
@@ -51,7 +58,6 @@ const clsLabel = 'text-xs font-black text-gray-400 uppercase ml-1 block mb-2 tra
 const TZ = 'America/Monterrey';
 function formatRewardPeriod(period?: string) {
   const now = new Date();
-
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: TZ,
     year: 'numeric',
@@ -61,7 +67,7 @@ function formatRewardPeriod(period?: string) {
 
   const y = parseInt(parts.find((p) => p.type === 'year')?.value || String(now.getFullYear()), 10);
   const mStr = parts.find((p) => p.type === 'month')?.value || String(now.getMonth() + 1).padStart(2, '0');
-  const month = parseInt(mStr, 10); // 1-12
+  const month = parseInt(mStr, 10);
 
   const fmtEnd = (d: Date) =>
     new Intl.DateTimeFormat('es-MX', {
@@ -102,17 +108,6 @@ function Shine() {
     <span className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
       <span className="absolute -inset-x-24 -top-24 h-48 w-48 rotate-12 bg-white/25 blur-2xl" />
     </span>
-  );
-}
-
-function ShineSweep({ className = '' }: { className?: string }) {
-  return (
-    <motion.span
-      aria-hidden
-      className={'pointer-events-none absolute -left-1/3 top-0 h-full w-1/2 rotate-12 bg-white/35 blur-xl ' + className}
-      animate={{ x: ['-130%', '230%'] }}
-      transition={{ duration: 3.2, repeat: Infinity, ease: 'linear' }}
-    />
   );
 }
 
@@ -232,9 +227,11 @@ export default function Home() {
   const reduce = useReducedMotion();
   const canAnim = !reduce;
 
-  const [activeTab, setActiveTab] =
-  useState<'checkin' | 'points' | 'map' | 'profile'>('checkin');
+  // ✅ ESTE ERA EL QUE TE FALTABA (y por eso truena el build)
+  const [view, setView] = useState<ViewState>('WELCOME');
 
+  // ✅ Tabs separados: Check-In (primero), Puntos, Mapa, Perfil
+  const [activeTab, setActiveTab] = useState<'checkin' | 'points' | 'map' | 'profile'>('checkin');
 
   const [user, setUser] = useState<any>(null);
 
@@ -249,16 +246,13 @@ export default function Home() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const [codeInput, setCodeInput] = useState('');
-  const [lastScanMsg, setLastScanMsg] = useState<string>('');
+  const [manualCode, setManualCode] = useState('');
   const [pendingCode, setPendingCode] = useState<string | null>(null);
 
   const [prizeCode, setPrizeCode] = useState<{ code: string; tenant: string } | null>(null);
 
   const [tenants, setTenants] = useState<any[]>([]);
   const [mapFocus, setMapFocus] = useState<[number, number] | null>(null);
-  const [selectedTenant, setSelectedTenant] = useState<any | null>(null);
-  const [mapRadiusKm, setMapRadiusKm] = useState<number>(100);
 
   const [showTutorial, setShowTutorial] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -298,7 +292,6 @@ export default function Home() {
       if (d.tenants) {
         setTenants(d.tenants);
 
-        // ✅ Centrar el mapa donde realmente hay negocios (y no en CDMX)
         if (!mapFocus) {
           const coords = (d.tenants as any[])
             .filter((t) => typeof t?.lat === 'number' && typeof t?.lng === 'number')
@@ -346,9 +339,11 @@ export default function Home() {
         setName(data.name);
         setEmail(data.email || '');
         setGender(data.gender || '');
-        
         if (data.birthDate) setBirthDate(data.birthDate.split('T')[0]);
         else setBirthDate('');
+
+        // ✅ Entra a Cliente y abre CHECK-IN primero
+        setActiveTab('checkin');
         setView('APP');
       } else setMessage('⚠️ ' + data.error);
     } catch {
@@ -420,18 +415,13 @@ export default function Home() {
       });
       const data = await res.json();
       if (res.ok) {
-        setLastScanMsg(data.message || '✅ Check-in registrado');
+        alert(data.message);
         handleLogin();
-        setCodeInput('');
+        setManualCode('');
       } else alert('❌ ' + data.error);
     } catch {
       if (user) alert('Error');
     }
-  };
-
-  const redeemCodeForCheckIn = async () => {
-    if (!codeInput.trim()) return;
-    await handleScan(codeInput.trim());
   };
 
   const getPrizeCode = async (tenantId: string, tenantName: string) => {
@@ -454,8 +444,6 @@ export default function Home() {
     const target = tenants.find((t) => t.name === tName);
     if (target && target.lat && target.lng) {
       setMapFocus([target.lat, target.lng]);
-      setMapRadiusKm(50);
-      setSelectedTenant(target);
       setActiveTab('map');
     } else {
       alert('Ubicación no disponible.');
@@ -548,7 +536,9 @@ export default function Home() {
             </div>
 
             <div className="w-full pt-8 border-t border-white/20">
-              <p className="text-center text-white/70 text-xs font-black uppercase tracking-widest mb-6">¿CÓMO FUNCIONA?</p>
+              <p className="text-center text-white/70 text-xs font-black uppercase tracking-widest mb-6">
+                ¿CÓMO FUNCIONA?
+              </p>
               <Onboarding />
             </div>
           </div>
@@ -574,7 +564,9 @@ export default function Home() {
             <div className="mt-4 mb-4 flex justify-center scale-[0.75]">
               <BrandLogo animate={false} />
             </div>
-            <h2 className="text-3xl font-black mt-2 tracking-tight">{view === 'REGISTER' ? 'Únete al Club' : 'Bienvenido'}</h2>
+            <h2 className="text-3xl font-black mt-2 tracking-tight">
+              {view === 'REGISTER' ? 'Únete al Club' : 'Bienvenido'}
+            </h2>
             <p className="text-white/90 text-sm mt-1 font-semibold">
               {view === 'REGISTER' ? 'Premiamos tu lealtad, fácil y YA.' : 'Tus premios te esperan'}
             </p>
@@ -613,13 +605,7 @@ export default function Home() {
                 <>
                   <div className="relative">
                     <label className={clsLabel}>Email (Opcional)</label>
-                    <input
-                      type="email"
-                      className={clsInput}
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="correo@ejemplo.com"
-                    />
+                    <input type="email" className={clsInput} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 items-end">
@@ -642,13 +628,7 @@ export default function Home() {
 
               <div className="relative">
                 <label className={clsLabel}>Contraseña</label>
-                <input
-                  type="password"
-                  className={clsInput}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••"
-                />
+                <input type="password" className={clsInput} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••" />
               </div>
 
               {message && (
@@ -666,7 +646,7 @@ export default function Home() {
                 whileHover={canAnim ? { y: -2 } : undefined}
                 onClick={view === 'REGISTER' ? handleRegister : handleLogin}
                 disabled={loading}
-                className={`relative w-full ${glow} text-white py-4 rounded-2xl font-black shadow-2xl hover:shadow-3xl transition-all text-lg mt-2 overflow-hidden`}
+                className={`relative w-full ${glow} text-white py-4 rounded-2xl font-black shadow-2xl transition-all text-lg mt-2 overflow-hidden`}
               >
                 <Shine />
                 {loading ? 'Procesando...' : view === 'REGISTER' ? 'Crear Cuenta' : 'Entrar'}
@@ -685,6 +665,7 @@ export default function Home() {
           transition={canAnim ? { ...spring } : undefined}
           className="min-h-screen bg-gray-50 pb-32"
         >
+          {/* Overlays */}
           <AnimatePresence>
             {showTutorial && (
               <motion.div
@@ -731,10 +712,7 @@ export default function Home() {
                   transition={canAnim ? { ...spring } : undefined}
                   className="bg-white p-6 rounded-[2rem] w-full max-w-md h-[70vh] flex flex-col shadow-2xl relative"
                 >
-                  <button
-                    onClick={() => setShowHistory(false)}
-                    className="absolute top-4 right-4 text-gray-400 font-black p-2 text-xl hover:text-gray-600"
-                  >
+                  <button onClick={() => setShowHistory(false)} className="absolute top-4 right-4 text-gray-400 font-black p-2 text-xl hover:text-gray-600">
                     ✕
                   </button>
 
@@ -750,9 +728,7 @@ export default function Home() {
                           transition={canAnim ? { ...spring, delay: i * 0.03 } : undefined}
                           className="bg-yellow-50 p-4 rounded-2xl border border-yellow-100 flex items-center gap-4"
                         >
-                          <div className="bg-yellow-200 text-yellow-700 h-12 w-12 rounded-xl flex items-center justify-center text-2xl">
-                            🎁
-                          </div>
+                          <div className="bg-yellow-200 text-yellow-700 h-12 w-12 rounded-xl flex items-center justify-center text-2xl">🎁</div>
                           <div>
                             <h3 className="font-black text-gray-800">{h.prize}</h3>
                             <p className="text-xs text-gray-500 font-semibold">
@@ -827,6 +803,7 @@ export default function Home() {
             )}
           </AnimatePresence>
 
+          {/* Header */}
           <div className="bg-white px-8 pt-16 pb-6 sticky top-0 z-20 shadow-sm flex justify-between items-center">
             <div>
               <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Hola,</p>
@@ -854,7 +831,9 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Body */}
           <div className="p-6">
+            {/* TAB: CHECK-IN */}
             {activeTab === 'checkin' && !scanning && (
               <div className="flex flex-col gap-6">
                 <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-6 shadow-sm">
@@ -873,268 +852,213 @@ export default function Home() {
                       Escanear QR
                     </motion.button>
                   </div>
-
-                  {lastScanMsg && <div className="mt-4 text-sm font-semibold text-gray-700">{lastScanMsg}</div>}
                 </div>
 
                 <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-6 shadow-sm">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="text-base font-black text-gray-900">Escribir manual</h3>
-                      <p className="text-sm text-gray-600 mt-1">Si no puedes escanear, escribe el código del QR.</p>
-                    </div>
+                  <div>
+                    <h3 className="text-base font-black text-gray-900">Escribir manual</h3>
+                    <p className="text-sm text-gray-600 mt-1">Si no puedes escanear, escribe el código del QR.</p>
                   </div>
 
                   <div className="mt-4 flex flex-col sm:flex-row gap-3">
                     <input
-                      value={codeInput}
-                      onChange={(e) => setCodeInput(e.target.value)}
+                      value={manualCode}
+                      onChange={(e) => setManualCode(e.target.value)}
                       placeholder="Ej. ABCD-1234-EFGH"
                       className="w-full sm:flex-1 px-4 py-3 rounded-2xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black/20"
                     />
                     <motion.button
                       whileTap={canAnim ? { scale: 0.98 } : undefined}
-                      onClick={redeemCodeForCheckIn}
+                      onClick={() => {
+                        if (!manualCode.trim()) return;
+                        handleScan(manualCode.trim());
+                      }}
                       className="bg-black text-white font-black px-6 py-3 rounded-2xl"
                     >
                       OK
                     </motion.button>
                   </div>
                 </div>
-
-                
-
-            {activeTab === 'points' && (
-              <div className="space-y-4">
-<div className="space-y-4">
-                                  {user?.memberships?.map((m: any, idx: number) => {
-                                    const logo = (m.logoData ?? m.tenant?.logoData ?? '') as string;
-                                    const requiredVisits = m.requiredVisits ?? 10;
-                                    const visits = m.visits ?? Math.round((m.points ?? 0) / 10);
-                                    const progress = Math.min(Math.round((visits / requiredVisits) * 100), 100);
-                                    const isWinner = visits >= requiredVisits;
-                                    const isExpanded = expandedId === m.tenantId;
-                
-                                    return (
-                                      <motion.div
-                                        key={idx}
-                                        layout
-                                        transition={canAnim ? spring : undefined}
-                                        onClick={() => toggleCard(m.tenantId)}
-                                        whileTap={canAnim ? { scale: 0.99 } : undefined}
-                                        className={`bg-white p-6 rounded-[2rem] relative overflow-hidden cursor-pointer border border-gray-100 ${
-                                          isExpanded ? 'shadow-2xl ring-4 ring-pink-50' : 'shadow-lg hover:shadow-xl'
-                                        }`}
-                                      >
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-100 via-pink-100 to-purple-100 rounded-bl-full opacity-70" />
-                                        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-orange-100/50 blur-3xl rounded-full" />
-                
-                                        <div className="relative z-10">
-                                          <div className="flex justify-between items-start mb-6">
-                                            <div className="flex items-center gap-4">
-                                              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-gray-950 to-gray-700 text-white flex items-center justify-center font-black text-2xl shadow-lg overflow-hidden">
-                                                {logo ? (
-                                                  // eslint-disable-next-line @next/next/no-img-element
-                                                  <img src={logo} alt="Logo" className="w-full h-full object-cover" />
-                                                ) : (
-                                                  <span>{m.name?.charAt(0)}</span>
-                                                )}
-                                              </div>
-                                              <div>
-                                                <h3 className="font-black text-gray-900 text-xl tracking-tight leading-none">{m.name}</h3>
-                                                <div className="mt-2 flex flex-wrap items-center gap-2">
-                                                  <motion.span
-                                                    initial={{ scale: 1 }}
-                                                    animate={canAnim ? { y: [0, -1, 0], scale: [1, 1.03, 1] } : undefined}
-                                                    transition={canAnim ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : undefined}
-                                                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 text-white shadow-md border border-white/30 relative overflow-hidden"
-                                                  >
-                                                    <ShineSweep className="opacity-80" />
-                                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-90">Premio</span>
-                                                    <span className="text-sm font-black leading-none">{m.prize}</span>
-                                                    <span className="ml-0.5 text-base leading-none">🎁</span>
-                                                  </motion.span>
-                                                </div>
-                                              </div>
-                                            </div>
-                
-                                            <div className="text-right">
-                                              <span className="block text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-600">
-                                                {visits}
-                                              </span>
-                                              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">VISITAS</span>
-                                            </div>
-                                          </div>
-                
-                                          <div className="relative z-10 mb-4">
-                                            <div className="bg-white/70 backdrop-blur-sm border border-gray-100 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
-                                              <div className="min-w-0">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Meta</p>
-                                                <p className="text-sm font-black text-gray-900 truncate">
-                                                  {visits} / {requiredVisits} visitas
-                                                </p>
-                                              </div>
-                                              <div className="text-right shrink-0">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Te faltan</p>
-                                                <p className="text-sm font-black text-pink-600">{Math.max(0, requiredVisits - visits)} visitas</p>
-                                              </div>
-                                            </div>
-                                          </div>
-                
-                                          {!isWinner ? (
-                                            <>
-                                              <div className="relative w-full h-5 bg-gray-100 rounded-full overflow-hidden mb-3 shadow-inner">
-                                                <div className="absolute inset-0 bg-gray-200/50" />
-                                                <motion.div
-                                                  className="h-full rounded-full bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 relative"
-                                                  initial={canAnim ? { width: 0 } : false}
-                                                  animate={canAnim ? { width: `${progress}%` } : false}
-                                                  transition={canAnim ? { duration: 0.9, ease: 'easeOut' } : undefined}
-                                                >
-                                                  {canAnim && (
-                                                    <motion.div
-                                                      aria-hidden
-                                                      className="absolute inset-0"
-                                                      animate={{ opacity: [0.25, 0.5, 0.25] }}
-                                                      transition={{ duration: 1.8, repeat: Infinity }}
-                                                      style={{
-                                                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent)',
-                                                      }}
-                                                    />
-                                                  )}
-                                                </motion.div>
-                                              </div>
-                
-                                              <div className="flex justify-between items-center text-xs font-black uppercase tracking-wide">
-                                                <span className="text-gray-400 flex items-center gap-1">{isExpanded ? '🔽 Menos info' : '▶️ Ver +'}</span>
-                
-                                                <div className="text-right leading-tight">
-                                                  <div className="text-[11px] font-extrabold text-gray-800 whitespace-nowrap">
-                                                    Contador: {formatRewardPeriod(m.rewardPeriod).counter}
-                                                  </div>
-                                                  <div className="text-[11px] font-semibold text-gray-500 whitespace-nowrap mt-0.5">
-                                                    Vigencia: {formatRewardPeriod(m.rewardPeriod).window}
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </>
-                                          ) : (
-                                            <motion.button
-                                              whileTap={canAnim ? { scale: 0.98 } : undefined}
-                                              whileHover={canAnim ? { y: -2 } : undefined}
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                getPrizeCode(m.tenantId, m.name);
-                                              }}
-                                              className="relative w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white font-black py-5 rounded-2xl shadow-2xl tracking-wide text-lg overflow-hidden border-4 border-white/20"
-                                            >
-                                              <Shine />
-                                              🎁 CANJEAR PREMIO
-                                              <span className="block text-[11px] font-black text-white/80 mt-1">Listo para canjear</span>
-                                            </motion.button>
-                                          )}
-                
-                                          <motion.div
-                                            layout
-                                            className={`grid grid-cols-2 gap-3 mt-4 overflow-hidden ${
-                                              isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
-                                            } transition-all duration-500`}
-                                          >
-                                            <motion.button
-                                              whileTap={canAnim ? { scale: 0.98 } : undefined}
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                goToBusinessMap(m.name);
-                                              }}
-                                              className="bg-white border-2 border-blue-50 text-blue-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-blue-50 transition-colors shadow-sm"
-                                            >
-                                              <span className="text-2xl mb-1">📍</span>
-                                              Ver Mapa
-                                            </motion.button>
-                
-                                            {m.instagram ? (
-                                              <a
-                                                href={`https://instagram.com/${m.instagram.replace('@', '')}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                onClick={(e) => e.stopPropagation()}
-                                                className="bg-white border-2 border-pink-50 text-pink-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-pink-50 transition-colors no-underline shadow-sm"
-                                              >
-                                                <span className="text-2xl mb-1">📸</span>
-                                                Instagram
-                                              </a>
-                                            ) : (
-                                              <div className="bg-gray-50 border-2 border-gray-100 text-gray-300 py-4 rounded-2xl font-black text-xs flex flex-col items-center opacity-70">
-                                                <span className="text-2xl mb-1">📸</span>
-                                                No IG
-                                              </div>
-                                            )}
-                                          </motion.div>
-                                        </div>
-                                      </motion.div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
               </div>
             )}
 
-{activeTab === 'map' && (
+            {/* TAB: PUNTOS */}
+            {activeTab === 'points' && (
+              <div className="space-y-4">
+                {user?.memberships?.map((m: any, idx: number) => {
+                  const logo = (m.logoData ?? m.tenant?.logoData ?? '') as string;
+                  const requiredVisits = m.requiredVisits ?? 10;
+                  const visits = m.visits ?? Math.round((m.points ?? 0) / 10);
+                  const progress = Math.min(Math.round((visits / requiredVisits) * 100), 100);
+                  const isWinner = visits >= requiredVisits;
+                  const isExpanded = expandedId === m.tenantId;
+
+                  return (
+                    <motion.div
+                      key={idx}
+                      layout
+                      transition={canAnim ? spring : undefined}
+                      onClick={() => toggleCard(m.tenantId)}
+                      whileTap={canAnim ? { scale: 0.99 } : undefined}
+                      className={`bg-white p-6 rounded-[2rem] relative overflow-hidden cursor-pointer border border-gray-100 ${
+                        isExpanded ? 'shadow-2xl ring-4 ring-pink-50' : 'shadow-lg hover:shadow-xl'
+                      }`}
+                    >
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-100 via-pink-100 to-purple-100 rounded-bl-full opacity-70" />
+                      <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-orange-100/50 blur-3xl rounded-full" />
+
+                      <div className="relative z-10">
+                        <div className="flex justify-between items-start mb-6">
+                          <div className="flex items-center gap-4">
+                            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-gray-950 to-gray-700 text-white flex items-center justify-center font-black text-2xl shadow-lg overflow-hidden">
+                              {logo ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={logo} alt="Logo" className="w-full h-full object-cover" />
+                              ) : (
+                                <span>{m.name?.charAt(0)}</span>
+                              )}
+                            </div>
+
+                            <div>
+                              <h3 className="font-black text-gray-900 text-xl tracking-tight leading-none">{m.name}</h3>
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <motion.span
+                                  initial={{ scale: 1 }}
+                                  animate={canAnim ? { y: [0, -1, 0], scale: [1, 1.03, 1] } : undefined}
+                                  transition={canAnim ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } : undefined}
+                                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 text-white shadow-md border border-white/30"
+                                >
+                                  <span className="text-[10px] font-black uppercase tracking-widest opacity-90">Premio</span>
+                                  <span className="text-sm font-black leading-none">{m.prize}</span>
+                                  <span className="ml-0.5 text-base leading-none">🎁</span>
+                                </motion.span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <span className="block text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-600">
+                              {visits}
+                            </span>
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">VISITAS</span>
+                          </div>
+                        </div>
+
+                        {!isWinner ? (
+                          <>
+                            <div className="relative w-full h-5 bg-gray-100 rounded-full overflow-hidden mb-3 shadow-inner">
+                              <motion.div
+                                className="h-full rounded-full bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600"
+                                initial={canAnim ? { width: 0 } : false}
+                                animate={canAnim ? { width: `${progress}%` } : false}
+                                transition={canAnim ? { duration: 0.9, ease: 'easeOut' } : undefined}
+                              />
+                            </div>
+
+                            <div className="flex justify-between items-center">
+                              <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest">
+                                {isExpanded ? '🔽 Menos info' : '▶️ Ver +'}
+                              </span>
+
+                              <div className="text-right leading-tight">
+                                <div className="text-[11px] font-extrabold text-gray-800 whitespace-nowrap">
+                                  Contador: {formatRewardPeriod(m.rewardPeriod).counter}
+                                </div>
+                                <div className="text-[11px] font-semibold text-gray-500 whitespace-nowrap mt-0.5">
+                                  Vigencia: {formatRewardPeriod(m.rewardPeriod).window}
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <motion.button
+                            whileTap={canAnim ? { scale: 0.98 } : undefined}
+                            whileHover={canAnim ? { y: -2 } : undefined}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              getPrizeCode(m.tenantId, m.name);
+                            }}
+                            className="relative w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white font-black py-5 rounded-2xl shadow-2xl tracking-wide text-lg overflow-hidden border-4 border-white/20"
+                          >
+                            <Shine />
+                            🎁 CANJEAR PREMIO
+                            <span className="block text-[11px] font-black text-white/80 mt-1">Listo para canjear</span>
+                          </motion.button>
+                        )}
+
+                        <motion.div
+                          layout
+                          className={`grid grid-cols-2 gap-3 mt-4 overflow-hidden ${
+                            isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
+                          } transition-all duration-500`}
+                        >
+                          <motion.button
+                            whileTap={canAnim ? { scale: 0.98 } : undefined}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              goToBusinessMap(m.name);
+                            }}
+                            className="bg-white border-2 border-blue-50 text-blue-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-blue-50 transition-colors shadow-sm"
+                          >
+                            <span className="text-2xl mb-1">📍</span>
+                            Ver Mapa
+                          </motion.button>
+
+                          {m.instagram ? (
+                            <a
+                              href={`https://instagram.com/${m.instagram.replace('@', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="bg-white border-2 border-pink-50 text-pink-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-pink-50 transition-colors no-underline shadow-sm"
+                            >
+                              <span className="text-2xl mb-1">📸</span>
+                              Instagram
+                            </a>
+                          ) : (
+                            <div className="bg-gray-50 border-2 border-gray-100 text-gray-300 py-4 rounded-2xl font-black text-xs flex flex-col items-center opacity-70">
+                              <span className="text-2xl mb-1">📸</span>
+                              No IG
+                            </div>
+                          )}
+                        </motion.div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* TAB: MAPA */}
+            {activeTab === 'map' && (
               <motion.div
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
                 animate={canAnim ? { opacity: 1, y: 0 } : false}
                 transition={canAnim ? { ...spring } : undefined}
-                className="h-[52vh] md:h-[58vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white"
-
+                className="h-[52vh] md:h-[58vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white relative"
               >
-                <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={100} />
+                <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={50} />
               </motion.div>
             )}
+          </div>
 
+          {/* Scanner Overlay */}
+          {scanning && (
+            <div className="fixed inset-0 bg-black z-50 flex flex-col">
+              <QRScanner onScan={(r: any) => r?.[0] && handleScan(r[0].rawValue)} onError={() => {}} />
+              <motion.button
+                whileTap={canAnim ? { scale: 0.98 } : undefined}
+                onClick={() => setScanning(false)}
+                className="absolute bottom-12 left-8 right-8 bg-white/20 backdrop-blur-md text-white p-5 rounded-3xl font-black border border-white/20 shadow-2xl"
+              >
+                Cancelar Escaneo
+              </motion.button>
+            </div>
+          )}
 
-            {selectedTenant?.lat && selectedTenant?.lng && (
-              <div className="fixed bottom-24 left-6 right-6 z-30">
-                <div className="bg-white/90 backdrop-blur-xl border border-white/50 shadow-2xl rounded-[2rem] p-4 flex items-center justify-between gap-3 ring-1 ring-black/5">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Seleccionado</p>
-                    <p className="text-base font-black text-gray-900 truncate">{selectedTenant.name ?? 'Negocio'}</p>
-                    <p className="text-xs text-gray-500 font-semibold truncate">{selectedTenant.address ?? selectedTenant.city ?? ''}</p>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <a
-                      className="px-4 py-3 rounded-2xl bg-gray-950 text-white font-black text-sm shadow-lg no-underline"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      href={`https://www.google.com/maps/search/?api=1&query=${selectedTenant.lat},${selectedTenant.lng}`}
-                    >
-                      Google Maps
-                    </a>
-                    <button
-                      onClick={() => setSelectedTenant(null)}
-                      className="px-4 py-3 rounded-2xl bg-gray-100 text-gray-700 font-black text-sm border border-gray-200"
-                    >
-                      Cerrar
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {scanning && (
-              <div className="fixed inset-0 bg-black z-50 flex flex-col">
-                <QRScanner onScan={(r: any) => r?.[0] && handleScan(r[0].rawValue)} onError={() => {}} />
-                <motion.button
-                  whileTap={canAnim ? { scale: 0.98 } : undefined}
-                  onClick={() => setScanning(false)}
-                  className="absolute bottom-12 left-8 right-8 bg-white/20 backdrop-blur-md text-white p-5 rounded-3xl font-black border border-white/20 shadow-2xl"
-                >
-                  Cancelar Escaneo
-                </motion.button>
-              </div>
-            )}
-
-            {activeTab === 'profile' && (
+          {/* TAB: PERFIL */}
+          {activeTab === 'profile' && (
+            <div className="p-6 pt-0">
               <motion.div
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
                 animate={canAnim ? { opacity: 1, y: 0 } : false}
@@ -1215,12 +1139,14 @@ export default function Home() {
                   </p>
                 )}
               </motion.div>
-            )}
-          </div>
+            </div>
+          )}
 
+          {/* Bottom Tabs */}
           <div className="fixed bottom-6 left-6 right-6 bg-white/80 backdrop-blur-xl border border-white/40 p-2 rounded-[2.5rem] shadow-2xl flex justify-between items-center z-40 ring-1 ring-black/5">
             {[
-              { key: 'checkin', icon: '🔥', label: 'Puntos' },
+              { key: 'checkin', icon: '✅', label: 'Check-In' },
+              { key: 'points', icon: '🔥', label: 'Puntos' },
               { key: 'map', icon: '🗺️', label: 'Mapa' },
               { key: 'profile', icon: '👤', label: 'Perfil' },
             ].map((t) => {
@@ -1229,13 +1155,7 @@ export default function Home() {
                 <motion.button
                   key={t.key}
                   whileTap={canAnim ? { scale: 0.98 } : undefined}
-                  onClick={() => {
-                    setActiveTab(t.key as any);
-                    if (t.key !== 'map') {
-                      setSelectedTenant(null);
-                      setMapRadiusKm(100);
-                    }
-                  }}
+                  onClick={() => setActiveTab(t.key as any)}
                   className={`flex-1 flex flex-col items-center py-4 rounded-[2rem] transition-all duration-300 ${
                     active ? 'bg-gray-950 text-white shadow-lg' : 'text-gray-400 hover:bg-white hover:text-gray-700'
                   }`}
