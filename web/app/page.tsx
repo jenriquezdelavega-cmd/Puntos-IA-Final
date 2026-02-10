@@ -179,7 +179,19 @@ function Onboarding() {
     []
   );
 
-  useEffect(() => {
+  
+
+async function safeJson(res: Response) {
+  // Evita que una respuesta no-JSON rompa la app (típico en 500/HTML en Vercel)
+  const text = await res.text();
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch {
+    return { error: text || 'Respuesta no válida del servidor' };
+  }
+}
+
+useEffect(() => {
     const i = setInterval(() => setSlide((p) => (p + 1) % slides.length), 3500);
     return () => clearInterval(i);
   }, [slides.length]);
@@ -288,7 +300,7 @@ export default function Home() {
   const loadMapData = async () => {
     try {
       const res = await fetch('/api/map/tenants');
-      const d = await res.json();
+      const d = await safeJson(res);
       if (d.tenants) {
         setTenants(d.tenants);
 
@@ -315,7 +327,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (data.history) setHistory(data.history);
       setShowHistory(true);
     } catch {
@@ -333,7 +345,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, password }),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (res.ok) {
         setUser(data);
         setName(data.name);
@@ -367,7 +379,7 @@ export default function Home() {
       });
       if (res.ok) handleLogin();
       else {
-        const d = await res.json();
+        const d = await safeJson(res);
         setMessage('⚠️ ' + d.error);
       }
     } catch {
@@ -392,7 +404,7 @@ export default function Home() {
         setMessage('✅ Datos actualizados');
         setUser({ ...user, name, email, gender, birthDate, phone });
       } else {
-        const d = await res.json();
+        const d = await safeJson(res);
         setMessage('❌ ' + d.error);
       }
     } catch {
@@ -413,7 +425,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user?.id, code: finalCode }),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (res.ok) {
         alert(data.message);
         handleLogin();
@@ -432,7 +444,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, tenantId }),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (res.ok) setPrizeCode({ code: data.code, tenant: tenantName });
       else alert(data.error);
     } catch {
