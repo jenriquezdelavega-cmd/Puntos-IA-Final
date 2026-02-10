@@ -1,48 +1,153 @@
 'use client';
-import { useEffect } from 'react';
+
+import React, { useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
-const iconUrl = 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png';
-const iconRetinaUrl = 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png';
-const shadowUrl = 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png';
+// Fix de íconos en Next (evita que el marcador salga sin imagen)
+// Usamos URLs públicas para no depender del bundling.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+delete (L.Icon.Default.prototype as any)._getIconUrl;
 
-const DefaultIcon = L.icon({
-  iconUrl, iconRetinaUrl, shadowUrl,
-  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl:
+    'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
-L.Marker.prototype.options.icon = DefaultIcon;
 
-function MapController({ coords }: { coords: [number, number] | null }) {
+type Coords = [number, number];
+
+type Tenant = {
+  id?: string;
+  name?: string;
+  lat?: number | null;
+  lng?: number | null;
+  address?: string | null;
+};
+
+function boundsAround(center: Coords, radiusKm: number) {
+  const [lat, lng] = center;
+  const latRad = (lat * Math.PI) / 180;
+
+  const latDelta = radiusKm / 111; // ~111km por grado de latitud
+  const lngDelta = radiusKm / (111 * Math.max(0.15, Math.cos(latRad)));
+
+  return L.latLngBounds(
+    [lat - latDelta, lng - lngDelta],
+    [lat + latDelta, lng + lngDelta]
+  );
+}
+
+function avgCenter(points: Coords[]): Coords {
+  const sum = points.reduce(
+    (acc, p) => [acc[0] + p[0], acc[1] + p[1]] as Coords,
+    [0, 0]
+  );
+  return [sum[0] / points.length, sum[1] / points.length];
+}
+
+function Fitter({
+  focusCoords,
+  coords,
+  radiusKm,
+}: {
+  focusCoords: Coords | null;
+  coords: Coords[];
+  radiusKm: number;
+}) {
   const map = useMap();
-  useEffect(() => { if (coords) map.flyTo(coords, 16, { duration: 1.5 }); }, [coords, map]);
+
+  useEffect(() => {
+    // 1) Si hay foco explícito (por ejemplo al tocar un negocio), centra en ese punto
+    if (focusCoords) {
+      map.fitBounds(boundsAround(focusCoords, radiusKm), {
+        padding: [24, 24],
+        animate: true,
+      });
+      return;
+    }
+
+    // 2) Si hay negocios, centra y abre el zoom para cubrir ~500km alrededor
+    if (coords.length > 0) {
+      const center = avgCenter(coords);
+
+      // Fit a los negocios + “colchón” de 500km
+      const tenantsBounds = L.latLngBounds(coords.map((c) => L.latLng(c[0], c[1])));
+      const padded = boundsAround(center, radiusKm);
+      tenantsBounds.extend(padded);
+
+      map.fitBounds(tenantsBounds, {
+        padding: [24, 24],
+        animate: true,
+      });
+      return;
+    }
+
+    // 3) Fallback (si todavía no carga data)
+    map.setView([19.4326, -99.1332], 5, { animate: false });
+  }, [map, focusCoords, coords, radiusKm]);
+
   return null;
 }
 
-export default function BusinessMap({ tenants, focusCoords }: { tenants: any[], focusCoords: [number, number] | null }) {
-  const defaultCenter: [number, number] = [19.4326, -99.1332];
+export default function BusinessMap({
+  tenants,
+  focusCoords,
+  radiusKm = 500,
+}: {
+  tenants: Tenant[];
+  focusCoords?: Coords | null;
+  radiusKm?: number;
+}) {
+  const coords = useMemo(() => {
+    return (tenants || [])
+      .filter((t) => typeof t.lat === 'number' && typeof t.lng === 'number')
+      .map((t) => [t.lat as number, t.lng as number] as Coords);
+  }, [tenants]);
+
+  const initialCenter = useMemo<Coords>(() => {
+    if (focusCoords) return focusCoords;
+    if (coords.length > 0) return avgCenter(coords);
+    return [19.4326, -99.1332];
+  }, [focusCoords, coords]);
 
   return (
-    <MapContainer center={defaultCenter} zoom={13} style={{ height: '100%', width: '100%' }}>
-      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
-      <MapController coords={focusCoords} />
-      {tenants.map(t => (
-         t.lat && t.lng ? (
-           <Marker key={t.id} position={[t.lat, t.lng]}>
+    <div className="w-full h-full">
+      <MapContainer
+        center={initialCenter}
+        zoom={6}
+        scrollWheelZoom
+        className="w-full h-full rounded-2xl"
+        style={{ minHeight: 360 }}
+      >
+        <TileLayer
+          attribution="&copy; OpenStreetMap contributors"
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+
+        <Fitter focusCoords={focusCoords ?? null} coords={coords} radiusKm={radiusKm} />
+
+        {(tenants || [])
+          .filter((t) => typeof t.lat === 'number' && typeof t.lng === 'number')
+          .map((t) => (
+            <Marker
+              key={t.id || `${t.name}-${t.lat}-${t.lng}`}
+              position={[t.lat as number, t.lng as number]}
+            >
               <Popup>
-                 <div className="text-center min-w-[150px]">
-                     <strong className="text-base text-gray-900 block mb-1">{t.name}</strong>
-                     <span className="text-xs text-gray-500 block mb-3">{t.address || 'Ubicación'}</span>
-                     
-                     <a href={`https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}`} target="_blank" rel="noopener noreferrer" className="bg-blue-600 text-white text-xs px-4 py-2 rounded-full font-bold block hover:bg-blue-700 no-underline shadow-md">
-                       🚗 Cómo llegar
-                     </a>
-                 </div>
+                <div className="text-sm">
+                  <div className="font-black">{t.name || 'Negocio'}</div>
+                  {t.address ? (
+                    <div className="text-xs opacity-80 mt-1">{t.address}</div>
+                  ) : null}
+                </div>
               </Popup>
-           </Marker>
-         ) : null
-      ))}
-    </MapContainer>
+            </Marker>
+          ))}
+      </MapContainer>
+    </div>
   );
 }

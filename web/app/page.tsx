@@ -290,7 +290,23 @@ export default function Home() {
     try {
       const res = await fetch('/api/map/tenants');
       const d = await res.json();
-      if (d.tenants) setTenants(d.tenants);
+      if (d.tenants) {
+        setTenants(d.tenants);
+
+        // ✅ Centrar el mapa donde realmente hay negocios (y no en CDMX)
+        // Solo fijamos un foco inicial si todavía no hay uno.
+        if (!mapFocus) {
+          const coords = (d.tenants as any[])
+            .filter((t) => typeof t?.lat === 'number' && typeof t?.lng === 'number')
+            .map((t) => [t.lat as number, t.lng as number] as [number, number]);
+
+          if (coords.length) {
+            const avgLat = coords.reduce((acc, c) => acc + c[0], 0) / coords.length;
+            const avgLng = coords.reduce((acc, c) => acc + c[1], 0) / coords.length;
+            setMapFocus([avgLat, avgLng]);
+          }
+        }
+      }
     } catch {}
   };
 
@@ -900,10 +916,31 @@ export default function Home() {
                                   {m.name}
                                 </h3>
                                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                                <span className="text-[11px] font-black text-gray-500 uppercase tracking-widest">Premio</span>
-                                <span className="text-sm font-black text-gray-900 bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-xl">
-                                  {m.prize}
-                                </span>
+                                  <motion.span
+                                    initial={{ scale: 1 }}
+                                    animate={
+                                      canAnim
+                                        ? {
+                                            y: [0, -1, 0],
+                                            scale: [1, 1.03, 1],
+                                          }
+                                        : undefined
+                                    }
+                                    transition={
+                                      canAnim
+                                        ? {
+                                            duration: 2.2,
+                                            repeat: Infinity,
+                                            ease: 'easeInOut',
+                                          }
+                                        : undefined
+                                    }
+                                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 text-white shadow-md border border-white/30"
+                                  >
+                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-90">Premio</span>
+                                    <span className="text-sm font-black leading-none">{m.prize}</span>
+                                    <span className="ml-0.5 text-base leading-none">🎁</span>
+                                  </motion.span>
                                 </div>
                               </div>
                             </div>
@@ -1083,7 +1120,7 @@ export default function Home() {
                 transition={canAnim ? { ...spring } : undefined}
                 className="h-[65vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white"
               >
-                <BusinessMap tenants={tenants} focusCoords={mapFocus} />
+            <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={500} />
               </motion.div>
             )}
 
