@@ -2,7 +2,18 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Scanner } from '@yudiel/react-qr-scanner';
+const QRScanner = dynamic(
+  () => import('@yudiel/react-qr-scanner').then((m) => m.Scanner),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="fixed inset-0 bg-black z-50 flex items-center justify-center text-white font-black">
+        Cargando cámara...
+      </div>
+    ),
+  }
+);
+
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 const [selectedTenant, setSelectedTenant] = useState<any | null>(null);
 const [mapRadiusKm, setMapRadiusKm] = useState(50);
@@ -1204,7 +1215,8 @@ export default function Home() {
           {/* Scanner overlay */}
           {scanning && (
             <div className="fixed inset-0 bg-black z-50 flex flex-col">
-              <Scanner onScan={(r) => r[0] && handleScan(r[0].rawValue)} onError={() => {}} />
+              <QRScanner onScan={(r: any) => r?.[0] && handleScan(r[0].rawValue)} onError={() => {}} />
+
               <motion.button
                 whileTap={canAnim ? { scale: 0.98 } : undefined}
                 onClick={() => setScanning(false)}
