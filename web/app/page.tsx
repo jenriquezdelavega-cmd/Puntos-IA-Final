@@ -1066,24 +1066,23 @@ export default function Home() {
                                 </motion.div>
                               </div>
 
-                              <div className="flex justify-between items-center text-xs font-black uppercase tracking-wide">
-                                <span className="text-gray-400 flex items-center gap-1">
-                                  {isExpanded ? '🔽 Menos info' : '▶️ Ver +'}
-                                </span>
-
-                                <div className="text-right leading-tight">
-                                    <div className="text-[11px] font-extrabold text-gray-800 whitespace-nowrap">
-                                      Contador: {formatRewardPeriod(m.rewardPeriod).counter}
-                                    </div>
-                                    <div className="text-[11px] font-semibold text-gray-500 whitespace-nowrap mt-0.5">
-                                      Vigencia: {formatRewardPeriod(m.rewardPeriod).window}
-                                    </div>
-                                  </div>
-  <span className="relative block text-[10px] font-black text-white/90 leading-none mt-1 whitespace-nowrap drop-shadow">
-    {`Vigencia: ${formatRewardPeriod(m.rewardPeriod).window}`}
+                              <div className="flex items-center justify-between gap-3">
+  <span className="text-xs font-black uppercase tracking-wide text-gray-400 flex items-center gap-1">
+    {isExpanded ? '🔽 Menos info' : '▶️ Ver +'}
   </span>
-</span>
-                              </div>
+
+  <div className="flex items-center gap-2">
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border border-gray-200 bg-white shadow-sm text-[11px]">
+      <span className="font-black text-gray-400">Contador</span>
+      <span className="font-black text-gray-900">{formatRewardPeriod(m.rewardPeriod).counter}</span>
+    </span>
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl border border-gray-200 bg-white shadow-sm text-[11px]">
+      <span className="font-black text-gray-400">Vigencia</span>
+      <span className="font-black text-gray-900">{formatRewardPeriod(m.rewardPeriod).window}</span>
+    </span>
+  </div>
+</div>
+</div>
                             </>
                           ) : (
                             <motion.button
