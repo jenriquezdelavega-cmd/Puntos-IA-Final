@@ -1,153 +1,239 @@
 'use client';
 
-import React, { useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  Circle,
+  useMap,
+} from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix de íconos en Next (evita que el marcador salga sin imagen)
-// Usamos URLs públicas para no depender del bundling.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-
-L.Icon.Default.mergeOptions({
+// Fix icon paths (Leaflet en Next a veces no encuentra los assets)
+const DefaultIcon = L.icon({
+  iconUrl:
+    'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl:
     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl:
     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
 });
 
-type Coords = [number, number];
+L.Marker.prototype.options.icon = DefaultIcon;
 
 type Tenant = {
   id?: string;
-  name?: string;
-  lat?: number | null;
-  lng?: number | null;
-  address?: string | null;
+  name: string;
+  lat: number;
+  lng: number;
+  address?: string;
+  googlePlaceId?: string;
 };
 
-function boundsAround(center: Coords, radiusKm: number) {
-  const [lat, lng] = center;
-  const latRad = (lat * Math.PI) / 180;
-
-  const latDelta = radiusKm / 111; // ~111km por grado de latitud
-  const lngDelta = radiusKm / (111 * Math.max(0.15, Math.cos(latRad)));
-
-  return L.latLngBounds(
-    [lat - latDelta, lng - lngDelta],
-    [lat + latDelta, lng + lngDelta]
-  );
-}
-
-function avgCenter(points: Coords[]): Coords {
-  const sum = points.reduce(
-    (acc, p) => [acc[0] + p[0], acc[1] + p[1]] as Coords,
-    [0, 0]
-  );
-  return [sum[0] / points.length, sum[1] / points.length];
-}
-
-function Fitter({
-  focusCoords,
-  coords,
+function FitToFocus({
+  focus,
   radiusKm,
 }: {
-  focusCoords: Coords | null;
-  coords: Coords[];
+  focus: [number, number] | null;
   radiusKm: number;
 }) {
   const map = useMap();
 
   useEffect(() => {
-    // 1) Si hay foco explícito (por ejemplo al tocar un negocio), centra en ese punto
-    if (focusCoords) {
-      map.fitBounds(boundsAround(focusCoords, radiusKm), {
-        padding: [24, 24],
-        animate: true,
-      });
-      return;
-    }
+    if (!focus) return;
 
-    // 2) Si hay negocios, centra y abre el zoom para cubrir ~500km alrededor
-    if (coords.length > 0) {
-      const center = avgCenter(coords);
-
-      // Fit a los negocios + “colchón” de 500km
-      const tenantsBounds = L.latLngBounds(coords.map((c) => L.latLng(c[0], c[1])));
-      const padded = boundsAround(center, radiusKm);
-      tenantsBounds.extend(padded);
-
-      map.fitBounds(tenantsBounds, {
-        padding: [24, 24],
-        animate: true,
-      });
-      return;
-    }
-
-    // 3) Fallback (si todavía no carga data)
-    map.setView([19.4326, -99.1332], 5, { animate: false });
-  }, [map, focusCoords, coords, radiusKm]);
+    // Ajusta vista para que el círculo de radiusKm quede en pantalla
+    const circle = L.circle(focus as any, { radius: radiusKm * 1000 });
+    map.fitBounds(circle.getBounds(), { padding: [24, 24] });
+  }, [map, focus, radiusKm]);
 
   return null;
+}
+
+function BottomSheet({
+  tenant,
+  onClose,
+}: {
+  tenant: Tenant;
+  onClose: () => void;
+}) {
+  const gmapsUrl = useMemo(() => {
+    // Opción 1 (simple y robusta): coords directas
+    const q = `${tenant.lat},${tenant.lng}`;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+
+    // Si luego quieres “Directions”:
+    // return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}`;
+  }, [tenant.lat, tenant.lng]);
+
+  return (
+    <div className="absolute left-3 right-3 bottom-3 z-[500]">
+      <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden">
+        <div className="px-5 pt-4 pb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-widest text-gray-400">
+              Negocio
+            </p>
+            <h3 className="text-lg font-black text-gray-900 leading-tight truncate">
+              {tenant.name}
+            </h3>
+            {tenant.address ? (
+              <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                {tenant.address}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500 mt-1">
+                Ubicación disponible por coordenadas
+              </p>
+            )}
+          </div>
+
+          <button
+            onClick={onClose}
+            className="h-10 w-10 rounded-2xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200 transition"
+            aria-label="Cerrar"
+            title="Cerrar"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="px-5 pb-5 flex gap-3">
+          <a
+            href={gmapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 bg-black text-white font-black py-3 rounded-2xl text-center shadow-md"
+          >
+            Abrir en Google Maps
+          </a>
+
+          <a
+            href={gmapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 bg-gray-100 text-gray-900 font-black px-4 py-3 rounded-2xl text-center border border-gray-200"
+            title="Abrir"
+          >
+            🧭
+          </a>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function BusinessMap({
   tenants,
   focusCoords,
-  radiusKm = 500,
+  radiusKm = 50,
+  selectedTenant,
+  onSelectTenant,
 }: {
   tenants: Tenant[];
-  focusCoords?: Coords | null;
+  focusCoords: [number, number] | null;
   radiusKm?: number;
+  selectedTenant?: Tenant | null;
+  onSelectTenant?: (t: Tenant) => void;
 }) {
-  const coords = useMemo(() => {
-    return (tenants || [])
-      .filter((t) => typeof t.lat === 'number' && typeof t.lng === 'number')
-      .map((t) => [t.lat as number, t.lng as number] as Coords);
-  }, [tenants]);
+  const mapRef = useRef<L.Map | null>(null);
+  const [localSelected, setLocalSelected] = useState<Tenant | null>(null);
 
-  const initialCenter = useMemo<Coords>(() => {
+  // Usa selectedTenant si viene del padre; si no, usa selección local
+  const active = selectedTenant ?? localSelected;
+
+  const validTenants = useMemo(
+    () =>
+      (tenants || []).filter(
+        (t) => typeof t?.lat === 'number' && typeof t?.lng === 'number'
+      ),
+    [tenants]
+  );
+
+  // Si no hay focusCoords, centra en promedio de negocios (para no caer en CDMX)
+  const computedCenter = useMemo<[number, number]>(() => {
     if (focusCoords) return focusCoords;
-    if (coords.length > 0) return avgCenter(coords);
-    return [19.4326, -99.1332];
-  }, [focusCoords, coords]);
+    if (!validTenants.length) return [19.4326, -99.1332]; // fallback (CDMX) solo si no hay data
+
+    const avgLat =
+      validTenants.reduce((acc, t) => acc + t.lat, 0) / validTenants.length;
+    const avgLng =
+      validTenants.reduce((acc, t) => acc + t.lng, 0) / validTenants.length;
+    return [avgLat, avgLng];
+  }, [focusCoords, validTenants]);
 
   return (
-    <div className="w-full h-full">
+    <div className="relative h-full w-full">
       <MapContainer
-        center={initialCenter}
-        zoom={6}
-        scrollWheelZoom
-        className="w-full h-full rounded-2xl"
-        style={{ minHeight: 360 }}
+        center={computedCenter}
+        zoom={11}
+        scrollWheelZoom={true}
+        className="h-full w-full"
+        whenReady={(e) => {
+          mapRef.current = e.target;
+        }}
       >
         <TileLayer
-          attribution="&copy; OpenStreetMap contributors"
+          attribution=""
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <Fitter focusCoords={focusCoords ?? null} coords={coords} radiusKm={radiusKm} />
+        {/* Mantén el mapa siempre “cerca” del foco con radioKm */}
+        <FitToFocus focus={computedCenter} radiusKm={radiusKm} />
 
-        {(tenants || [])
-          .filter((t) => typeof t.lat === 'number' && typeof t.lng === 'number')
-          .map((t) => (
-            <Marker
-              key={t.id || `${t.name}-${t.lat}-${t.lng}`}
-              position={[t.lat as number, t.lng as number]}
-            >
-              <Popup>
-                <div className="text-sm">
-                  <div className="font-black">{t.name || 'Negocio'}</div>
-                  {t.address ? (
-                    <div className="text-xs opacity-80 mt-1">{t.address}</div>
-                  ) : null}
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+        {/* Círculo visual de 50km (opcional, pero ayuda a ver el rango) */}
+        <Circle
+          center={computedCenter as any}
+          radius={radiusKm * 1000}
+          pathOptions={{ color: '#111', weight: 1, fillOpacity: 0.06 }}
+        />
+
+        {validTenants.map((t, idx) => (
+          <Marker
+            key={t.id ?? `${t.name}-${idx}`}
+            position={[t.lat, t.lng]}
+            eventHandlers={{
+              click: () => {
+                // 1) selecciona
+                setLocalSelected(t);
+                onSelectTenant?.(t);
+
+                // 2) zoom cerca (fit a un círculo 50km centrado en el negocio)
+                if (mapRef.current) {
+                  const circle = L.circle([t.lat, t.lng] as any, {
+                    radius: 50 * 1000,
+                  });
+                  mapRef.current.fitBounds(circle.getBounds(), {
+                    padding: [24, 24],
+                  });
+                }
+              },
+            }}
+          >
+            <Popup>
+              <div className="font-semibold">{t.name}</div>
+              <div className="text-xs opacity-70">
+                Toca “Abrir en Google Maps” abajo
+              </div>
+            </Popup>
+          </Marker>
+        ))}
       </MapContainer>
+
+      {active && (
+        <BottomSheet
+          tenant={active}
+          onClose={() => {
+            setLocalSelected(null);
+            onSelectTenant?.(null as any);
+          }}
+        />
+      )}
     </div>
   );
 }

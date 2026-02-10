@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-
+const [selectedTenant, setSelectedTenant] = useState<any | null>(null);
+const [mapRadiusKm, setMapRadiusKm] = useState(50);
 const BusinessMap = dynamic(() => import('./components/BusinessMap'), {
   ssr: false,
   loading: () => (
@@ -448,8 +449,10 @@ export default function Home() {
 
   const goToBusinessMap = (tName: string) => {
     const target = tenants.find((t) => t.name === tName);
-    if (target && target.lat && target.lng) {
+    if (target && typeof target.lat === 'number' && typeof target.lng === 'number') {
       setMapFocus([target.lat, target.lng]);
+      setSelectedTenant(target);
+      setMapRadiusKm(50);
       setActiveTab('map');
     } else {
       alert('Ubicación no disponible.');
@@ -1099,7 +1102,17 @@ export default function Home() {
                 transition={canAnim ? { ...spring } : undefined}
                 className="h-[65vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white"
               >
-                <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={100} />
+                <BusinessMap
+                  tenants={tenants}
+                  focusCoords={mapFocus}
+                  radiusKm={mapRadiusKm}
+                  selectedTenant={selectedTenant}
+                  onSelectTenant={(t: any) => {
+                    setSelectedTenant(t);
+                    if (t?.lat && t?.lng) setMapFocus([t.lat, t.lng]);
+                    setMapRadiusKm(50);
+                  }}
+                />
               </motion.div>
             )}
 
