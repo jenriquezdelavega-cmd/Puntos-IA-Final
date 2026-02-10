@@ -96,7 +96,7 @@ function Fitter({
 export default function BusinessMap({
   tenants,
   focusCoords,
-  radiusKm = 100,
+  radiusKm = 10,
 }: {
   tenants: Tenant[];
   focusCoords?: Coords | null;
@@ -118,7 +118,7 @@ export default function BusinessMap({
     <div className="w-full h-full">
       <MapContainer
         center={initialCenter}
-        zoom={6}
+        zoom={1}
         scrollWheelZoom
         className="w-full h-full rounded-2xl"
         style={{ minHeight: 360 }}
