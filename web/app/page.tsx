@@ -1058,7 +1058,7 @@ export default function Home() {
                 transition={canAnim ? { ...spring } : undefined}
                 className="h-[52vh] md:h-[58vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white relative"
               >
-                <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={5} />
+                <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={50} />
               </motion.div>
             )}
           </div>

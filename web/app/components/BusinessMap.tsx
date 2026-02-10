@@ -11,6 +11,7 @@ type Tenant = {
   lat: number;
   lng: number;
   address?: string;
+  instagram?: string;
 };
 
 function zoomForRadiusKm(radiusKm: number) {
@@ -137,14 +138,27 @@ export default function BusinessMap({
                   </div>
                 )}
 
-                <a
-                  className="mt-3 inline-flex items-center justify-center w-full px-3 py-2 rounded-xl bg-black text-white font-black text-sm no-underline"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  href={`https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}`}
-                >
-                  Abrir en Google Maps
-                </a>
+                <div className="mt-3 flex gap-2">
+  <a
+    className="inline-flex items-center justify-center flex-1 px-3 py-2 rounded-xl bg-black text-white font-black text-sm no-underline"
+    target="_blank"
+    rel="noopener noreferrer"
+    href={`https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}`}
+  >
+    Google Maps
+  </a>
+
+  {t.instagram ? (
+    <a
+      className="inline-flex items-center justify-center flex-1 px-3 py-2 rounded-xl bg-pink-600 text-white font-black text-sm no-underline"
+      target="_blank"
+      rel="noopener noreferrer"
+      href={`https://instagram.com/${String(t.instagram).replace('@', '')}`}
+    >
+      Instagram
+    </a>
+  ) : null}
+</div>
               </div>
             </Popup>
           </Marker>
@@ -162,14 +176,27 @@ export default function BusinessMap({
                   : `${selected.lat.toFixed(5)}, ${selected.lng.toFixed(5)}`}
               </div>
             </div>
-            <a
-              className="shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-black text-white font-black text-xs no-underline"
-              target="_blank"
-              rel="noopener noreferrer"
-              href={`https://www.google.com/maps/search/?api=1&query=${selected.lat},${selected.lng}`}
-            >
-              Google Maps
-            </a>
+            <div className="shrink-0 flex gap-2">
+  <a
+    className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-black text-white font-black text-xs no-underline"
+    target="_blank"
+    rel="noopener noreferrer"
+    href={`https://www.google.com/maps/search/?api=1&query=${selected.lat},${selected.lng}`}
+  >
+    Google Maps
+  </a>
+
+  {selected.instagram ? (
+    <a
+      className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-pink-600 text-white font-black text-xs no-underline"
+      target="_blank"
+      rel="noopener noreferrer"
+      href={`https://instagram.com/${String(selected.instagram).replace('@', '')}`}
+    >
+      Instagram
+    </a>
+  ) : null}
+</div>
           </div>
         </div>
       )}
