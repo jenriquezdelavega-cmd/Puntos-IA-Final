@@ -892,6 +892,61 @@ export default function Home() {
           <div className="p-6">
             {activeTab === 'checkin' && !scanning && (
               <div className="flex flex-col gap-6">
+            {/* CHECK-IN (arriba) */}
+            <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-black text-gray-900">Hacer Check-In</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Escanea el QR del negocio para registrar tu visita.
+                  </p>
+                </div>
+
+                <motion.button
+                  whileTap={canAnim ? { scale: 0.98 } : undefined}
+                  whileHover={canAnim ? { y: -1 } : undefined}
+                  onClick={() => setScanning(true)}
+                  className="shrink-0 bg-black text-white font-black px-5 py-3 rounded-2xl shadow-md"
+                >
+                  Escanear QR
+                </motion.button>
+              </div>
+
+              {lastScanMsg && (
+                <div className="mt-4 text-sm font-semibold text-gray-700">
+                  {lastScanMsg}
+                </div>
+              )}
+            </div>
+
+            {/* ESCRIBIR MANUAL (arriba) */}
+            <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-base font-black text-gray-900">Escribir manual</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Si no puedes escanear, escribe el código del QR.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                <input
+                  value={codeInput}
+                  onChange={(e) => setCodeInput(e.target.value)}
+                  placeholder="Ej. ABCD-1234-EFGH"
+                  className="w-full sm:flex-1 px-4 py-3 rounded-2xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black/20"
+                />
+                <motion.button
+                  whileTap={canAnim ? { scale: 0.98 } : undefined}
+                  onClick={() => redeemCodeForCheckIn()}
+                  className="bg-black text-white font-black px-6 py-3 rounded-2xl"
+                >
+                  OK
+                </motion.button>
+              </div>
+            </div>
+
                 <div className="space-y-4">
                   {user?.memberships?.map((m: any, idx: number) => {
                     const logo = (m.logoData ?? m.tenant?.logoData ?? '') as string;
@@ -1016,11 +1071,14 @@ export default function Home() {
                                   {isExpanded ? '🔽 Menos info' : '▶️ Ver +'}
                                 </span>
 
-                                <span className="relative overflow-hidden px-3 py-2 rounded-xl shadow-lg border border-white/20 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500">
-  <ShineSweep className="opacity-70" />
-  <span className="relative block text-[10px] font-black text-white leading-none whitespace-nowrap drop-shadow">
-    {`Contador: ${formatRewardPeriod(m.rewardPeriod).counter}`}
-  </span>
+                                <div className="text-right leading-tight">
+                                    <div className="text-[11px] font-extrabold text-gray-800 whitespace-nowrap">
+                                      Contador: {formatRewardPeriod(m.rewardPeriod).counter}
+                                    </div>
+                                    <div className="text-[11px] font-semibold text-gray-500 whitespace-nowrap mt-0.5">
+                                      Vigencia: {formatRewardPeriod(m.rewardPeriod).window}
+                                    </div>
+                                  </div>
   <span className="relative block text-[10px] font-black text-white/90 leading-none mt-1 whitespace-nowrap drop-shadow">
     {`Vigencia: ${formatRewardPeriod(m.rewardPeriod).window}`}
   </span>
@@ -1086,50 +1144,7 @@ export default function Home() {
                   })}
                 </div>
 
-                <motion.button
-                  whileTap={canAnim ? { scale: 0.98 } : undefined}
-                  whileHover={canAnim ? { y: -2 } : undefined}
-                  onClick={() => setScanning(true)}
-                  className="relative w-full bg-gray-950 text-white py-6 rounded-[2.5rem] font-black shadow-2xl flex items-center justify-center gap-3 transition-all text-xl hover:bg-black overflow-hidden"
-                >
-                  <Shine />
-                  <span>📷</span>
-                  Escanear Nuevo QR
-                </motion.button>
-
-                <div className="mt-8 flex justify-center">
-                  <div className="flex bg-white p-2 rounded-full shadow-sm border border-gray-100 w-full max-w-xs">
-                    <input
-                      className="flex-1 p-2 bg-transparent text-gray-900 font-black text-center tracking-[0.2em] uppercase text-sm outline-none placeholder-gray-300"
-                      placeholder="ABCD-EFGH-JKLM"
-                      value={manualCode}
-                      onChange={(e) => {
-                      const raw = e.target.value.toUpperCase();
-                      // deja solo A-Z, 2-9 y guión
-                      const cleaned = raw.replace(/[^A-Z2-9-]/g, '').replace(/-/g, '');
-                      // formatea XXXX-XXXX-XXXX (máximo 12 chars + 2 guiones = 14)
-                      const part1 = cleaned.slice(0, 4);
-                      const part2 = cleaned.slice(4, 8);
-                      const part3 = cleaned.slice(8, 12);
-                      const formatted = [part1, part2, part3].filter(Boolean).join('-').slice(0, 14);
-                      setManualCode(formatted);
-                    }}
-                      maxLength={14}
-                    />
-                    <motion.button
-                      whileTap={canAnim ? { scale: 0.95 } : undefined}
-                      onClick={() => handleScan(manualCode)}
-                      disabled={!manualCode}
-                      className="bg-gray-200 text-gray-700 font-black px-4 rounded-full disabled:opacity-50 hover:bg-gray-300 transition-all"
-                    >
-                      OK
-                    </motion.button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'map' && (
+                {activeTab === 'map' && (
               <motion.div
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
                 animate={canAnim ? { opacity: 1, y: 0 } : false}
