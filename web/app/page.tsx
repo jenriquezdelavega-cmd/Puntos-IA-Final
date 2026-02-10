@@ -113,10 +113,21 @@ async function safeJson(res: Response): Promise<any> {
   }
 }
 
+const slides = [
+  { icon: '🎁', title: 'Tus premios te esperan', text: 'Acumula puntos y cámbialos por recompensas.' },
+  { icon: '📍', title: 'Encuentra negocios', text: 'Explora el mapa y descubre aliados cerca de ti.' },
+  { icon: '📲', title: 'Check‑in rápido', text: 'Escanea un QR o ingresa un código para sumar puntos.' },
+] as const;
+
+const spring = { type: 'spring', stiffness: 350, damping: 30 };
+
+function Onboarding({ canAnim }: { canAnim: boolean }) {
+  const [slide, setSlide] = useState(0);
+
   useEffect(() => {
     const i = setInterval(() => setSlide((p) => (p + 1) % slides.length), 3500);
     return () => clearInterval(i);
-  }, [slides.length]);
+  }, []);
 
   return (
     <div className="flex flex-col items-center w-full">
@@ -773,7 +784,7 @@ export default function Home() {
           {/* Body */}
           <div className="p-6">
             {/* TAB: CHECK-IN */}
-            
+
             {activeTab === 'checkin' && !scanning && (
               <div className="flex flex-col gap-6">
                 {/* CHECK-IN (PuntoIA look) */}
