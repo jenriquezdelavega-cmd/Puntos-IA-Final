@@ -932,10 +932,10 @@ export default function Home() {
 
                                 <span className="bg-purple-50 border border-purple-100 px-3 py-2 rounded-xl shadow-sm">
                                   <span className="block text-[10px] font-black text-purple-700 leading-none whitespace-nowrap">
-                                    {\`Contador: \${formatRewardPeriod(m.rewardPeriod).counter}\`}
+                                    {`Contador: \${formatRewardPeriod(m.rewardPeriod).counter}`}
                                   </span>
                                   <span className="block text-[10px] font-black text-purple-700/80 leading-none mt-1 whitespace-nowrap">
-                                    {\`Vigencia: \${formatRewardPeriod(m.rewardPeriod).window}\`}
+                                    {`Vigencia: \${formatRewardPeriod(m.rewardPeriod).window}`}
                                   </span>
                                 </span>
                               </div>
