@@ -47,25 +47,59 @@ const clsLabel =
 
 const TZ = 'America/Monterrey';
 function formatRewardPeriod(period?: string) {
+  // Devuelve:
+  // - counter: cómo se reinicia el contador (mensual, trimestral, etc.)
+  // - window: hasta cuándo es válido el periodo actual
   const now = new Date();
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit' }).formatToParts(now);
-  const y = parseInt(parts.find(p => p.type === 'year')?.value || '0', 10);
-  const mth = parseInt(parts.find(p => p.type === 'month')?.value || '1', 10);
-  const monthName = new Intl.DateTimeFormat('es-MX', { timeZone: TZ, month: 'long' }).format(now);
-  const capMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
-  if (!period || period === 'OPEN') return { counter: 'Sin vigencia', window: 'Abierto' };
-  if (period === 'MONTHLY') return { counter: 'Mensual', window: `${capMonth} ${y}` };
-  if (period === 'QUARTERLY') {
-    const q = Math.floor((mth - 1) / 3) + 1;
-    return { counter: 'Trimestral', window: `Q${q} ${y}` };
+  // Tomamos año/mes desde Monterrey para que el "fin de mes" sea consistente
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+
+  const y = parseInt(parts.find(p => p.type === 'year')?.value || String(now.getFullYear()), 10);
+  const mStr = parts.find(p => p.type === 'month')?.value || String(now.getMonth() + 1).padStart(2, '0');
+  const month = parseInt(mStr, 10); // 1-12
+
+  const fmtEnd = (d: Date) =>
+    new Intl.DateTimeFormat('es-MX', {
+      timeZone: TZ,
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(d);
+
+  const endOfMonth = (year: number, month1to12: number) =>
+    // 12:00 UTC para evitar problemas de cambio de día por zona horaria
+    new Date(Date.UTC(year, month1to12, 0, 12));
+
+  const p = (period || 'OPEN').toUpperCase();
+  let counter = 'Sin vigencia';
+  let window = 'Sin vigencia';
+
+  if (p === 'MONTHLY') {
+    counter = 'Mensual';
+    window = `Hasta ${fmtEnd(endOfMonth(y, month))}`;
+  } else if (p === 'QUARTERLY') {
+    counter = 'Trimestral';
+    const q = Math.floor((month - 1) / 3) + 1;
+    const endMonth = q * 3; // 3,6,9,12
+    window = `Hasta ${fmtEnd(endOfMonth(y, endMonth))}`;
+  } else if (p === 'SEMESTER') {
+    counter = 'Semestral';
+    const endMonth = month <= 6 ? 6 : 12;
+    window = `Hasta ${fmtEnd(endOfMonth(y, endMonth))}`;
+  } else if (p === 'ANNUAL') {
+    counter = 'Anual';
+    window = `Hasta ${fmtEnd(endOfMonth(y, 12))}`;
   }
-  if (period === 'SEMESTER') {
-    const sem = mth <= 6 ? 1 : 2;
-    return { counter: 'Semestral', window: `S${sem} ${y}` };
-  }
-  return { counter: 'Anual', window: `${y}` };
+
+  return { counter, window };
 }
+
 
 function Shine() {
   return (
@@ -932,10 +966,10 @@ export default function Home() {
 
                                 <span className="bg-purple-50 border border-purple-100 px-3 py-2 rounded-xl shadow-sm">
                                   <span className="block text-[10px] font-black text-purple-700 leading-none whitespace-nowrap">
-                                    {`Contador: \${formatRewardPeriod(m.rewardPeriod).counter}`}
+                                    {`Contador: ${formatRewardPeriod(m.rewardPeriod).counter}`}
                                   </span>
                                   <span className="block text-[10px] font-black text-purple-700/80 leading-none mt-1 whitespace-nowrap">
-                                    {`Vigencia: \${formatRewardPeriod(m.rewardPeriod).window}`}
+                                    {`Vigencia: ${formatRewardPeriod(m.rewardPeriod).window}`}
                                   </span>
                                 </span>
                               </div>
