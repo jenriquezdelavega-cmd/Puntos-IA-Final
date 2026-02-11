@@ -11,7 +11,27 @@ type Tenant = {
   lat: number;
   lng: number;
   address?: string;
+  instagram?: string | null;
 };
+
+function instagramUrl(raw?: string | null) {
+  if (!raw) return null;
+  const v = raw.trim();
+  if (!v) return null;
+
+  // Already a URL (or protocol-relative)
+  if (/^https?:\/\//i.test(v)) return v;
+  if (v.startsWith('//')) return `https:${v}`;
+
+  // "instagram.com/..." without protocol
+  if (/^instagram\.com\//i.test(v)) return `https://${v}`;
+  if (/^www\.instagram\.com\//i.test(v)) return `https://${v}`;
+
+  // Treat as handle
+  const handle = v.replace(/^@/, '');
+  if (!handle) return null;
+  return `https://instagram.com/${handle}`;
+}
 
 function zoomForRadiusKm(radiusKm: number) {
   if (radiusKm <= 10) return 13;
@@ -119,36 +139,52 @@ export default function BusinessMap({
 
         <Circle center={center} radius={localRadiusKm * 1000} pathOptions={{ opacity: 0.25, fillOpacity: 0.08 }} />
 
-        {valid.map((t) => (
-          <Marker
-            key={t.id || `${t.name}-${t.lat}-${t.lng}`}
-            position={[t.lat, t.lng]}
-            eventHandlers={{ click: () => onPick(t) }}
-          >
-            <Popup>
-              <div className="min-w-[220px]">
-                <div className="font-black text-gray-900">{t.name}</div>
+        {valid.map((t) => {
+          const ig = instagramUrl(t.instagram);
+          return (
+            <Marker
+              key={t.id || `${t.name}-${t.lat}-${t.lng}`}
+              position={[t.lat, t.lng]}
+              eventHandlers={{ click: () => onPick(t) }}
+            >
+              <Popup>
+                <div className="min-w-[220px]">
+                  <div className="font-black text-gray-900">{t.name}</div>
 
-                {(t.address || '').trim() ? (
-                  <div className="text-xs text-gray-600 mt-1">{t.address}</div>
-                ) : (
-                  <div className="text-xs text-gray-500 mt-1">
-                    {t.lat.toFixed(5)}, {t.lng.toFixed(5)}
+                  {(t.address || '').trim() ? (
+                    <div className="text-xs text-gray-600 mt-1">{t.address}</div>
+                  ) : (
+                    <div className="text-xs text-gray-500 mt-1">
+                      {t.lat.toFixed(5)}, {t.lng.toFixed(5)}
+                    </div>
+                  )}
+
+                  <div className="mt-3 grid grid-cols-1 gap-2">
+                    <a
+                      className="inline-flex items-center justify-center w-full px-3 py-2 rounded-xl bg-black text-white font-black text-sm no-underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      href={`https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}`}
+                    >
+                      Abrir en Google Maps
+                    </a>
+
+                    {ig && (
+                      <a
+                        className="inline-flex items-center justify-center w-full px-3 py-2 rounded-xl border border-gray-300 bg-white text-gray-900 font-black text-sm no-underline"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        href={ig}
+                      >
+                        Instagram
+                      </a>
+                    )}
                   </div>
-                )}
-
-                <a
-                  className="mt-3 inline-flex items-center justify-center w-full px-3 py-2 rounded-xl bg-black text-white font-black text-sm no-underline"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  href={`https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}`}
-                >
-                  Abrir en Google Maps
-                </a>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
       </MapContainer>
 
       {selected && (
@@ -162,14 +198,28 @@ export default function BusinessMap({
                   : `${selected.lat.toFixed(5)}, ${selected.lng.toFixed(5)}`}
               </div>
             </div>
-            <a
-              className="shrink-0 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-black text-white font-black text-xs no-underline"
-              target="_blank"
-              rel="noopener noreferrer"
-              href={`https://www.google.com/maps/search/?api=1&query=${selected.lat},${selected.lng}`}
-            >
-              Google Maps
-            </a>
+
+            <div className="shrink-0 flex items-center gap-2">
+              {instagramUrl(selected.instagram) && (
+                <a
+                  className="inline-flex items-center justify-center px-3 py-2 rounded-xl border border-gray-300 bg-white text-gray-900 font-black text-xs no-underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  href={instagramUrl(selected.instagram)!}
+                >
+                  Instagram
+                </a>
+              )}
+
+              <a
+                className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-black text-white font-black text-xs no-underline"
+                target="_blank"
+                rel="noopener noreferrer"
+                href={`https://www.google.com/maps/search/?api=1&query=${selected.lat},${selected.lng}`}
+              >
+                Google Maps
+              </a>
+            </div>
           </div>
         </div>
       )}
