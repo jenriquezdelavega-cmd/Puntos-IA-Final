@@ -1,45 +1,54 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+
 const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { tenantId, code } = body;
+    const tenantId = String(body?.tenantId || '').trim();
+    const code = String(body?.code || '').trim();
 
-    const redemption = await prisma.redemption.findFirst({
-      where: { tenantId, code, isUsed: false },
-      include: { user: true }
-    });
-
-    if (!redemption) return NextResponse.json({ error: 'Código inválido' }, { status: 404 });
-
-    // 🛠️ CORRECCIÓN AQUÍ TAMBIÉN
-    const membership = await prisma.membership.findUnique({
-      where: {
-        tenantId_userId: { // 👈 Corregido
-          tenantId: tenantId,
-          userId: redemption.userId
-        }
-      }
-    });
-
-    if (!membership || membership.totalVisits * 10 < 100) {
-      return NextResponse.json({ error: 'Puntos insuficientes' }, { status: 400 });
+    if (!tenantId || !code) {
+      return NextResponse.json(
+        { error: 'tenantId y code son requeridos' },
+        { status: 400 }
+      );
     }
 
-    await prisma.$transaction([
-      prisma.membership.update({
-        where: { id: membership.id },
-        data: { totalVisits: { decrement: 10 } } 
-      }),
-      prisma.redemption.update({
-        where: { id: redemption.id },
-        data: { isUsed: true }
-      })
-    ]);
+    // VALIDAR premio YA GANADO (NO recalcula puntos/visitas)
+    const redemption = await prisma.redemption.findFirst({
+      where: { tenantId, code, isUsed: false },
+      include: { user: true },
+    });
 
-    return NextResponse.json({ success: true, user: redemption.user.name });
+    if (!redemption) {
+      return NextResponse.json(
+        { error: 'Código inválido o ya fue canjeado' },
+        { status: 404 }
+      );
+    }
 
-  } catch (error: any) { return NextResponse.json({ error: error.message }, { status: 500 }); }
+    await prisma.redemption.update({
+      where: { id: redemption.id },
+      data: { isUsed: true },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      user: redemption.user?.name || redemption.user?.phone || 'Usuario',
+      redemption: {
+        id: redemption.id,
+        code: redemption.code,
+        tenantId: redemption.tenantId,
+        isUsed: true,
+        usedAt: new Date().toISOString(),
+      },
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error?.message || 'Error inesperado' },
+      { status: 500 }
+    );
+  }
 }
