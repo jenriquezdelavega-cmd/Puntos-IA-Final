@@ -32,6 +32,18 @@ const [msg, setMsg] = useState('');
 const [team, setTeam] = useState<any[]>([]);
 const [newStaff, setNewStaff] = useState({ name: '', username: '', password: '', role: 'STAFF' });
 
+const trendData = reportData?.chartData ?? [];
+const genderData = reportData?.genderData ?? [];
+const ageData = reportData?.ageData ?? [];
+const totalClients = reportData?.csvData?.length || 0;
+const totalCheckins = trendData.reduce((sum: number, item: any) => sum + Number(item.count || 0), 0);
+const peakDay = trendData.reduce((max: any, item: any) => {
+  return Number(item.count || 0) > Number(max?.count || 0) ? item : max;
+}, null);
+const trendMax = Math.max(...trendData.map((d: any) => Number(d.count || 0)), 1);
+const genderMax = Math.max(...genderData.map((d: any) => Number(d.value || 0)), 1);
+const ageMax = Math.max(...ageData.map((d: any) => Number(d.value || 0)), 1);
+
 const handleLogin = async (e: React.FormEvent) => {
 e.preventDefault();
 try {
@@ -207,12 +219,74 @@ return (
 <div className="flex-1 p-6 md:p-8 overflow-y-auto pb-32 md:pb-0">
 {tab === 'dashboard' && userRole === 'ADMIN' && (
 <div className="space-y-8 animate-fadeIn">
-<h2 className="text-3xl font-bold text-gray-800">Resumen</h2>
-<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-<div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100"><p className="text-gray-400 text-xs font-bold uppercase">Clientes</p><p className="text-4xl font-black text-gray-900 mt-2">{reportData?.csvData?.length || 0}</p></div>
-<div className="bg-gradient-to-br from-orange-400 to-pink-500 p-6 rounded-3xl shadow-lg text-white cursor-pointer" onClick={downloadCSV}><p className="font-bold uppercase text-xs opacity-80">Base de Datos</p><p className="text-2xl font-black mt-2"> Excel</p></div>
+<div className="flex items-center justify-between gap-4 flex-wrap">
+  <div>
+    <h2 className="text-3xl font-bold text-gray-800">Dashboard</h2>
+    <p className="text-sm text-gray-500 font-medium mt-1">Tendencia de check-ins, género y edades de tus clientes.</p>
+  </div>
+  <button className="bg-gradient-to-br from-orange-400 to-pink-500 px-5 py-3 rounded-2xl shadow-lg text-white font-black text-sm" onClick={downloadCSV}>Exportar base (CSV)</button>
 </div>
-<div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100"><h3 className="text-lg font-bold text-gray-800 mb-6">Tendencia</h3><div className="h-40 flex items-end justify-between gap-2">{reportData?.chartData?.map((d:any,i:number)=><div key={i} className="flex-1 bg-indigo-500 rounded-t-lg" style={{height:`${Math.min(d.count*20,150)}px`}}></div>)}</div></div>
+
+<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100"><p className="text-gray-400 text-xs font-bold uppercase">Clientes registrados</p><p className="text-4xl font-black text-gray-900 mt-2">{totalClients}</p></div>
+<div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100"><p className="text-gray-400 text-xs font-bold uppercase">Check-ins acumulados</p><p className="text-4xl font-black text-gray-900 mt-2">{totalCheckins}</p></div>
+<div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100"><p className="text-gray-400 text-xs font-bold uppercase">Día más fuerte</p><p className="text-xl font-black text-gray-900 mt-2">{peakDay ? `${peakDay.date} · ${peakDay.count}` : 'Sin datos'}</p></div>
+</div>
+
+<div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+  <h3 className="text-lg font-bold text-gray-800 mb-1">Tendencia de check-ins</h3>
+  <p className="text-xs text-gray-500 font-medium mb-5">Actividad diaria de tus clientes.</p>
+  <div className="h-44 flex items-end justify-between gap-2">
+    {trendData.length > 0 ? trendData.map((d:any,i:number)=>(
+      <div key={i} className="flex-1 flex flex-col items-center gap-2 min-w-0">
+        <div className="w-full bg-gradient-to-t from-orange-500 to-pink-500 rounded-t-lg" style={{height:`${Math.max((Number(d.count || 0) / trendMax) * 170, 8)}px`}}></div>
+        <span className="text-[10px] font-bold text-gray-400 truncate w-full text-center">{String(d.date).slice(5)}</span>
+      </div>
+    )) : <p className="text-sm text-gray-400">Aún no hay check-ins para mostrar.</p>}
+  </div>
+</div>
+
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+    <h3 className="text-lg font-bold text-gray-800 mb-1">Distribución por género</h3>
+    <p className="text-xs text-gray-500 font-medium mb-5">Clientes por segmento.</p>
+    <div className="space-y-4">
+      {genderData.length > 0 ? genderData.map((item:any) => {
+        const width = Math.max((Number(item.value || 0) / genderMax) * 100, item.value ? 8 : 0);
+        return (
+          <div key={item.label}>
+            <div className="flex justify-between text-xs font-bold text-gray-600 mb-1">
+              <span>{item.label}</span>
+              <span>{item.value}</span>
+            </div>
+            <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
+              <div className="h-full rounded-full" style={{ width: `${width}%`, backgroundColor: item.color || '#fb7185' }}></div>
+            </div>
+          </div>
+        );
+      }) : <p className="text-sm text-gray-400">Sin datos de género.</p>}
+    </div>
+  </div>
+
+  <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+    <h3 className="text-lg font-bold text-gray-800 mb-1">Distribución por edades</h3>
+    <p className="text-xs text-gray-500 font-medium mb-5">Rangos de edad de tus clientes.</p>
+    <div className="space-y-3">
+      {ageData.length > 0 ? ageData.map((item:any, idx:number) => {
+        const width = Math.max((Number(item.value || 0) / ageMax) * 100, item.value ? 8 : 0);
+        return (
+          <div key={item.label} className="flex items-center gap-3">
+            <span className="w-14 text-[11px] font-bold text-gray-500">{item.label}</span>
+            <div className="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500" style={{ width: `${width}%`, opacity: 0.6 + (idx % 4) * 0.1 }}></div>
+            </div>
+            <span className="w-6 text-right text-xs font-bold text-gray-700">{item.value}</span>
+          </div>
+        );
+      }) : <p className="text-sm text-gray-400">Sin datos de edades.</p>}
+    </div>
+  </div>
+</div>
 </div>
 )}
 
