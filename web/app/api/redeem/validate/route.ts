@@ -11,14 +11,13 @@ export async function POST(request: Request) {
     const code = String(body?.code || '').trim();
 
     if (!tenantId || !code) {
-      logApiEvent('/api/redeem/validate', 'validation_error', { hasTenantId: Boolean(tenantId), hasCode: Boolean(code) });
-      return NextResponse.json(
-        { error: 'tenantId y code son requeridos' },
-        { status: 400 }
-      );
+      logApiEvent('/api/redeem/validate', 'validation_error', {
+        hasTenantId: Boolean(tenantId),
+        hasCode: Boolean(code),
+      });
+      return NextResponse.json({ error: 'tenantId y code son requeridos' }, { status: 400 });
     }
 
-    // VALIDAR premio YA GANADO (NO recalcula puntos/visitas)
     const redemption = await prisma.redemption.findFirst({
       where: { tenantId, code, isUsed: false },
       include: { user: true },
@@ -26,10 +25,7 @@ export async function POST(request: Request) {
 
     if (!redemption) {
       logApiEvent('/api/redeem/validate', 'invalid_or_used_code', { tenantId, code });
-      return NextResponse.json(
-        { error: 'Código inválido o ya fue canjeado' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Código inválido o ya fue canjeado' }, { status: 404 });
     }
 
     await prisma.redemption.update({
@@ -37,7 +33,11 @@ export async function POST(request: Request) {
       data: { isUsed: true },
     });
 
-    logApiEvent('/api/redeem/validate', 'redemption_validated', { tenantId, code, redemptionId: redemption.id });
+    logApiEvent('/api/redeem/validate', 'redemption_validated', {
+      tenantId,
+      code,
+      redemptionId: redemption.id,
+    });
 
     return NextResponse.json({
       ok: true,
