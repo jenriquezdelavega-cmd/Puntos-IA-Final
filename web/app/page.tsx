@@ -845,7 +845,8 @@ export default function Home() {
             {/* TAB: CHECK-IN */}
             {activeTab === 'checkin' && !scanning && (
               <div className="flex flex-col gap-6">
-                <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-6 shadow-sm">
+                <div className="bg-white border border-gray-100 rounded-3xl p-5 md:p-6 shadow-md relative overflow-hidden">
+                  <span className="pointer-events-none absolute -top-20 -right-20 h-40 w-40 rounded-full bg-pink-100/50 blur-3xl" />
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <h2 className="text-lg font-black text-gray-900">Hacer Check-In</h2>
@@ -856,7 +857,7 @@ export default function Home() {
                       whileTap={canAnim ? { scale: 0.98 } : undefined}
                       whileHover={canAnim ? { y: -1 } : undefined}
                       onClick={() => setScanning(true)}
-                      className="shrink-0 bg-black text-white font-black px-5 py-3 rounded-2xl shadow-md"
+                      className="shrink-0 bg-gradient-to-r from-gray-950 to-gray-800 text-white font-black px-5 py-3 rounded-2xl shadow-md"
                     >
                       Escanear QR
                     </motion.button>
@@ -874,7 +875,7 @@ export default function Home() {
                       value={manualCode}
                       onChange={(e) => setManualCode(e.target.value)}
                       placeholder="Ej. ABCD-1234-EFGH"
-                      className="w-full sm:flex-1 px-4 py-3 rounded-2xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black/20"
+                      className="w-full sm:flex-1 px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-pink-200"
                     />
                     <motion.button
                       whileTap={canAnim ? { scale: 0.98 } : undefined}
@@ -882,7 +883,7 @@ export default function Home() {
                         if (!manualCode.trim()) return;
                         handleScan(manualCode.trim());
                       }}
-                      className="bg-black text-white font-black px-6 py-3 rounded-2xl"
+                      className="bg-gradient-to-r from-gray-950 to-gray-800 text-white font-black px-6 py-3 rounded-2xl shadow-sm"
                     >
                       OK
                     </motion.button>
@@ -1053,7 +1054,7 @@ export default function Home() {
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
                 animate={canAnim ? { opacity: 1, y: 0 } : false}
                 transition={canAnim ? { ...spring } : undefined}
-                className="h-[52vh] md:h-[58vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white relative"
+                className="h-[52vh] md:h-[58vh] w-full rounded-3xl overflow-hidden shadow-xl border border-gray-100 relative"
               >
                 <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={50} />
               </motion.div>
@@ -1081,7 +1082,7 @@ export default function Home() {
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
                 animate={canAnim ? { opacity: 1, y: 0 } : false}
                 transition={canAnim ? { ...spring } : undefined}
-                className="bg-white p-8 rounded-[2rem] shadow-lg border border-gray-100 relative overflow-hidden"
+                className="bg-white p-6 md:p-7 rounded-3xl shadow-md border border-gray-100 relative overflow-hidden"
               >
                 <span className="pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full bg-pink-200/35 blur-3xl" />
                 <span className="pointer-events-none absolute -bottom-24 -left-24 h-48 w-48 rounded-full bg-orange-200/35 blur-3xl" />
@@ -1137,7 +1138,7 @@ export default function Home() {
                 <motion.button
                   whileTap={canAnim ? { scale: 0.98 } : undefined}
                   onClick={loadHistory}
-                  className="w-full bg-yellow-400 text-yellow-950 p-5 rounded-2xl font-black mt-8 shadow-xl hover:bg-yellow-300 transition-all text-lg flex items-center justify-center gap-2"
+                  className="w-full bg-yellow-400 text-yellow-950 p-4 rounded-2xl font-black mt-6 shadow-md hover:bg-yellow-300 transition-all text-base flex items-center justify-center gap-2"
                 >
                   <span>📜</span> Ver Historial de Premios
                 </motion.button>
@@ -1145,7 +1146,7 @@ export default function Home() {
                 <motion.button
                   whileTap={canAnim ? { scale: 0.98 } : undefined}
                   onClick={handleUpdate}
-                  className="relative w-full bg-gray-950 text-white p-5 rounded-2xl font-black mt-4 shadow-2xl transition-all text-lg hover:bg-black overflow-hidden"
+                  className="relative w-full bg-gradient-to-r from-gray-950 to-gray-800 text-white p-4 rounded-2xl font-black mt-3 shadow-lg transition-all text-base hover:from-black hover:to-gray-900 overflow-hidden"
                 >
                   <Shine />
                   Guardar Cambios 💾
