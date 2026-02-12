@@ -725,7 +725,7 @@ export default function Home() {
                     ✕
                   </button>
 
-                  <h2 className="text-2xl font-black text-gray-900 mb-6 text-center">🏆 Mis Victorias</h2>
+                  <h2 className="text-2xl font-black text-gray-900 mb-6 text-center">✨ Mis premios</h2>
 
                   <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                     {history.length > 0 ? (
@@ -737,7 +737,7 @@ export default function Home() {
                           transition={canAnim ? { ...spring, delay: i * 0.03 } : undefined}
                           className="bg-yellow-50 p-4 rounded-2xl border border-yellow-100 flex items-center gap-4"
                         >
-                          <div className="bg-yellow-200 text-yellow-700 h-12 w-12 rounded-xl flex items-center justify-center text-2xl">🎁</div>
+                          <div className="bg-yellow-100 text-yellow-700 h-12 w-12 rounded-xl flex items-center justify-center text-2xl">✨</div>
                           <div>
                             <h3 className="font-black text-gray-800">{h.prize}</h3>
                             <p className="text-xs text-gray-500 font-semibold">
@@ -823,10 +823,10 @@ export default function Home() {
               <motion.button
                 whileTap={canAnim ? { scale: 0.95 } : undefined}
                 onClick={() => setShowTutorial(true)}
-                className="h-12 w-12 bg-blue-50 text-blue-600 rounded-full font-black border border-blue-100 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                className="h-12 w-12 bg-gradient-to-r from-orange-500 to-pink-600 text-white rounded-full font-black border border-white/30 flex items-center justify-center hover:brightness-110 transition-all shadow-md"
                 title="Ayuda"
               >
-                ?
+                ✨
               </motion.button>
 
               <motion.button
@@ -940,7 +940,7 @@ export default function Home() {
                                 >
                                   <span className="text-[10px] font-black uppercase tracking-widest opacity-90">Premio</span>
                                   <span className="text-sm font-black leading-none">{m.prize}</span>
-                                  <span className="ml-0.5 text-base leading-none">🎁</span>
+                                  <span className="ml-0.5 text-base leading-none">✨</span>
                                 </motion.span>
                               </div>
                             </div>
@@ -976,7 +976,7 @@ export default function Home() {
 
                             <div className="flex justify-between items-center">
                               <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest">
-                                {isExpanded ? '🔽 Menos info' : '▶️ Ver +'}
+                                {isExpanded ? '▾ Menos info' : '▸ Ver más'}
                               </span>
 
                               <div className="text-right leading-tight">
@@ -1000,7 +1000,7 @@ export default function Home() {
                             className="relative w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white font-black py-5 rounded-2xl shadow-2xl tracking-wide text-lg overflow-hidden border-4 border-white/20"
                           >
                             <Shine />
-                            🎁 CANJEAR PREMIO
+                            CANJEAR PREMIO ✨
                             <span className="block text-[11px] font-black text-white/80 mt-1">Listo para canjear</span>
                           </motion.button>
                         )}
@@ -1019,7 +1019,7 @@ export default function Home() {
                             }}
                             className="bg-white border-2 border-blue-50 text-blue-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-blue-50 transition-colors shadow-sm"
                           >
-                            <span className="text-2xl mb-1">📍</span>
+                            <span className="text-2xl mb-1">🧭</span>
                             Ver Mapa
                           </motion.button>
 
@@ -1031,12 +1031,12 @@ export default function Home() {
                               onClick={(e) => e.stopPropagation()}
                               className="bg-white border-2 border-pink-50 text-pink-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-pink-50 transition-colors no-underline shadow-sm"
                             >
-                              <span className="text-2xl mb-1">📸</span>
+                              <span className="text-2xl mb-1">📲</span>
                               Instagram
                             </a>
                           ) : (
                             <div className="bg-gray-50 border-2 border-gray-100 text-gray-300 py-4 rounded-2xl font-black text-xs flex flex-col items-center opacity-70">
-                              <span className="text-2xl mb-1">📸</span>
+                              <span className="text-2xl mb-1">◎</span>
                               No IG
                             </div>
                           )}
@@ -1056,7 +1056,8 @@ export default function Home() {
                 transition={canAnim ? { ...spring } : undefined}
                 className="h-[52vh] md:h-[58vh] w-full rounded-3xl overflow-hidden shadow-xl border border-gray-100 relative"
               >
-                <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={50} />
+<div className="absolute top-3 left-3 z-10 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-pink-600 shadow">Mapa de aliados Punto IA</div>
+                                <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={50} />
               </motion.div>
             )}
           </div>
@@ -1089,11 +1090,11 @@ export default function Home() {
 
                 <div className="flex items-center gap-5 mb-10 relative">
                   <div className="h-20 w-20 bg-gradient-to-br from-orange-100 to-pink-100 rounded-[1.5rem] flex items-center justify-center text-4xl shadow-inner text-pink-600">
-                    👤
+                    PI
                   </div>
                   <div>
                     <h2 className="text-2xl font-black text-gray-900">Mi Perfil</h2>
-                    <p className="text-sm text-gray-400 font-semibold">Gestiona tu identidad</p>
+                    <p className="text-sm text-pink-500 font-bold">Tu identidad Punto IA</p>
                   </div>
                 </div>
 
@@ -1140,7 +1141,7 @@ export default function Home() {
                   onClick={loadHistory}
                   className="w-full bg-yellow-400 text-yellow-950 p-4 rounded-2xl font-black mt-6 shadow-md hover:bg-yellow-300 transition-all text-base flex items-center justify-center gap-2"
                 >
-                  <span>📜</span> Ver Historial de Premios
+                  <span>🗂️</span> Ver Historial de Premios
                 </motion.button>
 
                 <motion.button
@@ -1149,7 +1150,7 @@ export default function Home() {
                   className="relative w-full bg-gradient-to-r from-gray-950 to-gray-800 text-white p-4 rounded-2xl font-black mt-3 shadow-lg transition-all text-base hover:from-black hover:to-gray-900 overflow-hidden"
                 >
                   <Shine />
-                  Guardar Cambios 💾
+                  Guardar Cambios ✨
                 </motion.button>
 
                 {message && (
@@ -1164,10 +1165,10 @@ export default function Home() {
           {/* Bottom Tabs */}
           <div className="fixed bottom-6 left-6 right-6 bg-white/80 backdrop-blur-xl border border-white/40 p-2 rounded-[2.5rem] shadow-2xl flex justify-between items-center z-40 ring-1 ring-black/5">
             {[
-              { key: 'checkin', icon: '✅', label: 'Check-In' },
-              { key: 'points', icon: '🔥', label: 'Puntos' },
-              { key: 'map', icon: '🗺️', label: 'Mapa' },
-              { key: 'profile', icon: '👤', label: 'Perfil' },
+              { key: 'checkin', icon: '⚡', label: 'Check-In' },
+              { key: 'points', icon: '🎯', label: 'Puntos' },
+              { key: 'map', icon: '🧭', label: 'Mapa' },
+              { key: 'profile', icon: '✨', label: 'Perfil' },
             ].map((t) => {
               const active = activeTab === (t.key as any);
               return (
