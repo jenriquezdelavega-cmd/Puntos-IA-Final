@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
@@ -541,6 +542,14 @@ export default function Home() {
               </p>
               <Onboarding />
             </div>
+
+
+            <Link
+              href="/aliados"
+              className="mt-8 inline-flex items-center justify-center rounded-full border border-white/50 bg-white/15 px-5 py-3 text-sm font-black tracking-wide text-white shadow-lg backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/25"
+            >
+              ¿Quieres que tu negocio sea aliado de Punto IA? <span className="ml-2 underline">Conoce más</span>
+            </Link>
           </div>
         </motion.div>
       )}
