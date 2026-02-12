@@ -909,15 +909,15 @@ export default function Home() {
                       transition={canAnim ? spring : undefined}
                       onClick={() => toggleCard(m.tenantId)}
                       whileTap={canAnim ? { scale: 0.99 } : undefined}
-                      className={`bg-white p-6 rounded-[2rem] relative overflow-hidden cursor-pointer border border-gray-100 ${
-                        isExpanded ? 'shadow-2xl ring-4 ring-pink-50' : 'shadow-lg hover:shadow-xl'
+                      className={`bg-white p-5 md:p-6 rounded-3xl relative overflow-hidden cursor-pointer border border-gray-100 ${
+                        isExpanded ? 'shadow-xl ring-2 ring-pink-100' : 'shadow-md hover:shadow-lg'
                       }`}
                     >
                       <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-100 via-pink-100 to-purple-100 rounded-bl-full opacity-70" />
                       <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-orange-100/50 blur-3xl rounded-full" />
 
                       <div className="relative z-10">
-                        <div className="flex justify-between items-start mb-6">
+                        <div className="flex justify-between items-start gap-3 mb-4">
                           <div className="flex items-center gap-4">
                             <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-gray-950 to-gray-700 text-white flex items-center justify-center font-black text-2xl shadow-lg overflow-hidden">
                               {logo ? (
@@ -929,7 +929,7 @@ export default function Home() {
                             </div>
 
                             <div>
-                              <h3 className="font-black text-gray-900 text-xl tracking-tight leading-none">{m.name}</h3>
+                              <h3 className="font-black text-gray-900 text-lg md:text-xl tracking-tight leading-tight">{m.name}</h3>
                               <div className="mt-2 flex flex-wrap items-center gap-2">
                                 <motion.span
                                   initial={{ scale: 1 }}
@@ -946,7 +946,7 @@ export default function Home() {
                           </div>
 
                           <div className="text-right">
-                            <span className="block text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-600">
+                            <span className="block text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-600">
                               {visits}
                             </span>
                             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">VISITAS</span>
@@ -955,13 +955,22 @@ export default function Home() {
 
                         {!isWinner ? (
                           <>
-                            <div className="relative w-full h-5 bg-gray-100 rounded-full overflow-hidden mb-3 shadow-inner">
-                              <motion.div
-                                className="h-full rounded-full bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600"
-                                initial={canAnim ? { width: 0 } : false}
-                                animate={canAnim ? { width: `${progress}%` } : false}
-                                transition={canAnim ? { duration: 0.9, ease: 'easeOut' } : undefined}
-                              />
+                            <div className="mb-3 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2">
+                              <div className="flex items-center justify-between text-[11px] font-bold text-gray-600">
+                                <span>Meta: <span className="text-gray-900">{requiredVisits} visitas</span></span>
+                                <span>Llevas: <span className="text-gray-900">{visits}</span></span>
+                              </div>
+                              <div className="mt-2 relative w-full h-3 bg-white rounded-full overflow-hidden border border-gray-200">
+                                <motion.div
+                                  className="h-full rounded-full bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600"
+                                  initial={canAnim ? { width: 0 } : false}
+                                  animate={canAnim ? { width: `${progress}%` } : false}
+                                  transition={canAnim ? { duration: 0.9, ease: 'easeOut' } : undefined}
+                                />
+                              </div>
+                              <div className="mt-1 text-[11px] font-semibold text-gray-500">
+                                Te faltan <span className="text-gray-900">{Math.max(requiredVisits - visits, 0)}</span> visita(s) para canjear.
+                              </div>
                             </div>
 
                             <div className="flex justify-between items-center">
