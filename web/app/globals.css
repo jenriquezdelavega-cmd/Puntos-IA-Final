@@ -44,9 +44,9 @@ body {
 
 .brand-orb {
   position: absolute;
-  top: -0.22em;
-  right: -0.11em;
-  width: clamp(0.95rem, 2.45vw, 1.28rem);
+  top: -0.04em;
+  right: -0.19em;
+  width: clamp(0.98rem, 2.55vw, 1.34rem);
   aspect-ratio: 1 / 1;
   border-radius: 9999px;
   background: radial-gradient(circle at 66% 24%, #ffe5b8 2%, #ffbe5f 18%, #ff9525 48%, #ff6708 77%, #e84a00 100%);
