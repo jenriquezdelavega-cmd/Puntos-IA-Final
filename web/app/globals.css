@@ -44,15 +44,15 @@ body {
 
 .brand-orb {
   position: absolute;
-  left: 50%;
-  top: 0.25rem;
-  width: clamp(2.4rem, 6vw, 3.2rem);
+  top: -0.08em;
+  width: clamp(1.45rem, 3.7vw, 1.95rem);
   aspect-ratio: 1 / 1;
-  transform: translateX(-54%);
+  left: 78%;
+  transform: translateX(-50%);
   border-radius: 9999px;
   background: radial-gradient(circle at 65% 25%, #ffd99f 1%, #ffbd57 16%, #ff8d1f 47%, #ff6200 78%, #e84a00 100%);
-  border: 2px solid rgba(255, 198, 124, 0.8);
-  box-shadow: 0 14px 26px rgba(247, 104, 0, 0.5), 0 2px 7px rgba(255, 255, 255, 0.5) inset;
+  border: 1.5px solid rgba(255, 198, 124, 0.85);
+  box-shadow: 0 9px 18px rgba(247, 104, 0, 0.45), 0 1px 5px rgba(255, 255, 255, 0.52) inset;
   z-index: 10;
 }
 
@@ -72,4 +72,14 @@ body {
   border-radius: 9999px;
   background: rgba(255, 250, 230, 0.92);
   filter: blur(1px);
+}
+
+.brand-lockup {
+  align-items: flex-end;
+}
+
+.brand-punto-wrap {
+  position: relative;
+  display: inline-block;
+  padding-right: 0.2em;
 }
