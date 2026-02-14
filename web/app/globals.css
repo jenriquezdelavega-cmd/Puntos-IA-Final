@@ -24,3 +24,52 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.brand-word {
+  color: #fff;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 0.9;
+  text-shadow: 0 8px 24px rgba(110, 8, 57, 0.22);
+  font-family: Inter, Arial, Helvetica, sans-serif;
+}
+
+.brand-word-punto {
+  font-size: clamp(3.1rem, 8vw, 4.8rem);
+}
+
+.brand-word-ia {
+  font-size: clamp(3.1rem, 8vw, 4.8rem);
+}
+
+.brand-orb {
+  position: absolute;
+  left: 50%;
+  top: 0.25rem;
+  width: clamp(2.4rem, 6vw, 3.2rem);
+  aspect-ratio: 1 / 1;
+  transform: translateX(-54%);
+  border-radius: 9999px;
+  background: radial-gradient(circle at 65% 25%, #ffd99f 1%, #ffbd57 16%, #ff8d1f 47%, #ff6200 78%, #e84a00 100%);
+  border: 2px solid rgba(255, 198, 124, 0.8);
+  box-shadow: 0 14px 26px rgba(247, 104, 0, 0.5), 0 2px 7px rgba(255, 255, 255, 0.5) inset;
+  z-index: 10;
+}
+
+.brand-orb-glow {
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 224, 163, 0.85);
+}
+
+.brand-orb-shine {
+  position: absolute;
+  top: 18%;
+  left: 22%;
+  width: 38%;
+  aspect-ratio: 1 / 1;
+  border-radius: 9999px;
+  background: rgba(255, 250, 230, 0.92);
+  filter: blur(1px);
+}

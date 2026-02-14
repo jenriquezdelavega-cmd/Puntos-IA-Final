@@ -30,7 +30,7 @@ const QRScanner = dynamic(() => import('@yudiel/react-qr-scanner').then((m) => m
 
 type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
 
-const glow = 'bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600';
+const glow = 'bg-gradient-to-br from-[#ff7a59] via-[#ff3f8e] to-[#f90086]';
 
 const screenFx = {
   initial: { opacity: 0, y: 16, filter: 'blur(6px)' },
@@ -117,50 +117,25 @@ function BrandLogo({ animate = true }: { animate?: boolean }) {
   const canAnim = animate && !reduce;
 
   return (
-    <div className="flex items-center justify-center gap-1 mb-2 select-none scale-90">
-      <motion.span
+    <div className="mb-2 select-none scale-90">
+      <motion.div
         initial={canAnim ? { opacity: 0, y: 8 } : false}
         animate={canAnim ? { opacity: 1, y: 0 } : false}
         transition={canAnim ? { ...spring } : undefined}
-        className="text-6xl font-black tracking-tight text-white drop-shadow-lg"
-        style={{ fontFamily: 'sans-serif' }}
+        className="relative inline-flex items-end justify-center gap-3"
       >
-        punto
-      </motion.span>
-
-      <motion.div
-        initial={canAnim ? { scale: 0.9, opacity: 0 } : false}
-        animate={canAnim ? { scale: 1, opacity: 1 } : false}
-        transition={canAnim ? { ...spring, delay: 0.05 } : undefined}
-        className="relative h-12 w-12 mx-1"
-      >
-        <motion.div
-          animate={
-            canAnim
-              ? {
-                  boxShadow: [
-                    '0 0 25px rgba(255,200,0,0.55)',
-                    '0 0 35px rgba(255,120,200,0.55)',
-                    '0 0 25px rgba(255,200,0,0.55)',
-                  ],
-                }
-              : undefined
-          }
-          transition={canAnim ? { duration: 2.8, repeat: Infinity } : undefined}
-          className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200 via-orange-400 to-red-500"
-        />
-        <div className="absolute top-2 left-3 w-3 h-3 bg-white rounded-full blur-[2px] opacity-90" />
+        <span className="brand-word brand-word-punto">punto</span>
+        <motion.span
+          initial={canAnim ? { scale: 0.85, opacity: 0 } : false}
+          animate={canAnim ? { scale: 1, opacity: 1 } : false}
+          transition={canAnim ? { ...spring, delay: 0.08 } : undefined}
+          className="brand-orb"
+        >
+          <span className="brand-orb-glow" />
+          <span className="brand-orb-shine" />
+        </motion.span>
+        <span className="brand-word brand-word-ia">IA</span>
       </motion.div>
-
-      <motion.span
-        initial={canAnim ? { opacity: 0, y: 8 } : false}
-        animate={canAnim ? { opacity: 1, y: 0 } : false}
-        transition={canAnim ? { ...spring, delay: 0.08 } : undefined}
-        className="text-6xl font-black tracking-tight text-white drop-shadow-lg"
-        style={{ fontFamily: 'sans-serif' }}
-      >
-        IA
-      </motion.span>
     </div>
   );
 }
@@ -672,7 +647,7 @@ export default function Home() {
           animate={canAnim ? screenFx.animate : false}
           exit={canAnim ? screenFx.exit : false}
           transition={canAnim ? { ...spring } : undefined}
-          className="min-h-screen bg-gray-50 pb-32"
+          className="min-h-screen bg-gradient-to-b from-[#fff2f8] via-[#fff9f4] to-[#fffdfd] pb-32"
         >
           {/* Overlays */}
           <AnimatePresence>
@@ -813,7 +788,7 @@ export default function Home() {
           </AnimatePresence>
 
           {/* Header */}
-          <div className="bg-white px-8 pt-16 pb-6 sticky top-0 z-20 shadow-sm flex justify-between items-center">
+          <div className="bg-white/95 backdrop-blur px-8 pt-16 pb-6 sticky top-0 z-20 shadow-sm border-b border-pink-100/80 flex justify-between items-center">
             <div>
               <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Hola,</p>
               <h1 className="text-3xl font-black text-gray-900 tracking-tight">{user?.name?.split(' ')?.[0] ?? '👋'}</h1>
