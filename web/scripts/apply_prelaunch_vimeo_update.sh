@@ -6,7 +6,7 @@ if [[ -f "web/app/page.tsx" ]]; then
 elif [[ -f "app/page.tsx" ]]; then
   FILE="app/page.tsx"
 else
-  echo "❌ No encontré app/page.tsx. Corre este script desde la raíz del repo o desde la carpeta web/."
+  echo "❌ No encontré app/page.tsx. Pégalo en terminal desde ~/workspace/web o desde la raíz del proyecto."
   exit 1
 fi
 
@@ -20,6 +20,11 @@ const newUrl = 'https://player.vimeo.com/video/1165062263?badge=0&amp;autopause=
 s = s.replace(
   /https:\/\/player\.vimeo\.com\/video\/\d+\?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479/,
   newUrl
+);
+
+s = s.replace(
+  /title="[^"]*"\n\s*allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media(?:; web-share)?"/,
+  'title="Genera_un_video_1080p_202602141913"\n                allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"'
 );
 
 const topParagraph =
@@ -50,7 +55,15 @@ if (s.includes(broken)) {
 }
 
 fs.writeFileSync(file, s, 'utf8');
-console.log(`✅ prelaunch Vimeo + copy position actualizado en ${file}`);
-NODE
 
-rg -n "player\.vimeo\.com/video|Sistema de puntos multi-negocio" "$FILE" || true
+const lines = s.split('\n');
+const show = (needle) => {
+  const idx = lines.findIndex((l) => l.includes(needle));
+  if (idx !== -1) console.log(`${idx + 1}: ${lines[idx]}`);
+};
+
+console.log(`✅ prelaunch Vimeo + copy position actualizado en ${file}`);
+show('player.vimeo.com/video');
+show('Genera_un_video_1080p_202602141913');
+show('Sistema de puntos multi-negocio');
+NODE
