@@ -511,9 +511,16 @@ export default function Home() {
         <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr,1fr]">
           <div className="rounded-3xl border border-white/30 bg-white/12 backdrop-blur-md p-5 md:p-6 shadow-2xl">
             <p className="text-xs uppercase tracking-[0.22em] font-black text-white/75 mb-3">Teaser video</p>
-            <div className="aspect-video rounded-2xl border border-white/30 bg-black/25 flex flex-col items-center justify-center text-center px-4">
-              <p className="text-lg md:text-xl font-black">Aquí va tu mini video teaser</p>
-              <p className="text-white/80 text-sm mt-2">Puedes pegar un embed de YouTube/Vimeo o un video MP4 cuando lo tengas listo.</p>
+            <div className="aspect-video rounded-2xl border border-white/30 bg-black/30 overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+              <iframe
+                className="h-full w-full"
+                src="https://player.vimeo.com/video/1165062263?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479"
+                title="Genera_un_video_1080p_202602141913"
+                allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                loading="lazy"
+                allowFullScreen
+              />
             </div>
           </div>
           <div className="rounded-3xl border border-white/35 bg-white/15 backdrop-blur-md p-5 md:p-6 shadow-2xl">

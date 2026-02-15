@@ -22,6 +22,22 @@ s = s.replace(
   newUrl
 );
 
+const teaserPlaceholderRegex = /<div className="aspect-video rounded-2xl border border-white\/30 bg-black\/25 flex flex-col items-center justify-center text-center px-4">[\s\S]*?<\/div>/;
+const teaserEmbedBlock = `<div className="aspect-video rounded-2xl border border-white/30 bg-black/30 overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+              <iframe
+                className="h-full w-full"
+                src="https://player.vimeo.com/video/1165062263?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479"
+                title="Genera_un_video_1080p_202602141913"
+                allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                loading="lazy"
+                allowFullScreen
+              />
+            </div>`;
+if (teaserPlaceholderRegex.test(s)) {
+  s = s.replace(teaserPlaceholderRegex, teaserEmbedBlock);
+}
+
 s = s.replace(
   /title="[^"]*"\n\s*allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media(?:; web-share)?"/,
   'title="Genera_un_video_1080p_202602141913"\n                allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"'
