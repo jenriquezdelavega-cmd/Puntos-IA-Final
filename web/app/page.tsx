@@ -506,11 +506,11 @@ export default function Home() {
           <BrandLogo />
           <p className="mt-4 inline-block rounded-full border border-white/35 bg-white/10 px-4 py-1 text-xs font-black tracking-widest uppercase">PRE-LANZAMIENTO</p>
           <h1 className="mt-6 text-4xl md:text-6xl font-black leading-tight max-w-4xl">Muy pronto lanzaremos Punto IA para transformar la lealtad de tus clientes.</h1>
-          <p className="mt-4 text-white/90 max-w-2xl text-sm md:text-base font-semibold">Sistema de puntos multi-negocio para pymes en México. Deja tus datos y sé de los primeros aliados en activar la plataforma.</p>
+          <p className="mt-4 text-white/90 max-w-2xl text-sm md:text-base font-semibold"></p>
         </div>
         <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr,1fr]">
           <div className="rounded-3xl border border-white/30 bg-white/12 backdrop-blur-md p-5 md:p-6 shadow-2xl">
-            <p className="text-xs uppercase tracking-[0.22em] font-black text-white/75 mb-3">Teaser video</p>
+            <p className="text-xs uppercase tracking-[0.22em] font-black text-white/75 mb-3">Video</p>
             <div className="aspect-video rounded-2xl border border-white/30 bg-black/30 overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
               <iframe
                 className="h-full w-full"
