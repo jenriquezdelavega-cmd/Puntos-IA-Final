@@ -505,7 +505,7 @@ export default function Home() {
         <div className="flex flex-col items-center text-center">
           <BrandLogo />
           <p className="mt-4 inline-block rounded-full border border-white/35 bg-white/10 px-4 py-1 text-xs font-black tracking-widest uppercase">PRE-LANZAMIENTO</p>
-          <h1 className="mt-6 text-4xl md:text-6xl font-black leading-tight max-w-4xl">Muy pronto lanzamos Punto IA para transformar la lealtad de tus clientes.</h1>
+          <h1 className="mt-6 text-4xl md:text-6xl font-black leading-tight max-w-4xl">Muy pronto lanzaremos Punto IA para transformar la lealtad de tus clientes.</h1>
           <p className="mt-4 text-white/90 max-w-2xl text-sm md:text-base font-semibold">Sistema de puntos multi-negocio para pymes en México. Deja tus datos y sé de los primeros aliados en activar la plataforma.</p>
         </div>
         <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr,1fr]">
@@ -534,6 +534,10 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        <p className="mt-6 text-white/90 max-w-2xl text-sm md:text-base font-semibold mx-auto text-center">
+          Sistema de puntos multi-negocio para pymes en México. Deja tus datos y sé de los primeros aliados en activar la plataforma.
+        </p>
       </section>
     </main>
   ) : (
