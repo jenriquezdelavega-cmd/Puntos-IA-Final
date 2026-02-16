@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { addPrelaunchLead } from '@/app/lib/prelaunch-leads';
 
 type LeadBody = {
   businessName?: string;
@@ -26,19 +27,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email inválido.' }, { status: 400 });
     }
 
-    console.info(
-      JSON.stringify({
-        level: 'info',
-        route: '/api/prelaunch/business',
-        event: 'lead_submitted',
-        ts: new Date().toISOString(),
-        businessName,
-        contactName,
-        phone,
-        email,
-        city,
-      })
-    );
+    const createdAt = new Date().toISOString();
+
+    await addPrelaunchLead({
+      businessName,
+      contactName,
+      phone,
+      email,
+      city,
+      createdAt,
+    });
 
     return NextResponse.json({ ok: true });
   } catch {
