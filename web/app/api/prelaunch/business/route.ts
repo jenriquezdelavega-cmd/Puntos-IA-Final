@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
     const createdAt = new Date().toISOString();
 
-    await addPrelaunchLead({
+    const saved = await addPrelaunchLead({
       businessName,
       contactName,
       phone,
@@ -38,8 +38,29 @@ export async function POST(request: Request) {
       createdAt,
     });
 
+    console.info(
+      JSON.stringify({
+        level: 'info',
+        route: '/api/prelaunch/business',
+        event: 'lead_submitted',
+        ts: createdAt,
+        saved: saved.ok,
+        file: saved.file,
+        businessName,
+        contactName,
+        phone,
+        email,
+        city,
+      })
+    );
+
+    if (!saved.ok) {
+      return NextResponse.json({ error: 'No se pudo guardar en almacenamiento. Revisa permisos del servidor.' }, { status: 500 });
+    }
+
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    console.error('prelaunch_business_error', error);
     return NextResponse.json({ error: 'No se pudo procesar la solicitud.' }, { status: 500 });
   }
 }
