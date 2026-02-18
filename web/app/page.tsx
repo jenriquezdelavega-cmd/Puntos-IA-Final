@@ -259,6 +259,7 @@ export default function Home() {
   });
   const [leadLoading, setLeadLoading] = useState(false);
   const [leadStatus, setLeadStatus] = useState('');
+  const [showClientPortal, setShowClientPortal] = useState(false);
 
   const handleLeadField = (key: keyof BusinessLeadForm, value: string) => {
     setLeadForm((prev) => ({ ...prev, [key]: value }));
@@ -304,6 +305,9 @@ export default function Home() {
       if (c) {
         setPendingCode(c);
         if (!user) setMessage('👋 Código detectado.');
+      }
+      if (p.get('clientes') === '1') {
+        setShowClientPortal(true);
       }
     }
     loadMapData();
@@ -498,7 +502,7 @@ export default function Home() {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  return prelaunchMode ? (
+  return prelaunchMode && !showClientPortal ? (
     <main className={`min-h-screen ${glow} text-white relative overflow-hidden`}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_18%,rgba(255,255,255,0.22),transparent_36%),radial-gradient(circle_at_82%_8%,rgba(255,255,255,0.18),transparent_35%),radial-gradient(circle_at_88%_88%,rgba(255,255,255,0.12),transparent_40%)]" />
       <section className="relative z-10 mx-auto w-full max-w-6xl px-6 py-12 md:py-16">
