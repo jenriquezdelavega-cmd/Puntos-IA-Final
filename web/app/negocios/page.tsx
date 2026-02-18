@@ -1,5 +1,22 @@
 import Link from 'next/link';
 
+type Pillar = {
+  title: string;
+  desc: string;
+  tag: string;
+  glyph: string;
+};
+
+type Plan = {
+  name: string;
+  subtitle: string;
+  price: string;
+  cadence: string;
+  cta: string;
+  highlight?: boolean;
+  features: string[];
+};
+
 const loyaltyFacts = [
   {
     stat: '5x–7x',
@@ -13,31 +30,35 @@ const loyaltyFacts = [
   },
   {
     stat: '1ª visita → hábito',
-    title: 'en pocas semanas',
+    title: 'en semanas',
     desc: 'Los programas simples convierten visitas sueltas en comportamiento recurrente medible.',
   },
 ];
 
-const pillars = [
+const pillars: Pillar[] = [
   {
     title: 'Lealtad que sí regresa',
     desc: 'Activa campañas de recompensas con reglas claras para que tus clientes vuelvan más seguido.',
-    icon: '🎯',
+    tag: 'Retención',
+    glyph: 'LR',
   },
   {
     title: 'Operación en minutos',
     desc: 'Tu staff valida check-ins y canjes en segundos, sin fricción ni procesos complejos.',
-    icon: '⚡',
+    tag: 'Operación',
+    glyph: 'OP',
   },
   {
     title: 'Visibilidad en red de aliados',
     desc: 'Tu negocio entra al ecosistema Punto IA para ganar descubrimiento local.',
-    icon: '🤝',
+    tag: 'Adquisición',
+    glyph: 'RA',
   },
   {
     title: 'Decisiones con datos',
     desc: 'Mide visitas, recurrencia y comportamiento para ajustar promociones con precisión.',
-    icon: '📊',
+    tag: 'Analítica',
+    glyph: 'DA',
   },
 ];
 
@@ -71,14 +92,13 @@ const roadmap = [
   },
 ];
 
-const plans = [
+const plans: Plan[] = [
   {
     name: 'Starter',
     subtitle: 'Validación rápida',
     price: '$0',
     cadence: 'pre-lanzamiento',
     cta: 'Unirme al pre-lanzamiento',
-    highlight: false,
     features: ['1 sucursal', 'Base de lealtad inicial', 'Check-ins y leads', 'Soporte por correo'],
   },
   {
@@ -96,7 +116,6 @@ const plans = [
     price: 'Custom',
     cadence: 'según operación',
     cta: 'Hablar con ventas',
-    highlight: false,
     features: ['Sucursales ilimitadas', 'Acompañamiento estratégico', 'Integraciones', 'SLA dedicado'],
   },
 ];
@@ -122,17 +141,17 @@ const faqs = [
 
 export default function NegociosPage() {
   return (
-    <main className="min-h-screen bg-[#0b0b16] text-white">
+    <main className="min-h-screen bg-[#090913] text-white">
       <section className="relative overflow-hidden border-b border-white/10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_15%,rgba(255,122,89,0.30),transparent_34%),radial-gradient(circle_at_82%_10%,rgba(249,0,134,0.24),transparent_38%),radial-gradient(circle_at_60%_85%,rgba(255,255,255,0.08),transparent_40%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_14%,rgba(255,122,89,0.28),transparent_34%),radial-gradient(circle_at_86%_8%,rgba(249,0,134,0.22),transparent_35%),radial-gradient(circle_at_58%_82%,rgba(119,47,255,0.16),transparent_35%)]" />
         <div className="relative mx-auto max-w-6xl px-6 py-14 md:py-20">
-          <p className="inline-flex rounded-full border border-pink-300/35 bg-pink-400/10 px-4 py-1 text-xs font-black tracking-[0.2em] uppercase text-pink-100">
+          <p className="inline-flex rounded-full border border-[#ff3f8e]/40 bg-[#ff3f8e]/15 px-4 py-1 text-[11px] font-black tracking-[0.18em] uppercase text-pink-100 shadow-[0_0_0_1px_rgba(255,63,142,0.15)]">
             Punto IA para negocios
           </p>
 
           <h1 className="mt-6 max-w-5xl text-4xl md:text-6xl font-black leading-tight">
             Convierte visitas en{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#f90086]">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#8b5cf6]">
               lealtad medible
             </span>{' '}
             y crecimiento sostenible.
@@ -142,16 +161,16 @@ export default function NegociosPage() {
             Punto IA unifica recompensas, operación y analítica para que cada visita tenga valor y cada decisión se tome con datos reales.
           </p>
 
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-9 flex flex-wrap gap-3">
             <Link
               href="/"
-              className="rounded-2xl border border-white/25 bg-white/10 hover:bg-white/20 transition px-6 py-3 font-black"
+              className="rounded-2xl border border-white/25 bg-white/10 hover:bg-white/20 transition px-6 py-3 font-black shadow-lg"
             >
               Ver teaser
             </Link>
             <Link
               href="/?clientes=1"
-              className="rounded-2xl bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#f90086] px-6 py-3 font-black text-white shadow-xl hover:brightness-110 transition"
+              className="rounded-2xl bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#8b5cf6] px-6 py-3 font-black text-white shadow-2xl hover:brightness-110 transition"
             >
               Probar experiencia cliente
             </Link>
@@ -162,8 +181,11 @@ export default function NegociosPage() {
       <section className="mx-auto max-w-6xl px-6 py-10 md:py-14">
         <div className="grid gap-4 md:grid-cols-3">
           {loyaltyFacts.map((fact) => (
-            <article key={fact.title} className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
-              <p className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a59] to-[#f90086]">{fact.stat}</p>
+            <article
+              key={fact.title}
+              className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.02] p-6 shadow-[0_12px_36px_rgba(0,0,0,0.35)]"
+            >
+              <p className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e]">{fact.stat}</p>
               <h2 className="mt-2 text-xl font-black">{fact.title}</h2>
               <p className="mt-2 text-white/75 font-semibold leading-relaxed">{fact.desc}</p>
             </article>
@@ -175,9 +197,17 @@ export default function NegociosPage() {
       <section className="mx-auto max-w-6xl px-6 py-6 md:py-10">
         <div className="grid gap-4 md:grid-cols-2">
           {pillars.map((item) => (
-            <article key={item.title} className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 md:p-7 shadow-[0_10px_35px_rgba(0,0,0,0.35)]">
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-r from-[#ff7a59] to-[#f90086] text-2xl shadow-lg">
-                {item.icon}
+            <article
+              key={item.title}
+              className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.08] via-white/[0.03] to-transparent p-6 md:p-7 shadow-[0_10px_35px_rgba(0,0,0,0.35)]"
+            >
+              <div className="flex items-center justify-between">
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black tracking-[0.12em] uppercase text-white/80">
+                  {item.tag}
+                </span>
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e] text-xs font-black tracking-[0.08em] shadow-lg">
+                  {item.glyph}
+                </span>
               </div>
               <h2 className="mt-4 text-2xl font-black">{item.title}</h2>
               <p className="mt-2 text-white/75 font-semibold leading-relaxed">{item.desc}</p>
@@ -187,12 +217,13 @@ export default function NegociosPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-6 md:py-10">
-        <div className="rounded-3xl border border-white/10 bg-gradient-to-r from-white/[0.05] to-white/[0.02] p-6 md:p-8">
+        <div className="rounded-3xl border border-white/10 bg-gradient-to-r from-white/[0.08] to-white/[0.03] p-6 md:p-8 shadow-xl">
           <h3 className="text-3xl font-black">¿Por qué ahora?</h3>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {whyNow.map((line) => (
               <p key={line} className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white/85 font-semibold">
-                ✅ {line}
+                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#ff3f8e]/20 text-[#ff82b8] text-xs">•</span>
+                {line}
               </p>
             ))}
           </div>
@@ -200,14 +231,18 @@ export default function NegociosPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-6 md:py-10">
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 md:p-8">
+        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 md:p-8 shadow-xl">
           <h3 className="text-3xl font-black">Ruta de implementación</h3>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             {roadmap.map((r) => (
               <article key={r.step} className="rounded-2xl border border-white/10 bg-black/20 p-5">
-                <p className="text-xs font-black tracking-[0.16em] uppercase text-pink-200">Fase {r.step}</p>
-                <h4 className="mt-2 text-xl font-black">{r.title}</h4>
-                <p className="mt-2 text-white/75 font-semibold">{r.desc}</p>
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e] text-xs font-black">
+                    {r.step}
+                  </span>
+                  <h4 className="text-xl font-black">{r.title}</h4>
+                </div>
+                <p className="mt-3 text-white/75 font-semibold">{r.desc}</p>
               </article>
             ))}
           </div>
@@ -229,12 +264,12 @@ export default function NegociosPage() {
               key={plan.name}
               className={`rounded-3xl border p-6 md:p-7 shadow-xl ${
                 plan.highlight
-                  ? 'border-pink-400 bg-gradient-to-b from-pink-500/15 to-purple-500/10 ring-2 ring-pink-400/40'
+                  ? 'border-[#ff3f8e] bg-gradient-to-b from-[#ff3f8e]/20 via-[#8b5cf6]/12 to-transparent ring-2 ring-[#ff3f8e]/35'
                   : 'border-white/10 bg-white/[0.03]'
               }`}
             >
               {plan.highlight ? (
-                <p className="inline-flex rounded-full bg-pink-500 text-white text-[10px] font-black uppercase tracking-[0.14em] px-3 py-1">
+                <p className="inline-flex rounded-full bg-[#ff3f8e] text-white text-[10px] font-black uppercase tracking-[0.14em] px-3 py-1">
                   Recomendado
                 </p>
               ) : null}
@@ -248,7 +283,10 @@ export default function NegociosPage() {
 
               <ul className="mt-5 space-y-2 text-sm font-semibold text-white/85">
                 {plan.features.map((f) => (
-                  <li key={f}>✅ {f}</li>
+                  <li key={f} className="flex items-start gap-2">
+                    <span className="mt-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#ff3f8e]/20 text-[#ff8ac0] text-[10px]">•</span>
+                    <span>{f}</span>
+                  </li>
                 ))}
               </ul>
 
@@ -256,7 +294,7 @@ export default function NegociosPage() {
                 href="/"
                 className={`mt-6 inline-flex w-full items-center justify-center rounded-2xl py-3 font-black transition ${
                   plan.highlight
-                    ? 'bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#f90086] text-white hover:brightness-110'
+                    ? 'bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#8b5cf6] text-white hover:brightness-110'
                     : 'border border-white/25 bg-white/10 text-white hover:bg-white/20'
                 }`}
               >
@@ -268,7 +306,7 @@ export default function NegociosPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-6 md:py-10">
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 md:p-8">
+        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 md:p-8 shadow-xl">
           <h3 className="text-3xl font-black">Preguntas frecuentes</h3>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             {faqs.map((f) => (
@@ -282,7 +320,7 @@ export default function NegociosPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-10 md:py-14">
-        <div className="rounded-3xl border border-pink-300/30 bg-gradient-to-r from-[#ff7a59]/20 via-[#ff3f8e]/20 to-[#f90086]/20 p-7 md:p-10 text-center shadow-2xl">
+        <div className="rounded-3xl border border-[#ff3f8e]/35 bg-gradient-to-r from-[#ff7a59]/25 via-[#ff3f8e]/25 to-[#8b5cf6]/25 p-7 md:p-10 text-center shadow-2xl">
           <h3 className="text-3xl md:text-4xl font-black">¿Listo para subir tu recurrencia?</h3>
           <p className="mt-3 text-white/90 font-semibold max-w-2xl mx-auto">
             Únete al pre-lanzamiento y sé de los primeros negocios en operar fidelización moderna con Punto IA.
