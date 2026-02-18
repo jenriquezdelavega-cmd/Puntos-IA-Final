@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { logApiError, logApiEvent } from '@/app/lib/api-log';
 import { PrismaClient, RewardPeriod } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -28,16 +29,25 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { userId, tenantId } = body;
 
-    if (!userId || !tenantId) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
+    if (!userId || !tenantId) {
+      logApiEvent('/api/redeem/request', 'validation_error', { hasUserId: Boolean(userId), hasTenantId: Boolean(tenantId) });
+      return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
+    }
 
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
-    if (!tenant) return NextResponse.json({ error: 'Negocio no encontrado' }, { status: 404 });
+    if (!tenant) {
+      logApiEvent('/api/redeem/request', 'tenant_not_found', { tenantId });
+      return NextResponse.json({ error: 'Negocio no encontrado' }, { status: 404 });
+    }
 
     let membership = await prisma.membership.findUnique({
       where: { tenantId_userId: { tenantId, userId } }
     });
 
-    if (!membership) return NextResponse.json({ error: 'No tienes membresía' }, { status: 400 });
+    if (!membership) {
+      logApiEvent('/api/redeem/request', 'membership_not_found', { userId, tenantId });
+      return NextResponse.json({ error: 'No tienes membresía' }, { status: 400 });
+    }
 
     const now = new Date();
     const tenantPeriod = (tenant.rewardPeriod as RewardPeriod) || 'OPEN';
@@ -67,6 +77,7 @@ export async function POST(request: Request) {
     const currentVisits = membership.currentVisits ?? 0;
 
     if (currentVisits < requiredVisits) {
+      logApiEvent('/api/redeem/request', 'insufficient_visits', { userId, tenantId, currentVisits, requiredVisits });
       return NextResponse.json({ error: `Te faltan ${requiredVisits - currentVisits} visita(s) para canjear` }, { status: 400 });
     }
 
@@ -82,9 +93,12 @@ export async function POST(request: Request) {
       })
     ]);
 
+    logApiEvent('/api/redeem/request', 'redemption_requested', { userId, tenantId, code });
+
     return NextResponse.json({ success: true, code });
 
-  } catch (error: any) {
-    return NextResponse.json({ error: 'Error técnico: ' + (error.message || '') }, { status: 500 });
+  } catch (error: unknown) {
+    logApiError('/api/redeem/request', error);
+    return NextResponse.json({ error: 'Error técnico: ' + (error instanceof Error ? error.message : '') }, { status: 500 });
   }
 }

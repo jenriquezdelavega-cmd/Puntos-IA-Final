@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { isValidMasterPassword } from '@/app/lib/master-auth';
+import { hashPassword, isHashedPassword } from '@/app/lib/password';
+
 const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
@@ -7,7 +10,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { masterPassword, action, userId, data } = body;
 
-    if (masterPassword !== 'superadmin2026') return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    if (!isValidMasterPassword(masterPassword)) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
 
     if (action === 'DELETE') {
       await prisma.tenantUser.delete({ where: { id: userId } });
@@ -15,20 +20,30 @@ export async function POST(request: Request) {
     }
 
     if (action === 'UPDATE') {
+      const nextPasswordRaw = String(data?.password || '');
+      const nextPassword =
+        !nextPasswordRaw
+          ? undefined
+          : isHashedPassword(nextPasswordRaw)
+            ? nextPasswordRaw
+            : hashPassword(nextPasswordRaw);
+
       const updated = await prisma.tenantUser.update({
         where: { id: userId },
-        data: { 
-            name: data.name, 
-            username: data.username, 
-            password: data.password, // En prod encriptaríamos esto
-            role: data.role,
-            phone: data.phone,
-            email: data.email
-        }
+        data: {
+          name: data.name,
+          username: data.username,
+          password: nextPassword,
+          role: data.role,
+          phone: data.phone,
+          email: data.email,
+        },
       });
       return NextResponse.json({ success: true, user: updated });
     }
 
     return NextResponse.json({ error: 'Acción no válida' }, { status: 400 });
-  } catch (error: any) { return NextResponse.json({ error: error.message }, { status: 500 }); }
+  } catch (error: unknown) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error inesperado' }, { status: 500 });
+  }
 }

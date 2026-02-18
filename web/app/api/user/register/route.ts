@@ -1,24 +1,39 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { hashPassword } from '@/app/lib/password';
 
 const prisma = new PrismaClient();
 
+type RegisterBody = {
+  name?: string;
+  phone?: string;
+  email?: string;
+  password?: string;
+  gender?: string;
+  birthDate?: string;
+};
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { name, phone, email, password, gender, birthDate } = body; // 🆕 email
+    const body = (await request.json()) as RegisterBody;
+    const name = String(body.name || '').trim();
+    const phone = String(body.phone || '').trim();
+    const email = String(body.email || '').trim();
+    const password = String(body.password || '').trim();
+    const gender = String(body.gender || '').trim();
+    const birthDate = body.birthDate;
 
-    if (!name || !phone || !password) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
+    if (!name || !phone || !password) {
+      return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
+    }
 
-    // Limpieza Género
     let cleanGender = 'Otro';
     if (gender === 'Hombre') cleanGender = 'Hombre';
     if (gender === 'Mujer') cleanGender = 'Mujer';
 
-    // Fecha
-    let finalDate = null;
+    let finalDate: Date | null = null;
     if (birthDate) {
-      finalDate = new Date(birthDate + "T12:00:00Z");
+      finalDate = new Date(`${birthDate}T12:00:00Z`);
       if (isNaN(finalDate.getTime())) finalDate = null;
     }
 
@@ -26,17 +41,29 @@ export async function POST(request: Request) {
       data: {
         name,
         phone,
-        email: email || null, // 🆕 Guardar email
-        password,
+        email: email || null,
+        password: hashPassword(password),
         gender: cleanGender,
-        birthDate: finalDate
-      }
+        birthDate: finalDate,
+      },
     });
 
     return NextResponse.json({ id: newUser.id, name: newUser.name });
+  } catch (error: unknown) {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: string }).code === 'P2002'
+    ) {
+      return NextResponse.json({ error: 'Teléfono ya registrado' }, { status: 400 });
+    }
 
-  } catch (error: any) {
-    if (error.code === 'P2002') return NextResponse.json({ error: 'Teléfono ya registrado' }, { status: 400 });
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message =
+      typeof error === 'object' && error !== null && 'message' in error
+        ? String((error as { message?: string }).message || 'Error interno')
+        : 'Error interno';
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

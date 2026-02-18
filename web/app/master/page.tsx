@@ -63,6 +63,36 @@ export default function MasterPage() {
   const openEdit = (t: any) => { setEditingTenant(t); setEditPrize(t.prize||''); setEditIg(t.instagram||''); setEditAddress(t.address||''); if(t.lat) setEditCoords([t.lat,t.lng]); };
   const searchAddress = async () => { if (!editAddress) return; try { const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(editAddress)}`); const data = await res.json(); if (data && data.length > 0) setEditCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]); else alert("No encontrado"); } catch (e) { alert("Error"); } };
 
+  const downloadReport = async (report: 'prelaunch' | 'tenant-users', onlySelectedTenant = false) => {
+    try {
+      const res = await fetch('/api/master/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ masterPassword: masterPass, report, tenantId: onlySelectedTenant ? (selectedTenantId || undefined) : undefined }),
+      });
+
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        alert(d?.error || 'No se pudo generar el reporte');
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const cd = res.headers.get('content-disposition') || '';
+      const m = cd.match(/filename="?([^";]+)"?/i);
+      a.href = url;
+      a.download = m?.[1] || (report === 'prelaunch' ? 'preinscritos-negocios.csv' : 'clientes-por-negocio.csv');
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert('Error de red al descargar reporte');
+    }
+  };
+
   if (!auth) return <div className="min-h-screen bg-black flex justify-center items-center p-4"><form onSubmit={handleAuth} className="bg-gray-900 p-8 rounded-xl border border-red-900 text-center"><h1 className="text-red-500 font-bold mb-4">👑 MASTER</h1><input type="password" className="p-3 rounded bg-gray-800 text-white w-full mb-4" value={masterPass} onChange={e=>setMasterPass(e.target.value)}/><button className="bg-red-600 w-full py-3 rounded font-bold text-white">Entrar</button></form></div>;
 
   return (
@@ -92,6 +122,17 @@ export default function MasterPage() {
         </div>
       </div>
       {msg && <div className="p-4 bg-white text-black font-bold rounded mt-4 text-center mb-8">{msg}</div>}
+
+      <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 mb-6">
+        <h2 className="text-lg font-bold mb-3">📥 Reportes Master</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <button onClick={() => downloadReport('prelaunch')} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded">Descargar preinscritos (CSV)</button>
+          <button onClick={() => downloadReport('tenant-users')} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded">Clientes de todos los negocios</button>
+          <button onClick={() => downloadReport('tenant-users', true)} disabled={!selectedTenantId} className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-bold py-3 rounded">Clientes del negocio seleccionado</button>
+        </div>
+        <p className="text-xs text-gray-400 mt-3">Tip: selecciona un negocio en el directorio para exportar solo sus clientes.</p>
+      </div>
+
       <h2 className="text-2xl font-bold mb-4">🏢 Directorio</h2>
       <div className="space-y-6">
         {tenants.map(t => (

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { isValidMasterPassword } from '@/app/lib/master-auth';
+
 const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
@@ -7,7 +9,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { masterPassword, action, tenantId, data } = body;
 
-    if (masterPassword !== 'superadmin2026') return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    if (!isValidMasterPassword(masterPassword)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
 
     if (action === 'DELETE') {
       await prisma.tenant.delete({ where: { id: tenantId } });
@@ -17,17 +19,22 @@ export async function POST(request: Request) {
     if (action === 'UPDATE') {
       const updated = await prisma.tenant.update({
         where: { id: tenantId },
-        data: { 
-            name: data.name, 
-            slug: data.slug, 
-            prize: data.prize, 
-            instagram: data.instagram,
-            isActive: data.isActive // 🆕 Actualizar estado
-        }
+        data: {
+          name: data.name,
+          slug: data.slug,
+          prize: data.prize,
+          instagram: data.instagram,
+          isActive: data.isActive,
+        },
       });
       return NextResponse.json({ success: true, tenant: updated });
     }
 
     return NextResponse.json({ error: 'Acción no válida' }, { status: 400 });
-  } catch (error: any) { return NextResponse.json({ error: error.message }, { status: 500 }); }
+  } catch (error: unknown) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Error inesperado' },
+      { status: 500 }
+    );
+  }
 }

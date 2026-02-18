@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { isValidMasterPassword } from '@/app/lib/master-auth';
+
 const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
@@ -7,23 +9,29 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { masterPassword, name, slug } = body;
 
-    if (masterPassword !== 'superadmin2026') return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    if (!isValidMasterPassword(masterPassword)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     if (!name || !slug) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
 
-    // GENERAR PREFIJO ÚNICO (5 LETRAS MAYÚSCULAS)
-    // Ej: "PIZZA", "FARM1", "X7Z9A"
-    const prefix = name.substring(0, 3).toUpperCase() + Math.floor(Math.random() * 99).toString(); 
-    
-    // Asegurar que sea único (simple check)
-    // En prod haríamos un loop, aquí confiamos en el random
-    
+    const prefix = name.substring(0, 3).toUpperCase() + Math.floor(Math.random() * 99).toString();
+
     const newTenant = await prisma.tenant.create({
-      data: { name, slug, codePrefix: prefix }
+      data: { name, slug, codePrefix: prefix },
     });
 
     return NextResponse.json({ success: true, tenant: newTenant });
-  } catch (error: any) {
-    if (error.code === 'P2002') return NextResponse.json({ error: 'Slug o Prefijo duplicado' }, { status: 400 });
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: string }).code === 'P2002'
+    ) {
+      return NextResponse.json({ error: 'Slug o Prefijo duplicado' }, { status: 400 });
+    }
+
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Error interno' },
+      { status: 500 }
+    );
   }
 }

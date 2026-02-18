@@ -1,17 +1,25 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { hashPassword, isHashedPassword, verifyPassword } from '@/app/lib/password';
 
 const prisma = new PrismaClient();
 
+type LoginBody = {
+  phone?: string;
+  password?: string;
+};
+
 export async function POST(req: Request) {
   try {
-    const { phone, password } = await req.json();
+    const { phone, password } = (await req.json()) as LoginBody;
+    const normalizedPhone = String(phone || '').trim();
 
-    if (!phone) return NextResponse.json({ error: 'Teléfono requerido' }, { status: 400 });
+    if (!normalizedPhone) {
+      return NextResponse.json({ error: 'Teléfono requerido' }, { status: 400 });
+    }
 
-    // Traemos memberships + tenant (para logoData, prize, requiredVisits, rewardPeriod, instagram, isActive, etc.)
     const user = await prisma.user.findUnique({
-      where: { phone },
+      where: { phone: normalizedPhone },
       include: {
         memberships: {
           include: { tenant: true },
@@ -21,43 +29,56 @@ export async function POST(req: Request) {
 
     if (!user) return NextResponse.json({ error: 'Usuario no existe' }, { status: 401 });
 
-    // Auth MVP (si tu esquema trae password en User)
-    // Si password viene vacío, no bloqueamos.
-    const stored = (user as any).password;
-    if (stored && password !== undefined && stored !== password) {
-      return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
+    if (typeof user.password === 'string' && user.password.length > 0) {
+      const inputPassword = String(password || '');
+      const validPassword = verifyPassword(inputPassword, user.password);
+
+      if (!validPassword) {
+        return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
+      }
+
+      if (!isHashedPassword(user.password)) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { password: hashPassword(inputPassword) },
+        });
+      }
     }
 
-    const memberships = (user as any).memberships
-      .filter((m: any) => m?.tenant?.isActive !== false)
-      .map((m: any) => {
-        // compatibilidad con variantes del esquema
-        const visits = Number(m.visits ?? m.currentVisits ?? 0);
-        const points = Number(m.points ?? visits * 10);
+    const memberships = user.memberships
+      .filter((membership) => membership?.tenant?.isActive !== false)
+      .map((membership) => {
+        const visits = Number(membership.currentVisits ?? 0);
+        const points = visits * 10;
 
         return {
-          tenantId: m.tenantId,
-          name: m.tenant?.name,
-          prize: m.tenant?.prize ?? 'Premio Sorpresa',
-          instagram: m.tenant?.instagram ?? '',
-          requiredVisits: m.tenant?.requiredVisits ?? 10,
-          rewardPeriod: m.tenant?.rewardPeriod ?? 'OPEN',
-          logoData: m.tenant?.logoData ?? '', // ✅ CLAVE PARA EL CLIENTE
+          tenantId: membership.tenantId,
+          name: membership.tenant?.name,
+          prize: membership.tenant?.prize ?? 'Premio Sorpresa',
+          instagram: membership.tenant?.instagram ?? '',
+          requiredVisits: membership.tenant?.requiredVisits ?? 10,
+          rewardPeriod: membership.tenant?.rewardPeriod ?? 'OPEN',
+          logoData: membership.tenant?.logoData ?? '',
           visits,
           points,
         };
       });
 
     return NextResponse.json({
-      id: (user as any).id,
-      phone: (user as any).phone,
-      name: (user as any).name ?? '',
-      email: (user as any).email ?? '',
-      gender: (user as any).gender ?? '',
-      birthDate: (user as any).birthDate ?? null,
+      id: user.id,
+      phone: user.phone,
+      name: user.name ?? '',
+      email: user.email ?? '',
+      gender: user.gender ?? '',
+      birthDate: user.birthDate ?? null,
       memberships,
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+  } catch (error: unknown) {
+    const message =
+      typeof error === 'object' && error !== null && 'message' in error
+        ? String((error as { message?: string }).message || 'Error')
+        : 'Error';
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

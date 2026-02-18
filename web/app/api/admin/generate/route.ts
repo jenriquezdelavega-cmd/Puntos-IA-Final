@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
 
 const prisma = new PrismaClient();
+const BUSINESS_TZ = 'America/Monterrey';
 
 // Alfabeto sin caracteres confusos (sin I, O, 0, 1)
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -20,9 +21,16 @@ function generateRobustCode() {
   return parts.join("-");
 }
 
-function todayKeyUTC() {
-  // estable y simple (puedes cambiarlo a timezone de MX después)
-  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+function dayKeyInBusinessTz(d = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: BUSINESS_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(d);
+
+  const get = (type: string) => parts.find((part) => part.type === type)?.value || '';
+  return `${get('year')}-${get('month')}-${get('day')}`; // YYYY-MM-DD
 }
 
 export async function POST(request: Request) {
@@ -33,7 +41,7 @@ export async function POST(request: Request) {
     if (!tenantId) return NextResponse.json({ error: 'Falta Tenant ID' }, { status: 400 });
     if (!tenantUserId) return NextResponse.json({ error: 'Falta TenantUser ID' }, { status: 400 });
 
-    const day = todayKeyUTC();
+    const day = dayKeyInBusinessTz();
 
     // Si el empleado ya generó hoy, regresa el existente (no crea otro)
     const existing = await prisma.dailyCode.findFirst({
