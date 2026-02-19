@@ -516,27 +516,10 @@ export default function Home() {
           <h1 className="mt-6 text-4xl md:text-6xl font-black leading-tight max-w-4xl">
             Muy pronto lanzamos Punto IA para transformar la lealtad de tus clientes.
           </h1>
-          <div className="mt-6 flex w-full max-w-3xl flex-col gap-3 sm:flex-row sm:justify-center">
-            <Link
-              href="/negocios"
-              className="inline-flex items-center justify-center rounded-2xl bg-white text-pink-600 px-6 py-3.5 font-black shadow-xl hover:bg-pink-50 transition"
-            >
-              Soy negocio
-            </Link>
-            <button
-              onClick={() => {
-                setShowClientPortal(true);
-                if (typeof window !== 'undefined') {
-                  const u = new URL(window.location.href);
-                  u.searchParams.set('clientes', '1');
-                  window.history.replaceState({}, '', `${u.pathname}?${u.searchParams.toString()}`);
-                }
-              }}
-              className="inline-flex items-center justify-center rounded-2xl border border-white/50 bg-white/10 px-6 py-3.5 font-black text-white shadow-xl hover:bg-white/20 transition"
-            >
-              Soy cliente
-            </button>
-          </div>
+          <p className="mt-6 max-w-2xl text-white/90 text-sm md:text-base font-semibold leading-relaxed">
+            Estamos preparando una experiencia de fidelización más inteligente para negocios y clientes. Mientras tanto,
+            conoce el teaser y deja tus datos para entrar como aliado fundador.
+          </p>
         </div>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr,1fr]">
@@ -553,7 +536,7 @@ export default function Home() {
                 allowFullScreen
               />
             </div>
-            <p className="text-white/80 text-xs mt-3">¿Quieres que también lo deje en autoplay sin sonido para landing?</p>
+            <p className="text-white/80 text-xs mt-3">Presentación oficial Punto IA · producto en etapa de pre-lanzamiento.</p>
           </div>
 
           <div className="rounded-3xl border border-white/35 bg-white/15 backdrop-blur-md p-5 md:p-6 shadow-2xl">
