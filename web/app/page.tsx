@@ -633,11 +633,27 @@ export default function Home() {
           <div className="w-full max-w-sm flex flex-col items-center py-10 relative">
             <BrandLogo />
 
-            <p className="text-white text-xl font-medium mb-10 mt-0 tracking-wide drop-shadow-md text-center leading-tight">
-              Premiamos tu lealtad,
+            <p className="text-white text-xl font-medium mb-6 mt-0 tracking-wide drop-shadow-md text-center leading-tight">
+              Tu experiencia Punto IA,
               <br />
-              <span className="font-extrabold italic">fácil y YA.</span>
+              <span className="font-extrabold italic">más premium, más rápida.</span>
             </p>
+
+            <div className="mb-8 grid w-full grid-cols-3 gap-2">
+              {[
+                { icon: '🎟️', label: 'Pase universal' },
+                { icon: '⚡', label: 'Check-in express' },
+                { icon: '🎁', label: 'Premios reales' },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-2xl border border-white/35 bg-white/15 px-3 py-3 text-center backdrop-blur-sm shadow-lg"
+                >
+                  <div className="text-xl leading-none">{item.icon}</div>
+                  <div className="mt-1 text-[10px] font-black uppercase tracking-wider text-white/90">{item.label}</div>
+                </div>
+              ))}
+            </div>
 
             {pendingCode && (
               <motion.div
@@ -661,7 +677,7 @@ export default function Home() {
                 className="relative w-full bg-white text-pink-600 py-4 rounded-2xl font-extrabold text-lg shadow-2xl hover:bg-gray-50 transition-all overflow-hidden"
               >
                 <Shine />
-                Iniciar Sesión
+                ✨ Iniciar Sesión
               </motion.button>
 
               <motion.button
@@ -673,7 +689,7 @@ export default function Home() {
                 }}
                 className="w-full bg-white/10 border-2 border-white/50 text-white py-4 rounded-2xl font-black text-lg hover:bg-white/20 transition-all backdrop-blur-sm"
               >
-                Crear Cuenta
+                🚀 Crear Cuenta
               </motion.button>
             </div>
 
@@ -701,9 +717,9 @@ export default function Home() {
           animate={canAnim ? screenFx.animate : false}
           exit={canAnim ? screenFx.exit : false}
           transition={canAnim ? { ...spring } : undefined}
-          className="min-h-screen bg-gray-50 flex flex-col"
+          className="min-h-screen bg-[radial-gradient(circle_at_15%_10%,#fff7ed,transparent_40%),radial-gradient(circle_at_85%_5%,#fdf2f8,transparent_35%),#f9fafb] flex flex-col"
         >
-          <div className={`${glow} p-8 pb-20 pt-16 rounded-b-[3rem] shadow-xl text-white text-center relative`}>
+          <div className={`${glow} p-8 pb-20 pt-16 rounded-b-[3rem] shadow-[0_22px_60px_rgba(249,0,134,0.35)] text-white text-center relative overflow-hidden`}>
             <button
               onClick={() => setView('WELCOME')}
               className="absolute top-12 left-6 text-white/80 hover:text-white font-black text-2xl transition-colors"
@@ -714,11 +730,16 @@ export default function Home() {
               <BrandLogo animate={false} />
             </div>
             <h2 className="text-3xl font-black mt-2 tracking-tight">
-              {view === 'REGISTER' ? 'Únete al Club' : 'Bienvenido'}
+              {view === 'REGISTER' ? 'Crea tu cuenta Punto IA' : 'Bienvenido de vuelta'}
             </h2>
-            <p className="text-white/90 text-sm mt-1 font-semibold">
-              {view === 'REGISTER' ? 'Premiamos tu lealtad, fácil y YA.' : 'Tus premios te esperan'}
+            <p className="text-white/95 text-sm mt-1 font-semibold">
+              {view === 'REGISTER' ? 'Activa tu pase universal y comienza a acumular beneficios.' : 'Entra y muestra tu pase para registrar visitas.'}
             </p>
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/15 px-4 py-1 text-[11px] font-black uppercase tracking-[0.15em]">
+              <span>cliente</span>
+              <span className="text-white/70">•</span>
+              <span>experiencia premium</span>
+            </div>
           </div>
 
           <div className="flex-1 px-6 -mt-12 pb-10">
@@ -726,7 +747,7 @@ export default function Home() {
               initial={canAnim ? { opacity: 0, y: 14 } : false}
               animate={canAnim ? { opacity: 1, y: 0 } : false}
               transition={canAnim ? { ...spring } : undefined}
-              className="bg-white rounded-3xl shadow-2xl p-8 space-y-6 border border-gray-100 relative overflow-hidden"
+              className="bg-white/95 rounded-3xl shadow-[0_24px_70px_rgba(17,24,39,0.16)] p-8 space-y-6 border border-white relative overflow-hidden backdrop-blur"
             >
               <span className="pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full bg-pink-200/35 blur-3xl" />
               <span className="pointer-events-none absolute -bottom-24 -left-24 h-48 w-48 rounded-full bg-orange-200/35 blur-3xl" />
@@ -798,7 +819,7 @@ export default function Home() {
                 className={`relative w-full ${glow} text-white py-4 rounded-2xl font-black shadow-2xl transition-all text-lg mt-2 overflow-hidden`}
               >
                 <Shine />
-                {loading ? 'Procesando...' : view === 'REGISTER' ? 'Crear Cuenta' : 'Entrar'}
+                {loading ? 'Procesando...' : view === 'REGISTER' ? '🚀 Crear Cuenta' : 'Entrar'}
               </motion.button>
             </motion.div>
           </div>
