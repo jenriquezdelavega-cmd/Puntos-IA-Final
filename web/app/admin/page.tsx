@@ -31,6 +31,7 @@ const [msg, setMsg] = useState('');
 
 const [team, setTeam] = useState<any[]>([]);
 const [newStaff, setNewStaff] = useState({ name: '', username: '', password: '', role: 'STAFF' });
+const [passCustomerId, setPassCustomerId] = useState('');
 
 const trendData = reportData?.chartData ?? [];
 const genderData = reportData?.genderData ?? [];
@@ -101,6 +102,12 @@ try { await fetch('/api/tenant/users', { method: 'DELETE', headers: {'Content-Ty
 };
 
 const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, tenantUserId }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch (e) {} };
+
+const openCustomerPass = () => {
+const id = String(passCustomerId || '').trim();
+if (!id) return alert('Captura el customer_id');
+window.open(`/pass?customer_id=${encodeURIComponent(id)}&from=${encodeURIComponent(tenant?.name || 'admin')}`, '_blank', 'noopener,noreferrer');
+};
 
 const searchLocation = async () => {
 if (!addressSearch) return;
@@ -339,6 +346,20 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
 <div className="bg-gray-50 p-6 rounded-3xl mb-6 flex justify-center">{qrValue ? <QRCode value={qrValue} size={200} /> : <div className="h-[200px] w-[200px] bg-gray-200 rounded-xl flex items-center justify-center text-gray-400">Sin QR</div>}</div>
 {code && <p className="text-4xl font-mono font-black text-gray-900 tracking-widest mb-6">{code}</p>}
 <button onClick={generateCode} className="w-full bg-black text-white py-4 rounded-2xl font-bold shadow-lg">Generar Nuevo</button>
+
+<div className="mt-6 rounded-2xl border border-orange-100 bg-orange-50 p-4 text-left">
+  <h3 className="text-sm font-black text-orange-700 uppercase tracking-wider">Crear pase de cliente</h3>
+  <p className="text-xs text-orange-700/80 mt-1">Ingresa el customer_id del cliente y abre su pase universal para descargar/mostrar.</p>
+  <div className="mt-3 flex gap-2">
+    <input
+      className="flex-1 p-3 rounded-xl border border-orange-200 bg-white text-gray-900 font-semibold"
+      placeholder="customer_id"
+      value={passCustomerId}
+      onChange={e => setPassCustomerId(e.target.value)}
+    />
+    <button onClick={openCustomerPass} className="px-4 py-3 rounded-xl bg-orange-600 text-white font-black">Abrir Pase</button>
+  </div>
+</div>
 </div>
 </div>
 )}
