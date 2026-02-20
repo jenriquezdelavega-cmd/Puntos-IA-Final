@@ -489,6 +489,16 @@ export default function Home() {
     }
   };
 
+  const openPass = (tenantName?: string) => {
+    if (!user?.id) {
+      alert('Primero inicia sesión para ver tu pase.');
+      return;
+    }
+
+    const label = tenantName ? `&from=${encodeURIComponent(tenantName)}` : '';
+    window.open(`/pass?customer_id=${encodeURIComponent(user.id)}${label}`, '_blank', 'noopener,noreferrer');
+  };
+
   const handleLogout = () => {
     if (confirm('¿Salir?')) {
       setUser(null);
@@ -1138,8 +1148,8 @@ export default function Home() {
 
                         <motion.div
                           layout
-                          className={`grid grid-cols-2 gap-3 mt-4 overflow-hidden ${
-                            isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
+                          className={`grid grid-cols-3 gap-3 mt-4 overflow-hidden ${
+                            isExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
                           } transition-all duration-500`}
                         >
                           <motion.button
@@ -1152,6 +1162,18 @@ export default function Home() {
                           >
                             <span className="text-2xl mb-1">🧭</span>
                             Ver Mapa
+                          </motion.button>
+
+                          <motion.button
+                            whileTap={canAnim ? { scale: 0.98 } : undefined}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openPass(m.name);
+                            }}
+                            className="bg-white border-2 border-orange-50 text-orange-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-orange-50 transition-colors shadow-sm"
+                          >
+                            <span className="text-2xl mb-1">🎟️</span>
+                            Mi Pase
                           </motion.button>
 
                           {m.instagram ? (
@@ -1187,8 +1209,16 @@ export default function Home() {
                 transition={canAnim ? { ...spring } : undefined}
                 className="h-[52vh] md:h-[58vh] w-full rounded-3xl overflow-hidden shadow-xl border border-gray-100 relative"
               >
-<div className="absolute top-3 left-3 z-10 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-pink-600 shadow">Mapa de aliados Punto IA</div>
-                                <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={50} />
+                <div className="absolute top-3 left-3 z-10 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-pink-600 shadow">
+                  Mapa de aliados Punto IA
+                </div>
+                <button
+                  onClick={() => openPass()}
+                  className="absolute top-3 right-3 z-10 rounded-full bg-white px-4 py-2 text-xs font-black text-orange-600 shadow-lg border border-orange-100 hover:bg-orange-50 transition"
+                >
+                  Ver mi Pase
+                </button>
+                <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={50} />
               </motion.div>
             )}
           </div>
