@@ -32,6 +32,12 @@ const [msg, setMsg] = useState('');
 const [team, setTeam] = useState<any[]>([]);
 const [newStaff, setNewStaff] = useState({ name: '', username: '', password: '', role: 'STAFF' });
 const [passCustomerId, setPassCustomerId] = useState('');
+<<<<<<< HEAD
+=======
+const [passPhone, setPassPhone] = useState('');
+const [passResult, setPassResult] = useState<any>(null);
+const [passLoading, setPassLoading] = useState(false);
+>>>>>>> origin/codex/review-my-code
 
 const trendData = reportData?.chartData ?? [];
 const genderData = reportData?.genderData ?? [];
@@ -109,6 +115,32 @@ if (!id) return alert('Captura el customer_id');
 window.open(`/pass?customer_id=${encodeURIComponent(id)}&from=${encodeURIComponent(tenant?.name || 'admin')}`, '_blank', 'noopener,noreferrer');
 };
 
+<<<<<<< HEAD
+=======
+const createCustomerPass = async () => {
+const customerId = String(passCustomerId || '').trim();
+const phone = String(passPhone || '').trim();
+if (!customerId && !phone) return alert('Ingresa customer_id o teléfono');
+setPassLoading(true);
+setPassResult(null);
+try {
+const res = await fetch('/api/pass/create', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ customerId, phone }),
+});
+const data = await res.json();
+if (!res.ok) return alert(data.error || 'No se pudo crear pase');
+setPassResult(data);
+setPassCustomerId(data.customer?.id || customerId);
+} catch {
+alert('No se pudo crear pase');
+} finally {
+setPassLoading(false);
+}
+};
+
+>>>>>>> origin/codex/review-my-code
 const searchLocation = async () => {
 if (!addressSearch) return;
 setIsSearching(true);
@@ -199,6 +231,14 @@ return (
   >
     <span className="text-xl leading-none">📷</span>
     <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">QR</span>
+  </button>
+
+  <button
+    onClick={()=>setTab('passes')}
+    className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab==='passes'?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
+  >
+    <span className="text-lg">🎟️</span>
+    <span className="text-xs md:text-sm font-bold">Pases</span>
   </button>
 
   <button
@@ -359,8 +399,54 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
     />
     <button onClick={openCustomerPass} className="px-4 py-3 rounded-xl bg-orange-600 text-white font-black">Abrir Pase</button>
   </div>
+<<<<<<< HEAD
+</div>
+=======
+>>>>>>> origin/codex/review-my-code
 </div>
 </div>
+</div>
+)}
+
+{tab === 'passes' && (
+<div className="max-w-2xl mx-auto mt-10 animate-fadeIn">
+  <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-orange-100">
+    <h2 className="text-2xl font-black text-gray-800">Crear pase de cliente</h2>
+    <p className="text-sm text-gray-500 mt-1">Genera/abre un pase universal buscando por customer_id o teléfono.</p>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5">
+      <input
+        className="p-4 rounded-2xl border border-gray-200 text-gray-900 font-semibold"
+        placeholder="customer_id"
+        value={passCustomerId}
+        onChange={e => setPassCustomerId(e.target.value)}
+      />
+      <input
+        className="p-4 rounded-2xl border border-gray-200 text-gray-900 font-semibold"
+        placeholder="Teléfono del cliente"
+        value={passPhone}
+        onChange={e => setPassPhone(e.target.value.replace(/\D/g, ''))}
+      />
+    </div>
+
+    <div className="mt-4 flex flex-wrap gap-2">
+      <button onClick={createCustomerPass} disabled={passLoading} className="px-5 py-3 rounded-xl bg-orange-600 text-white font-black disabled:opacity-60">{passLoading ? 'Creando...' : 'Crear pase'}</button>
+      <button onClick={openCustomerPass} className="px-5 py-3 rounded-xl bg-gray-900 text-white font-black">Abrir pase</button>
+    </div>
+
+    {passResult ? (
+      <div className="mt-5 rounded-2xl border border-orange-100 bg-orange-50 p-4">
+        <p className="text-sm font-bold text-orange-800">Cliente: {passResult.customer?.name} · {passResult.customer?.phone}</p>
+        <p className="text-xs text-orange-700 mt-1 font-mono">ID: {passResult.customer?.id}</p>
+        <button
+          onClick={() => window.open(passResult.pass?.path, '_blank', 'noopener,noreferrer')}
+          className="mt-3 px-4 py-2 rounded-lg bg-white border border-orange-200 text-orange-700 font-bold text-sm"
+        >
+          Abrir pase generado
+        </button>
+      </div>
+    ) : null}
+  </div>
 </div>
 )}
 

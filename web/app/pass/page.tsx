@@ -44,6 +44,25 @@ export default function PassPage() {
     }
   }, []);
 
+<<<<<<< HEAD
+=======
+  const downloadQrSvg = () => {
+    const svg = document.querySelector('#punto-pass-qr svg');
+    if (!svg || !pass) return;
+    const serializer = new XMLSerializer();
+    const source = serializer.serializeToString(svg);
+    const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pase-${pass.customer_id}.svg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+>>>>>>> origin/codex/review-my-code
   const loadPass = async (id: string) => {
     const cleanId = String(id || '').trim();
     if (!cleanId) return;
@@ -99,10 +118,18 @@ export default function PassPage() {
             <p className="text-xl font-black mt-1">{pass.name}</p>
             <p className="text-xs font-semibold text-gray-500 mt-1">ID: {pass.customer_id}</p>
 
+<<<<<<< HEAD
             <div className="mt-5 rounded-xl border border-pink-100 p-4 flex items-center justify-center bg-white">
               <QRCode value={pass.qr.value} size={240} />
             </div>
             <p className="text-[11px] text-gray-500 mt-3 font-semibold">QR universal firmado. No contiene datos sensibles en texto plano.</p>
+=======
+            <div id="punto-pass-qr" className="mt-5 rounded-xl border border-pink-100 p-4 flex items-center justify-center bg-white">
+              <QRCode value={pass.qr.value} size={240} />
+            </div>
+            <p className="text-[11px] text-gray-500 mt-3 font-semibold">QR universal firmado. No contiene datos sensibles en texto plano.</p>
+            <button onClick={downloadQrSvg} className="mt-3 w-full rounded-xl border border-pink-100 bg-pink-50 py-2 text-sm font-black text-pink-700 hover:bg-pink-100">Descargar QR (SVG)</button>
+>>>>>>> origin/codex/review-my-code
           </div>
         ) : null}
       </div>

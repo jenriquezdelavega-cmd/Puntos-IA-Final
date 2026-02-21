@@ -22,6 +22,10 @@ s = s.replace(
   newUrl
 );
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/codex/review-my-code
 const teaserPlaceholderRegex = /<div className="aspect-video rounded-2xl border border-white\/30 bg-black\/25 flex flex-col items-center justify-center text-center px-4">[\s\S]*?<\/div>/;
 const teaserEmbedBlock = `<div className="aspect-video rounded-2xl border border-white/30 bg-black/30 overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
               <iframe

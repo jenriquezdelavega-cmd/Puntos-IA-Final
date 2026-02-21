@@ -33,7 +33,11 @@ export default function AliadosPage() {
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <a
+<<<<<<< HEAD
               href="mailto:contacto@puntoia.mx?subject=Quiero%20ser%20aliado%20de%20Punto%20IA"
+=======
+              href="mailto:ventas@puntoia.mx?subject=Quiero%20ser%20aliado%20de%20Punto%20IA"
+>>>>>>> origin/codex/review-my-code
               className="inline-flex items-center justify-center rounded-2xl bg-fuchsia-600 px-5 py-3 text-sm font-black text-white shadow-lg transition hover:bg-fuchsia-700"
             >
               Quiero una demo

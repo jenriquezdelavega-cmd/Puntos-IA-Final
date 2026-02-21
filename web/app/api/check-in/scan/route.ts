@@ -14,7 +14,11 @@ function dayKeyInBusinessTz(d = new Date()) {
   }).formatToParts(d);
 
   const get = (type: string) => parts.find((part) => part.type === type)?.value || '';
+<<<<<<< HEAD
   return `${get('year')}-${get('month')}-${get('day')}`;
+=======
+  return `${get('year')}-${get('month')}-${get('day')}`; // para DailyCode.day
+>>>>>>> origin/codex/review-my-code
 }
 
 function tzParts(d: Date) {
@@ -44,6 +48,7 @@ export async function POST(request: Request) {
     const { userId, code } = body;
 
     if (!userId || !code) {
+<<<<<<< HEAD
       logApiEvent('/api/check-in/scan', 'validation_error', {
         hasUserId: Boolean(userId),
         hasCode: Boolean(code),
@@ -52,6 +57,13 @@ export async function POST(request: Request) {
     }
 
     const day = dayKeyInBusinessTz();
+=======
+      logApiEvent('/api/check-in/scan', 'validation_error', { hasUserId: Boolean(userId), hasCode: Boolean(code) });
+      return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
+    }
+
+    const dayUTC = dayKeyInBusinessTz();
+>>>>>>> origin/codex/review-my-code
 
     const validCode = await prisma.dailyCode.findFirst({
       where: { code, isActive: true, day },
@@ -59,7 +71,11 @@ export async function POST(request: Request) {
     });
 
     if (!validCode) {
+<<<<<<< HEAD
       logApiEvent('/api/check-in/scan', 'invalid_code', { userId, code });
+=======
+      logApiEvent('/api/check-in/scan', 'invalid_code', { userId });
+>>>>>>> origin/codex/review-my-code
       return NextResponse.json({ error: 'Código inválido o no es de hoy' }, { status: 404 });
     }
 
@@ -91,11 +107,15 @@ export async function POST(request: Request) {
     });
 
     if (alreadyToday) {
+<<<<<<< HEAD
       logApiEvent('/api/check-in/scan', 'duplicate_visit', {
         userId,
         tenantId: validCode.tenantId,
         visitDay,
       });
+=======
+      logApiEvent('/api/check-in/scan', 'duplicate_visit', { userId, tenantId: validCode.tenantId, visitDay });
+>>>>>>> origin/codex/review-my-code
       return NextResponse.json({ error: '¡Ya registraste tu visita hoy!' }, { status: 400 });
     }
 
@@ -140,12 +160,16 @@ export async function POST(request: Request) {
       }),
     ]);
 
+<<<<<<< HEAD
     logApiEvent('/api/check-in/scan', 'visit_registered', {
       userId,
       tenantId: validCode.tenantId,
       visitDay,
       visits: updatedMembership.currentVisits,
     });
+=======
+    logApiEvent('/api/check-in/scan', 'visit_registered', { userId, tenantId: validCode.tenantId, visitDay });
+>>>>>>> origin/codex/review-my-code
 
     return NextResponse.json({
       success: true,
@@ -154,11 +178,18 @@ export async function POST(request: Request) {
       rewardPeriod: validCode.tenant.rewardPeriod,
       message: `¡Visita registrada en ${validCode.tenant.name}!`,
     });
+<<<<<<< HEAD
   } catch (error: unknown) {
     logApiError('/api/check-in/scan', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Error técnico' },
       { status: 500 }
     );
+=======
+
+  } catch (error: unknown) {
+    logApiError('/api/check-in/scan', error);
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error técnico' }, { status: 500 });
+>>>>>>> origin/codex/review-my-code
   }
 }
