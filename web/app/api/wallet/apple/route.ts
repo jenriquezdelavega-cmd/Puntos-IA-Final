@@ -20,6 +20,13 @@ function requiredEnv(name: string) {
   return value;
 }
 
+function readCustomerId(searchParams: URLSearchParams) {
+  const direct = String(searchParams.get('customerId') || '').trim();
+  if (direct) return direct;
+  // Compatibilidad con enlaces existentes en frontend (`customer_id`).
+  return String(searchParams.get('customer_id') || '').trim();
+}
+
 async function createPassPackage(params: {
   customerId: string;
   businessId: string;
@@ -177,7 +184,7 @@ async function createPassPackage(params: {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const customerId = String(searchParams.get('customerId') || '').trim();
+    const customerId = readCustomerId(searchParams);
     const businessId = String(searchParams.get('businessId') || '').trim();
     const businessNameInput = String(searchParams.get('businessName') || '').trim();
 
@@ -211,9 +218,11 @@ export async function GET(req: Request) {
       },
     });
   } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'No se pudo generar el .pkpass';
+    const status = message.startsWith('Falta env var:') ? 400 : 500;
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'No se pudo generar el .pkpass' },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }
