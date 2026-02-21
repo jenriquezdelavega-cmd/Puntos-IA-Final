@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { logApiError, logApiEvent } from '@/app/lib/api-log';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -10,6 +11,7 @@ export async function POST(request: Request) {
     const code = String(body?.code || '').trim();
 
     if (!tenantId || !code) {
+      logApiEvent('/api/redeem/validate', 'validation_error', { hasTenantId: Boolean(tenantId), hasCode: Boolean(code) });
       return NextResponse.json(
         { error: 'tenantId y code son requeridos' },
         { status: 400 }
@@ -23,6 +25,7 @@ export async function POST(request: Request) {
     });
 
     if (!redemption) {
+      logApiEvent('/api/redeem/validate', 'invalid_or_used_code', { tenantId, code });
       return NextResponse.json(
         { error: 'Código inválido o ya fue canjeado' },
         { status: 404 }
@@ -33,6 +36,8 @@ export async function POST(request: Request) {
       where: { id: redemption.id },
       data: { isUsed: true },
     });
+
+    logApiEvent('/api/redeem/validate', 'redemption_validated', { tenantId, code, redemptionId: redemption.id });
 
     return NextResponse.json({
       ok: true,
@@ -45,9 +50,10 @@ export async function POST(request: Request) {
         usedAt: new Date().toISOString(),
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    logApiError('/api/redeem/validate', error);
     return NextResponse.json(
-      { error: error?.message || 'Error inesperado' },
+      { error: error instanceof Error ? error.message : 'Error inesperado' },
       { status: 500 }
     );
   }

@@ -1,18 +1,26 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+function pickFirstNonEmpty(...values: Array<string | undefined>) {
+  return values.find((value) => typeof value === 'string' && value.trim().length > 0) ?? null;
+}
 
 export async function GET() {
-  try {
-    console.log("🛠️ Reparando Cafetería...");
-    const tenant = await prisma.tenant.upsert({
-      where: { slug: 'cafeteria-central' },
-      update: {},
-      create: { name: 'Cafetería Central', slug: 'cafeteria-central' }
-    });
-    return NextResponse.json({ status: 'ARREGLADO', cafeteria: tenant });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  const commitSha = pickFirstNonEmpty(
+    process.env.VERCEL_GIT_COMMIT_SHA,
+    process.env.NEXT_PUBLIC_COMMIT_SHA,
+  );
+
+  const branch = pickFirstNonEmpty(
+    process.env.VERCEL_GIT_COMMIT_REF,
+    process.env.NEXT_PUBLIC_GIT_BRANCH,
+  );
+
+  return NextResponse.json({
+    ok: true,
+    service: 'puntos-ia',
+    environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? 'unknown',
+    branch,
+    commitSha,
+    timestamp: new Date().toISOString(),
+  });
 }

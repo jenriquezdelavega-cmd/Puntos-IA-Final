@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
@@ -29,7 +30,15 @@ const QRScanner = dynamic(() => import('@yudiel/react-qr-scanner').then((m) => m
 
 type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
 
-const glow = 'bg-gradient-to-br from-orange-400 via-pink-500 to-purple-600';
+type BusinessLeadForm = {
+  businessName: string;
+  contactName: string;
+  phone: string;
+  email: string;
+  city: string;
+};
+
+const glow = 'bg-gradient-to-br from-[#ff7a59] via-[#ff3f8e] to-[#f90086]';
 
 const screenFx = {
   initial: { opacity: 0, y: 16, filter: 'blur(6px)' },
@@ -117,50 +126,30 @@ function BrandLogo({ animate = true }: { animate?: boolean }) {
   const canAnim = animate && !reduce;
 
   return (
-    <div className="flex items-center justify-center gap-1 mb-2 select-none scale-90">
-      <motion.span
+    <div className="mb-2 select-none scale-90">
+      <motion.div
         initial={canAnim ? { opacity: 0, y: 8 } : false}
         animate={canAnim ? { opacity: 1, y: 0 } : false}
         transition={canAnim ? { ...spring } : undefined}
-        className="text-6xl font-black tracking-tight text-white drop-shadow-lg"
-        style={{ fontFamily: 'sans-serif' }}
+        className="brand-lockup relative inline-flex items-end justify-center gap-3"
       >
-        punto
-      </motion.span>
-
-      <motion.div
-        initial={canAnim ? { scale: 0.9, opacity: 0 } : false}
-        animate={canAnim ? { scale: 1, opacity: 1 } : false}
-        transition={canAnim ? { ...spring, delay: 0.05 } : undefined}
-        className="relative h-12 w-12 mx-1"
-      >
-        <motion.div
-          animate={
-            canAnim
-              ? {
-                  boxShadow: [
-                    '0 0 25px rgba(255,200,0,0.55)',
-                    '0 0 35px rgba(255,120,200,0.55)',
-                    '0 0 25px rgba(255,200,0,0.55)',
-                  ],
-                }
-              : undefined
-          }
-          transition={canAnim ? { duration: 2.8, repeat: Infinity } : undefined}
-          className="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-200 via-orange-400 to-red-500"
-        />
-        <div className="absolute top-2 left-3 w-3 h-3 bg-white rounded-full blur-[2px] opacity-90" />
+        <span className="brand-punto-wrap">
+          <span className="brand-word brand-word-punto">punt</span>
+          <span className="brand-o-wrap">
+            <span className="brand-word brand-word-punto">o</span>
+            <motion.span
+              initial={canAnim ? { scale: 0.85, opacity: 0 } : false}
+              animate={canAnim ? { scale: 1, opacity: 1 } : false}
+              transition={canAnim ? { ...spring, delay: 0.08 } : undefined}
+              className="brand-orb"
+            >
+              <span className="brand-orb-glow" />
+              <span className="brand-orb-shine" />
+            </motion.span>
+          </span>
+        </span>
+        <span className="brand-word brand-word-ia">IA</span>
       </motion.div>
-
-      <motion.span
-        initial={canAnim ? { opacity: 0, y: 8 } : false}
-        animate={canAnim ? { opacity: 1, y: 0 } : false}
-        transition={canAnim ? { ...spring, delay: 0.08 } : undefined}
-        className="text-6xl font-black tracking-tight text-white drop-shadow-lg"
-        style={{ fontFamily: 'sans-serif' }}
-      >
-        IA
-      </motion.span>
     </div>
   );
 }
@@ -225,6 +214,7 @@ function Onboarding() {
 }
 
 export default function Home() {
+  const prelaunchMode = process.env.NEXT_PUBLIC_PRELAUNCH_MODE !== 'false';
   const reduce = useReducedMotion();
   const canAnim = !reduce;
 
@@ -261,6 +251,51 @@ export default function Home() {
   const [history, setHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
+  const [leadForm, setLeadForm] = useState<BusinessLeadForm>({
+    businessName: '',
+    contactName: '',
+    phone: '',
+    email: '',
+    city: '',
+  });
+  const [leadLoading, setLeadLoading] = useState(false);
+  const [leadStatus, setLeadStatus] = useState('');
+  const [showClientPortal, setShowClientPortal] = useState(false);
+
+  const handleLeadField = (key: keyof BusinessLeadForm, value: string) => {
+    setLeadForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const submitLead = async () => {
+    if (!leadForm.businessName.trim() || !leadForm.contactName.trim() || !leadForm.phone.trim() || !leadForm.email.trim()) {
+      setLeadStatus('Completa negocio, nombre, teléfono y email.');
+      return;
+    }
+
+    setLeadLoading(true);
+    setLeadStatus('Enviando...');
+
+    try {
+      const res = await fetch('/api/prelaunch/business', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(leadForm),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setLeadStatus(data?.error || 'No se pudo enviar. Intenta de nuevo.');
+      } else {
+        setLeadStatus('¡Gracias! Te contactaremos para activar tu negocio.');
+        setLeadForm({ businessName: '', contactName: '', phone: '', email: '', city: '' });
+      }
+    } catch {
+      setLeadStatus('Error de conexión. Intenta nuevamente.');
+    } finally {
+      setLeadLoading(false);
+    }
+  };
+
   const isValidPhone = (p: string) => /^\d{10}$/.test(p);
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
@@ -271,6 +306,9 @@ export default function Home() {
       if (c) {
         setPendingCode(c);
         if (!user) setMessage('👋 Código detectado.');
+      }
+      if (p.get('clientes') === '1') {
+        setShowClientPortal(true);
       }
     }
     loadMapData();
@@ -451,6 +489,16 @@ export default function Home() {
     }
   };
 
+  const openPass = (tenantName?: string) => {
+    if (!user?.id) {
+      alert('Primero inicia sesión para ver tu pase.');
+      return;
+    }
+
+    const label = tenantName ? `&from=${encodeURIComponent(tenantName)}` : '';
+    window.open(`/pass?customer_id=${encodeURIComponent(user.id)}${label}`, '_blank', 'noopener,noreferrer');
+  };
+
   const handleLogout = () => {
     if (confirm('¿Salir?')) {
       setUser(null);
@@ -465,7 +513,100 @@ export default function Home() {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  return (
+  return prelaunchMode && !showClientPortal ? (
+    <main className={`min-h-screen ${glow} text-white relative overflow-hidden`}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_18%,rgba(255,255,255,0.22),transparent_36%),radial-gradient(circle_at_82%_8%,rgba(255,255,255,0.18),transparent_35%),radial-gradient(circle_at_88%_88%,rgba(255,255,255,0.12),transparent_40%)]" />
+
+      <section className="relative z-10 mx-auto w-full max-w-6xl px-6 py-12 md:py-16">
+        <div className="flex flex-col items-center text-center">
+          <BrandLogo />
+          <p className="mt-4 inline-block rounded-full border border-white/35 bg-white/10 px-4 py-1 text-xs font-black tracking-widest uppercase">
+            PRE-LANZAMIENTO
+          </p>
+          <h1 className="mt-6 text-4xl md:text-6xl font-black leading-tight max-w-4xl">
+            Muy pronto lanzamos Punto IA para transformar la lealtad de tus clientes.
+          </h1>
+          <p className="mt-6 max-w-2xl text-white/90 text-sm md:text-base font-semibold leading-relaxed">
+            Estamos preparando una experiencia de fidelización más inteligente para negocios y clientes. Mientras tanto,
+            conoce el teaser y deja tus datos para entrar como aliado fundador.
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr,1fr]">
+          <div className="rounded-3xl border border-white/30 bg-white/12 backdrop-blur-md p-5 md:p-6 shadow-2xl">
+            <p className="text-xs uppercase tracking-[0.22em] font-black text-white/75 mb-3">Teaser video</p>
+            <div className="aspect-video rounded-2xl border border-white/30 bg-black/30 overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+              <iframe
+                className="h-full w-full"
+                src="https://player.vimeo.com/video/1165202097?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479"
+                title="Genera_un_video_1080p_202602141913"
+                allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                loading="lazy"
+                allowFullScreen
+              />
+            </div>
+            <p className="text-white/80 text-xs mt-3">Presentación oficial Punto IA · producto en etapa de pre-lanzamiento.</p>
+          </div>
+
+          <div className="rounded-3xl border border-white/35 bg-white/15 backdrop-blur-md p-5 md:p-6 shadow-2xl">
+            <h2 className="text-2xl font-black">Preinscripción para negocios</h2>
+            <p className="text-sm text-white/85 mt-1 mb-4">Te contactamos para sumarte como aliado fundador.</p>
+
+            <div className="space-y-3">
+              <input
+                className="w-full rounded-2xl border border-white/35 bg-white/95 text-gray-900 p-3 font-semibold"
+                placeholder="Nombre del negocio"
+                value={leadForm.businessName}
+                onChange={(e) => handleLeadField('businessName', e.target.value)}
+              />
+              <input
+                className="w-full rounded-2xl border border-white/35 bg-white/95 text-gray-900 p-3 font-semibold"
+                placeholder="Tu nombre"
+                value={leadForm.contactName}
+                onChange={(e) => handleLeadField('contactName', e.target.value)}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input
+                  className="w-full rounded-2xl border border-white/35 bg-white/95 text-gray-900 p-3 font-semibold"
+                  placeholder="Teléfono"
+                  value={leadForm.phone}
+                  onChange={(e) => handleLeadField('phone', e.target.value)}
+                />
+                <input
+                  className="w-full rounded-2xl border border-white/35 bg-white/95 text-gray-900 p-3 font-semibold"
+                  placeholder="Ciudad"
+                  value={leadForm.city}
+                  onChange={(e) => handleLeadField('city', e.target.value)}
+                />
+              </div>
+              <input
+                type="email"
+                className="w-full rounded-2xl border border-white/35 bg-white/95 text-gray-900 p-3 font-semibold"
+                placeholder="Email"
+                value={leadForm.email}
+                onChange={(e) => handleLeadField('email', e.target.value)}
+              />
+
+              <button
+                onClick={submitLead}
+                disabled={leadLoading}
+                className="w-full rounded-2xl bg-white text-pink-600 font-black py-3.5 shadow-xl hover:bg-pink-50 transition disabled:opacity-70"
+              >
+                {leadLoading ? 'Enviando...' : 'Quiero preinscribirme como negocio'}
+              </button>
+
+              {leadStatus ? <p className="text-sm font-semibold text-white/95">{leadStatus}</p> : null}
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-6 text-white/90 max-w-2xl text-sm md:text-base font-semibold mx-auto text-center">
+          Sistema de puntos multi-negocio para pymes en México. Deja tus datos y sé de los primeros aliados en activar la plataforma.
+        </p>
+      </section>
+    </main>
+  ) : (
     <AnimatePresence mode="wait">
       {view === 'WELCOME' && (
         <motion.div
@@ -492,11 +633,27 @@ export default function Home() {
           <div className="w-full max-w-sm flex flex-col items-center py-10 relative">
             <BrandLogo />
 
-            <p className="text-white text-xl font-medium mb-10 mt-0 tracking-wide drop-shadow-md text-center leading-tight">
-              Premiamos tu lealtad,
+            <p className="text-white text-xl font-medium mb-6 mt-0 tracking-wide drop-shadow-md text-center leading-tight">
+              Tu experiencia Punto IA,
               <br />
-              <span className="font-extrabold italic">fácil y YA.</span>
+              <span className="font-extrabold italic">más premium, más rápida.</span>
             </p>
+
+            <div className="mb-8 grid w-full grid-cols-3 gap-2">
+              {[
+                { icon: '🎟️', label: 'Pase universal' },
+                { icon: '⚡', label: 'Check-in express' },
+                { icon: '🎁', label: 'Premios reales' },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-2xl border border-white/35 bg-white/15 px-3 py-3 text-center backdrop-blur-sm shadow-lg"
+                >
+                  <div className="text-xl leading-none">{item.icon}</div>
+                  <div className="mt-1 text-[10px] font-black uppercase tracking-wider text-white/90">{item.label}</div>
+                </div>
+              ))}
+            </div>
 
             {pendingCode && (
               <motion.div
@@ -520,7 +677,7 @@ export default function Home() {
                 className="relative w-full bg-white text-pink-600 py-4 rounded-2xl font-extrabold text-lg shadow-2xl hover:bg-gray-50 transition-all overflow-hidden"
               >
                 <Shine />
-                Iniciar Sesión
+                ✨ Iniciar Sesión
               </motion.button>
 
               <motion.button
@@ -532,7 +689,7 @@ export default function Home() {
                 }}
                 className="w-full bg-white/10 border-2 border-white/50 text-white py-4 rounded-2xl font-black text-lg hover:bg-white/20 transition-all backdrop-blur-sm"
               >
-                Crear Cuenta
+                🚀 Crear Cuenta
               </motion.button>
             </div>
 
@@ -542,6 +699,13 @@ export default function Home() {
               </p>
               <Onboarding />
             </div>
+
+            <Link
+              href="/aliados"
+              className="mt-12 inline-flex items-center justify-center rounded-full border border-white/50 bg-white/15 px-5 py-3 text-sm font-black tracking-wide text-white shadow-lg backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/25"
+            >
+              ¿Tienes negocio? <span className="ml-2 underline">Únete a Punto IA</span>
+            </Link>
           </div>
         </motion.div>
       )}
@@ -553,9 +717,9 @@ export default function Home() {
           animate={canAnim ? screenFx.animate : false}
           exit={canAnim ? screenFx.exit : false}
           transition={canAnim ? { ...spring } : undefined}
-          className="min-h-screen bg-gray-50 flex flex-col"
+          className="min-h-screen bg-[radial-gradient(circle_at_15%_10%,#fff7ed,transparent_40%),radial-gradient(circle_at_85%_5%,#fdf2f8,transparent_35%),#f9fafb] flex flex-col"
         >
-          <div className={`${glow} p-8 pb-20 pt-16 rounded-b-[3rem] shadow-xl text-white text-center relative`}>
+          <div className={`${glow} p-8 pb-20 pt-16 rounded-b-[3rem] shadow-[0_22px_60px_rgba(249,0,134,0.35)] text-white text-center relative overflow-hidden`}>
             <button
               onClick={() => setView('WELCOME')}
               className="absolute top-12 left-6 text-white/80 hover:text-white font-black text-2xl transition-colors"
@@ -566,11 +730,16 @@ export default function Home() {
               <BrandLogo animate={false} />
             </div>
             <h2 className="text-3xl font-black mt-2 tracking-tight">
-              {view === 'REGISTER' ? 'Únete al Club' : 'Bienvenido'}
+              {view === 'REGISTER' ? 'Crea tu cuenta Punto IA' : 'Bienvenido de vuelta'}
             </h2>
-            <p className="text-white/90 text-sm mt-1 font-semibold">
-              {view === 'REGISTER' ? 'Premiamos tu lealtad, fácil y YA.' : 'Tus premios te esperan'}
+            <p className="text-white/95 text-sm mt-1 font-semibold">
+              {view === 'REGISTER' ? 'Activa tu pase universal y comienza a acumular beneficios.' : 'Entra y muestra tu pase para registrar visitas.'}
             </p>
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/15 px-4 py-1 text-[11px] font-black uppercase tracking-[0.15em]">
+              <span>cliente</span>
+              <span className="text-white/70">•</span>
+              <span>experiencia premium</span>
+            </div>
           </div>
 
           <div className="flex-1 px-6 -mt-12 pb-10">
@@ -578,7 +747,7 @@ export default function Home() {
               initial={canAnim ? { opacity: 0, y: 14 } : false}
               animate={canAnim ? { opacity: 1, y: 0 } : false}
               transition={canAnim ? { ...spring } : undefined}
-              className="bg-white rounded-3xl shadow-2xl p-8 space-y-6 border border-gray-100 relative overflow-hidden"
+              className="bg-white/95 rounded-3xl shadow-[0_24px_70px_rgba(17,24,39,0.16)] p-8 space-y-6 border border-white relative overflow-hidden backdrop-blur"
             >
               <span className="pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full bg-pink-200/35 blur-3xl" />
               <span className="pointer-events-none absolute -bottom-24 -left-24 h-48 w-48 rounded-full bg-orange-200/35 blur-3xl" />
@@ -650,7 +819,7 @@ export default function Home() {
                 className={`relative w-full ${glow} text-white py-4 rounded-2xl font-black shadow-2xl transition-all text-lg mt-2 overflow-hidden`}
               >
                 <Shine />
-                {loading ? 'Procesando...' : view === 'REGISTER' ? 'Crear Cuenta' : 'Entrar'}
+                {loading ? 'Procesando...' : view === 'REGISTER' ? '🚀 Crear Cuenta' : 'Entrar'}
               </motion.button>
             </motion.div>
           </div>
@@ -664,7 +833,7 @@ export default function Home() {
           animate={canAnim ? screenFx.animate : false}
           exit={canAnim ? screenFx.exit : false}
           transition={canAnim ? { ...spring } : undefined}
-          className="min-h-screen bg-gray-50 pb-32"
+          className="min-h-screen bg-gradient-to-b from-[#fff2f8] via-[#fff9f4] to-[#fffdfd] pb-32"
         >
           {/* Overlays */}
           <AnimatePresence>
@@ -717,7 +886,7 @@ export default function Home() {
                     ✕
                   </button>
 
-                  <h2 className="text-2xl font-black text-gray-900 mb-6 text-center">🏆 Mis Victorias</h2>
+                  <h2 className="text-2xl font-black text-gray-900 mb-6 text-center">✨ Mis premios</h2>
 
                   <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                     {history.length > 0 ? (
@@ -729,7 +898,7 @@ export default function Home() {
                           transition={canAnim ? { ...spring, delay: i * 0.03 } : undefined}
                           className="bg-yellow-50 p-4 rounded-2xl border border-yellow-100 flex items-center gap-4"
                         >
-                          <div className="bg-yellow-200 text-yellow-700 h-12 w-12 rounded-xl flex items-center justify-center text-2xl">🎁</div>
+                          <div className="bg-yellow-100 text-yellow-700 h-12 w-12 rounded-xl flex items-center justify-center text-2xl">✨</div>
                           <div>
                             <h3 className="font-black text-gray-800">{h.prize}</h3>
                             <p className="text-xs text-gray-500 font-semibold">
@@ -805,7 +974,7 @@ export default function Home() {
           </AnimatePresence>
 
           {/* Header */}
-          <div className="bg-white px-8 pt-16 pb-6 sticky top-0 z-20 shadow-sm flex justify-between items-center">
+          <div className="bg-white/95 backdrop-blur px-8 pt-16 pb-6 sticky top-0 z-20 shadow-sm border-b border-pink-100/80 flex justify-between items-center">
             <div>
               <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Hola,</p>
               <h1 className="text-3xl font-black text-gray-900 tracking-tight">{user?.name?.split(' ')?.[0] ?? '👋'}</h1>
@@ -815,10 +984,10 @@ export default function Home() {
               <motion.button
                 whileTap={canAnim ? { scale: 0.95 } : undefined}
                 onClick={() => setShowTutorial(true)}
-                className="h-12 w-12 bg-blue-50 text-blue-600 rounded-full font-black border border-blue-100 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                className="h-12 w-12 bg-gradient-to-r from-orange-500 to-pink-600 text-white rounded-full font-black border border-white/30 flex items-center justify-center hover:brightness-110 transition-all shadow-md"
                 title="Ayuda"
               >
-                ?
+                ✨
               </motion.button>
 
               <motion.button
@@ -837,7 +1006,8 @@ export default function Home() {
             {/* TAB: CHECK-IN */}
             {activeTab === 'checkin' && !scanning && (
               <div className="flex flex-col gap-6">
-                <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-6 shadow-sm">
+                <div className="bg-white border border-gray-100 rounded-3xl p-5 md:p-6 shadow-md relative overflow-hidden">
+                  <span className="pointer-events-none absolute -top-20 -right-20 h-40 w-40 rounded-full bg-pink-100/50 blur-3xl" />
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <h2 className="text-lg font-black text-gray-900">Hacer Check-In</h2>
@@ -848,14 +1018,15 @@ export default function Home() {
                       whileTap={canAnim ? { scale: 0.98 } : undefined}
                       whileHover={canAnim ? { y: -1 } : undefined}
                       onClick={() => setScanning(true)}
-                      className="shrink-0 bg-black text-white font-black px-5 py-3 rounded-2xl shadow-md"
+                      className="shrink-0 bg-gradient-to-r from-gray-950 to-gray-800 text-white font-black px-5 py-3 rounded-2xl shadow-md"
                     >
                       Escanear QR
                     </motion.button>
                   </div>
                 </div>
 
-                <div className="bg-white border border-gray-200 rounded-3xl p-5 md:p-6 shadow-sm">
+                <div className="bg-white border border-gray-100 rounded-3xl p-5 md:p-6 shadow-md relative overflow-hidden">
+                  <span className="pointer-events-none absolute -bottom-24 -left-24 h-44 w-44 rounded-full bg-orange-100/40 blur-3xl" />
                   <div>
                     <h3 className="text-base font-black text-gray-900">Escribir manual</h3>
                     <p className="text-sm text-gray-600 mt-1">Si no puedes escanear, escribe el código del QR.</p>
@@ -866,7 +1037,7 @@ export default function Home() {
                       value={manualCode}
                       onChange={(e) => setManualCode(e.target.value)}
                       placeholder="Ej. ABCD-1234-EFGH"
-                      className="w-full sm:flex-1 px-4 py-3 rounded-2xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black/20"
+                      className="w-full sm:flex-1 px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-pink-200"
                     />
                     <motion.button
                       whileTap={canAnim ? { scale: 0.98 } : undefined}
@@ -874,7 +1045,7 @@ export default function Home() {
                         if (!manualCode.trim()) return;
                         handleScan(manualCode.trim());
                       }}
-                      className="bg-black text-white font-black px-6 py-3 rounded-2xl"
+                      className="bg-gradient-to-r from-gray-950 to-gray-800 text-white font-black px-6 py-3 rounded-2xl shadow-sm"
                     >
                       OK
                     </motion.button>
@@ -901,15 +1072,15 @@ export default function Home() {
                       transition={canAnim ? spring : undefined}
                       onClick={() => toggleCard(m.tenantId)}
                       whileTap={canAnim ? { scale: 0.99 } : undefined}
-                      className={`bg-white p-6 rounded-[2rem] relative overflow-hidden cursor-pointer border border-gray-100 ${
-                        isExpanded ? 'shadow-2xl ring-4 ring-pink-50' : 'shadow-lg hover:shadow-xl'
+                      className={`bg-white p-5 md:p-6 rounded-3xl relative overflow-hidden cursor-pointer border border-gray-100 ${
+                        isExpanded ? 'shadow-xl ring-2 ring-pink-100' : 'shadow-md hover:shadow-lg'
                       }`}
                     >
                       <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-100 via-pink-100 to-purple-100 rounded-bl-full opacity-70" />
                       <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-orange-100/50 blur-3xl rounded-full" />
 
                       <div className="relative z-10">
-                        <div className="flex justify-between items-start mb-6">
+                        <div className="flex justify-between items-start gap-3 mb-4">
                           <div className="flex items-center gap-4">
                             <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-gray-950 to-gray-700 text-white flex items-center justify-center font-black text-2xl shadow-lg overflow-hidden">
                               {logo ? (
@@ -921,7 +1092,7 @@ export default function Home() {
                             </div>
 
                             <div>
-                              <h3 className="font-black text-gray-900 text-xl tracking-tight leading-none">{m.name}</h3>
+                              <h3 className="font-black text-gray-900 text-lg md:text-xl tracking-tight leading-tight">{m.name}</h3>
                               <div className="mt-2 flex flex-wrap items-center gap-2">
                                 <motion.span
                                   initial={{ scale: 1 }}
@@ -931,14 +1102,14 @@ export default function Home() {
                                 >
                                   <span className="text-[10px] font-black uppercase tracking-widest opacity-90">Premio</span>
                                   <span className="text-sm font-black leading-none">{m.prize}</span>
-                                  <span className="ml-0.5 text-base leading-none">🎁</span>
+                                  <span className="ml-0.5 text-base leading-none">✨</span>
                                 </motion.span>
                               </div>
                             </div>
                           </div>
 
                           <div className="text-right">
-                            <span className="block text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-600">
+                            <span className="block text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-600">
                               {visits}
                             </span>
                             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">VISITAS</span>
@@ -947,18 +1118,27 @@ export default function Home() {
 
                         {!isWinner ? (
                           <>
-                            <div className="relative w-full h-5 bg-gray-100 rounded-full overflow-hidden mb-3 shadow-inner">
-                              <motion.div
-                                className="h-full rounded-full bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600"
-                                initial={canAnim ? { width: 0 } : false}
-                                animate={canAnim ? { width: `${progress}%` } : false}
-                                transition={canAnim ? { duration: 0.9, ease: 'easeOut' } : undefined}
-                              />
+                            <div className="mb-3 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2">
+                              <div className="flex items-center justify-between text-[11px] font-bold text-gray-600">
+                                <span>Meta: <span className="text-gray-900">{requiredVisits} visitas</span></span>
+                                <span>Llevas: <span className="text-gray-900">{visits}</span></span>
+                              </div>
+                              <div className="mt-2 relative w-full h-3 bg-white rounded-full overflow-hidden border border-gray-200">
+                                <motion.div
+                                  className="h-full rounded-full bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600"
+                                  initial={canAnim ? { width: 0 } : false}
+                                  animate={canAnim ? { width: `${progress}%` } : false}
+                                  transition={canAnim ? { duration: 0.9, ease: 'easeOut' } : undefined}
+                                />
+                              </div>
+                              <div className="mt-1 text-[11px] font-semibold text-gray-500">
+                                Te faltan <span className="text-gray-900">{Math.max(requiredVisits - visits, 0)}</span> visita(s) para canjear.
+                              </div>
                             </div>
 
                             <div className="flex justify-between items-center">
                               <span className="text-[11px] font-black text-gray-400 uppercase tracking-widest">
-                                {isExpanded ? '🔽 Menos info' : '▶️ Ver +'}
+                                {isExpanded ? '▾ Menos info' : '▸ Ver más'}
                               </span>
 
                               <div className="text-right leading-tight">
@@ -982,15 +1162,15 @@ export default function Home() {
                             className="relative w-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white font-black py-5 rounded-2xl shadow-2xl tracking-wide text-lg overflow-hidden border-4 border-white/20"
                           >
                             <Shine />
-                            🎁 CANJEAR PREMIO
+                            CANJEAR PREMIO ✨
                             <span className="block text-[11px] font-black text-white/80 mt-1">Listo para canjear</span>
                           </motion.button>
                         )}
 
                         <motion.div
                           layout
-                          className={`grid grid-cols-2 gap-3 mt-4 overflow-hidden ${
-                            isExpanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'
+                          className={`grid grid-cols-3 gap-3 mt-4 overflow-hidden ${
+                            isExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
                           } transition-all duration-500`}
                         >
                           <motion.button
@@ -1001,8 +1181,20 @@ export default function Home() {
                             }}
                             className="bg-white border-2 border-blue-50 text-blue-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-blue-50 transition-colors shadow-sm"
                           >
-                            <span className="text-2xl mb-1">📍</span>
+                            <span className="text-2xl mb-1">🧭</span>
                             Ver Mapa
+                          </motion.button>
+
+                          <motion.button
+                            whileTap={canAnim ? { scale: 0.98 } : undefined}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openPass(m.name);
+                            }}
+                            className="bg-white border-2 border-orange-50 text-orange-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-orange-50 transition-colors shadow-sm"
+                          >
+                            <span className="text-2xl mb-1">🎟️</span>
+                            Mi Pase
                           </motion.button>
 
                           {m.instagram ? (
@@ -1013,12 +1205,12 @@ export default function Home() {
                               onClick={(e) => e.stopPropagation()}
                               className="bg-white border-2 border-pink-50 text-pink-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-pink-50 transition-colors no-underline shadow-sm"
                             >
-                              <span className="text-2xl mb-1">📸</span>
+                              <span className="text-2xl mb-1">📲</span>
                               Instagram
                             </a>
                           ) : (
                             <div className="bg-gray-50 border-2 border-gray-100 text-gray-300 py-4 rounded-2xl font-black text-xs flex flex-col items-center opacity-70">
-                              <span className="text-2xl mb-1">📸</span>
+                              <span className="text-2xl mb-1">◎</span>
                               No IG
                             </div>
                           )}
@@ -1036,8 +1228,17 @@ export default function Home() {
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
                 animate={canAnim ? { opacity: 1, y: 0 } : false}
                 transition={canAnim ? { ...spring } : undefined}
-                className="h-[52vh] md:h-[58vh] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white relative"
+                className="h-[52vh] md:h-[58vh] w-full rounded-3xl overflow-hidden shadow-xl border border-gray-100 relative"
               >
+                <div className="absolute top-3 left-3 z-10 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-pink-600 shadow">
+                  Mapa de aliados Punto IA
+                </div>
+                <button
+                  onClick={() => openPass()}
+                  className="absolute top-3 right-3 z-10 rounded-full bg-white px-4 py-2 text-xs font-black text-orange-600 shadow-lg border border-orange-100 hover:bg-orange-50 transition"
+                >
+                  Ver mi Pase
+                </button>
                 <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={50} />
               </motion.div>
             )}
@@ -1064,18 +1265,18 @@ export default function Home() {
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
                 animate={canAnim ? { opacity: 1, y: 0 } : false}
                 transition={canAnim ? { ...spring } : undefined}
-                className="bg-white p-8 rounded-[2rem] shadow-lg border border-gray-100 relative overflow-hidden"
+                className="bg-white p-6 md:p-7 rounded-3xl shadow-md border border-gray-100 relative overflow-hidden"
               >
                 <span className="pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full bg-pink-200/35 blur-3xl" />
                 <span className="pointer-events-none absolute -bottom-24 -left-24 h-48 w-48 rounded-full bg-orange-200/35 blur-3xl" />
 
                 <div className="flex items-center gap-5 mb-10 relative">
                   <div className="h-20 w-20 bg-gradient-to-br from-orange-100 to-pink-100 rounded-[1.5rem] flex items-center justify-center text-4xl shadow-inner text-pink-600">
-                    👤
+                    PI
                   </div>
                   <div>
                     <h2 className="text-2xl font-black text-gray-900">Mi Perfil</h2>
-                    <p className="text-sm text-gray-400 font-semibold">Gestiona tu identidad</p>
+                    <p className="text-sm text-pink-500 font-bold">Tu identidad Punto IA</p>
                   </div>
                 </div>
 
@@ -1120,18 +1321,18 @@ export default function Home() {
                 <motion.button
                   whileTap={canAnim ? { scale: 0.98 } : undefined}
                   onClick={loadHistory}
-                  className="w-full bg-yellow-400 text-yellow-950 p-5 rounded-2xl font-black mt-8 shadow-xl hover:bg-yellow-300 transition-all text-lg flex items-center justify-center gap-2"
+                  className="w-full bg-yellow-400 text-yellow-950 p-4 rounded-2xl font-black mt-6 shadow-md hover:bg-yellow-300 transition-all text-base flex items-center justify-center gap-2"
                 >
-                  <span>📜</span> Ver Historial de Premios
+                  <span>🗂️</span> Ver Historial de Premios
                 </motion.button>
 
                 <motion.button
                   whileTap={canAnim ? { scale: 0.98 } : undefined}
                   onClick={handleUpdate}
-                  className="relative w-full bg-gray-950 text-white p-5 rounded-2xl font-black mt-4 shadow-2xl transition-all text-lg hover:bg-black overflow-hidden"
+                  className="relative w-full bg-gradient-to-r from-gray-950 to-gray-800 text-white p-4 rounded-2xl font-black mt-3 shadow-lg transition-all text-base hover:from-black hover:to-gray-900 overflow-hidden"
                 >
                   <Shine />
-                  Guardar Cambios 💾
+                  Guardar Cambios ✨
                 </motion.button>
 
                 {message && (
@@ -1146,10 +1347,10 @@ export default function Home() {
           {/* Bottom Tabs */}
           <div className="fixed bottom-6 left-6 right-6 bg-white/80 backdrop-blur-xl border border-white/40 p-2 rounded-[2.5rem] shadow-2xl flex justify-between items-center z-40 ring-1 ring-black/5">
             {[
-              { key: 'checkin', icon: '✅', label: 'Check-In' },
-              { key: 'points', icon: '🔥', label: 'Puntos' },
-              { key: 'map', icon: '🗺️', label: 'Mapa' },
-              { key: 'profile', icon: '👤', label: 'Perfil' },
+              { key: 'checkin', icon: '⚡', label: 'Check-In' },
+              { key: 'points', icon: '🎯', label: 'Puntos' },
+              { key: 'map', icon: '🧭', label: 'Mapa' },
+              { key: 'profile', icon: '✨', label: 'Perfil' },
             ].map((t) => {
               const active = activeTab === (t.key as any);
               return (

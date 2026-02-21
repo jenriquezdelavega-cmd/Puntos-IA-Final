@@ -31,6 +31,22 @@ const [msg, setMsg] = useState('');
 
 const [team, setTeam] = useState<any[]>([]);
 const [newStaff, setNewStaff] = useState({ name: '', username: '', password: '', role: 'STAFF' });
+const [passCustomerId, setPassCustomerId] = useState('');
+const [passPhone, setPassPhone] = useState('');
+const [passResult, setPassResult] = useState<any>(null);
+const [passLoading, setPassLoading] = useState(false);
+
+const trendData = reportData?.chartData ?? [];
+const genderData = reportData?.genderData ?? [];
+const ageData = reportData?.ageData ?? [];
+const totalClients = reportData?.csvData?.length || 0;
+const totalCheckins = trendData.reduce((sum: number, item: any) => sum + Number(item.count || 0), 0);
+const peakDay = trendData.reduce((max: any, item: any) => {
+  return Number(item.count || 0) > Number(max?.count || 0) ? item : max;
+}, null);
+const trendMax = Math.max(...trendData.map((d: any) => Number(d.count || 0)), 1);
+const genderMax = Math.max(...genderData.map((d: any) => Number(d.value || 0)), 1);
+const ageMax = Math.max(...ageData.map((d: any) => Number(d.value || 0)), 1);
 
 const handleLogin = async (e: React.FormEvent) => {
 e.preventDefault();
@@ -89,6 +105,35 @@ try { await fetch('/api/tenant/users', { method: 'DELETE', headers: {'Content-Ty
 };
 
 const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, tenantUserId }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch (e) {} };
+
+const openCustomerPass = () => {
+const id = String(passCustomerId || '').trim();
+if (!id) return alert('Captura el customer_id');
+window.open(`/pass?customer_id=${encodeURIComponent(id)}&from=${encodeURIComponent(tenant?.name || 'admin')}`, '_blank', 'noopener,noreferrer');
+};
+
+const createCustomerPass = async () => {
+const customerId = String(passCustomerId || '').trim();
+const phone = String(passPhone || '').trim();
+if (!customerId && !phone) return alert('Ingresa customer_id o teléfono');
+setPassLoading(true);
+setPassResult(null);
+try {
+const res = await fetch('/api/pass/create', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({ customerId, phone }),
+});
+const data = await res.json();
+if (!res.ok) return alert(data.error || 'No se pudo crear pase');
+setPassResult(data);
+setPassCustomerId(data.customer?.id || customerId);
+} catch {
+alert('No se pudo crear pase');
+} finally {
+setPassLoading(false);
+}
+};
 
 const searchLocation = async () => {
 if (!addressSearch) return;
@@ -183,6 +228,14 @@ return (
   </button>
 
   <button
+    onClick={()=>setTab('passes')}
+    className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab==='passes'?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
+  >
+    <span className="text-lg">🎟️</span>
+    <span className="text-xs md:text-sm font-bold">Pases</span>
+  </button>
+
+  <button
     onClick={()=>setTab('redeem')}
     className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab==='redeem'?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
   >
@@ -207,12 +260,74 @@ return (
 <div className="flex-1 p-6 md:p-8 overflow-y-auto pb-32 md:pb-0">
 {tab === 'dashboard' && userRole === 'ADMIN' && (
 <div className="space-y-8 animate-fadeIn">
-<h2 className="text-3xl font-bold text-gray-800">Resumen</h2>
-<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-<div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100"><p className="text-gray-400 text-xs font-bold uppercase">Clientes</p><p className="text-4xl font-black text-gray-900 mt-2">{reportData?.csvData?.length || 0}</p></div>
-<div className="bg-gradient-to-br from-orange-400 to-pink-500 p-6 rounded-3xl shadow-lg text-white cursor-pointer" onClick={downloadCSV}><p className="font-bold uppercase text-xs opacity-80">Base de Datos</p><p className="text-2xl font-black mt-2"> Excel</p></div>
+<div className="flex items-center justify-between gap-4 flex-wrap">
+  <div>
+    <h2 className="text-3xl font-bold text-gray-800">Dashboard</h2>
+    <p className="text-sm text-gray-500 font-medium mt-1">Tendencia de check-ins, género y edades de tus clientes.</p>
+  </div>
+  <button className="bg-gradient-to-br from-orange-400 to-pink-500 px-5 py-3 rounded-2xl shadow-lg text-white font-black text-sm" onClick={downloadCSV}>Exportar base (CSV)</button>
 </div>
-<div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100"><h3 className="text-lg font-bold text-gray-800 mb-6">Tendencia</h3><div className="h-40 flex items-end justify-between gap-2">{reportData?.chartData?.map((d:any,i:number)=><div key={i} className="flex-1 bg-indigo-500 rounded-t-lg" style={{height:`${Math.min(d.count*20,150)}px`}}></div>)}</div></div>
+
+<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100"><p className="text-gray-400 text-xs font-bold uppercase">Clientes registrados</p><p className="text-4xl font-black text-gray-900 mt-2">{totalClients}</p></div>
+<div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100"><p className="text-gray-400 text-xs font-bold uppercase">Check-ins acumulados</p><p className="text-4xl font-black text-gray-900 mt-2">{totalCheckins}</p></div>
+<div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100"><p className="text-gray-400 text-xs font-bold uppercase">Día más fuerte</p><p className="text-xl font-black text-gray-900 mt-2">{peakDay ? `${peakDay.date} · ${peakDay.count}` : 'Sin datos'}</p></div>
+</div>
+
+<div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+  <h3 className="text-lg font-bold text-gray-800 mb-1">Tendencia de check-ins</h3>
+  <p className="text-xs text-gray-500 font-medium mb-5">Actividad diaria de tus clientes.</p>
+  <div className="h-44 flex items-end justify-between gap-2">
+    {trendData.length > 0 ? trendData.map((d:any,i:number)=>(
+      <div key={i} className="flex-1 flex flex-col items-center gap-2 min-w-0">
+        <div className="w-full bg-gradient-to-t from-orange-500 to-pink-500 rounded-t-lg" style={{height:`${Math.max((Number(d.count || 0) / trendMax) * 170, 8)}px`}}></div>
+        <span className="text-[10px] font-bold text-gray-400 truncate w-full text-center">{String(d.date).slice(5)}</span>
+      </div>
+    )) : <p className="text-sm text-gray-400">Aún no hay check-ins para mostrar.</p>}
+  </div>
+</div>
+
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+    <h3 className="text-lg font-bold text-gray-800 mb-1">Distribución por género</h3>
+    <p className="text-xs text-gray-500 font-medium mb-5">Clientes por segmento.</p>
+    <div className="space-y-4">
+      {genderData.length > 0 ? genderData.map((item:any) => {
+        const width = Math.max((Number(item.value || 0) / genderMax) * 100, item.value ? 8 : 0);
+        return (
+          <div key={item.label}>
+            <div className="flex justify-between text-xs font-bold text-gray-600 mb-1">
+              <span>{item.label}</span>
+              <span>{item.value}</span>
+            </div>
+            <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
+              <div className="h-full rounded-full" style={{ width: `${width}%`, backgroundColor: item.color || '#fb7185' }}></div>
+            </div>
+          </div>
+        );
+      }) : <p className="text-sm text-gray-400">Sin datos de género.</p>}
+    </div>
+  </div>
+
+  <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+    <h3 className="text-lg font-bold text-gray-800 mb-1">Distribución por edades</h3>
+    <p className="text-xs text-gray-500 font-medium mb-5">Rangos de edad de tus clientes.</p>
+    <div className="space-y-3">
+      {ageData.length > 0 ? ageData.map((item:any, idx:number) => {
+        const width = Math.max((Number(item.value || 0) / ageMax) * 100, item.value ? 8 : 0);
+        return (
+          <div key={item.label} className="flex items-center gap-3">
+            <span className="w-14 text-[11px] font-bold text-gray-500">{item.label}</span>
+            <div className="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500" style={{ width: `${width}%`, opacity: 0.6 + (idx % 4) * 0.1 }}></div>
+            </div>
+            <span className="w-6 text-right text-xs font-bold text-gray-700">{item.value}</span>
+          </div>
+        );
+      }) : <p className="text-sm text-gray-400">Sin datos de edades.</p>}
+    </div>
+  </div>
+</div>
 </div>
 )}
 
@@ -265,7 +380,63 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
 <div className="bg-gray-50 p-6 rounded-3xl mb-6 flex justify-center">{qrValue ? <QRCode value={qrValue} size={200} /> : <div className="h-[200px] w-[200px] bg-gray-200 rounded-xl flex items-center justify-center text-gray-400">Sin QR</div>}</div>
 {code && <p className="text-4xl font-mono font-black text-gray-900 tracking-widest mb-6">{code}</p>}
 <button onClick={generateCode} className="w-full bg-black text-white py-4 rounded-2xl font-bold shadow-lg">Generar Nuevo</button>
+
+<div className="mt-6 rounded-2xl border border-orange-100 bg-orange-50 p-4 text-left">
+  <h3 className="text-sm font-black text-orange-700 uppercase tracking-wider">Crear pase de cliente</h3>
+  <p className="text-xs text-orange-700/80 mt-1">Ingresa el customer_id del cliente y abre su pase universal para descargar/mostrar.</p>
+  <div className="mt-3 flex gap-2">
+    <input
+      className="flex-1 p-3 rounded-xl border border-orange-200 bg-white text-gray-900 font-semibold"
+      placeholder="customer_id"
+      value={passCustomerId}
+      onChange={e => setPassCustomerId(e.target.value)}
+    />
+    <button onClick={openCustomerPass} className="px-4 py-3 rounded-xl bg-orange-600 text-white font-black">Abrir Pase</button>
+  </div>
 </div>
+</div>
+</div>
+)}
+
+{tab === 'passes' && (
+<div className="max-w-2xl mx-auto mt-10 animate-fadeIn">
+  <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-orange-100">
+    <h2 className="text-2xl font-black text-gray-800">Crear pase de cliente</h2>
+    <p className="text-sm text-gray-500 mt-1">Genera/abre un pase universal buscando por customer_id o teléfono.</p>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5">
+      <input
+        className="p-4 rounded-2xl border border-gray-200 text-gray-900 font-semibold"
+        placeholder="customer_id"
+        value={passCustomerId}
+        onChange={e => setPassCustomerId(e.target.value)}
+      />
+      <input
+        className="p-4 rounded-2xl border border-gray-200 text-gray-900 font-semibold"
+        placeholder="Teléfono del cliente"
+        value={passPhone}
+        onChange={e => setPassPhone(e.target.value.replace(/\D/g, ''))}
+      />
+    </div>
+
+    <div className="mt-4 flex flex-wrap gap-2">
+      <button onClick={createCustomerPass} disabled={passLoading} className="px-5 py-3 rounded-xl bg-orange-600 text-white font-black disabled:opacity-60">{passLoading ? 'Creando...' : 'Crear pase'}</button>
+      <button onClick={openCustomerPass} className="px-5 py-3 rounded-xl bg-gray-900 text-white font-black">Abrir pase</button>
+    </div>
+
+    {passResult ? (
+      <div className="mt-5 rounded-2xl border border-orange-100 bg-orange-50 p-4">
+        <p className="text-sm font-bold text-orange-800">Cliente: {passResult.customer?.name} · {passResult.customer?.phone}</p>
+        <p className="text-xs text-orange-700 mt-1 font-mono">ID: {passResult.customer?.id}</p>
+        <button
+          onClick={() => window.open(passResult.pass?.path, '_blank', 'noopener,noreferrer')}
+          className="mt-3 px-4 py-2 rounded-lg bg-white border border-orange-200 text-orange-700 font-bold text-sm"
+        >
+          Abrir pase generado
+        </button>
+      </div>
+    ) : null}
+  </div>
 </div>
 )}
 
