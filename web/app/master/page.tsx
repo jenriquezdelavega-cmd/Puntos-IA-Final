@@ -132,10 +132,7 @@ export default function MasterPage() {
         </div>
         <p className="text-xs text-gray-400 mt-3">Tip: selecciona un negocio en el directorio para exportar solo sus clientes.</p>
       </div>
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/codex/review-my-code
       <h2 className="text-2xl font-bold mb-4">🏢 Directorio</h2>
       <div className="space-y-6">
         {tenants.map(t => (

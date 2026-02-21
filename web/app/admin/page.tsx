@@ -32,12 +32,9 @@ const [msg, setMsg] = useState('');
 const [team, setTeam] = useState<any[]>([]);
 const [newStaff, setNewStaff] = useState({ name: '', username: '', password: '', role: 'STAFF' });
 const [passCustomerId, setPassCustomerId] = useState('');
-<<<<<<< HEAD
-=======
 const [passPhone, setPassPhone] = useState('');
 const [passResult, setPassResult] = useState<any>(null);
 const [passLoading, setPassLoading] = useState(false);
->>>>>>> origin/codex/review-my-code
 
 const trendData = reportData?.chartData ?? [];
 const genderData = reportData?.genderData ?? [];
@@ -115,8 +112,6 @@ if (!id) return alert('Captura el customer_id');
 window.open(`/pass?customer_id=${encodeURIComponent(id)}&from=${encodeURIComponent(tenant?.name || 'admin')}`, '_blank', 'noopener,noreferrer');
 };
 
-<<<<<<< HEAD
-=======
 const createCustomerPass = async () => {
 const customerId = String(passCustomerId || '').trim();
 const phone = String(passPhone || '').trim();
@@ -140,7 +135,6 @@ setPassLoading(false);
 }
 };
 
->>>>>>> origin/codex/review-my-code
 const searchLocation = async () => {
 if (!addressSearch) return;
 setIsSearching(true);
@@ -399,10 +393,6 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
     />
     <button onClick={openCustomerPass} className="px-4 py-3 rounded-xl bg-orange-600 text-white font-black">Abrir Pase</button>
   </div>
-<<<<<<< HEAD
-</div>
-=======
->>>>>>> origin/codex/review-my-code
 </div>
 </div>
 </div>

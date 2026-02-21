@@ -90,26 +90,27 @@ function formatRewardPeriod(period?: string) {
 
   const p = (period || 'OPEN').toUpperCase();
   let counter = 'Sin vigencia';
-  let window = 'Sin vigencia';
+  // Avoid shadowing the global `validityWindow` object (can confuse bundlers / minifiers).
+  let validityWindow = 'Sin vigencia';
 
   if (p === 'MONTHLY') {
     counter = 'Mensual';
-    window = `Hasta ${fmtEnd(endOfMonth(y, month))}`;
+    validityWindow = `Hasta ${fmtEnd(endOfMonth(y, month))}`;
   } else if (p === 'QUARTERLY') {
     counter = 'Trimestral';
     const q = Math.floor((month - 1) / 3) + 1;
     const endMonth = q * 3;
-    window = `Hasta ${fmtEnd(endOfMonth(y, endMonth))}`;
+    validityWindow = `Hasta ${fmtEnd(endOfMonth(y, endMonth))}`;
   } else if (p === 'SEMESTER') {
     counter = 'Semestral';
     const endMonth = month <= 6 ? 6 : 12;
-    window = `Hasta ${fmtEnd(endOfMonth(y, endMonth))}`;
+    validityWindow = `Hasta ${fmtEnd(endOfMonth(y, endMonth))}`;
   } else if (p === 'ANNUAL') {
     counter = 'Anual';
-    window = `Hasta ${fmtEnd(endOfMonth(y, 12))}`;
+    validityWindow = `Hasta ${fmtEnd(endOfMonth(y, 12))}`;
   }
 
-  return { counter, window };
+  return { counter, window: validityWindow };
 }
 
 function Shine() {
@@ -515,18 +516,6 @@ export default function Home() {
   return prelaunchMode && !showClientPortal ? (
     <main className={`min-h-screen ${glow} text-white relative overflow-hidden`}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_18%,rgba(255,255,255,0.22),transparent_36%),radial-gradient(circle_at_82%_8%,rgba(255,255,255,0.18),transparent_35%),radial-gradient(circle_at_88%_88%,rgba(255,255,255,0.12),transparent_40%)]" />
-<<<<<<< HEAD
-      <section className="relative z-10 mx-auto w-full max-w-6xl px-6 py-12 md:py-16">
-        <div className="flex flex-col items-center text-center">
-          <BrandLogo />
-          <p className="mt-4 inline-block rounded-full border border-white/35 bg-white/10 px-4 py-1 text-xs font-black tracking-widest uppercase">PRE-LANZAMIENTO</p>
-          <h1 className="mt-6 text-4xl md:text-6xl font-black leading-tight max-w-4xl">Muy pronto lanzaremos Punto IA para transformar la lealtad de tus clientes.</h1>
-          <p className="mt-4 text-white/90 max-w-2xl text-sm md:text-base font-semibold"></p>
-        </div>
-        <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr,1fr]">
-          <div className="rounded-3xl border border-white/30 bg-white/12 backdrop-blur-md p-5 md:p-6 shadow-2xl">
-            <p className="text-xs uppercase tracking-[0.22em] font-black text-white/75 mb-3">Video</p>
-=======
 
       <section className="relative z-10 mx-auto w-full max-w-6xl px-6 py-12 md:py-16">
         <div className="flex flex-col items-center text-center">
@@ -546,39 +535,17 @@ export default function Home() {
         <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr,1fr]">
           <div className="rounded-3xl border border-white/30 bg-white/12 backdrop-blur-md p-5 md:p-6 shadow-2xl">
             <p className="text-xs uppercase tracking-[0.22em] font-black text-white/75 mb-3">Teaser video</p>
->>>>>>> origin/codex/review-my-code
             <div className="aspect-video rounded-2xl border border-white/30 bg-black/30 overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
               <iframe
                 className="h-full w-full"
-                src="https://player.vimeo.com/video/1165062263?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479"
-<<<<<<< HEAD
-                title="PUNTO IA"
-=======
+                src="https://player.vimeo.com/video/1165202097?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479"
                 title="Genera_un_video_1080p_202602141913"
->>>>>>> origin/codex/review-my-code
                 allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
                 referrerPolicy="strict-origin-when-cross-origin"
                 loading="lazy"
                 allowFullScreen
               />
             </div>
-<<<<<<< HEAD
-          </div>
-          <div className="rounded-3xl border border-white/35 bg-white/15 backdrop-blur-md p-5 md:p-6 shadow-2xl">
-            <h2 className="text-2xl font-black">Preinscripción para negocios</h2>
-            <p className="text-sm text-white/85 mt-1 mb-4">Te contactamos para sumarte como aliado fundador.</p>
-            <div className="space-y-3">
-              <input className="w-full rounded-2xl border border-white/35 bg-white/95 text-gray-900 p-3 font-semibold" placeholder="Nombre del negocio" value={leadForm.businessName} onChange={(e) => handleLeadField('businessName', e.target.value)} />
-              <input className="w-full rounded-2xl border border-white/35 bg-white/95 text-gray-900 p-3 font-semibold" placeholder="Tu nombre" value={leadForm.contactName} onChange={(e) => handleLeadField('contactName', e.target.value)} />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input className="w-full rounded-2xl border border-white/35 bg-white/95 text-gray-900 p-3 font-semibold" placeholder="Teléfono" value={leadForm.phone} onChange={(e) => handleLeadField('phone', e.target.value)} />
-                <input className="w-full rounded-2xl border border-white/35 bg-white/95 text-gray-900 p-3 font-semibold" placeholder="Ciudad" value={leadForm.city} onChange={(e) => handleLeadField('city', e.target.value)} />
-              </div>
-              <input type="email" className="w-full rounded-2xl border border-white/35 bg-white/95 text-gray-900 p-3 font-semibold" placeholder="Email" value={leadForm.email} onChange={(e) => handleLeadField('email', e.target.value)} />
-              <button onClick={submitLead} disabled={leadLoading} className="w-full rounded-2xl bg-white text-pink-600 font-black py-3.5 shadow-xl hover:bg-pink-50 transition disabled:opacity-70">
-                {leadLoading ? 'Enviando...' : 'Quiero preinscribirme como negocio'}
-              </button>
-=======
             <p className="text-white/80 text-xs mt-3">Presentación oficial Punto IA · producto en etapa de pre-lanzamiento.</p>
           </div>
 
@@ -629,7 +596,6 @@ export default function Home() {
                 {leadLoading ? 'Enviando...' : 'Quiero preinscribirme como negocio'}
               </button>
 
->>>>>>> origin/codex/review-my-code
               {leadStatus ? <p className="text-sm font-semibold text-white/95">{leadStatus}</p> : null}
             </div>
           </div>
@@ -734,10 +700,6 @@ export default function Home() {
               <Onboarding />
             </div>
 
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/codex/review-my-code
             <Link
               href="/aliados"
               className="mt-12 inline-flex items-center justify-center rounded-full border border-white/50 bg-white/15 px-5 py-3 text-sm font-black tracking-wide text-white shadow-lg backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/25"

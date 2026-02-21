@@ -12,10 +12,9 @@ function tzParts(d: Date) {
     month: '2-digit',
   });
   const parts = fmt.formatToParts(d);
-  const get = (t: string) => parts.find((p) => p.type === t)?.value || '';
+  const get = (t: string) => parts.find(p => p.type === t)?.value || '';
   return { y: parseInt(get('year'), 10), m: parseInt(get('month'), 10) };
 }
-
 function periodKey(period: RewardPeriod, now = new Date()) {
   if (period === 'OPEN') return 'OPEN';
   const { y, m } = tzParts(now);
@@ -31,14 +30,7 @@ export async function POST(request: Request) {
     const { userId, tenantId } = body;
 
     if (!userId || !tenantId) {
-<<<<<<< HEAD
-      logApiEvent('/api/redeem/request', 'validation_error', {
-        hasUserId: Boolean(userId),
-        hasTenantId: Boolean(tenantId),
-      });
-=======
       logApiEvent('/api/redeem/request', 'validation_error', { hasUserId: Boolean(userId), hasTenantId: Boolean(tenantId) });
->>>>>>> origin/codex/review-my-code
       return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
     }
 
@@ -49,7 +41,7 @@ export async function POST(request: Request) {
     }
 
     let membership = await prisma.membership.findUnique({
-      where: { tenantId_userId: { tenantId, userId } },
+      where: { tenantId_userId: { tenantId, userId } }
     });
 
     if (!membership) {
@@ -61,6 +53,7 @@ export async function POST(request: Request) {
     const tenantPeriod = (tenant.rewardPeriod as RewardPeriod) || 'OPEN';
     const appliedType = (membership.periodType as RewardPeriod) || 'OPEN';
 
+    // cambio de regla: adoptar sin reset
     if (appliedType !== tenantPeriod) {
       const newKey = periodKey(tenantPeriod, now);
       membership = await prisma.membership.update({
@@ -69,6 +62,7 @@ export async function POST(request: Request) {
       });
     }
 
+    // expiración natural
     const curType = (membership.periodType as RewardPeriod) || 'OPEN';
     const curKey = periodKey(curType, now);
 
@@ -83,50 +77,22 @@ export async function POST(request: Request) {
     const currentVisits = membership.currentVisits ?? 0;
 
     if (currentVisits < requiredVisits) {
-<<<<<<< HEAD
-      logApiEvent('/api/redeem/request', 'insufficient_visits', {
-        userId,
-        tenantId,
-        currentVisits,
-        requiredVisits,
-      });
-      return NextResponse.json(
-        { error: `Te faltan ${requiredVisits - currentVisits} visita(s) para canjear` },
-        { status: 400 }
-      );
-=======
       logApiEvent('/api/redeem/request', 'insufficient_visits', { userId, tenantId, currentVisits, requiredVisits });
       return NextResponse.json({ error: `Te faltan ${requiredVisits - currentVisits} visita(s) para canjear` }, { status: 400 });
->>>>>>> origin/codex/review-my-code
     }
 
     const code = Math.floor(1000 + Math.random() * 9000).toString();
 
     await prisma.$transaction([
       prisma.redemption.create({
-        data: { code, userId, tenantId, isUsed: false },
+        data: { code, userId, tenantId, isUsed: false }
       }),
       prisma.membership.update({
         where: { id: membership.id },
-        data: { currentVisits: 0 },
-      }),
+        data: { currentVisits: 0 }
+      })
     ]);
 
-<<<<<<< HEAD
-    logApiEvent('/api/redeem/request', 'redemption_requested', {
-      userId,
-      tenantId,
-      code,
-    });
-
-    return NextResponse.json({ success: true, code });
-  } catch (error: unknown) {
-    logApiError('/api/redeem/request', error);
-    return NextResponse.json(
-      { error: 'Error técnico: ' + (error instanceof Error ? error.message : '') },
-      { status: 500 }
-    );
-=======
     logApiEvent('/api/redeem/request', 'redemption_requested', { userId, tenantId, code });
 
     return NextResponse.json({ success: true, code });
@@ -134,6 +100,5 @@ export async function POST(request: Request) {
   } catch (error: unknown) {
     logApiError('/api/redeem/request', error);
     return NextResponse.json({ error: 'Error técnico: ' + (error instanceof Error ? error.message : '') }, { status: 500 });
->>>>>>> origin/codex/review-my-code
   }
 }

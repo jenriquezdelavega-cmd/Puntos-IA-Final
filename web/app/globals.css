@@ -25,8 +25,6 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-<<<<<<< HEAD
-=======
 
 .brand-lockup {
   align-items: baseline;
@@ -44,7 +42,6 @@ body {
   margin-left: -0.02em;
 }
 
->>>>>>> origin/codex/review-my-code
 .brand-word {
   color: #fff;
   font-weight: 900;
@@ -64,13 +61,8 @@ body {
 
 .brand-orb {
   position: absolute;
-<<<<<<< HEAD
-  top: -0.04em;
-  right: -0.19em;
-=======
   top: 0.04em;
   right: -0.27em;
->>>>>>> origin/codex/review-my-code
   width: clamp(0.98rem, 2.55vw, 1.34rem);
   aspect-ratio: 1 / 1;
   border-radius: 9999px;
@@ -97,22 +89,3 @@ body {
   background: rgba(255, 250, 230, 0.92);
   filter: blur(0.6px);
 }
-<<<<<<< HEAD
-
-.brand-lockup {
-  align-items: baseline;
-}
-
-.brand-punto-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: baseline;
-}
-
-.brand-o-wrap {
-  position: relative;
-  display: inline-block;
-  margin-left: -0.02em;
-}
-=======
->>>>>>> origin/codex/review-my-code
