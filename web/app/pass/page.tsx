@@ -120,6 +120,12 @@ export default function PassPage() {
             </div>
             <p className="text-[11px] text-gray-500 mt-3 font-semibold">QR universal firmado. No contiene datos sensibles en texto plano.</p>
             <button onClick={downloadQrSvg} className="mt-3 w-full rounded-xl border border-pink-100 bg-pink-50 py-2 text-sm font-black text-pink-700 hover:bg-pink-100">Descargar QR (SVG)</button>
+            <a
+              className="mt-2 block w-full rounded-xl border border-pink-100 bg-pink-50 py-2 text-center text-sm font-black text-pink-700 hover:bg-pink-100"
+              href={`/api/wallet/apple?customerId=${encodeURIComponent(pass.customer_id)}`}
+            >
+              Descargar pase de Apple Wallet (.pkpass)
+            </a>
           </div>
         ) : null}
       </div>
