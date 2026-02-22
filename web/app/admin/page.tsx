@@ -1,9 +1,14 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import QRCode from 'react-qr-code';
 import dynamic from 'next/dynamic';
 
 const AdminMap = dynamic(() => import('../components/AdminMap'), { ssr: false, loading: () => <div className="h-full bg-gray-100 animate-pulse text-center pt-10 text-gray-400">Cargando...</div> });
+
+const QRScanner = dynamic(() => import('@yudiel/react-qr-scanner').then((m) => m.Scanner), {
+  ssr: false,
+  loading: () => <div className="h-[320px] rounded-2xl bg-gray-100 animate-pulse text-center pt-24 text-gray-400">Cargando cámara...</div>,
+});
 
 export default function AdminPage() {
 const [tenant, setTenant] = useState<any>(null);
@@ -28,13 +33,13 @@ const [coords, setCoords] = useState<[number, number]>([19.4326, -99.1332]);
 
 const [redeemCode, setRedeemCode] = useState('');
 const [msg, setMsg] = useState('');
+const [scannerOpen, setScannerOpen] = useState(false);
+const [scannerMsg, setScannerMsg] = useState('');
+const lastScanRef = useRef<string>('');
 
 const [team, setTeam] = useState<any[]>([]);
 const [newStaff, setNewStaff] = useState({ name: '', username: '', password: '', role: 'STAFF' });
-const [passCustomerId, setPassCustomerId] = useState('');
-const [passPhone, setPassPhone] = useState('');
-const [passResult, setPassResult] = useState<any>(null);
-const [passLoading, setPassLoading] = useState(false);
+const [lastScannedCustomerId, setLastScannedCustomerId] = useState('');
 
 const trendData = reportData?.chartData ?? [];
 const genderData = reportData?.genderData ?? [];
@@ -69,7 +74,7 @@ if (data.tenant.address) setAddressSearch(data.tenant.address);
 if (typeof window !== 'undefined') setBaseUrl(window.location.origin);
 
 if (data.user.role === 'ADMIN') { 
-setTab('dashboard'); 
+setTab('qr'); 
 loadReports(data.tenant.id); 
 loadTeam(data.tenant.id);
 } else setTab('qr');
@@ -105,35 +110,6 @@ try { await fetch('/api/tenant/users', { method: 'DELETE', headers: {'Content-Ty
 };
 
 const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, tenantUserId }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch (e) {} };
-
-const openCustomerPass = () => {
-const id = String(passCustomerId || '').trim();
-if (!id) return alert('Captura el customer_id');
-window.open(`/pass?customer_id=${encodeURIComponent(id)}&from=${encodeURIComponent(tenant?.name || 'admin')}`, '_blank', 'noopener,noreferrer');
-};
-
-const createCustomerPass = async () => {
-const customerId = String(passCustomerId || '').trim();
-const phone = String(passPhone || '').trim();
-if (!customerId && !phone) return alert('Ingresa customer_id o teléfono');
-setPassLoading(true);
-setPassResult(null);
-try {
-const res = await fetch('/api/pass/create', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ customerId, phone }),
-});
-const data = await res.json();
-if (!res.ok) return alert(data.error || 'No se pudo crear pase');
-setPassResult(data);
-setPassCustomerId(data.customer?.id || customerId);
-} catch {
-alert('No se pudo crear pase');
-} finally {
-setPassLoading(false);
-}
-};
 
 const searchLocation = async () => {
 if (!addressSearch) return;
@@ -189,6 +165,83 @@ const saveSettings = async () => {
 const validateRedeem = async () => { setMsg('Validando...'); try { const res = await fetch('/api/redeem/validate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, code: redeemCode }) }); const data = await res.json(); if (res.ok) { setMsg(` ENTREGAR A: ${data.user}`); setRedeemCode(''); if(userRole==='ADMIN') loadReports(tenant.id); } else setMsg(' ' + data.error); } catch(e) { setMsg('Error'); } };
 const downloadCSV = () => { if (!reportData?.csvData) return; const headers = Object.keys(reportData.csvData[0]).join(','); const rows = reportData.csvData.map((obj: any) => Object.values(obj).join(',')).join('\n'); const encodedUri = encodeURI("data:text/csv;charset=utf-8," + headers + "\n" + rows); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `clientes_${tenant.slug}.csv`); document.body.appendChild(link); link.click(); };
 
+
+const ensureDailyCode = async () => {
+  if (code) return code;
+  const res = await fetch('/api/admin/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tenantId: tenant.id, tenantUserId }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data?.code) throw new Error(data?.error || 'No se pudo generar código diario');
+  setCode(data.code);
+  return String(data.code);
+};
+
+const resolveScannedCustomerId = async (rawValue: string) => {
+  const raw = String(rawValue || '').trim();
+  if (!raw) throw new Error('QR vacío');
+
+  try {
+    const url = new URL(raw);
+    const fromQuery = url.searchParams.get('customer_id') || url.searchParams.get('customerId');
+    if (fromQuery) return fromQuery;
+  } catch {}
+
+  const uuidMatch = raw.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}/);
+  if (uuidMatch?.[0]) return uuidMatch[0];
+
+  const res = await fetch('/api/pass/resolve-token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ qrValue: raw }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data?.customerId) throw new Error(data?.error || 'No se pudo resolver cliente del QR');
+  return String(data.customerId);
+};
+
+const openScanner = () => {
+  setTab('qr');
+  setScannerMsg('Apunta al QR del pase del cliente');
+  setScannerOpen(true);
+};
+
+const handleAdminScan = async (rawValue: string) => {
+  const raw = String(rawValue || '').trim();
+  if (!raw) return;
+  if (lastScanRef.current === raw) return;
+  lastScanRef.current = raw;
+
+  setScannerMsg('Procesando QR...');
+  try {
+    const customerId = await resolveScannedCustomerId(raw);
+    const todayCode = await ensureDailyCode();
+
+    const res = await fetch('/api/check-in/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: customerId, code: todayCode }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || 'No se pudo registrar visita');
+
+    setScannerMsg(`✅ ${data.message || 'Visita registrada'} (${data.visits}/${data.requiredVisits})`);
+    setMsg(`✅ ${data.message || 'Visita registrada'} (${data.visits}/${data.requiredVisits})`);
+    setLastScannedCustomerId(customerId);
+  } catch (error: unknown) {
+    const text = error instanceof Error ? error.message : 'Error al escanear';
+    setScannerMsg(`❌ ${text}`);
+    setMsg(`❌ ${text}`);
+  } finally {
+    setTimeout(() => {
+      lastScanRef.current = '';
+    }, 1200);
+  }
+};
+
 if (!tenant) return <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4"><div className="bg-gray-800 p-8 rounded-2xl w-full max-w-sm shadow-2xl border border-gray-700"><div className="text-center mb-8"><h1 className="text-3xl font-black text-white tracking-tighter">punto<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500">IA</span></h1><p className="text-gray-400 text-sm mt-2">Acceso de Personal</p></div><form onSubmit={handleLogin} className="space-y-4"><input className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Usuario (Ej: PIZZA.juan)" value={username} onChange={e=>setUsername(e.target.value)} /><input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Contraseña" value={password} onChange={e=>setPassword(e.target.value)} /><button className="w-full bg-gradient-to-r from-orange-500 to-pink-600 font-bold py-4 rounded-xl text-white shadow-lg">Iniciar Sesión</button></form></div></div>;
 
 const qrValue = code ? `${baseUrl}/?code=${code}` : '';
@@ -227,13 +280,6 @@ return (
     <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">QR</span>
   </button>
 
-  <button
-    onClick={()=>setTab('passes')}
-    className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab==='passes'?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
-  >
-    <span className="text-lg">🎟️</span>
-    <span className="text-xs md:text-sm font-bold">Pases</span>
-  </button>
 
   <button
     onClick={()=>setTab('redeem')}
@@ -258,6 +304,14 @@ return (
 <button onClick={() => setTenant(null)} className="md:hidden fixed top-4 right-4 z-50 bg-red-600 text-white w-8 h-8 rounded-full font-bold flex items-center justify-center shadow-lg">✕</button>
 
 <div className="flex-1 p-6 md:p-8 overflow-y-auto pb-32 md:pb-0">
+<div className="mb-4">
+  <button
+    onClick={openScanner}
+    className="w-full md:w-auto px-4 py-3 rounded-2xl bg-emerald-600 text-white font-black shadow hover:bg-emerald-700"
+  >
+    📷 Abrir escáner ahora
+  </button>
+</div>
 {tab === 'dashboard' && userRole === 'ADMIN' && (
 <div className="space-y-8 animate-fadeIn">
 <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -381,64 +435,64 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
 {code && <p className="text-4xl font-mono font-black text-gray-900 tracking-widest mb-6">{code}</p>}
 <button onClick={generateCode} className="w-full bg-black text-white py-4 rounded-2xl font-bold shadow-lg">Generar Nuevo</button>
 
-<div className="mt-6 rounded-2xl border border-orange-100 bg-orange-50 p-4 text-left">
-  <h3 className="text-sm font-black text-orange-700 uppercase tracking-wider">Crear pase de cliente</h3>
-  <p className="text-xs text-orange-700/80 mt-1">Ingresa el customer_id del cliente y abre su pase universal para descargar/mostrar.</p>
-  <div className="mt-3 flex gap-2">
-    <input
-      className="flex-1 p-3 rounded-xl border border-orange-200 bg-white text-gray-900 font-semibold"
-      placeholder="customer_id"
-      value={passCustomerId}
-      onChange={e => setPassCustomerId(e.target.value)}
-    />
-    <button onClick={openCustomerPass} className="px-4 py-3 rounded-xl bg-orange-600 text-white font-black">Abrir Pase</button>
-  </div>
+<div className="mt-4 grid gap-2">
+  <button
+    onClick={() => { setScannerOpen(true); setScannerMsg('Apunta al QR del cliente'); }}
+    className="w-full bg-emerald-600 text-white py-3 rounded-2xl font-black shadow-lg hover:bg-emerald-700"
+  >
+    Abrir cámara para escanear cliente
+  </button>
+  {scannerMsg ? <p className="text-xs font-bold text-gray-600 text-left">{scannerMsg}</p> : null}
+  {lastScannedCustomerId ? <p className="text-[11px] font-mono text-gray-500 text-left">Cliente: {lastScannedCustomerId}</p> : null}
+</div>
+
+<div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-left">
+  <h3 className="text-sm font-black text-emerald-700 uppercase tracking-wider">Escanear pase de cliente</h3>
+  <p className="text-xs text-emerald-700/80 mt-1">Aquí se escanea el QR que el cliente guardó en Apple Wallet para contar una visita.</p>
+  <button
+    onClick={() => { setScannerOpen(true); setScannerMsg('Apunta al QR del pase del cliente'); }}
+    className="mt-3 w-full px-4 py-3 rounded-xl bg-emerald-600 text-white font-black"
+  >
+    Abrir cámara y escanear pase
+  </button>
 </div>
 </div>
 </div>
 )}
 
-{tab === 'passes' && (
-<div className="max-w-2xl mx-auto mt-10 animate-fadeIn">
-  <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-orange-100">
-    <h2 className="text-2xl font-black text-gray-800">Crear pase de cliente</h2>
-    <p className="text-sm text-gray-500 mt-1">Genera/abre un pase universal buscando por customer_id o teléfono.</p>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-5">
-      <input
-        className="p-4 rounded-2xl border border-gray-200 text-gray-900 font-semibold"
-        placeholder="customer_id"
-        value={passCustomerId}
-        onChange={e => setPassCustomerId(e.target.value)}
-      />
-      <input
-        className="p-4 rounded-2xl border border-gray-200 text-gray-900 font-semibold"
-        placeholder="Teléfono del cliente"
-        value={passPhone}
-        onChange={e => setPassPhone(e.target.value.replace(/\D/g, ''))}
-      />
+{scannerOpen && (
+<div className="fixed inset-0 z-[70] bg-black/80 p-4 md:p-8">
+  <div className="max-w-xl mx-auto bg-white rounded-3xl p-4 md:p-6 shadow-2xl border border-gray-200">
+    <div className="flex items-center justify-between mb-3">
+      <h3 className="text-lg font-black text-gray-900">Escanear pase de cliente</h3>
+      <button
+        onClick={() => setScannerOpen(false)}
+        className="px-3 py-1 rounded-lg bg-gray-100 text-gray-700 font-bold"
+      >
+        Cerrar
+      </button>
     </div>
 
-    <div className="mt-4 flex flex-wrap gap-2">
-      <button onClick={createCustomerPass} disabled={passLoading} className="px-5 py-3 rounded-xl bg-orange-600 text-white font-black disabled:opacity-60">{passLoading ? 'Creando...' : 'Crear pase'}</button>
-      <button onClick={openCustomerPass} className="px-5 py-3 rounded-xl bg-gray-900 text-white font-black">Abrir pase</button>
+    <div className="rounded-2xl overflow-hidden border border-gray-200 h-[360px] bg-black">
+      <QRScanner
+        paused={!scannerOpen}
+        constraints={{ facingMode: 'environment' }}
+        onScan={(codes: { rawValue: string }[]) => {
+          const value = codes?.[0]?.rawValue;
+          if (value) void handleAdminScan(value);
+        }}
+        onError={() => {
+          setScannerMsg('No se pudo acceder a la cámara. Revisa permisos del navegador.');
+        }}
+      />
     </div>
-
-    {passResult ? (
-      <div className="mt-5 rounded-2xl border border-orange-100 bg-orange-50 p-4">
-        <p className="text-sm font-bold text-orange-800">Cliente: {passResult.customer?.name} · {passResult.customer?.phone}</p>
-        <p className="text-xs text-orange-700 mt-1 font-mono">ID: {passResult.customer?.id}</p>
-        <button
-          onClick={() => window.open(passResult.pass?.path, '_blank', 'noopener,noreferrer')}
-          className="mt-3 px-4 py-2 rounded-lg bg-white border border-orange-200 text-orange-700 font-bold text-sm"
-        >
-          Abrir pase generado
-        </button>
-      </div>
-    ) : null}
+    <p className="mt-3 text-xs font-semibold text-gray-600">Escanea el QR del pase en Apple Wallet para registrar una visita.</p>
+    {scannerMsg ? <p className="mt-2 text-sm font-black text-emerald-700">{scannerMsg}</p> : null}
   </div>
 </div>
 )}
+
 
 {tab === 'redeem' && (
 <div className="max-w-md mx-auto mt-10 animate-fadeIn">
