@@ -112,11 +112,6 @@ export default function PassPage() {
     window.location.href = href;
   };
 
-  const refreshCounter = async () => {
-    if (!pass?.customer_id || !pass.business?.id) return;
-    await loadPass(pass.customer_id, pass.business.id);
-  };
-
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#ff7a59] via-[#ff3f8e] to-[#f90086] p-6 text-white flex items-center justify-center">
       <div className="w-full max-w-md rounded-3xl border border-white/35 bg-white/15 backdrop-blur-md p-6 shadow-2xl">
@@ -157,13 +152,6 @@ export default function PassPage() {
             <div className="mt-3 grid gap-2">
               <button onClick={downloadQrSvg} className="w-full rounded-xl border border-pink-100 bg-pink-50 py-2 text-sm font-black text-pink-700 hover:bg-pink-100">
                 Descargar QR (SVG)
-              </button>
-              <button
-                type="button"
-                onClick={refreshCounter}
-                className="w-full rounded-xl border border-emerald-200 bg-emerald-50 py-2 text-sm font-black text-emerald-700 hover:bg-emerald-100"
-              >
-                🔄 Actualizar contador
               </button>
               <button
                 type="button"
