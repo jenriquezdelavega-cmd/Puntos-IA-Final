@@ -479,10 +479,11 @@ export default function Home() {
     }
   };
 
-  const goToBusinessMap = (tName: string) => {
+    const goToBusinessMap = (tName: string) => {
     const target = tenants.find((t) => t.name === tName);
     if (target && target.lat && target.lng) {
       setMapFocus([target.lat, target.lng]);
+      setSelectedBusiness({ id: String(target.id || ''), name: String(target.name || '') });
       setActiveTab('map');
     } else {
       alert('Ubicación no disponible.');
@@ -498,6 +499,13 @@ export default function Home() {
     const explicitBusinessId = String(tenantId || '').trim();
     const explicitBusinessName = String(tenantName || '').trim();
 
+    const matchedByName = explicitBusinessName
+      ? tenants.find((t) => String(t?.name || '').trim().toLowerCase() === explicitBusinessName.toLowerCase())
+      : null;
+
+    const selectedBusinessId = String(selectedBusiness?.id || '').trim();
+    const selectedBusinessName = String(selectedBusiness?.name || '').trim();
+
     const storedBusinessId =
       typeof window !== 'undefined' ? String(localStorage.getItem('punto_last_business_id') || '').trim() : '';
     const storedBusinessName =
@@ -509,11 +517,15 @@ export default function Home() {
 
     const resolvedBusinessId =
       explicitBusinessId ||
+      String(matchedByName?.id || '').trim() ||
+      selectedBusinessId ||
       storedBusinessId ||
       String(fallbackMembership?.tenantId || '').trim();
 
     const resolvedBusinessName =
       explicitBusinessName ||
+      String(matchedByName?.name || '').trim() ||
+      selectedBusinessName ||
       storedBusinessName ||
       String(fallbackMembership?.name || '').trim();
 
@@ -1223,7 +1235,7 @@ export default function Home() {
                             whileTap={canAnim ? { scale: 0.98 } : undefined}
                             onClick={(e) => {
                               e.stopPropagation();
-                              openPass(m.name);
+                              openPass(m.name, m.tenantId);
                             }}
                             className="bg-white border-2 border-orange-50 text-orange-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-orange-50 transition-colors shadow-sm"
                           >
@@ -1268,7 +1280,7 @@ export default function Home() {
                   Mapa de aliados Punto IA
                 </div>
                 <button
-                  onClick={() => openPass()}
+                  onClick={() => openPass(selectedBusiness?.name, selectedBusiness?.id)}
                   className="absolute top-3 right-3 z-10 rounded-full bg-white px-4 py-2 text-xs font-black text-orange-600 shadow-lg border border-orange-100 hover:bg-orange-50 transition"
                 >
                   Ver mi Pase
