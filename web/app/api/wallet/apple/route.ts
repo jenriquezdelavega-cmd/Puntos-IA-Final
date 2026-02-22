@@ -219,114 +219,97 @@ function crc32(data: Buffer) {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
-function dosDateTime(date = new Date()) {
-  const year = Math.max(1980, date.getFullYear());
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const seconds = Math.floor(date.getSeconds() / 2);
-  const dosTime = (hours << 11) | (minutes << 5) | seconds;
-  const dosDate = ((year - 1980) << 9) | (month << 5) | day;
-  return { dosDate, dosTime };
-}
-
 function buildZip(entries: Array<{ name: string; data: Buffer }>) {
-  const localParts: Buffer[] = [];
-  const centralParts: Buffer[] = [];
+  const localChunks: Buffer[] = [];
+  const centralChunks: Buffer[] = [];
   let offset = 0;
 
   for (const entry of entries) {
-    const nameBuf = Buffer.from(entry.name, 'utf8');
-    const data = entry.data;
-    const { dosDate, dosTime } = dosDateTime();
-    const checksum = crc32(data);
+    const nameBuffer = Buffer.from(entry.name, 'utf8');
+    const fileData = entry.data;
+    const checksum = crc32(fileData);
 
-    const localHeader = Buffer.alloc(30);
+    const localHeader = Buffer.alloc(30 + nameBuffer.length);
     localHeader.writeUInt32LE(0x04034b50, 0);
-    localHeader.writeUInt16LE(20, 4); // version needed
-    localHeader.writeUInt16LE(0, 6); // flags
-    localHeader.writeUInt16LE(0, 8); // compression method: store
-    localHeader.writeUInt16LE(dosTime, 10);
-    localHeader.writeUInt16LE(dosDate, 12);
+    localHeader.writeUInt16LE(20, 4);
+    localHeader.writeUInt16LE(0, 6);
+    localHeader.writeUInt16LE(0, 8);
+    localHeader.writeUInt16LE(0, 10);
+    localHeader.writeUInt16LE(0, 12);
     localHeader.writeUInt32LE(checksum, 14);
-    localHeader.writeUInt32LE(data.length, 18);
-    localHeader.writeUInt32LE(data.length, 22);
-    localHeader.writeUInt16LE(nameBuf.length, 26);
+    localHeader.writeUInt32LE(fileData.length, 18);
+    localHeader.writeUInt32LE(fileData.length, 22);
+    localHeader.writeUInt16LE(nameBuffer.length, 26);
     localHeader.writeUInt16LE(0, 28);
+    nameBuffer.copy(localHeader, 30);
 
-    const localRecord = Buffer.concat([localHeader, nameBuf, data]);
-    localParts.push(localRecord);
+    localChunks.push(localHeader, fileData);
 
-    const centralHeader = Buffer.alloc(46);
+    const centralHeader = Buffer.alloc(46 + nameBuffer.length);
     centralHeader.writeUInt32LE(0x02014b50, 0);
-    centralHeader.writeUInt16LE(20, 4); // version made by
-    centralHeader.writeUInt16LE(20, 6); // version needed
-    centralHeader.writeUInt16LE(0, 8); // flags
-    centralHeader.writeUInt16LE(0, 10); // compression method
-    centralHeader.writeUInt16LE(dosTime, 12);
-    centralHeader.writeUInt16LE(dosDate, 14);
+    centralHeader.writeUInt16LE(20, 4);
+    centralHeader.writeUInt16LE(20, 6);
+    centralHeader.writeUInt16LE(0, 8);
+    centralHeader.writeUInt16LE(0, 10);
+    centralHeader.writeUInt16LE(0, 12);
+    centralHeader.writeUInt16LE(0, 14);
     centralHeader.writeUInt32LE(checksum, 16);
-    centralHeader.writeUInt32LE(data.length, 20);
-    centralHeader.writeUInt32LE(data.length, 24);
-    centralHeader.writeUInt16LE(nameBuf.length, 28);
-    centralHeader.writeUInt16LE(0, 30); // extra length
-    centralHeader.writeUInt16LE(0, 32); // comment length
-    centralHeader.writeUInt16LE(0, 34); // disk number start
-    centralHeader.writeUInt16LE(0, 36); // internal attrs
-    centralHeader.writeUInt32LE(0, 38); // external attrs
+    centralHeader.writeUInt32LE(fileData.length, 20);
+    centralHeader.writeUInt32LE(fileData.length, 24);
+    centralHeader.writeUInt16LE(nameBuffer.length, 28);
+    centralHeader.writeUInt16LE(0, 30);
+    centralHeader.writeUInt16LE(0, 32);
+    centralHeader.writeUInt16LE(0, 34);
+    centralHeader.writeUInt16LE(0, 36);
+    centralHeader.writeUInt32LE(0, 38);
     centralHeader.writeUInt32LE(offset, 42);
+    nameBuffer.copy(centralHeader, 46);
 
-    centralParts.push(Buffer.concat([centralHeader, nameBuf]));
-    offset += localRecord.length;
+    centralChunks.push(centralHeader);
+
+    offset += localHeader.length + fileData.length;
   }
 
-  const centralDir = Buffer.concat(centralParts);
-  const localDir = Buffer.concat(localParts);
+  const centralDirectory = Buffer.concat(centralChunks);
+  const localDirectory = Buffer.concat(localChunks);
 
   const endRecord = Buffer.alloc(22);
   endRecord.writeUInt32LE(0x06054b50, 0);
-  endRecord.writeUInt16LE(0, 4); // disk number
-  endRecord.writeUInt16LE(0, 6); // central dir disk
+  endRecord.writeUInt16LE(0, 4);
+  endRecord.writeUInt16LE(0, 6);
   endRecord.writeUInt16LE(entries.length, 8);
   endRecord.writeUInt16LE(entries.length, 10);
-  endRecord.writeUInt32LE(centralDir.length, 12);
-  endRecord.writeUInt32LE(localDir.length, 16);
-  endRecord.writeUInt16LE(0, 20); // comment length
+  endRecord.writeUInt32LE(centralDirectory.length, 12);
+  endRecord.writeUInt32LE(localDirectory.length, 16);
+  endRecord.writeUInt16LE(0, 20);
 
-  return Buffer.concat([localDir, centralDir, endRecord]);
+  return Buffer.concat([localDirectory, centralDirectory, endRecord]);
 }
 
-function decodeTenantLogoData(logoDataRaw: string) {
-  const raw = String(logoDataRaw || '').trim();
+
+function buildPkPassArchiveEntries() {
+  const required = ['pass.json', 'manifest.json', 'signature', 'icon.png', 'logo.png'] as const;
+  const optional = ['icon@2x.png', 'logo@2x.png'] as const;
+  return { required, optional };
+}
+
+function decodeTenantLogoData(logoData: string) {
+  const raw = String(logoData || '').trim();
   if (!raw) return null;
 
-  let base64 = raw;
-  const commaIndex = raw.indexOf(',');
-  if (raw.startsWith('data:') && commaIndex > -1) {
-    base64 = raw.slice(commaIndex + 1);
+  const dataUrlMatch = raw.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+  if (dataUrlMatch) {
+    return Buffer.from(dataUrlMatch[2], 'base64');
   }
 
-  base64 = base64
-    .replace(/\\n/g, '')
-    .replace(/\s+/g, '')
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return null;
 
   try {
-    const decoded = Buffer.from(base64, 'base64');
-    if (!decoded.length) return null;
-    return decoded;
+    const compact = raw.replace(/\s+/g, '');
+    return Buffer.from(compact, 'base64');
   } catch {
     return null;
   }
-}
-
-function buildPkPassArchiveEntries() {
-  return {
-    required: ['pass.json', 'manifest.json', 'signature', 'icon.png', 'logo.png'],
-    optional: ['icon@2x.png', 'logo@2x.png'],
-  };
 }
 
 async function createPassPackage(params: {
@@ -337,29 +320,30 @@ async function createPassPackage(params: {
   currentVisits: number;
   tenantLogoData?: string | null;
 }) {
-  const passTypeIdentifier = requiredEnv('APPLE_PASS_TYPE_IDENTIFIER');
-  const teamIdentifier = requiredEnv('APPLE_TEAM_IDENTIFIER');
-  const wwdrBase64 = requiredEnv('APPLE_WWDR_BASE64');
-  const certP12Base64 = requiredEnv('APPLE_P12_BASE64');
-  const p12Password = optionalEnv('APPLE_P12_PASSWORD', '');
+  const passTypeIdentifier = requiredEnv('APPLE_PASS_TYPE_ID');
+  const teamIdentifier = requiredEnv('APPLE_TEAM_ID');
+  const p12Password = optionalEnv('APPLE_P12_PASSWORD');
+  const p12Base64 = requiredEnv('APPLE_P12_BASE64');
   const publicBaseUrl = requiredEnv('PUBLIC_BASE_URL').replace(/\/$/, '');
 
-  const serialNumber = `${params.customerId}-${params.businessId}`;
   const qrToken = generateCustomerToken(params.customerId);
+  const serialNumber = `${params.customerId}-${params.businessId}`;
 
-  const tempDir = await mkdtemp(join(tmpdir(), 'pkpass-'));
+  const tempDir = await mkdtemp(join(tmpdir(), 'puntoia-pkpass-'));
   try {
-    const p12Path = join(tempDir, 'cert.p12');
+    const p12Path = join(tempDir, 'signer.p12');
     const certPath = join(tempDir, 'signerCert.pem');
     const keyPath = join(tempDir, 'signerKey.pem');
-    const chainPath = join(tempDir, 'wwdr.pem');
+    const chainPath = join(tempDir, 'chain.pem');
 
-    await writeFile(p12Path, decodeP12Base64(certP12Base64));
-
-    await writeFile(chainPath, Buffer.from(wwdrBase64, 'base64'));
+    await writeFile(p12Path, decodeP12Base64(p12Base64));
 
     await exportPkcs12(p12Path, certPath, p12Password, ['-clcerts', '-nokeys']);
+
     await exportPkcs12(p12Path, keyPath, p12Password, ['-nocerts', '-nodes']);
+
+    // Export all certs from p12 as chain; if user included WWDR chain in p12 this is enough.
+    await exportPkcs12(p12Path, chainPath, p12Password, ['-nokeys']);
 
     const passJson = {
       formatVersion: 1,

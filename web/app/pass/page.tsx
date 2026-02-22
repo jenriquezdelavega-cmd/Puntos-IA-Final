@@ -17,41 +17,75 @@ type PassResponse = {
 };
 
 function extractPassQuery() {
-  if (typeof window === 'undefined') return { customerId: '', businessId: '' };
+  if (typeof window === 'undefined') return { customerId: '', businessId: '', from: '' };
   const url = new URL(window.location.href);
   return {
     customerId: url.searchParams.get('customer_id') || '',
     businessId: url.searchParams.get('business_id') || '',
+    from: url.searchParams.get('from') || '',
   };
 }
 
 export default function PassPage() {
-  const [customerId, setCustomerId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [pass, setPass] = useState<PassResponse | null>(null);
-  const [businessId, setBusinessId] = useState('');
+  const [sourceBusinessName, setSourceBusinessName] = useState('');
+
+  const loadPass = async (customerId: string, businessId: string) => {
+    const cleanCustomerId = String(customerId || '').trim();
+    const cleanBusinessId = String(businessId || '').trim();
+
+    if (!cleanCustomerId || !cleanBusinessId) {
+      setPass(null);
+      setError('No se pudo identificar tu sesión o negocio. Vuelve a entrar desde la tarjeta del negocio en la app.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch(`/api/pass/${encodeURIComponent(cleanCustomerId)}?businessId=${encodeURIComponent(cleanBusinessId)}`);
+      const data = (await res.json()) as PassResponse | { error?: string };
+      if (!res.ok) {
+        setPass(null);
+        setError((data as { error?: string }).error || 'No se pudo cargar el pase');
+        return;
+      }
+      setPass(data as PassResponse);
+    } catch {
+      setPass(null);
+      setError('No se pudo cargar el pase');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const query = extractPassQuery();
-    if (query.customerId) {
-      setCustomerId(query.customerId);
-      setBusinessId(query.businessId);
+    setSourceBusinessName(query.from);
+
+    if (query.customerId && query.businessId) {
       void loadPass(query.customerId, query.businessId);
       return;
     }
 
     const storedUser = typeof window !== 'undefined' ? localStorage.getItem('punto_user') : null;
-    if (storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser) as { id?: string };
-        if (parsed?.id) {
-          setCustomerId(parsed.id);
-          void loadPass(parsed.id);
-        }
-      } catch {
-        // ignore parse errors, user can paste id manually
+    if (!storedUser) {
+      setError('Inicia sesión y abre tu pase desde el negocio para cargarlo automáticamente.');
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(storedUser) as { id?: string };
+      if (!parsed?.id || !query.businessId) {
+        setError('Abre tu pase desde la tarjeta de un negocio para aplicar branding y contador correctos.');
+        return;
       }
+      void loadPass(parsed.id, query.businessId);
+    } catch {
+      setError('No se pudo leer tu sesión. Inicia sesión de nuevo.');
     }
   }, []);
 
@@ -71,7 +105,6 @@ export default function PassPage() {
     URL.revokeObjectURL(url);
   };
 
-
   const openAppleWallet = () => {
     if (!pass?.customer_id || !pass.business?.id) return;
     const businessParam = `&businessId=${encodeURIComponent(pass.business.id)}&businessName=${encodeURIComponent(pass.business.name)}`;
@@ -79,29 +112,9 @@ export default function PassPage() {
     window.location.href = href;
   };
 
-  const loadPass = async (id: string, selectedBusinessId?: string) => {
-    const cleanId = String(id || '').trim();
-    if (!cleanId) return;
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const businessParam = selectedBusinessId ? `?businessId=${encodeURIComponent(selectedBusinessId)}` : '';
-      const res = await fetch(`/api/pass/${encodeURIComponent(cleanId)}${businessParam}`);
-      const data = (await res.json()) as PassResponse | { error?: string };
-      if (!res.ok) {
-        setPass(null);
-        setError((data as { error?: string }).error || 'No se pudo cargar el pase');
-        return;
-      }
-      setPass(data as PassResponse);
-    } catch {
-      setPass(null);
-      setError('No se pudo cargar el pase');
-    } finally {
-      setLoading(false);
-    }
+  const refreshCounter = async () => {
+    if (!pass?.customer_id || !pass.business?.id) return;
+    await loadPass(pass.customer_id, pass.business.id);
   };
 
   return (
@@ -109,64 +122,45 @@ export default function PassPage() {
       <div className="w-full max-w-md rounded-3xl border border-white/35 bg-white/15 backdrop-blur-md p-6 shadow-2xl">
         <p className="text-xs font-black tracking-[0.2em] uppercase text-white/80">Pase de Lealtad</p>
         <h1 className="text-3xl font-black mt-2">Punto IA</h1>
-        <p className="mt-2 text-sm text-white/90">Tu QR universal para registrar visitas en cualquier negocio afiliado.</p>
+        <p className="mt-2 text-sm text-white/90">
+          Tu QR universal para registrar visitas. Este pase se personaliza automáticamente con el negocio desde donde lo abriste.
+        </p>
 
-        <div className="mt-5 flex gap-2">
-          <input
-            className="flex-1 rounded-xl border border-white/40 bg-white/95 text-gray-900 px-3 py-2 font-semibold"
-            placeholder="customer_id"
-            value={customerId}
-            onChange={(e) => setCustomerId(e.target.value)}
-          />
-          <button
-            onClick={() => loadPass(customerId, businessId)}
-            disabled={loading}
-            className="rounded-xl bg-white text-pink-600 px-4 py-2 font-black disabled:opacity-60"
-          >
-            {loading ? '...' : 'Cargar'}
-          </button>
-        </div>
+        {sourceBusinessName ? (
+          <p className="mt-3 text-xs font-bold text-white/90">Negocio seleccionado: {sourceBusinessName}</p>
+        ) : null}
 
-        <div className="mt-3">
-          <input
-            className="w-full rounded-xl border border-white/40 bg-white/95 text-gray-900 px-3 py-2 font-semibold"
-            placeholder="business_id (requerido para Wallet)"
-            value={businessId}
-            onChange={(e) => setBusinessId(e.target.value)}
-          />
-          <p className="mt-2 text-[11px] font-semibold text-white/85">
-            Tip: tu QR es universal, pero el wallet y contador se generan por negocio (business_id).
-          </p>
-        </div>
-
+        {loading ? <p className="mt-3 text-sm font-bold text-white">Cargando pase...</p> : null}
         {error ? <p className="mt-3 text-sm font-bold text-yellow-100">{error}</p> : null}
 
         {pass ? (
           <div className="mt-5 rounded-2xl bg-white p-5 text-gray-900 shadow-xl">
             <p className="text-xs uppercase tracking-[0.15em] font-black text-pink-600">Cliente</p>
             <p className="text-xl font-black mt-1">{pass.name}</p>
-            <p className="text-xs font-semibold text-gray-500 mt-1">ID: {pass.customer_id}</p>
+
             {pass.business ? (
               <p className="text-xs font-bold text-emerald-700 mt-1">
                 {pass.business.name} · {pass.business.currentVisits}/{pass.business.requiredVisits} visitas
               </p>
             ) : (
               <p className="text-xs font-bold text-amber-700 mt-1">
-                Selecciona un business_id para crear wallet con marca y contador por negocio.
+                No se pudo resolver el negocio del pase. Regresa a la app y abre el pase desde una tarjeta de negocio.
               </p>
             )}
 
             <div id="punto-pass-qr" className="mt-5 rounded-xl border border-pink-100 p-4 flex items-center justify-center bg-white">
               <QRCode value={pass.qr.value} size={240} />
             </div>
-            <p className="text-[11px] text-gray-500 mt-3 font-semibold">QR universal firmado. No contiene datos sensibles en texto plano.</p>
+            <p className="text-[11px] text-gray-500 mt-3 font-semibold">
+              QR universal firmado (mismo cliente en todos los negocios). Contador y wallet se muestran por negocio.
+            </p>
             <div className="mt-3 grid gap-2">
               <button onClick={downloadQrSvg} className="w-full rounded-xl border border-pink-100 bg-pink-50 py-2 text-sm font-black text-pink-700 hover:bg-pink-100">
                 Descargar QR (SVG)
               </button>
               <button
                 type="button"
-                onClick={() => loadPass(customerId, businessId)}
+                onClick={refreshCounter}
                 className="w-full rounded-xl border border-emerald-200 bg-emerald-50 py-2 text-sm font-black text-emerald-700 hover:bg-emerald-100"
               >
                 🔄 Actualizar contador

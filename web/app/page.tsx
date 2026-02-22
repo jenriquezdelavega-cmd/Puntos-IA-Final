@@ -489,15 +489,21 @@ export default function Home() {
     }
   };
 
-  const openPass = (tenantName?: string) => {
-    if (!user?.id) {
-      alert('Primero inicia sesión para ver tu pase.');
-      return;
-    }
+  const openPass = (tenantName?: string, tenantId?: string) => {
+      if (!user?.id) {
+        alert('Primero inicia sesión para ver tu pase.');
+        return;
+      }
 
-    const label = tenantName ? `&from=${encodeURIComponent(tenantName)}` : '';
-    window.open(`/pass?customer_id=${encodeURIComponent(user.id)}${label}`, '_blank', 'noopener,noreferrer');
-  };
+      if (!tenantId) {
+        alert('No se pudo identificar el negocio. Intenta desde la tarjeta del negocio.');
+        return;
+      }
+
+      const label = tenantName ? `&from=${encodeURIComponent(tenantName)}` : '';
+      const businessParam = `&business_id=${encodeURIComponent(tenantId)}`;
+      window.open(`/pass?customer_id=${encodeURIComponent(user.id)}${label}${businessParam}`, '_blank', 'noopener,noreferrer');
+    };
 
   const handleLogout = () => {
     if (confirm('¿Salir?')) {
