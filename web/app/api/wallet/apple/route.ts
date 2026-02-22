@@ -7,6 +7,7 @@ import { promisify } from 'util';
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { generateCustomerToken } from '@/app/lib/customer-token';
+import { walletAuthTokenForSerial, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
 
 const execFileAsync = promisify(execFile);
 const prisma = new PrismaClient();
@@ -327,7 +328,8 @@ async function createPassPackage(params: {
   const publicBaseUrl = requiredEnv('PUBLIC_BASE_URL').replace(/\/$/, '');
 
   const qrToken = generateCustomerToken(params.customerId);
-  const serialNumber = `${params.customerId}-${params.businessId}`;
+  const serialNumber = walletSerialNumber(params.customerId, params.businessId);
+  const authenticationToken = walletAuthTokenForSerial(serialNumber);
 
   const tempDir = await mkdtemp(join(tmpdir(), 'puntoia-pkpass-'));
   try {
@@ -368,6 +370,8 @@ async function createPassPackage(params: {
           messageEncoding: 'iso-8859-1',
         },
       ],
+      webServiceURL: `${publicBaseUrl}/api/wallet/apple/v1`,
+      authenticationToken,
       storeCard: {
         headerFields: [
           { key: 'business', label: 'Negocio', value: params.businessName || params.businessId },

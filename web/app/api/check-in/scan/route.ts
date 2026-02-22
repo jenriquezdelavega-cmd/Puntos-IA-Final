@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { logApiError, logApiEvent } from '@/app/lib/api-log';
 import { PrismaClient, RewardPeriod } from '@prisma/client';
+import { touchWalletPassRegistrations, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
 
 const prisma = new PrismaClient();
 const TZ = 'America/Monterrey';
@@ -129,6 +130,16 @@ export async function POST(request: Request) {
         },
       }),
     ]);
+
+    try {
+      const serialNumber = walletSerialNumber(userId, validCode.tenantId);
+      await touchWalletPassRegistrations(prisma, {
+        serialNumber,
+        passTypeIdentifier: String(process.env.APPLE_PASS_TYPE_ID || '').trim() || undefined,
+      });
+    } catch (walletError) {
+      logApiError('/api/check-in/scan#wallet-touch', walletError);
+    }
 
     logApiEvent('/api/check-in/scan', 'visit_registered', { userId, tenantId: validCode.tenantId, visitDay });
 
