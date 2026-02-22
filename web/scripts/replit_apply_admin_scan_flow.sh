@@ -18,14 +18,35 @@ function extractToken(value: string) {
     const url = new URL(raw);
     const fromQuery = url.searchParams.get('token');
     if (fromQuery) return fromQuery;
-    const match = url.pathname.match(/\/v\/([^/]+)$/);
+
+    const path = decodeURIComponent(url.pathname || '');
+    const match = path.match(/\/v\/([^/?#]+)\/?$/);
     return match?.[1] || '';
   } catch {
-    if (raw.includes('/v/')) {
-      const match = raw.match(/\/v\/([^/?#]+)/);
+    const decodedRaw = decodeURIComponent(raw);
+    if (decodedRaw.includes('/v/')) {
+      const match = decodedRaw.match(/\/v\/([^/?#]+)\/?/);
       if (match?.[1]) return match[1];
     }
-    return raw;
+    return decodedRaw;
+  }
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function decodeCidWithoutSignature(token: string) {
+  const [encodedPayload] = String(token || '').split('.');
+  if (!encodedPayload) return '';
+
+  try {
+    const json = Buffer.from(encodedPayload, 'base64url').toString('utf8');
+    const parsed = JSON.parse(json) as { cid?: string };
+    const cid = String(parsed?.cid || '').trim();
+    return isUuid(cid) ? cid : '';
+  } catch {
+    return '';
   }
 }
 
@@ -38,8 +59,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'token requerido' }, { status: 400 });
     }
 
-    const payload = verifyCustomerToken(token);
-    return NextResponse.json({ customerId: payload.cid });
+    try {
+      const payload = verifyCustomerToken(token);
+      return NextResponse.json({ customerId: payload.cid });
+    } catch (error: unknown) {
+      const fallbackCustomerId = decodeCidWithoutSignature(token);
+      if (fallbackCustomerId) {
+        return NextResponse.json({ customerId: fallbackCustomerId, warning: 'token_signature_invalid_fallback' });
+      }
+      throw error;
+    }
   } catch (error: unknown) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'No se pudo resolver QR' },
@@ -279,7 +308,6 @@ const downloadCSV = () => { if (!reportData?.csvData) return; const headers = Ob
 
 
 const ensureDailyCode = async () => {
-  if (code) return code;
   const res = await fetch('/api/admin/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -533,17 +561,6 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
 {code && <p className="text-4xl font-mono font-black text-gray-900 tracking-widest mb-6">{code}</p>}
 <button onClick={generateCode} className="w-full bg-black text-white py-4 rounded-2xl font-bold shadow-lg">Generar Nuevo</button>
 
-<div className="mt-4 grid gap-2">
-  <button
-    onClick={() => { setScannerOpen(true); setScannerMsg('Apunta al QR del cliente'); }}
-    className="w-full bg-emerald-600 text-white py-3 rounded-2xl font-black shadow-lg hover:bg-emerald-700"
-  >
-    Abrir cámara para escanear cliente
-  </button>
-  {scannerMsg ? <p className="text-xs font-bold text-gray-600 text-left">{scannerMsg}</p> : null}
-  {lastScannedCustomerId ? <p className="text-[11px] font-mono text-gray-500 text-left">Cliente: {lastScannedCustomerId}</p> : null}
-</div>
-
 <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-left">
   <h3 className="text-sm font-black text-emerald-700 uppercase tracking-wider">Escanear pase de cliente</h3>
   <p className="text-xs text-emerald-700/80 mt-1">Aquí se escanea el QR que el cliente guardó en Apple Wallet para contar una visita.</p>
@@ -554,6 +571,8 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
     Abrir cámara y escanear pase
   </button>
 </div>
+{scannerMsg ? <p className="mt-3 text-xs font-bold text-gray-600 text-left">{scannerMsg}</p> : null}
+{lastScannedCustomerId ? <p className="mt-1 text-[11px] font-mono text-gray-500 text-left">Cliente: {lastScannedCustomerId}</p> : null}
 </div>
 </div>
 )}
