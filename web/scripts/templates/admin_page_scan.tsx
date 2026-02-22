@@ -1,4 +1,4 @@
-'use client';
+--'use client';
 import { useState } from 'react';
 import QRCode from 'react-qr-code';
 import dynamic from 'next/dynamic';
