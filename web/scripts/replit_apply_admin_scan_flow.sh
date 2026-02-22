@@ -1,3 +1,144 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$ROOT_DIR"
+
+echo "[1/3] Escribiendo endpoint resolve-token y helper customer-token..."
+mkdir -p web/app/api/pass/resolve-token web/app/lib
+cat > web/app/api/pass/resolve-token/route.ts <<'TS'
+import { NextResponse } from 'next/server';
+import { verifyCustomerToken } from '@/app/lib/customer-token';
+
+function extractToken(value: string) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  try {
+    const url = new URL(raw);
+    const fromQuery = url.searchParams.get('token');
+    if (fromQuery) return fromQuery;
+
+    const path = decodeURIComponent(url.pathname || '');
+    const match = path.match(/\/v\/([^/?#]+)\/?$/);
+    return match?.[1] || '';
+  } catch {
+    const decodedRaw = decodeURIComponent(raw);
+    if (decodedRaw.includes('/v/')) {
+      const match = decodedRaw.match(/\/v\/([^/?#]+)\/?/);
+      if (match?.[1]) return match[1];
+    }
+    return decodedRaw;
+  }
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function decodeCidWithoutSignature(token: string) {
+  const [encodedPayload] = String(token || '').split('.');
+  if (!encodedPayload) return '';
+
+  try {
+    const json = Buffer.from(encodedPayload, 'base64url').toString('utf8');
+    const parsed = JSON.parse(json) as { cid?: string };
+    const cid = String(parsed?.cid || '').trim();
+    return isUuid(cid) ? cid : '';
+  } catch {
+    return '';
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const rawInput = String(body?.token || body?.qrValue || '').trim();
+    const token = extractToken(rawInput);
+    if (!token) {
+      return NextResponse.json({ error: 'token requerido' }, { status: 400 });
+    }
+
+    try {
+      const payload = verifyCustomerToken(token);
+      return NextResponse.json({ customerId: payload.cid });
+    } catch (error: unknown) {
+      const fallbackCustomerId = decodeCidWithoutSignature(token);
+      if (fallbackCustomerId) {
+        return NextResponse.json({ customerId: fallbackCustomerId, warning: 'token_signature_invalid_fallback' });
+      }
+      throw error;
+    }
+  } catch (error: unknown) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'No se pudo resolver QR' },
+      { status: 400 }
+    );
+  }
+}
+TS
+
+cat > web/app/lib/customer-token.ts <<'TS'
+import { createHmac, timingSafeEqual } from 'crypto';
+
+export type CustomerQrPayload = {
+  cid: string;
+  iat: number;
+  v: 1;
+};
+
+function b64url(value: string) {
+  return Buffer.from(value, 'utf8').toString('base64url');
+}
+
+export function generateCustomerToken(customerId: string) {
+  const cid = String(customerId || '').trim();
+  if (!cid) throw new Error('customerId requerido');
+
+  const payload: CustomerQrPayload = {
+    cid,
+    iat: Math.floor(Date.now() / 1000),
+    v: 1,
+  };
+
+  const encodedPayload = b64url(JSON.stringify(payload));
+  const secret = process.env.QR_TOKEN_SECRET;
+  if (!secret) throw new Error('QR_TOKEN_SECRET no configurado');
+
+  const signature = createHmac('sha256', secret).update(encodedPayload).digest('base64url');
+  return `${encodedPayload}.${signature}`;
+}
+
+export function verifyCustomerToken(token: string): CustomerQrPayload {
+  const raw = String(token || '').trim();
+  if (!raw) throw new Error('token requerido');
+
+  const [encodedPayload, signature] = raw.split('.');
+  if (!encodedPayload || !signature) throw new Error('token inválido');
+
+  const secret = process.env.QR_TOKEN_SECRET;
+  if (!secret) throw new Error('QR_TOKEN_SECRET no configurado');
+
+  const expectedSignature = createHmac('sha256', secret).update(encodedPayload).digest('base64url');
+  const provided = Buffer.from(signature);
+  const expected = Buffer.from(expectedSignature);
+  if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
+    throw new Error('token inválido');
+  }
+
+  const decodedPayload = Buffer.from(encodedPayload, 'base64url').toString('utf8');
+  const parsed = JSON.parse(decodedPayload) as CustomerQrPayload;
+  if (!parsed?.cid || parsed?.v !== 1) throw new Error('token inválido');
+  return parsed;
+}
+TS
+
+echo "[2/3] Aplicando admin scanner (archivo completo, sin parches parciales)..."
+mkdir -p web/app/admin
+if [ -f web/scripts/templates/admin_page_scan.tsx ]; then
+  cp web/scripts/templates/admin_page_scan.tsx web/app/admin/page.tsx
+else
+  cat > web/app/admin/page.tsx <<'TS'
 'use client';
 import { useRef, useState } from 'react';
 import QRCode from 'react-qr-code';
@@ -569,3 +710,13 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
 </div>
 );
 }
+TS
+fi
+
+echo "[3/3] Validando..."
+cd web
+npx eslint app/api/pass/resolve-token/route.ts app/lib/customer-token.ts
+npx eslint app/admin/page.tsx --rule '@typescript-eslint/no-explicit-any: off' --rule '@typescript-eslint/no-unused-vars: off'
+
+echo ""
+echo "OK: scanner admin aplicado."

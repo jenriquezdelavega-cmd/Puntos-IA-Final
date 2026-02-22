@@ -489,14 +489,15 @@ export default function Home() {
     }
   };
 
-  const openPass = (tenantName?: string) => {
+  const openPass = (tenantName?: string, tenantId?: string) => {
     if (!user?.id) {
       alert('Primero inicia sesión para ver tu pase.');
       return;
     }
 
     const label = tenantName ? `&from=${encodeURIComponent(tenantName)}` : '';
-    window.open(`/pass?customer_id=${encodeURIComponent(user.id)}${label}`, '_blank', 'noopener,noreferrer');
+    const businessParam = tenantId ? `&business_id=${encodeURIComponent(tenantId)}` : '';
+    window.open(`/pass?customer_id=${encodeURIComponent(user.id)}${label}${businessParam}`, '_blank', 'noopener,noreferrer');
   };
 
   const handleLogout = () => {
@@ -1189,7 +1190,7 @@ export default function Home() {
                             whileTap={canAnim ? { scale: 0.98 } : undefined}
                             onClick={(e) => {
                               e.stopPropagation();
-                              openPass(m.name);
+                              openPass(m.name, m.tenantId);
                             }}
                             className="bg-white border-2 border-orange-50 text-orange-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-orange-50 transition-colors shadow-sm"
                           >

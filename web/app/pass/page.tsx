@@ -8,12 +8,21 @@ type PassResponse = {
   name: string;
   branding: { app: string; theme: string };
   qr: { token: string; value: string };
+  business: {
+    id: string;
+    name: string;
+    currentVisits: number;
+    requiredVisits: number;
+  } | null;
 };
 
-function extractCustomerIdFromQuery() {
-  if (typeof window === 'undefined') return '';
+function extractPassQuery() {
+  if (typeof window === 'undefined') return { customerId: '', businessId: '' };
   const url = new URL(window.location.href);
-  return url.searchParams.get('customer_id') || '';
+  return {
+    customerId: url.searchParams.get('customer_id') || '',
+    businessId: url.searchParams.get('business_id') || '',
+  };
 }
 
 export default function PassPage() {
@@ -21,12 +30,14 @@ export default function PassPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [pass, setPass] = useState<PassResponse | null>(null);
+  const [businessId, setBusinessId] = useState('');
 
   useEffect(() => {
-    const idFromQuery = extractCustomerIdFromQuery();
-    if (idFromQuery) {
-      setCustomerId(idFromQuery);
-      void loadPass(idFromQuery);
+    const query = extractPassQuery();
+    if (query.customerId) {
+      setCustomerId(query.customerId);
+      setBusinessId(query.businessId);
+      void loadPass(query.customerId, query.businessId);
       return;
     }
 
@@ -60,7 +71,15 @@ export default function PassPage() {
     URL.revokeObjectURL(url);
   };
 
-  const loadPass = async (id: string) => {
+
+  const openAppleWallet = () => {
+    if (!pass?.customer_id) return;
+    const businessParam = pass.business?.id ? `&businessId=${encodeURIComponent(pass.business.id)}&businessName=${encodeURIComponent(pass.business.name)}` : '';
+    const href = `/api/wallet/apple?customerId=${encodeURIComponent(pass.customer_id)}${businessParam}`;
+    window.location.href = href;
+  };
+
+  const loadPass = async (id: string, selectedBusinessId?: string) => {
     const cleanId = String(id || '').trim();
     if (!cleanId) return;
 
@@ -68,7 +87,8 @@ export default function PassPage() {
     setError('');
 
     try {
-      const res = await fetch(`/api/pass/${encodeURIComponent(cleanId)}`);
+      const businessParam = selectedBusinessId ? `?businessId=${encodeURIComponent(selectedBusinessId)}` : '';
+      const res = await fetch(`/api/pass/${encodeURIComponent(cleanId)}${businessParam}`);
       const data = (await res.json()) as PassResponse | { error?: string };
       if (!res.ok) {
         setPass(null);
@@ -99,12 +119,21 @@ export default function PassPage() {
             onChange={(e) => setCustomerId(e.target.value)}
           />
           <button
-            onClick={() => loadPass(customerId)}
+            onClick={() => loadPass(customerId, businessId)}
             disabled={loading}
             className="rounded-xl bg-white text-pink-600 px-4 py-2 font-black disabled:opacity-60"
           >
             {loading ? '...' : 'Cargar'}
           </button>
+        </div>
+
+        <div className="mt-3">
+          <input
+            className="w-full rounded-xl border border-white/40 bg-white/95 text-gray-900 px-3 py-2 font-semibold"
+            placeholder="business_id (opcional)"
+            value={businessId}
+            onChange={(e) => setBusinessId(e.target.value)}
+          />
         </div>
 
         {error ? <p className="mt-3 text-sm font-bold text-yellow-100">{error}</p> : null}
@@ -114,12 +143,28 @@ export default function PassPage() {
             <p className="text-xs uppercase tracking-[0.15em] font-black text-pink-600">Cliente</p>
             <p className="text-xl font-black mt-1">{pass.name}</p>
             <p className="text-xs font-semibold text-gray-500 mt-1">ID: {pass.customer_id}</p>
+            {pass.business ? (
+              <p className="text-xs font-bold text-emerald-700 mt-1">
+                {pass.business.name} · {pass.business.currentVisits}/{pass.business.requiredVisits} visitas
+              </p>
+            ) : null}
 
             <div id="punto-pass-qr" className="mt-5 rounded-xl border border-pink-100 p-4 flex items-center justify-center bg-white">
               <QRCode value={pass.qr.value} size={240} />
             </div>
             <p className="text-[11px] text-gray-500 mt-3 font-semibold">QR universal firmado. No contiene datos sensibles en texto plano.</p>
-            <button onClick={downloadQrSvg} className="mt-3 w-full rounded-xl border border-pink-100 bg-pink-50 py-2 text-sm font-black text-pink-700 hover:bg-pink-100">Descargar QR (SVG)</button>
+            <div className="mt-3 grid gap-2">
+              <button onClick={downloadQrSvg} className="w-full rounded-xl border border-pink-100 bg-pink-50 py-2 text-sm font-black text-pink-700 hover:bg-pink-100">
+                Descargar QR (SVG)
+              </button>
+              <button
+                type="button"
+                onClick={openAppleWallet}
+                className="w-full rounded-xl border-2 border-black bg-black py-2 text-sm font-black text-white hover:bg-gray-900"
+              >
+                🍎 Descargar en Apple Wallet (.pkpass)
+              </button>
+            </div>
           </div>
         ) : null}
       </div>

@@ -173,6 +173,529 @@ Con eso yo te devuelvo: prioridades, riesgos, y siguientes tareas accionables.
 
 ---
 
+
+
+## Troubleshooting rápido (Apple Wallet en Replit)
+
+Si pegas código TypeScript directo en la terminal y ves errores como `syntax error near unexpected token` o `const: command not found`, significa que **pegaste código de archivo en bash**.
+
+### Correcto (copy/paste seguro)
+
+1. Entrar al repo y crear rama:
+
+```bash
+cd ~/workspace
+git checkout -b fix/apple-wallet-openssl
+```
+
+2. Abrir el archivo en el editor de Replit (panel izquierdo):
+
+- `web/app/api/wallet/apple/route.ts`
+
+3. Pegar el bloque TypeScript **dentro del archivo** (no en terminal), guardar, y validar:
+
+```bash
+cd ~/workspace/web
+npx eslint app/api/wallet/apple/route.ts
+```
+
+4. Commit y push:
+
+```bash
+cd ~/workspace
+git add web/app/api/wallet/apple/route.ts
+git commit -m "fix(wallet): resolve usable openssl binary before signing pass"
+git push -u origin fix/apple-wallet-openssl
+```
+
+5. Abrir PR `fix/apple-wallet-openssl -> main` y mergear para deploy en Vercel.
+
+### Si aparece `Parsing error: ',' expected` en `route.ts`
+
+Eso suele indicar que el archivo quedó corrupto por un pegado parcial. Repara con estos comandos:
+
+```bash
+cd ~/workspace
+git checkout -- web/app/api/wallet/apple/route.ts
+git pull origin main
+cd ~/workspace/web
+npx eslint app/api/wallet/apple/route.ts
+```
+
+Si el error sigue, abre `web/app/api/wallet/apple/route.ts` y confirma que **todos** los `import` estén al inicio del archivo (no dentro de funciones).
+
+### Reemplazo completo (sin revisar secciones)
+
+Si prefieres sobrescribir todo el archivo de una vez, usa este bloque en terminal:
+
+```bash
+cd ~/workspace
+cat > web/app/api/wallet/apple/route.ts <<'TS'
+import { createHash, randomUUID } from 'crypto';
+import { mkdtemp, readFile, rm, writeFile } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import { generateCustomerToken } from '@/app/lib/customer-token';
+
+const execFileAsync = promisify(execFile);
+const prisma = new PrismaClient();
+let cachedOpenSslBin: string | null = null;
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+function requiredEnv(name: string) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Falta env var: ${name}`);
+  return value;
+}
+
+function readCustomerId(searchParams: URLSearchParams) {
+  const direct = String(searchParams.get('customerId') || '').trim();
+  if (direct) return direct;
+  return String(searchParams.get('customer_id') || '').trim();
+}
+
+async function resolveOpenSslBin() {
+  if (cachedOpenSslBin) return cachedOpenSslBin;
+
+  const preferred = String(process.env.OPENSSL_BIN || '').trim();
+  const candidates = [preferred, '/usr/local/bin/openssl', '/usr/bin/openssl', '/bin/openssl', 'openssl'].filter(Boolean);
+
+  const attempted: string[] = [];
+  for (const candidate of candidates) {
+    attempted.push(candidate);
+    try {
+      await execFileAsync(candidate, ['version']);
+      cachedOpenSslBin = candidate;
+      return candidate;
+    } catch {
+      // try next
+    }
+  }
+
+  throw new Error(`No se encontró un binario OpenSSL funcional. Candidatos probados: ${attempted.join(', ')}. Configura OPENSSL_BIN con la ruta correcta del binario en tu entorno.`);
+}
+
+async function runOpenSsl(args: string[]) {
+  const opensslBin = await resolveOpenSslBin();
+  const env = { ...process.env };
+  delete env.LD_LIBRARY_PATH;
+  return execFileAsync(opensslBin, args, { env });
+}
+
+async function createPassPackage(params: { customerId: string; businessId: string; businessName: string }) {
+  const passTypeIdentifier = requiredEnv('APPLE_PASS_TYPE_ID');
+  const teamIdentifier = requiredEnv('APPLE_TEAM_ID');
+  const p12Password = requiredEnv('APPLE_P12_PASSWORD');
+  const p12Base64 = requiredEnv('APPLE_P12_BASE64');
+  const publicBaseUrl = requiredEnv('PUBLIC_BASE_URL').replace(/\/$/, '');
+
+  const qrToken = generateCustomerToken(params.customerId);
+  const serialNumber = `${params.customerId}-${params.businessId}`;
+
+  const tempDir = await mkdtemp(join(tmpdir(), 'puntoia-pkpass-'));
+  try {
+    const p12Path = join(tempDir, 'signer.p12');
+    const certPath = join(tempDir, 'signerCert.pem');
+    const keyPath = join(tempDir, 'signerKey.pem');
+    const chainPath = join(tempDir, 'chain.pem');
+
+    await writeFile(p12Path, Buffer.from(p12Base64, 'base64'));
+
+    await runOpenSsl(['pkcs12', '-in', p12Path, '-clcerts', '-nokeys', '-out', certPath, '-passin', `pass:${p12Password}`]);
+    await runOpenSsl(['pkcs12', '-in', p12Path, '-nocerts', '-nodes', '-out', keyPath, '-passin', `pass:${p12Password}`]);
+    await runOpenSsl(['pkcs12', '-in', p12Path, '-nokeys', '-out', chainPath, '-passin', `pass:${p12Password}`]);
+
+    const passJson = {
+      formatVersion: 1,
+      passTypeIdentifier,
+      teamIdentifier,
+      serialNumber,
+      organizationName: 'punto IA',
+      description: 'Tarjeta de lealtad',
+      logoText: 'punto IA',
+      foregroundColor: 'rgb(255,255,255)',
+      backgroundColor: 'rgb(249,0,134)',
+      labelColor: 'rgb(255,199,221)',
+      barcode: { format: 'PKBarcodeFormatQR', message: `${publicBaseUrl}/v/${qrToken}`, messageEncoding: 'iso-8859-1' },
+      barcodes: [{ format: 'PKBarcodeFormatQR', message: `${publicBaseUrl}/v/${qrToken}`, messageEncoding: 'iso-8859-1' }],
+      storeCard: {
+        primaryFields: [{ key: 'visits', label: 'Visitas', value: '0/10' }],
+        secondaryFields: [
+          { key: 'client', label: 'Cliente', value: params.customerId },
+          { key: 'business', label: 'Negocio', value: params.businessName || params.businessId },
+        ],
+      },
+    };
+
+    const assetsDir = join(process.cwd(), 'wallet-assets');
+    for (const name of ['icon.png', 'logo.png']) await readFile(join(assetsDir, name));
+
+    const passPath = join(tempDir, 'pass.json');
+    await writeFile(passPath, JSON.stringify(passJson, null, 2));
+
+    const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png'] as const;
+    for (const file of packageFiles) {
+      const source = file === 'pass.json' ? passPath : join(assetsDir, file);
+      try {
+        const data = await readFile(source);
+        await writeFile(join(tempDir, file), data);
+      } catch {}
+    }
+
+    const manifest: Record<string, string> = {};
+    for (const file of packageFiles) {
+      try {
+        const data = await readFile(join(tempDir, file));
+        manifest[file] = createHash('sha1').update(data).digest('hex');
+      } catch {}
+    }
+
+    const manifestPath = join(tempDir, 'manifest.json');
+    await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+
+    const signaturePath = join(tempDir, 'signature');
+    await runOpenSsl(['smime', '-binary', '-sign', '-signer', certPath, '-inkey', keyPath, '-certfile', chainPath, '-in', manifestPath, '-out', signaturePath, '-outform', 'DER']);
+
+    const zipPath = join(tempDir, `puntoia-${randomUUID()}.pkpass`);
+    await execFileAsync('zip', ['-q', '-j', zipPath, 'pass.json', 'manifest.json', 'signature', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png'], { cwd: tempDir });
+
+    return await readFile(zipPath);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const customerId = readCustomerId(searchParams);
+    const businessId = String(searchParams.get('businessId') || '').trim();
+    const businessNameInput = String(searchParams.get('businessName') || '').trim();
+
+    if (!customerId) return NextResponse.json({ error: 'customerId requerido' }, { status: 400 });
+
+    const user = await prisma.user.findUnique({ where: { id: customerId }, select: { id: true } });
+    if (!user) return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
+
+    let businessName = businessNameInput || 'Negocio afiliado';
+    if (businessId) {
+      const tenant = await prisma.tenant.findUnique({ where: { id: businessId }, select: { name: true } });
+      if (tenant?.name) businessName = tenant.name;
+    }
+
+    const pkpass = await createPassPackage({ customerId: user.id, businessId: businessId || 'coalition', businessName });
+
+    return new NextResponse(pkpass, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/vnd.apple.pkpass',
+        'Content-Disposition': 'attachment; filename="puntoia.pkpass"',
+        'Cache-Control': 'no-store',
+      },
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'No se pudo generar el .pkpass';
+    const status = message.startsWith('Falta env var:') ? 400 : 500;
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+TS
+
+cd ~/workspace/web
+npx eslint app/api/wallet/apple/route.ts
+```
+
+
+### Kit único (todo copy/paste en Replit)
+
+Si quieres resolverlo **sin editar manualmente apartados**, pega este bloque completo en terminal:
+
+```bash
+cd ~/workspace
+
+# 1) Sobrescribe route.ts con versión válida
+cat > web/app/api/wallet/apple/route.ts <<'TS'
+import { createHash, randomUUID } from 'crypto';
+import { mkdtemp, readFile, rm, writeFile } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import { generateCustomerToken } from '@/app/lib/customer-token';
+
+const execFileAsync = promisify(execFile);
+const prisma = new PrismaClient();
+let cachedOpenSslBin: string | null = null;
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+function requiredEnv(name: string) {
+  const value = process.env[name];
+  if (!value) throw new Error(`Falta env var: ${name}`);
+  return value;
+}
+
+function readCustomerId(searchParams: URLSearchParams) {
+  const direct = String(searchParams.get('customerId') || '').trim();
+  if (direct) return direct;
+  return String(searchParams.get('customer_id') || '').trim();
+}
+
+async function resolveOpenSslBin() {
+  if (cachedOpenSslBin) return cachedOpenSslBin;
+
+  const preferred = String(process.env.OPENSSL_BIN || '').trim();
+  const candidates = [
+    preferred,
+    '/usr/local/bin/openssl',
+    '/usr/bin/openssl',
+    '/bin/openssl',
+    'openssl',
+  ].filter(Boolean);
+
+  const attempted: string[] = [];
+  for (const candidate of candidates) {
+    attempted.push(candidate);
+    try {
+      await execFileAsync(candidate, ['version']);
+      cachedOpenSslBin = candidate;
+      return candidate;
+    } catch {
+      // try next candidate
+    }
+  }
+
+  throw new Error(
+    `No se encontró un binario OpenSSL funcional. Candidatos probados: ${attempted.join(', ')}. ` +
+      'Configura OPENSSL_BIN con la ruta correcta del binario en tu entorno.'
+  );
+}
+
+async function runOpenSsl(args: string[]) {
+  const opensslBin = await resolveOpenSslBin();
+  const env = { ...process.env };
+  delete env.LD_LIBRARY_PATH;
+  return execFileAsync(opensslBin, args, { env });
+}
+
+async function createPassPackage(params: {
+  customerId: string;
+  businessId: string;
+  businessName: string;
+}) {
+  const passTypeIdentifier = requiredEnv('APPLE_PASS_TYPE_ID');
+  const teamIdentifier = requiredEnv('APPLE_TEAM_ID');
+  const p12Password = requiredEnv('APPLE_P12_PASSWORD');
+  const p12Base64 = requiredEnv('APPLE_P12_BASE64');
+  const publicBaseUrl = requiredEnv('PUBLIC_BASE_URL').replace(/\/$/, '');
+
+  const qrToken = generateCustomerToken(params.customerId);
+  const serialNumber = `${params.customerId}-${params.businessId}`;
+
+  const tempDir = await mkdtemp(join(tmpdir(), 'puntoia-pkpass-'));
+  try {
+    const p12Path = join(tempDir, 'signer.p12');
+    const certPath = join(tempDir, 'signerCert.pem');
+    const keyPath = join(tempDir, 'signerKey.pem');
+    const chainPath = join(tempDir, 'chain.pem');
+
+    await writeFile(p12Path, Buffer.from(p12Base64, 'base64'));
+
+    await runOpenSsl([
+      'pkcs12',
+      '-in',
+      p12Path,
+      '-clcerts',
+      '-nokeys',
+      '-out',
+      certPath,
+      '-passin',
+      `pass:${p12Password}`,
+    ]);
+
+    await runOpenSsl([
+      'pkcs12',
+      '-in',
+      p12Path,
+      '-nocerts',
+      '-nodes',
+      '-out',
+      keyPath,
+      '-passin',
+      `pass:${p12Password}`,
+    ]);
+
+    await runOpenSsl([
+      'pkcs12',
+      '-in',
+      p12Path,
+      '-nokeys',
+      '-out',
+      chainPath,
+      '-passin',
+      `pass:${p12Password}`,
+    ]);
+
+    const passJson = {
+      formatVersion: 1,
+      passTypeIdentifier,
+      teamIdentifier,
+      serialNumber,
+      organizationName: 'punto IA',
+      description: 'Tarjeta de lealtad',
+      logoText: 'punto IA',
+      foregroundColor: 'rgb(255,255,255)',
+      backgroundColor: 'rgb(249,0,134)',
+      labelColor: 'rgb(255,199,221)',
+      barcode: {
+        format: 'PKBarcodeFormatQR',
+        message: `${publicBaseUrl}/v/${qrToken}`,
+        messageEncoding: 'iso-8859-1',
+      },
+      barcodes: [
+        {
+          format: 'PKBarcodeFormatQR',
+          message: `${publicBaseUrl}/v/${qrToken}`,
+          messageEncoding: 'iso-8859-1',
+        },
+      ],
+      storeCard: {
+        primaryFields: [{ key: 'visits', label: 'Visitas', value: '0/10' }],
+        secondaryFields: [
+          { key: 'client', label: 'Cliente', value: params.customerId },
+          { key: 'business', label: 'Negocio', value: params.businessName || params.businessId },
+        ],
+      },
+    };
+
+    const assetsDir = join(process.cwd(), 'wallet-assets');
+    const requiredFiles = ['icon.png', 'logo.png'];
+    for (const name of requiredFiles) await readFile(join(assetsDir, name));
+
+    const passPath = join(tempDir, 'pass.json');
+    await writeFile(passPath, JSON.stringify(passJson, null, 2));
+
+    const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png'] as const;
+    for (const file of packageFiles) {
+      const source = file === 'pass.json' ? passPath : join(assetsDir, file);
+      try {
+        const data = await readFile(source);
+        await writeFile(join(tempDir, file), data);
+      } catch {
+        // optional assets
+      }
+    }
+
+    const manifest: Record<string, string> = {};
+    for (const file of packageFiles) {
+      try {
+        const data = await readFile(join(tempDir, file));
+        manifest[file] = createHash('sha1').update(data).digest('hex');
+      } catch {
+        // optional assets
+      }
+    }
+
+    const manifestPath = join(tempDir, 'manifest.json');
+    await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+
+    const signaturePath = join(tempDir, 'signature');
+    await runOpenSsl([
+      'smime',
+      '-binary',
+      '-sign',
+      '-signer',
+      certPath,
+      '-inkey',
+      keyPath,
+      '-certfile',
+      chainPath,
+      '-in',
+      manifestPath,
+      '-out',
+      signaturePath,
+      '-outform',
+      'DER',
+    ]);
+
+    const zipPath = join(tempDir, `puntoia-${randomUUID()}.pkpass`);
+    await execFileAsync(
+      'zip',
+      ['-q', '-j', zipPath, 'pass.json', 'manifest.json', 'signature', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png'],
+      { cwd: tempDir }
+    );
+
+    return await readFile(zipPath);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const customerId = readCustomerId(searchParams);
+    const businessId = String(searchParams.get('businessId') || '').trim();
+    const businessNameInput = String(searchParams.get('businessName') || '').trim();
+
+    if (!customerId) {
+      return NextResponse.json({ error: 'customerId requerido' }, { status: 400 });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: customerId }, select: { id: true } });
+    if (!user) {
+      return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
+    }
+
+    let businessName = businessNameInput || 'Negocio afiliado';
+    if (businessId) {
+      const tenant = await prisma.tenant.findUnique({ where: { id: businessId }, select: { name: true } });
+      if (tenant?.name) businessName = tenant.name;
+    }
+
+    const pkpass = await createPassPackage({
+      customerId: user.id,
+      businessId: businessId || 'coalition',
+      businessName,
+    });
+
+    return new NextResponse(pkpass, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/vnd.apple.pkpass',
+        'Content-Disposition': 'attachment; filename="puntoia.pkpass"',
+        'Cache-Control': 'no-store',
+      },
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'No se pudo generar el .pkpass';
+    const status = message.startsWith('Falta env var:') ? 400 : 500;
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+TS
+
+# 2) Verifica lint
+cd ~/workspace/web
+npx eslint app/api/wallet/apple/route.ts app/pass/page.tsx
+
+# 3) Guarda cambios y sube rama
+cd ~/workspace
+git checkout -b fix/apple-wallet-full-reset
+git add web/app/api/wallet/apple/route.ts web/app/pass/page.tsx
+git commit -m "fix(wallet): reset apple wallet route and keep visible download button"
+git push -u origin fix/apple-wallet-full-reset
+```
+
 ## Troubleshooting rápido de Git (Replit)
 
 Si te aparece este error:
@@ -731,3 +1254,157 @@ Validación rápida:
 cd /home/runner/workspace/web
 rg -n "Dashboard|Check-ins acumulados|Distribución por género|Distribución por edades" app/admin/page.tsx
 ```
+
+## Apple Wallet fix en Replit (sin Python)
+
+Si tu terminal de Replit muestra `python: command not found`, usa solo comandos Bash:
+
+```bash
+cd ~/workspace
+cat > web/app/api/wallet/apple/route.ts <<'TS'
+# pega aquí el archivo completo route.ts desde este repo
+TS
+
+cd ~/workspace/web
+npx eslint app/api/wallet/apple/route.ts
+```
+
+Nota: no uses `apply_patch` ni `python - <<'PY'` en Replit si no están instalados.
+
+## Replit: bloque único para arreglar Wallet (sin Python)
+
+Si quieres algo **100% copy/paste** y tu Replit no tiene `python`, usa esto:
+
+```bash
+cd ~/workspace
+bash web/scripts/replit_apply_wallet_fix.sh
+```
+
+Este script:
+- recupera `web/app/api/wallet/apple/route.ts` y `web/app/pass/page.tsx` desde `origin/main`,
+- corre `eslint` para validar,
+- y te deja los comandos de commit/push listos.
+
+> ¿Instalar Python en Replit? No es necesario para este fix.
+> Si aún así lo quieres, intenta `python3 --version` (muchos Replit ya traen `python3` aunque no traigan `python`).
+
+
+## Replit (solo copy/paste) — flujo recomendado
+
+### 1) Recuperar fix Wallet + CTA
+```bash
+cd ~/workspace
+bash web/scripts/replit_apply_wallet_fix.sh
+```
+
+### 2) Commit y push en una rama
+```bash
+cd ~/workspace
+git checkout -b fix/apple-wallet-recover || git checkout fix/apple-wallet-recover
+git add web/app/api/wallet/apple/route.ts web/app/pass/page.tsx
+git commit -m "fix(wallet): recover wallet route and CTA"
+git push -u origin fix/apple-wallet-recover
+```
+
+### 3) Si sigue saliendo `SSL_get_srp_g` en Vercel
+```bash
+# En Vercel -> Project -> Settings -> Environment Variables
+# agrega:
+# OPENSSL_BIN=/usr/bin/openssl
+# luego redeploy de production
+```
+
+## Error `SSL_get_srp_g` (copy/paste directo Replit)
+
+Si al descargar Apple Wallet ves el error `undefined symbol: SSL_get_srp_g`, aplica estos pasos exactos:
+
+```bash
+cd ~/workspace
+git pull origin main
+cd ~/workspace/web
+npx eslint app/api/wallet/apple/route.ts
+```
+
+Luego en Vercel configura **exactamente**:
+
+```text
+OPENSSL_BIN=/usr/bin/openssl
+```
+
+Si tenías `OPENSSL_BIN=openssl`, cámbialo por la ruta absoluta y haz redeploy.
+
+## Replit error: `needs merge` / `unmerged files` (copy/paste)
+
+Si ves este error al hacer `git pull`:
+
+- `web/app/api/wallet/apple/route.ts: needs merge`
+- `Pulling is not possible because you have unmerged files`
+
+usa este bloque exacto:
+
+```bash
+cd ~/workspace
+bash web/scripts/replit_fix_unmerged_wallet.sh
+```
+
+Luego sube a rama así:
+
+```bash
+cd ~/workspace
+git checkout -b fix/apple-wallet-merge-recovery || git checkout fix/apple-wallet-merge-recovery
+git add web/app/api/wallet/apple/route.ts web/app/pass/page.tsx
+git commit -m "fix(wallet): recover from unmerged state and restore wallet files"
+git push -u origin fix/apple-wallet-merge-recovery
+```
+
+## Replit (copy/paste) — Admin escanear QR y registrar visita
+
+Pega este bloque en Replit para aplicar toda la mejora sin editar archivos manualmente:
+
+```bash
+cd ~/workspace
+bash web/scripts/replit_apply_admin_scan_flow.sh
+```
+
+> Este script ahora usa una plantilla estable (`web/scripts/templates/admin_page_scan.tsx`) para evitar errores de parse por parches parciales en `admin/page.tsx`.
+
+## Replit + Vercel recovery (error en `app/admin/page.tsx:490`)
+
+Si Vercel falla con `Parsing ecmascript source code failed` en `app/admin/page.tsx` y además `git push` te da `fetch first`, usa exactamente esto:
+
+```bash
+cd ~/workspace
+
+# 1) alinea tu rama con remoto para evitar push rechazado
+git fetch origin --prune
+git checkout feat/admin-scan-qr || git checkout -b feat/admin-scan-qr
+git reset --hard origin/feat/admin-scan-qr
+
+# 2) aplica el script correcto de escaneo admin
+bash web/scripts/replit_apply_admin_scan_flow.sh
+
+# 3) valida que ya no exista error de parse
+cd web
+npx eslint app/api/pass/resolve-token/route.ts app/lib/customer-token.ts
+npx eslint app/admin/page.tsx --rule '@typescript-eslint/no-explicit-any: off' --rule '@typescript-eslint/no-unused-vars: off'
+
+# 4) commit + push con rebase (evita 'fetch first')
+cd ~/workspace
+git add web/app/admin/page.tsx web/app/api/pass/resolve-token/route.ts web/app/lib/customer-token.ts web/scripts/replit_apply_admin_scan_flow.sh
+git commit -m "fix(admin): recover scanner flow after parse error" || true
+git pull --rebase origin feat/admin-scan-qr
+git push -u origin feat/admin-scan-qr
+```
+
+Si `bash web/scripts/replit_apply_admin_scan_flow.sh` dice *No such file or directory*, primero trae `main` y vuelve a intentarlo:
+
+```bash
+cd ~/workspace
+git fetch origin --prune
+git checkout main
+git pull origin main
+git checkout feat/admin-scan-qr || git checkout -b feat/admin-scan-qr
+bash web/scripts/replit_apply_admin_scan_flow.sh
+```
+
+> Este script ahora usa una plantilla estable (`web/scripts/templates/admin_page_scan.tsx`) para evitar errores de parse por parches parciales en `admin/page.tsx`.
