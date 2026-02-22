@@ -219,118 +219,156 @@ function crc32(data: Buffer) {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
+function dosDateTime(date = new Date()) {
+  const year = Math.max(1980, date.getFullYear());
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const seconds = Math.floor(date.getSeconds() / 2);
+  const dosTime = (hours << 11) | (minutes << 5) | seconds;
+  const dosDate = ((year - 1980) << 9) | (month << 5) | day;
+  return { dosDate, dosTime };
+}
+
 function buildZip(entries: Array<{ name: string; data: Buffer }>) {
-  const localChunks: Buffer[] = [];
-  const centralChunks: Buffer[] = [];
+  const localParts: Buffer[] = [];
+  const centralParts: Buffer[] = [];
   let offset = 0;
 
   for (const entry of entries) {
-    const nameBuffer = Buffer.from(entry.name, 'utf8');
-    const fileData = entry.data;
-    const checksum = crc32(fileData);
+    const nameBuf = Buffer.from(entry.name, 'utf8');
+    const data = entry.data;
+    const { dosDate, dosTime } = dosDateTime();
+    const checksum = crc32(data);
 
-    const localHeader = Buffer.alloc(30 + nameBuffer.length);
+    const localHeader = Buffer.alloc(30);
     localHeader.writeUInt32LE(0x04034b50, 0);
-    localHeader.writeUInt16LE(20, 4);
-    localHeader.writeUInt16LE(0, 6);
-    localHeader.writeUInt16LE(0, 8);
-    localHeader.writeUInt16LE(0, 10);
-    localHeader.writeUInt16LE(0, 12);
+    localHeader.writeUInt16LE(20, 4); // version needed
+    localHeader.writeUInt16LE(0, 6); // flags
+    localHeader.writeUInt16LE(0, 8); // compression method: store
+    localHeader.writeUInt16LE(dosTime, 10);
+    localHeader.writeUInt16LE(dosDate, 12);
     localHeader.writeUInt32LE(checksum, 14);
-    localHeader.writeUInt32LE(fileData.length, 18);
-    localHeader.writeUInt32LE(fileData.length, 22);
-    localHeader.writeUInt16LE(nameBuffer.length, 26);
+    localHeader.writeUInt32LE(data.length, 18);
+    localHeader.writeUInt32LE(data.length, 22);
+    localHeader.writeUInt16LE(nameBuf.length, 26);
     localHeader.writeUInt16LE(0, 28);
-    nameBuffer.copy(localHeader, 30);
 
-    localChunks.push(localHeader, fileData);
+    const localRecord = Buffer.concat([localHeader, nameBuf, data]);
+    localParts.push(localRecord);
 
-    const centralHeader = Buffer.alloc(46 + nameBuffer.length);
+    const centralHeader = Buffer.alloc(46);
     centralHeader.writeUInt32LE(0x02014b50, 0);
-    centralHeader.writeUInt16LE(20, 4);
-    centralHeader.writeUInt16LE(20, 6);
-    centralHeader.writeUInt16LE(0, 8);
-    centralHeader.writeUInt16LE(0, 10);
-    centralHeader.writeUInt16LE(0, 12);
-    centralHeader.writeUInt16LE(0, 14);
+    centralHeader.writeUInt16LE(20, 4); // version made by
+    centralHeader.writeUInt16LE(20, 6); // version needed
+    centralHeader.writeUInt16LE(0, 8); // flags
+    centralHeader.writeUInt16LE(0, 10); // compression method
+    centralHeader.writeUInt16LE(dosTime, 12);
+    centralHeader.writeUInt16LE(dosDate, 14);
     centralHeader.writeUInt32LE(checksum, 16);
-    centralHeader.writeUInt32LE(fileData.length, 20);
-    centralHeader.writeUInt32LE(fileData.length, 24);
-    centralHeader.writeUInt16LE(nameBuffer.length, 28);
-    centralHeader.writeUInt16LE(0, 30);
-    centralHeader.writeUInt16LE(0, 32);
-    centralHeader.writeUInt16LE(0, 34);
-    centralHeader.writeUInt16LE(0, 36);
-    centralHeader.writeUInt32LE(0, 38);
+    centralHeader.writeUInt32LE(data.length, 20);
+    centralHeader.writeUInt32LE(data.length, 24);
+    centralHeader.writeUInt16LE(nameBuf.length, 28);
+    centralHeader.writeUInt16LE(0, 30); // extra length
+    centralHeader.writeUInt16LE(0, 32); // comment length
+    centralHeader.writeUInt16LE(0, 34); // disk number start
+    centralHeader.writeUInt16LE(0, 36); // internal attrs
+    centralHeader.writeUInt32LE(0, 38); // external attrs
     centralHeader.writeUInt32LE(offset, 42);
-    nameBuffer.copy(centralHeader, 46);
 
-    centralChunks.push(centralHeader);
-
-    offset += localHeader.length + fileData.length;
+    centralParts.push(Buffer.concat([centralHeader, nameBuf]));
+    offset += localRecord.length;
   }
 
-  const centralDirectory = Buffer.concat(centralChunks);
-  const localDirectory = Buffer.concat(localChunks);
+  const centralDir = Buffer.concat(centralParts);
+  const localDir = Buffer.concat(localParts);
 
   const endRecord = Buffer.alloc(22);
   endRecord.writeUInt32LE(0x06054b50, 0);
-  endRecord.writeUInt16LE(0, 4);
-  endRecord.writeUInt16LE(0, 6);
+  endRecord.writeUInt16LE(0, 4); // disk number
+  endRecord.writeUInt16LE(0, 6); // central dir disk
   endRecord.writeUInt16LE(entries.length, 8);
   endRecord.writeUInt16LE(entries.length, 10);
-  endRecord.writeUInt32LE(centralDirectory.length, 12);
-  endRecord.writeUInt32LE(localDirectory.length, 16);
-  endRecord.writeUInt16LE(0, 20);
+  endRecord.writeUInt32LE(centralDir.length, 12);
+  endRecord.writeUInt32LE(localDir.length, 16);
+  endRecord.writeUInt16LE(0, 20); // comment length
 
-  return Buffer.concat([localDirectory, centralDirectory, endRecord]);
+  return Buffer.concat([localDir, centralDir, endRecord]);
 }
 
+function decodeTenantLogoData(logoDataRaw: string) {
+  const raw = String(logoDataRaw || '').trim();
+  if (!raw) return null;
+
+  let base64 = raw;
+  const commaIndex = raw.indexOf(',');
+  if (raw.startsWith('data:') && commaIndex > -1) {
+    base64 = raw.slice(commaIndex + 1);
+  }
+
+  base64 = base64
+    .replace(/\\n/g, '')
+    .replace(/\s+/g, '')
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+
+  try {
+    const decoded = Buffer.from(base64, 'base64');
+    if (!decoded.length) return null;
+    return decoded;
+  } catch {
+    return null;
+  }
+}
 
 function buildPkPassArchiveEntries() {
-  const required = ['pass.json', 'manifest.json', 'signature', 'icon.png', 'logo.png'] as const;
-  const optional = ['icon@2x.png', 'logo@2x.png'] as const;
-  return { required, optional };
+  return {
+    required: ['pass.json', 'manifest.json', 'signature', 'icon.png', 'logo.png'],
+    optional: ['icon@2x.png', 'logo@2x.png'],
+  };
 }
 
 async function createPassPackage(params: {
   customerId: string;
   businessId: string;
   businessName: string;
+  requiredVisits: number;
+  currentVisits: number;
+  tenantLogoData?: string | null;
 }) {
-  const passTypeIdentifier = requiredEnv('APPLE_PASS_TYPE_ID');
-  const teamIdentifier = requiredEnv('APPLE_TEAM_ID');
-  const p12Password = optionalEnv('APPLE_P12_PASSWORD');
-  const p12Base64 = requiredEnv('APPLE_P12_BASE64');
+  const passTypeIdentifier = requiredEnv('APPLE_PASS_TYPE_IDENTIFIER');
+  const teamIdentifier = requiredEnv('APPLE_TEAM_IDENTIFIER');
+  const wwdrBase64 = requiredEnv('APPLE_WWDR_BASE64');
+  const certP12Base64 = requiredEnv('APPLE_P12_BASE64');
+  const p12Password = optionalEnv('APPLE_P12_PASSWORD', '');
   const publicBaseUrl = requiredEnv('PUBLIC_BASE_URL').replace(/\/$/, '');
 
-  const qrToken = generateCustomerToken(params.customerId);
   const serialNumber = `${params.customerId}-${params.businessId}`;
+  const qrToken = generateCustomerToken(params.customerId);
 
-  const tempDir = await mkdtemp(join(tmpdir(), 'puntoia-pkpass-'));
+  const tempDir = await mkdtemp(join(tmpdir(), 'pkpass-'));
   try {
-    const p12Path = join(tempDir, 'signer.p12');
+    const p12Path = join(tempDir, 'cert.p12');
     const certPath = join(tempDir, 'signerCert.pem');
     const keyPath = join(tempDir, 'signerKey.pem');
-    const chainPath = join(tempDir, 'chain.pem');
+    const chainPath = join(tempDir, 'wwdr.pem');
 
-    await writeFile(p12Path, decodeP12Base64(p12Base64));
+    await writeFile(p12Path, decodeP12Base64(certP12Base64));
+
+    await writeFile(chainPath, Buffer.from(wwdrBase64, 'base64'));
 
     await exportPkcs12(p12Path, certPath, p12Password, ['-clcerts', '-nokeys']);
-
     await exportPkcs12(p12Path, keyPath, p12Password, ['-nocerts', '-nodes']);
-
-    // Export all certs from p12 as chain; if user included WWDR chain in p12 this is enough.
-    await exportPkcs12(p12Path, chainPath, p12Password, ['-nokeys']);
 
     const passJson = {
       formatVersion: 1,
       passTypeIdentifier,
       teamIdentifier,
       serialNumber,
-      organizationName: 'punto IA',
-      description: 'Tarjeta de lealtad',
-      logoText: 'punto IA',
+      organizationName: params.businessName || 'Negocio afiliado',
+      description: `Tarjeta de lealtad · ${params.businessName || 'Negocio afiliado'}`,
+      logoText: params.businessName || 'Negocio afiliado',
       foregroundColor: 'rgb(255,255,255)',
       backgroundColor: 'rgb(249,0,134)',
       labelColor: 'rgb(255,199,221)',
@@ -347,10 +385,18 @@ async function createPassPackage(params: {
         },
       ],
       storeCard: {
-        primaryFields: [{ key: 'visits', label: 'Visitas', value: '0/10' }],
+        headerFields: [
+          { key: 'business', label: 'Negocio', value: params.businessName || params.businessId },
+        ],
+        primaryFields: [{ key: 'visits', label: 'Contador de visitas', value: `${params.currentVisits}/${params.requiredVisits}` }],
         secondaryFields: [
           { key: 'client', label: 'Cliente', value: params.customerId },
-          { key: 'business', label: 'Negocio', value: params.businessName || params.businessId },
+        ],
+        auxiliaryFields: [
+          { key: 'brand', label: 'Branding', value: 'Punto IA' },
+        ],
+        backFields: [
+          { key: 'footbrand', label: 'Punto IA', value: 'Programa de lealtad' },
         ],
       },
     };
@@ -361,12 +407,22 @@ async function createPassPackage(params: {
       await readFile(join(assetsDir, name));
     }
 
+    const tenantLogo = decodeTenantLogoData(String(params.tenantLogoData || ''));
+    if (tenantLogo && tenantLogo.length > 0) {
+      await writeFile(join(tempDir, 'logo.png'), tenantLogo);
+      await writeFile(join(tempDir, 'logo@2x.png'), tenantLogo);
+    }
+
     const passPath = join(tempDir, 'pass.json');
     await writeFile(passPath, JSON.stringify(passJson, null, 2));
 
     const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png'] as const;
     for (const file of packageFiles) {
-      const source = file === 'pass.json' ? passPath : join(assetsDir, file);
+      const source = file === 'pass.json'
+        ? passPath
+        : file.startsWith('logo')
+          ? join(tempDir, file)
+          : join(assetsDir, file);
       try {
         const data = await readFile(source);
         await writeFile(join(tempDir, file), data);
@@ -434,11 +490,15 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const customerId = readCustomerId(searchParams);
-    const businessId = String(searchParams.get('businessId') || '').trim();
+    const businessId = String(searchParams.get('businessId') || searchParams.get('business_id') || '').trim();
     const businessNameInput = String(searchParams.get('businessName') || '').trim();
 
     if (!customerId) {
       return NextResponse.json({ error: 'customerId requerido' }, { status: 400 });
+    }
+
+    if (!businessId) {
+      return NextResponse.json({ error: 'businessId requerido para crear wallet por negocio' }, { status: 400 });
     }
 
     const user = await prisma.user.findUnique({ where: { id: customerId }, select: { id: true } });
@@ -447,15 +507,36 @@ export async function GET(req: Request) {
     }
 
     let businessName = businessNameInput || 'Negocio afiliado';
-    if (businessId) {
-      const tenant = await prisma.tenant.findUnique({ where: { id: businessId }, select: { name: true } });
-      if (tenant?.name) businessName = tenant.name;
+    let requiredVisits = 10;
+    let currentVisits = 0;
+    let tenantLogoData: string | null = null;
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: businessId },
+      select: { id: true, name: true, requiredVisits: true, logoData: true },
+    });
+
+    if (!tenant) {
+      return NextResponse.json({ error: 'Negocio no encontrado para este wallet' }, { status: 404 });
     }
+
+    businessName = tenant.name || businessName;
+    requiredVisits = tenant.requiredVisits ?? 10;
+    tenantLogoData = tenant.logoData || null;
+
+    const membership = await prisma.membership.findFirst({
+      where: { tenantId: tenant.id, userId: user.id },
+      select: { currentVisits: true },
+    });
+    currentVisits = membership?.currentVisits ?? 0;
 
     const pkpass = await createPassPackage({
       customerId: user.id,
-      businessId: businessId || 'coalition',
+      businessId,
       businessName,
+      requiredVisits,
+      currentVisits,
+      tenantLogoData,
     });
 
     return new NextResponse(pkpass, {
