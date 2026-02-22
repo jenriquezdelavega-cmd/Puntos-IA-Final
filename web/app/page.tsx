@@ -490,20 +490,48 @@ export default function Home() {
   };
 
   const openPass = (tenantName?: string, tenantId?: string) => {
-      if (!user?.id) {
-        alert('Primero inicia sesión para ver tu pase.');
-        return;
-      }
+    if (!user?.id) {
+      alert('Primero inicia sesión para ver tu pase.');
+      return;
+    }
 
-      if (!tenantId) {
-        alert('No se pudo identificar el negocio. Intenta desde la tarjeta del negocio.');
-        return;
-      }
+    const explicitBusinessId = String(tenantId || '').trim();
+    const explicitBusinessName = String(tenantName || '').trim();
 
-      const label = tenantName ? `&from=${encodeURIComponent(tenantName)}` : '';
-      const businessParam = `&business_id=${encodeURIComponent(tenantId)}`;
-      window.open(`/pass?customer_id=${encodeURIComponent(user.id)}${label}${businessParam}`, '_blank', 'noopener,noreferrer');
-    };
+    const storedBusinessId =
+      typeof window !== 'undefined' ? String(localStorage.getItem('punto_last_business_id') || '').trim() : '';
+    const storedBusinessName =
+      typeof window !== 'undefined' ? String(localStorage.getItem('punto_last_business_name') || '').trim() : '';
+
+    const fallbackMembership = Array.isArray(user?.memberships) && user.memberships.length > 0
+      ? user.memberships[0]
+      : null;
+
+    const resolvedBusinessId =
+      explicitBusinessId ||
+      storedBusinessId ||
+      String(fallbackMembership?.tenantId || '').trim();
+
+    const resolvedBusinessName =
+      explicitBusinessName ||
+      storedBusinessName ||
+      String(fallbackMembership?.name || '').trim();
+
+    if (!resolvedBusinessId) {
+      alert('No se puede identificar el negocio. Entra primero a un negocio y vuelve a abrir tu pase.');
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('punto_last_business_id', resolvedBusinessId);
+      if (resolvedBusinessName) localStorage.setItem('punto_last_business_name', resolvedBusinessName);
+    }
+
+    const label = resolvedBusinessName ? `&from=${encodeURIComponent(resolvedBusinessName)}` : '';
+    const businessParam = `&business_id=${encodeURIComponent(resolvedBusinessId)}`;
+    window.open(`/pass?customer_id=${encodeURIComponent(user.id)}${label}${businessParam}`, '_blank', 'noopener,noreferrer');
+  };
+
 
   const handleLogout = () => {
     if (confirm('¿Salir?')) {
