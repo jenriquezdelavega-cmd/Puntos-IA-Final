@@ -503,6 +503,10 @@ export default function Home() {
       ? tenants.find((t) => String(t?.name || '').trim().toLowerCase() === explicitBusinessName.toLowerCase())
       : null;
 
+    const matchedMembershipByName = explicitBusinessName && Array.isArray(user?.memberships)
+      ? user.memberships.find((m: any) => String(m?.name || '').trim().toLowerCase() === explicitBusinessName.toLowerCase())
+      : null;
+
     const selectedBusinessId = String(selectedBusiness?.id || '').trim();
     const selectedBusinessName = String(selectedBusiness?.name || '').trim();
 
@@ -518,6 +522,7 @@ export default function Home() {
     const resolvedBusinessId =
       explicitBusinessId ||
       String(matchedByName?.id || '').trim() ||
+      String(matchedMembershipByName?.tenantId || '').trim() ||
       selectedBusinessId ||
       storedBusinessId ||
       String(fallbackMembership?.tenantId || '').trim();
@@ -525,6 +530,7 @@ export default function Home() {
     const resolvedBusinessName =
       explicitBusinessName ||
       String(matchedByName?.name || '').trim() ||
+      String(matchedMembershipByName?.name || '').trim() ||
       selectedBusinessName ||
       storedBusinessName ||
       String(fallbackMembership?.name || '').trim();
@@ -543,6 +549,7 @@ export default function Home() {
     const businessParam = `&business_id=${encodeURIComponent(resolvedBusinessId)}`;
     window.open(`/pass?customer_id=${encodeURIComponent(user.id)}${label}${businessParam}`, '_blank', 'noopener,noreferrer');
   };
+
 
 
   const handleLogout = () => {
