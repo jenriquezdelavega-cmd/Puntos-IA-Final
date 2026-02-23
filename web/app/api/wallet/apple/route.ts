@@ -550,7 +550,7 @@ export async function GET(req: Request) {
     const customerId = readCustomerId(searchParams);
     const businessId = String(searchParams.get('businessId') || searchParams.get('business_id') || '').trim();
     const businessNameInput = String(searchParams.get('businessName') || '').trim();
-
+    const safariSafeMode = String(searchParams.get('safari') || '').trim() === '1';
     if (!customerId) {
       return NextResponse.json({ error: 'customerId requerido' }, { status: 400 });
     }
@@ -584,6 +584,8 @@ export async function GET(req: Request) {
     tenantLogoData = tenant.logoData || null;
 
     const walletStyle = (await getTenantWalletStyle(prisma, tenant.id)) || defaultTenantWalletStyle(tenant.id);
+    const walletStripImageData = safariSafeMode ? '' : walletStyle.stripImageData;
+    const walletLogoData = safariSafeMode ? null : tenantLogoData;
 
 
 
@@ -600,11 +602,12 @@ export async function GET(req: Request) {
       businessName,
       requiredVisits,
       currentVisits,
-      tenantLogoData,
+      tenantLogoData: walletLogoData,
       walletBackgroundColor: walletStyle.backgroundColor,
       walletForegroundColor: walletStyle.foregroundColor,
       walletLabelColor: walletStyle.labelColor,
       walletStripImageData: walletStyle.stripImageData,
+      walletStripImageData,
     });
 
 
