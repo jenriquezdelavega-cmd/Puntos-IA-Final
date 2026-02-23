@@ -422,16 +422,15 @@ async function createPassPackage(params: {
       await writeFile(join(tempDir, 'logo.png'), tenantLogo);
       await writeFile(join(tempDir, 'logo@2x.png'), tenantLogo);
     }
-    const tenantStrip = decodeTenantLogoData(String(params.walletStripImageData || ''));
+
     const tenantStrip = decodeTenantImageData(String(params.walletStripImageData || ''));
-
-
     if (tenantStrip && tenantStrip.length > 0) {
       await writeFile(join(tempDir, 'strip.png'), tenantStrip);
       await writeFile(join(tempDir, 'strip@2x.png'), tenantStrip);
       await writeFile(join(tempDir, 'thumbnail.png'), tenantStrip);
       await writeFile(join(tempDir, 'thumbnail@2x.png'), tenantStrip);
     }
+
 
     const passPath = join(tempDir, 'pass.json');
     await writeFile(passPath, JSON.stringify(passJson, null, 2));
