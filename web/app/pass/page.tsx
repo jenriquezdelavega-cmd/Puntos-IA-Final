@@ -105,12 +105,33 @@ export default function PassPage() {
     URL.revokeObjectURL(url);
   };
 
-  const openAppleWallet = () => {
+  const openAppleWallet = async () => {
     if (!pass?.customer_id || !pass.business?.id) return;
+
     const businessParam = `&businessId=${encodeURIComponent(pass.business.id)}&businessName=${encodeURIComponent(pass.business.name)}`;
     const href = `/api/wallet/apple?customerId=${encodeURIComponent(pass.customer_id)}${businessParam}`;
-    window.location.href = href;
+
+    try {
+      const res = await fetch(href, { cache: 'no-store' });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'No se pudo generar el pase para Wallet');
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'puntoia.pkpass';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      window.location.href = href;
+    }
   };
+
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#ff7a59] via-[#ff3f8e] to-[#f90086] p-6 text-white flex items-center justify-center">
