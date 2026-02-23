@@ -547,9 +547,13 @@ export default function Home() {
 
     const label = resolvedBusinessName ? `&from=${encodeURIComponent(resolvedBusinessName)}` : '';
     const businessParam = `&business_id=${encodeURIComponent(resolvedBusinessId)}`;
-    window.open(`/pass?customer_id=${encodeURIComponent(user.id)}${label}${businessParam}`, '_blank', 'noopener,noreferrer');
-  };
+    const passUrl = `/pass?customer_id=${encodeURIComponent(user.id)}${label}${businessParam}`;
 
+    const newTab = window.open(passUrl, '_blank', 'noopener,noreferrer');
+    if (!newTab) {
+      window.location.href = passUrl;
+    }
+  };
 
 
   const handleLogout = () => {
