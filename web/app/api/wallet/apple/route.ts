@@ -312,15 +312,23 @@ function decodeTenantLogoData(logoData: string) {
     return null;
   }
 }
+function buildStampProgress(currentVisits: number, requiredVisits: number) {
+  const total = Math.max(1, Math.min(20, Number(requiredVisits) || 10));
+  const done = Math.max(0, Math.min(total, Number(currentVisits) || 0));
+  return `${'●'.repeat(done)}${'○'.repeat(Math.max(0, total - done))}`;
+}
+
 
 async function createPassPackage(params: {
   customerId: string;
+  customerName: string;
   businessId: string;
   businessName: string;
   requiredVisits: number;
   currentVisits: number;
   tenantLogoData?: string | null;
 }) {
+
   const passTypeIdentifier = requiredEnv('APPLE_PASS_TYPE_ID');
   const teamIdentifier = requiredEnv('APPLE_TEAM_ID');
   const p12Password = optionalEnv('APPLE_P12_PASSWORD');
@@ -378,13 +386,15 @@ async function createPassPackage(params: {
         ],
         primaryFields: [{ key: 'visits', label: 'Contador de visitas', value: `${params.currentVisits}/${params.requiredVisits}` }],
         secondaryFields: [
-          { key: 'client', label: 'Cliente', value: params.customerId },
+          { key: 'client', label: 'Cliente', value: params.customerName || params.customerId },
+          { key: 'goal', label: 'Meta', value: `${params.requiredVisits} visitas` },
         ],
         auxiliaryFields: [
-          { key: 'brand', label: 'Branding', value: 'Punto IA' },
+          { key: 'stamps', label: 'Sellos', value: buildStampProgress(params.currentVisits, params.requiredVisits) },
         ],
         backFields: [
-          { key: 'footbrand', label: 'Punto IA', value: 'Programa de lealtad' },
+          { key: 'footbrand', label: 'PUNTO IA', value: 'Programa de lealtad digital' },
+          { key: 'support', label: 'Soporte', value: 'Presenta este pase al negocio para registrar visitas.' },
         ],
       },
     };
@@ -489,7 +499,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'businessId requerido para crear wallet por negocio' }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: customerId }, select: { id: true } });
+    const user = await prisma.user.findUnique({ where: { id: customerId }, select: { id: true, name: true } });
+
     if (!user) {
       return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
     }
@@ -520,6 +531,7 @@ export async function GET(req: Request) {
 
     const pkpass = await createPassPackage({
       customerId: user.id,
+      customerName: String(user.name || '').trim() || 'Cliente',
       businessId,
       businessName,
       requiredVisits,
