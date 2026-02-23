@@ -554,7 +554,10 @@ export async function GET(req: Request) {
     const customerId = readCustomerId(searchParams);
     const businessId = String(searchParams.get('businessId') || searchParams.get('business_id') || '').trim();
     const businessNameInput = String(searchParams.get('businessName') || '').trim();
-    const safariSafeMode = String(searchParams.get('safari') || '').trim() === '1';
+    const ua = String(req.headers.get('user-agent') || '');
+    const isIosSafari = /iPhone|iPad|iPod/i.test(ua) && /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua);
+    const safariSafeMode = String(searchParams.get('safari') || '').trim() === '1' || isIosSafari;
+
     if (!customerId) {
       return NextResponse.json({ error: 'customerId requerido' }, { status: 400 });
     }
