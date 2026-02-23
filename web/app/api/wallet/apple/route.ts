@@ -304,6 +304,25 @@ function decodeTenantLogoData(logoData: string) {
   if (dataUrlMatch) {
     return Buffer.from(dataUrlMatch[2], 'base64');
   }
+  function decodeTenantStripData(stripData: string) {
+    const raw = String(stripData || '').trim();
+    if (!raw) return null;
+
+    const dataUrlMatch = raw.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+    if (dataUrlMatch) {
+      return Buffer.from(dataUrlMatch[2], 'base64');
+    }
+
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return null;
+
+    try {
+      const compact = raw.replace(/\s+/g, '');
+      return Buffer.from(compact, 'base64');
+    } catch {
+      return null;
+    }
+  }
+
 
   if (raw.startsWith('http://') || raw.startsWith('https://')) return null;
 
@@ -341,6 +360,8 @@ async function createPassPackage(params: {
 
   const qrToken = generateCustomerToken(params.customerId);
   const serialNumber = walletSerialNumber(params.customerId, params.businessId);
+  const tenantStrip = decodeTenantStripData(String(params.walletStripImageData || ''));
+
   const authenticationToken = walletAuthTokenForSerial(serialNumber);
 
   const tempDir = await mkdtemp(join(tmpdir(), 'puntoia-pkpass-'));
