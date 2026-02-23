@@ -1224,57 +1224,58 @@ export default function Home() {
                           </motion.button>
                         )}
 
-                      <motion.div
-                        layout
-                        className={`grid grid-cols-3 gap-3 mt-4 overflow-hidden ${
-                          isExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
-                        } transition-all duration-500`}
-                      >
-                        <motion.button
-                          whileTap={canAnim ? { scale: 0.98 } : undefined}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            goToBusinessMap(m.name);
-                          }}
-                          className="bg-white border-2 border-blue-50 text-blue-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-blue-50 transition-colors shadow-sm"
+                        <motion.div
+                          layout
+                          className={`grid grid-cols-3 gap-3 mt-4 overflow-hidden ${
+                            isExpanded ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0'
+                          } transition-all duration-500`}
                         >
-                          <span className="text-2xl mb-1">🧭</span>
-                          Ver Mapa
-                        </motion.button>
-
-                        <motion.button
-                          whileTap={canAnim ? { scale: 0.98 } : undefined}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const businessName = String(m?.name || '').trim();
-                            const businessId = String(m?.tenantId || '').trim();
-                            openPass(businessName, businessId);
-                          }}
-                          className="bg-white border-2 border-orange-50 text-orange-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-orange-50 transition-colors shadow-sm"
-                        >
-                          <span className="text-2xl mb-1">🎟️</span>
-                          Mi Pase
-                        </motion.button>
-
-                        {m.instagram ? (
-                          <a
-                            href={`https://instagram.com/${m.instagram.replace('@', '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-white border-2 border-pink-50 text-pink-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-pink-50 transition-colors no-underline shadow-sm"
+                          <motion.button
+                            whileTap={canAnim ? { scale: 0.98 } : undefined}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              goToBusinessMap(m.name);
+                            }}
+                            className="bg-white border-2 border-blue-50 text-blue-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-blue-50 transition-colors shadow-sm"
                           >
-                            <span className="text-2xl mb-1">📲</span>
-                            Instagram
-                          </a>
-                        ) : (
-                          <div className="bg-gray-50 border-2 border-gray-100 text-gray-300 py-4 rounded-2xl font-black text-xs flex flex-col items-center opacity-70">
-                            <span className="text-2xl mb-1">◎</span>
-                            No IG
-                          </div>
-                        )}
-                      </motion.div>
+                            <span className="text-2xl mb-1">🧭</span>
+                            Ver Mapa
+                          </motion.button>
 
+                          <motion.button
+                            whileTap={canAnim ? { scale: 0.98 } : undefined}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const businessName = String(m?.name || '').trim();
+                              const businessId = String(m?.tenantId || '').trim();
+                              openPass(businessName, businessId);
+                            }}
+                            className="bg-white border-2 border-orange-50 text-orange-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-orange-50 transition-colors shadow-sm"
+                          >
+                            <span className="text-2xl mb-1">🎟️</span>
+                            Mi Pase
+                          </motion.button>
+
+                          {m.instagram ? (
+                            <a
+                              href={`https://instagram.com/${m.instagram.replace('@', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="bg-white border-2 border-pink-50 text-pink-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-pink-50 transition-colors no-underline shadow-sm"
+                            >
+                              <span className="text-2xl mb-1">📲</span>
+                              Instagram
+                            </a>
+                          ) : (
+                            <div className="bg-gray-50 border-2 border-gray-100 text-gray-300 py-4 rounded-2xl font-black text-xs flex flex-col items-center opacity-70">
+                              <span className="text-2xl mb-1">◎</span>
+                              No IG
+                            </div>
+                          )}
+                        </motion.div>
+                      </div>
+                    </motion.div>
                   );
                 })}
               </div>
