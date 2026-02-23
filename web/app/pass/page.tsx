@@ -111,6 +111,16 @@ export default function PassPage() {
     const businessParam = `&businessId=${encodeURIComponent(pass.business.id)}&businessName=${encodeURIComponent(pass.business.name)}`;
     const href = `/api/wallet/apple?customerId=${encodeURIComponent(pass.customer_id)}${businessParam}`;
 
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    const isIos = /iPhone|iPad|iPod/i.test(ua);
+    const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua);
+
+    // En iOS Safari conviene abrir directo la URL del .pkpass para que Wallet lo maneje.
+    if (isIos && isSafari) {
+      window.location.assign(href);
+      return;
+    }
+
     try {
       const res = await fetch(href, { cache: 'no-store' });
       if (!res.ok) {
@@ -128,9 +138,10 @@ export default function PassPage() {
       document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch {
-      window.location.href = href;
+      window.location.assign(href);
     }
   };
+
 
 
   return (

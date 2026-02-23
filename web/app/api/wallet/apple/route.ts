@@ -612,7 +612,7 @@ export async function GET(req: Request) {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.apple.pkpass',
-        'Content-Disposition': `attachment; filename="puntoia.pkpass"; filename*=UTF-8''puntoia.pkpass`,
+        'Content-Disposition': `inline; filename="puntoia.pkpass"; filename*=UTF-8''puntoia.pkpass`,
         'Content-Transfer-Encoding': 'binary',
         'Content-Length': String(pkpass.length),
         'Accept-Ranges': 'none',
