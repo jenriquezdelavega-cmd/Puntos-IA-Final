@@ -457,19 +457,37 @@ async function createPassPackage(params: {
 
     const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png', 'strip.png', 'strip@2x.png', 'thumbnail.png', 'thumbnail@2x.png'] as const;
     for (const file of packageFiles) {
-      const source = file === 'pass.json'
-        ? passPath
-        : file.startsWith('logo') || file.startsWith('strip') || file.startsWith('thumbnail')
-
-          ? join(tempDir, file)
-          : join(assetsDir, file);
       try {
-        const data = await readFile(source);
+        if (file === 'pass.json') {
+          const data = await readFile(passPath);
+          await writeFile(join(tempDir, file), data);
+          continue;
+        }
+
+        if (file.startsWith('logo')) {
+          const logoFromTenant = await readFile(join(tempDir, file)).catch(() => null);
+          const logoData = logoFromTenant || await readFile(join(assetsDir, file)).catch(() => null);
+          if (logoData) {
+            await writeFile(join(tempDir, file), logoData);
+          }
+          continue;
+        }
+
+        if (file.startsWith('strip') || file.startsWith('thumbnail')) {
+          const customData = await readFile(join(tempDir, file)).catch(() => null);
+          if (customData) {
+            await writeFile(join(tempDir, file), customData);
+          }
+          continue;
+        }
+
+        const data = await readFile(join(assetsDir, file));
         await writeFile(join(tempDir, file), data);
       } catch {
         // optional retina assets can be absent
       }
     }
+
 
     const manifest: Record<string, string> = {};
     for (const file of packageFiles) {
