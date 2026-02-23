@@ -1255,6 +1255,18 @@ export default function Home() {
                           >
                             <span className="text-2xl mb-1">🎟️</span>
                             Mi Pase
+                          <motion.button
+                            whileTap={canAnim ? { scale: 0.98 } : undefined}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const businessName = String(m?.name || '').trim();
+                              const businessId = String(m?.tenantId || '').trim();
+                              openPass(businessName, businessId);
+                            }}
+                            className="bg-white border-2 border-orange-50 text-orange-700 py-4 rounded-2xl font-black text-xs flex flex-col items-center hover:bg-orange-50 transition-colors shadow-sm"
+                          >
+                            <span className="text-2xl mb-1">🎟️</span>
+                            Mi Pase
                           </motion.button>
 
 
