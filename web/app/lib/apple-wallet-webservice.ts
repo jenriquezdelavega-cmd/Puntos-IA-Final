@@ -126,8 +126,9 @@ export async function touchWalletPassRegistrations(prisma: PrismaClient, params:
   passTypeIdentifier?: string;
 }) {
   await ensureWalletRegistrationsTable(prisma);
+
   if (params.passTypeIdentifier) {
-    await prisma.$executeRawUnsafe(
+    const updatedWithPassType = await prisma.$executeRawUnsafe(
       `
         UPDATE ${TABLE_NAME}
         SET updated_at = NOW()
@@ -137,7 +138,10 @@ export async function touchWalletPassRegistrations(prisma: PrismaClient, params:
       params.serialNumber,
       params.passTypeIdentifier
     );
-    return;
+
+    if (updatedWithPassType > 0) {
+      return;
+    }
   }
 
   await prisma.$executeRawUnsafe(
@@ -149,3 +153,4 @@ export async function touchWalletPassRegistrations(prisma: PrismaClient, params:
     params.serialNumber
   );
 }
+
