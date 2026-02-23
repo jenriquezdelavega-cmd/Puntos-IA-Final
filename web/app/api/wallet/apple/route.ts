@@ -574,12 +574,15 @@ export async function GET(req: Request) {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.apple.pkpass',
-        'Content-Disposition': 'inline; filename="puntoia.pkpass"',
+        'Content-Disposition': `attachment; filename="puntoia.pkpass"; filename*=UTF-8''puntoia.pkpass`,
         'Content-Transfer-Encoding': 'binary',
         'Content-Length': String(pkpass.length),
+        'Accept-Ranges': 'none',
+        'X-Content-Type-Options': 'nosniff',
         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
       },
     });
+
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'No se pudo generar el .pkpass';
