@@ -296,13 +296,31 @@ function buildPkPassArchiveEntries() {
   return { required, optional };
 }
 
+function isPngBuffer(buffer: Buffer) {
+  return buffer.length > 8
+    && buffer[0] === 0x89
+    && buffer[1] === 0x50
+    && buffer[2] === 0x4e
+    && buffer[3] === 0x47
+    && buffer[4] === 0x0d
+    && buffer[5] === 0x0a
+    && buffer[6] === 0x1a
+    && buffer[7] === 0x0a;
+}
+
 function decodeTenantImageData(imageData: string) {
   const raw = String(imageData || '').trim();
   if (!raw) return null;
 
   const dataUrlMatch = raw.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
   if (dataUrlMatch) {
-    return Buffer.from(dataUrlMatch[2], 'base64');
+    const mime = String(dataUrlMatch[1] || '').toLowerCase();
+    if (mime !== 'image/png') {
+      return null;
+    }
+
+    const data = Buffer.from(dataUrlMatch[2], 'base64');
+    return isPngBuffer(data) ? data : null;
   }
 
   if (raw.startsWith('http://') || raw.startsWith('https://')) {
@@ -311,11 +329,13 @@ function decodeTenantImageData(imageData: string) {
 
   try {
     const compact = raw.replace(/\s+/g, '');
-    return Buffer.from(compact, 'base64');
+    const data = Buffer.from(compact, 'base64');
+    return isPngBuffer(data) ? data : null;
   } catch {
     return null;
   }
 }
+
 
 function decodeTenantLogoData(logoData: string) {
   return decodeTenantImageData(logoData);

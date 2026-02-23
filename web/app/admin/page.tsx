@@ -520,13 +520,14 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
     <div className="flex-1">
       <input
         type="file"
-        accept="image/*"
+        accept="image/png"
         className="w-full p-4 bg-gray-50 rounded-2xl font-medium text-gray-800 border border-transparent focus:bg-white focus:border-gray-200 outline-none transition-all"
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (!file) return;
           if (file.size > 200 * 1024) {
-            alert("Logo muy pesado. Usa uno pequeño (máx ~200KB) para este MVP.");
+            alert('Imagen inválida o muy pesada. Usa PNG (máx ~400KB) para wallet.');
+
             return;
           }
           const reader = new FileReader();
@@ -564,13 +565,14 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
     <label className="text-xs font-semibold text-gray-600">Imagen cabecera del pase (strip)</label>
     <input
       type="file"
-      accept="image/*"
+      accept="image/png"
       className="w-full p-3 bg-white rounded-xl mt-1 text-sm font-medium text-gray-800 border border-gray-200"
       onChange={(e) => {
         const file = e.target.files?.[0];
         if (!file) return;
         if (file.size > 400 * 1024) {
-          alert('Imagen muy pesada. Usa máx ~400KB para wallet.');
+          alert('Imagen inválida o muy pesada. Usa PNG (máx ~400KB) para wallet.');
+
           return;
         }
         const reader = new FileReader();
@@ -580,7 +582,7 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
     />
     <div className="mt-2 flex items-center gap-2">
       <button type="button" onClick={() => setWalletStripImageData('')} className="px-3 py-1 rounded-lg text-xs font-bold bg-gray-200 text-gray-700">Quitar imagen</button>
-      <span className="text-[11px] text-gray-500 font-semibold">Usa PNG o JPG, máx 400KB. Recomendado: 1242x492 px (relación 2.5:1).</span>
+      <span className="text-[11px] text-gray-500 font-semibold">Usa PNG (no JPG), máx 400KB. Recomendado: 1242x492 px (relación 2.5:1).</span>
     </div>
     {walletStripImageData ? (
       <div className="mt-3 rounded-xl overflow-hidden border border-gray-200 bg-white">
