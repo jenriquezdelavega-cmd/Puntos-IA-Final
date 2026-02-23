@@ -304,14 +304,7 @@ function decodeTenantLogoData(logoData: string) {
   if (dataUrlMatch) {
     return Buffer.from(dataUrlMatch[2], 'base64');
   }
-  function decodeTenantStripData(stripData: string) {
-    const raw = String(stripData || '').trim();
-    if (!raw) return null;
-
-    const dataUrlMatch = raw.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
-    if (dataUrlMatch) {
-      return Buffer.from(dataUrlMatch[2], 'base64');
-    }
+  
 
     if (raw.startsWith('http://') || raw.startsWith('https://')) return null;
 
@@ -435,7 +428,8 @@ async function createPassPackage(params: {
       await writeFile(join(tempDir, 'logo.png'), tenantLogo);
       await writeFile(join(tempDir, 'logo@2x.png'), tenantLogo);
     }
-    const tenantStrip = decodeTenantStripData(String(params.walletStripImageData || ''));
+    const tenantStrip = decodeTenantLogoData(String(params.walletStripImageData || ''));
+
     if (tenantStrip && tenantStrip.length > 0) {
       await writeFile(join(tempDir, 'strip.png'), tenantStrip);
       await writeFile(join(tempDir, 'strip@2x.png'), tenantStrip);
