@@ -133,10 +133,33 @@ export async function POST(request: Request) {
 
     try {
       const serialNumber = walletSerialNumber(userId, validCode.tenantId);
+      const passTypeIdentifier = String(process.env.APPLE_PASS_TYPE_ID || '').trim() || undefined;
+
       await touchWalletPassRegistrations(prisma, {
         serialNumber,
-        passTypeIdentifier: String(process.env.APPLE_PASS_TYPE_ID || '').trim() || undefined,
+        passTypeIdentifier,
       });
+
+      if (passTypeIdentifier) {
+        const pushTokens = await listWalletPushTokens(prisma, {
+          serialNumber,
+          passTypeIdentifier,
+        });
+
+        for (const pushToken of pushTokens) {
+          const result = await pushWalletUpdateToDevice(pushToken, passTypeIdentifier);
+          if (!result.ok) {
+            if (result.status === 410 || result.status === 400) {
+              await deleteWalletRegistrationsByPushToken(prisma, pushToken);
+            }
+            logApiEvent('/api/check-in/scan#wallet-push', 'push_failed', {
+              serialNumber,
+              status: result.status,
+              reason: result.reason || 'unknown',
+            });
+          }
+        }
+      }
     } catch (walletError) {
       logApiError('/api/check-in/scan#wallet-touch', walletError);
     }
