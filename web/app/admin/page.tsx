@@ -560,29 +560,36 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
         <input type="color" className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white" value={walletLabelColor} onChange={e => setWalletLabelColor(e.target.value)} />
       </label>
     </div>
-    <div>
-      <label className="text-xs font-semibold text-gray-600">Imagen cabecera del pase (strip)</label>
-      <input
-        type="file"
-        accept="image/*"
-        className="w-full p-3 bg-white rounded-xl mt-1 text-sm font-medium text-gray-800 border border-gray-200"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          if (file.size > 400 * 1024) {
-            alert('Imagen muy pesada. Usa máx ~400KB para wallet.');
-            return;
-          }
-          const reader = new FileReader();
-          reader.onload = () => setWalletStripImageData(String(reader.result || ''));
-          reader.readAsDataURL(file);
-        }}
-      />
-      <div className="mt-2 flex items-center gap-2">
-        <button type="button" onClick={() => setWalletStripImageData('')} className="px-3 py-1 rounded-lg text-xs font-bold bg-gray-200 text-gray-700">Quitar imagen</button>
-        <span className="text-[11px] text-gray-500 font-semibold">Opcional. Mejora look del pase en Wallet.</span>
-      </div>
+  <div>
+    <label className="text-xs font-semibold text-gray-600">Imagen cabecera del pase (strip)</label>
+    <input
+      type="file"
+      accept="image/*"
+      className="w-full p-3 bg-white rounded-xl mt-1 text-sm font-medium text-gray-800 border border-gray-200"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 400 * 1024) {
+          alert('Imagen muy pesada. Usa máx ~400KB para wallet.');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => setWalletStripImageData(String(reader.result || ''));
+        reader.readAsDataURL(file);
+      }}
+    />
+    <div className="mt-2 flex items-center gap-2">
+      <button type="button" onClick={() => setWalletStripImageData('')} className="px-3 py-1 rounded-lg text-xs font-bold bg-gray-200 text-gray-700">Quitar imagen</button>
+      <span className="text-[11px] text-gray-500 font-semibold">Usa PNG o JPG, máx 400KB. Recomendado: 1242x492 px (relación 2.5:1).</span>
     </div>
+    {walletStripImageData ? (
+      <div className="mt-3 rounded-xl overflow-hidden border border-gray-200 bg-white">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={walletStripImageData} alt="Preview strip wallet" className="w-full h-24 object-cover" />
+      </div>
+    ) : null}
+  </div>
+
   </div>
         <label className="text-xs font-bold text-gray-400 uppercase ml-1">Visitas requeridas</label>
         <input
