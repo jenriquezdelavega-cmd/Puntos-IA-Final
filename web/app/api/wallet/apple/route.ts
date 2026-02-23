@@ -296,28 +296,18 @@ function buildPkPassArchiveEntries() {
   return { required, optional };
 }
 
-function decodeTenantLogoData(logoData: string) {
-  const raw = String(logoData || '').trim();
+function decodeTenantImageData(imageData: string) {
+  const raw = String(imageData || '').trim();
   if (!raw) return null;
 
   const dataUrlMatch = raw.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
   if (dataUrlMatch) {
     return Buffer.from(dataUrlMatch[2], 'base64');
   }
-  
 
-    if (raw.startsWith('http://') || raw.startsWith('https://')) return null;
-
-    try {
-      const compact = raw.replace(/\s+/g, '');
-      return Buffer.from(compact, 'base64');
-    } catch {
-      return null;
-    }
+  if (raw.startsWith('http://') || raw.startsWith('https://')) {
+    return null;
   }
-
-
-  if (raw.startsWith('http://') || raw.startsWith('https://')) return null;
 
   try {
     const compact = raw.replace(/\s+/g, '');
@@ -326,6 +316,11 @@ function decodeTenantLogoData(logoData: string) {
     return null;
   }
 }
+
+function decodeTenantLogoData(logoData: string) {
+  return decodeTenantImageData(logoData);
+}
+
 function buildStampProgress(currentVisits: number, requiredVisits: number) {
   const total = Math.max(1, Math.min(20, Number(requiredVisits) || 10));
   const done = Math.max(0, Math.min(total, Number(currentVisits) || 0));
@@ -353,8 +348,7 @@ async function createPassPackage(params: {
 
   const qrToken = generateCustomerToken(params.customerId);
   const serialNumber = walletSerialNumber(params.customerId, params.businessId);
-  const tenantStrip = decodeTenantStripData(String(params.walletStripImageData || ''));
-
+ 
   const authenticationToken = walletAuthTokenForSerial(serialNumber);
 
   const tempDir = await mkdtemp(join(tmpdir(), 'puntoia-pkpass-'));
@@ -429,6 +423,8 @@ async function createPassPackage(params: {
       await writeFile(join(tempDir, 'logo@2x.png'), tenantLogo);
     }
     const tenantStrip = decodeTenantLogoData(String(params.walletStripImageData || ''));
+    const tenantStrip = decodeTenantImageData(String(params.walletStripImageData || ''));
+
 
     if (tenantStrip && tenantStrip.length > 0) {
       await writeFile(join(tempDir, 'strip.png'), tenantStrip);
