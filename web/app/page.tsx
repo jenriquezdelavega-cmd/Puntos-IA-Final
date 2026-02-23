@@ -244,6 +244,8 @@ export default function Home() {
 
   const [tenants, setTenants] = useState<any[]>([]);
   const [mapFocus, setMapFocus] = useState<[number, number] | null>(null);
+  const [selectedBusiness, setSelectedBusiness] = useState<{ id: string; name: string } | null>(null);
+
 
   const [showTutorial, setShowTutorial] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -479,16 +481,22 @@ export default function Home() {
     }
   };
 
-    const goToBusinessMap = (tName: string) => {
-    const target = tenants.find((t) => t.name === tName);
-    if (target && target.lat && target.lng) {
-      setMapFocus([target.lat, target.lng]);
+  const goToBusinessMap = (tName: string) => {
+    const normalizedName = String(tName || '').trim().toLowerCase();
+    const target = tenants.find((t) => String(t?.name || '').trim().toLowerCase() === normalizedName);
+
+    const lat = Number(target?.lat);
+    const lng = Number(target?.lng);
+
+    if (target && Number.isFinite(lat) && Number.isFinite(lng)) {
+      setMapFocus([lat, lng]);
       setSelectedBusiness({ id: String(target.id || ''), name: String(target.name || '') });
       setActiveTab('map');
     } else {
       alert('Ubicación no disponible.');
     }
   };
+
 
   const openPass = (tenantName?: string, tenantId?: string) => {
     if (!user?.id) {
