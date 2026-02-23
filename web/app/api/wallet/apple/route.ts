@@ -526,11 +526,9 @@ export async function GET(req: Request) {
     businessName = tenant.name || businessName;
     requiredVisits = tenant.requiredVisits ?? 10;
     tenantLogoData = tenant.logoData || null;
+
     const walletStyle = (await getTenantWalletStyle(prisma, tenant.id)) || defaultTenantWalletStyle(tenant.id);
-    walletBackgroundColor = walletStyle.backgroundColor;
-    walletForegroundColor = walletStyle.foregroundColor;
-    walletLabelColor = walletStyle.labelColor;
-    walletStripImageData = walletStyle.stripImageData;
+
 
 
     const membership = await prisma.membership.findFirst({
@@ -547,7 +545,12 @@ export async function GET(req: Request) {
       requiredVisits,
       currentVisits,
       tenantLogoData,
+      walletBackgroundColor: walletStyle.backgroundColor,
+      walletForegroundColor: walletStyle.foregroundColor,
+      walletLabelColor: walletStyle.labelColor,
+      walletStripImageData: walletStyle.stripImageData,
     });
+
 
     return new NextResponse(pkpass, {
       status: 200,
