@@ -8,6 +8,8 @@ import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { generateCustomerToken } from '@/app/lib/customer-token';
 import { walletAuthTokenForSerial, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
+import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
+
 
 const execFileAsync = promisify(execFile);
 const prisma = new PrismaClient();
@@ -327,6 +329,8 @@ async function createPassPackage(params: {
   requiredVisits: number;
   currentVisits: number;
   tenantLogoData?: string | null;
+  
+
 }) {
 
   const passTypeIdentifier = requiredEnv('APPLE_PASS_TYPE_ID');
@@ -363,9 +367,9 @@ async function createPassPackage(params: {
       organizationName: params.businessName || 'Negocio afiliado',
       description: `Tarjeta de lealtad · ${params.businessName || 'Negocio afiliado'}`,
       logoText: params.businessName || 'Negocio afiliado',
-      foregroundColor: 'rgb(255,255,255)',
-      backgroundColor: 'rgb(249,0,134)',
-      labelColor: 'rgb(255,199,221)',
+      foregroundColor: String(params.walletForegroundColor || 'rgb(255,255,255)'),
+      backgroundColor: String(params.walletBackgroundColor || 'rgb(31,41,55)'),
+      labelColor: String(params.walletLabelColor || 'rgb(191,219,254)'),
       barcode: {
         format: 'PKBarcodeFormatQR',
         message: `${publicBaseUrl}/v/${qrToken}`,
@@ -414,7 +418,7 @@ async function createPassPackage(params: {
     const passPath = join(tempDir, 'pass.json');
     await writeFile(passPath, JSON.stringify(passJson, null, 2));
 
-    const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png'] as const;
+    const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'strip.png', 'strip@2x.png', 'icon@2x.png', 'logo@2x.png'] as const;
     for (const file of packageFiles) {
       const source = file === 'pass.json'
         ? passPath
@@ -522,6 +526,12 @@ export async function GET(req: Request) {
     businessName = tenant.name || businessName;
     requiredVisits = tenant.requiredVisits ?? 10;
     tenantLogoData = tenant.logoData || null;
+    const walletStyle = (await getTenantWalletStyle(prisma, tenant.id)) || defaultTenantWalletStyle(tenant.id);
+    walletBackgroundColor = walletStyle.backgroundColor;
+    walletForegroundColor = walletStyle.foregroundColor;
+    walletLabelColor = walletStyle.labelColor;
+    walletStripImageData = walletStyle.stripImageData;
+
 
     const membership = await prisma.membership.findFirst({
       where: { tenantId: tenant.id, userId: user.id },

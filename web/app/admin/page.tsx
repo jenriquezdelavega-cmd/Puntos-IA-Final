@@ -26,6 +26,11 @@ const [prizeName, setPrizeName] = useState('');
 const [requiredVisits, setRequiredVisits] = useState('10');
 const [rewardPeriod, setRewardPeriod] = useState('OPEN');
 const [logoData, setLogoData] = useState<string>('');
+const [walletBackgroundColor, setWalletBackgroundColor] = useState('#1f2937');
+const [walletForegroundColor, setWalletForegroundColor] = useState('#ffffff');
+const [walletLabelColor, setWalletLabelColor] = useState('#bfdbfe');
+const [walletStripImageData, setWalletStripImageData] = useState<string>('');
+
 const [instagram, setInstagram] = useState('');
 const [addressSearch, setAddressSearch] = useState('');
 const [isSearching, setIsSearching] = useState(false);
@@ -67,6 +72,11 @@ setInstagram(data.tenant.instagram || '');
 setRequiredVisits(String(data.tenant.requiredVisits ?? 10));
 setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
 setLogoData(String(data.tenant.logoData ?? ''));
+setWalletBackgroundColor(String(data.tenant.walletBackgroundColor ?? '#1f2937'));
+setWalletForegroundColor(String(data.tenant.walletForegroundColor ?? '#ffffff'));
+setWalletLabelColor(String(data.tenant.walletLabelColor ?? '#bfdbfe'));
+setWalletStripImageData(String(data.tenant.walletStripImageData ?? ''));
+
 if (data.tenant.lat && data.tenant.lng) {
 setCoords([data.tenant.lat, data.tenant.lng]);
 if (data.tenant.address) setAddressSearch(data.tenant.address);
@@ -137,6 +147,10 @@ const saveSettings = async () => {
         lng: coords[1],
         address: addressSearch,
         instagram
+        walletBackgroundColor,
+        walletForegroundColor,
+        walletLabelColor,
+        walletStripImageData,
       }),
     });
 
@@ -154,6 +168,11 @@ const saveSettings = async () => {
       setInstagram(data.tenant.instagram || '');
       setRequiredVisits(String(data.tenant.requiredVisits ?? 10));
       setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
+      setWalletBackgroundColor(String(data.tenant.walletBackgroundColor ?? walletBackgroundColor));
+      setWalletForegroundColor(String(data.tenant.walletForegroundColor ?? walletForegroundColor));
+      setWalletLabelColor(String(data.tenant.walletLabelColor ?? walletLabelColor));
+      setWalletStripImageData(String(data.tenant.walletStripImageData ?? walletStripImageData));
+
     }
 
     alert('✅ Guardado');
@@ -528,7 +547,43 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
     </div>
   </div>
 </div>
-<div>
+<div> <div className="space-y-3 rounded-2xl border border-gray-200 p-4 bg-gray-50">
+    <p className="text-xs font-black text-gray-500 uppercase tracking-wide">Personalización Apple Wallet</p>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <label className="text-xs font-semibold text-gray-600">Fondo
+        <input type="color" className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white" value={walletBackgroundColor} onChange={e => setWalletBackgroundColor(e.target.value)} />
+      </label>
+      <label className="text-xs font-semibold text-gray-600">Texto
+        <input type="color" className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white" value={walletForegroundColor} onChange={e => setWalletForegroundColor(e.target.value)} />
+      </label>
+      <label className="text-xs font-semibold text-gray-600">Etiquetas
+        <input type="color" className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white" value={walletLabelColor} onChange={e => setWalletLabelColor(e.target.value)} />
+      </label>
+    </div>
+    <div>
+      <label className="text-xs font-semibold text-gray-600">Imagen cabecera del pase (strip)</label>
+      <input
+        type="file"
+        accept="image/*"
+        className="w-full p-3 bg-white rounded-xl mt-1 text-sm font-medium text-gray-800 border border-gray-200"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          if (file.size > 400 * 1024) {
+            alert('Imagen muy pesada. Usa máx ~400KB para wallet.');
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = () => setWalletStripImageData(String(reader.result || ''));
+          reader.readAsDataURL(file);
+        }}
+      />
+      <div className="mt-2 flex items-center gap-2">
+        <button type="button" onClick={() => setWalletStripImageData('')} className="px-3 py-1 rounded-lg text-xs font-bold bg-gray-200 text-gray-700">Quitar imagen</button>
+        <span className="text-[11px] text-gray-500 font-semibold">Opcional. Mejora look del pase en Wallet.</span>
+      </div>
+    </div>
+  </div>
         <label className="text-xs font-bold text-gray-400 uppercase ml-1">Visitas requeridas</label>
         <input
           type="number"

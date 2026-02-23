@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { getTenantWalletStyle, upsertTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
     const {
       tenantId,
       prize,
@@ -15,6 +16,10 @@ export async function POST(request: Request) {
       address,
       instagram,
       logoData,
+      walletBackgroundColor,
+      walletForegroundColor,
+      walletLabelColor,
+      walletStripImageData,
     } = body;
 
     if (!tenantId) return NextResponse.json({ error: 'tenantId requerido' }, { status: 400 });
@@ -35,11 +40,30 @@ export async function POST(request: Request) {
         ...(parsedVisits !== undefined ? { requiredVisits: parsedVisits } : {}),
         ...(rewardPeriod !== undefined ? { rewardPeriod } : {}),
         ...(logoData !== undefined ? { logoData } : {}),
-      } as any
+      }
     });
 
-    return NextResponse.json({ success: true, tenant: updated });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
+    await upsertTenantWalletStyle(prisma, {
+      tenantId,
+      backgroundColor: walletBackgroundColor,
+      foregroundColor: walletForegroundColor,
+      labelColor: walletLabelColor,
+      stripImageData: walletStripImageData,
+    });
+
+    const walletStyle = await getTenantWalletStyle(prisma, tenantId);
+
+    return NextResponse.json({
+      success: true,
+      tenant: {
+        ...updated,
+        walletBackgroundColor: walletStyle?.backgroundColor || null,
+        walletForegroundColor: walletStyle?.foregroundColor || null,
+        walletLabelColor: walletStyle?.labelColor || null,
+        walletStripImageData: walletStyle?.stripImageData || '',
+      },
+    });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Error' }, { status: 500 });
   }
 }

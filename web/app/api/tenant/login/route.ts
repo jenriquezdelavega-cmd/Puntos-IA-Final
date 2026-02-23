@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { hashPassword, isHashedPassword, verifyPassword } from '@/app/lib/password';
+import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 
 const prisma = new PrismaClient();
 
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     if (user.tenant.isActive === false) {
       return NextResponse.json({ error: 'Este negocio ha sido suspendido. Contacta a soporte.' }, { status: 403 });
     }
-
+    const walletStyle = (await getTenantWalletStyle(prisma, user.tenant.id)) || defaultTenantWalletStyle(user.tenant.id);
     return NextResponse.json({
       success: true,
       user: { id: user.id, name: user.name, role: user.role },
@@ -49,6 +50,10 @@ export async function POST(request: Request) {
         requiredVisits: user.tenant.requiredVisits,
         rewardPeriod: user.tenant.rewardPeriod,
         logoData: user.tenant.logoData,
+        walletBackgroundColor: walletStyle.backgroundColor,
+        walletForegroundColor: walletStyle.foregroundColor,
+        walletLabelColor: walletStyle.labelColor,
+        walletStripImageData: walletStyle.stripImageData,
       },
     });
   } catch {
