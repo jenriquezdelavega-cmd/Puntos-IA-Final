@@ -146,11 +146,11 @@ const saveSettings = async () => {
         lat: coords[0],
         lng: coords[1],
         address: addressSearch,
-        instagram
-        walletBackgroundColor,
-        walletForegroundColor,
-        walletLabelColor,
-        walletStripImageData,
+        instagram: instagram,
+        walletBackgroundColor: walletBackgroundColor,
+        walletForegroundColor: walletForegroundColor,
+        walletLabelColor: walletLabelColor,
+        walletStripImageData: walletStripImageData,
       }),
     });
 
