@@ -138,8 +138,8 @@ setIsSearching(false);
     const image = new Image();
     image.onerror = () => reject(new Error('Formato inválido.'));
     image.onload = () => {
-      const targetWidth = 1242;
-      const targetHeight = 492;
+      const targetWidth = 624;
+      const targetHeight = 246;
       const canvas = document.createElement('canvas');
       canvas.width = targetWidth;
       canvas.height = targetHeight;
