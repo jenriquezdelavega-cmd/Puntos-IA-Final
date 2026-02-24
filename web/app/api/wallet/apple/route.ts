@@ -10,7 +10,6 @@ import { generateCustomerToken } from '@/app/lib/customer-token';
 import { walletAuthTokenForSerial, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
 import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 
-
 const execFileAsync = promisify(execFile);
 const prisma = new PrismaClient();
 let cachedOpenSslBin: string | null = null;
@@ -288,6 +287,9 @@ function buildZip(entries: Array<{ name: string; data: Buffer }>) {
 
   return Buffer.concat([localDirectory, centralDirectory, endRecord]);
 }
+
+
+
 async function buildPkPassBuffer(tempDir: string, archive: ReturnType<typeof buildPkPassArchiveEntries>) {
   const files: string[] = [];
 
@@ -318,7 +320,6 @@ async function buildPkPassBuffer(tempDir: string, archive: ReturnType<typeof bui
     return buildZip(zipEntries);
   }
 }
-
 
 function buildPkPassArchiveEntries() {
   const required = ['pass.json', 'manifest.json', 'signature', 'icon.png', 'logo.png'] as const;
@@ -366,7 +367,6 @@ function decodeTenantImageData(imageData: string) {
   }
 }
 
-
 function decodeTenantLogoData(logoData: string) {
   return decodeTenantImageData(logoData);
 }
@@ -377,7 +377,6 @@ function buildStampProgress(currentVisits: number, requiredVisits: number) {
   return `${'●'.repeat(done)}${'○'.repeat(Math.max(0, total - done))}`;
 }
 
-
 async function createPassPackage(params: {
   customerId: string;
   customerName: string;
@@ -386,10 +385,11 @@ async function createPassPackage(params: {
   requiredVisits: number;
   currentVisits: number;
   tenantLogoData?: string | null;
-  
-
+  walletBackgroundColor?: string | null;
+  walletForegroundColor?: string | null;
+  walletLabelColor?: string | null;
+  walletStripImageData?: string | null;
 }) {
-
   const passTypeIdentifier = requiredEnv('APPLE_PASS_TYPE_ID');
   const teamIdentifier = requiredEnv('APPLE_TEAM_ID');
   const p12Password = optionalEnv('APPLE_P12_PASSWORD');
@@ -398,7 +398,6 @@ async function createPassPackage(params: {
 
   const qrToken = generateCustomerToken(params.customerId);
   const serialNumber = walletSerialNumber(params.customerId, params.businessId);
- 
   const authenticationToken = walletAuthTokenForSerial(serialNumber);
 
   const tempDir = await mkdtemp(join(tmpdir(), 'puntoia-pkpass-'));
@@ -442,7 +441,7 @@ async function createPassPackage(params: {
       ],
       webServiceURL: `${publicBaseUrl}/api/wallet/apple/v1`,
       authenticationToken,
-      COUPON: {
+      coupon: {
         headerFields: [
           { key: 'business', label: 'Negocio', value: params.businessName || params.businessId },
         ],
@@ -473,28 +472,15 @@ async function createPassPackage(params: {
       await writeFile(join(tempDir, 'logo@2x.png'), tenantLogo);
     }
 
-      const tenantStrip = decodeTenantImageData(String(params.walletStripImageData || ''));
-      if (tenantStrip && tenantStrip.length > 0) {
-        await writeFile(join(tempDir, 'strip.png'), tenantStrip);
-      }
- else {
-      const logoAsBackground = decodeTenantImageData(String(params.tenantLogoData || ''));
-      if (logoAsBackground && logoAsBackground.length > 0) {
-        await writeFile(join(tempDir, 'background.png'), logoAsBackground);
-        await writeFile(join(tempDir, 'background@2x.png'), logoAsBackground);
-      }
+    const tenantStrip = decodeTenantImageData(String(params.walletStripImageData || ''));
+    if (tenantStrip && tenantStrip.length > 0) {
+      await writeFile(join(tempDir, 'strip.png'), tenantStrip);
     }
-
-
-
 
     const passPath = join(tempDir, 'pass.json');
     await writeFile(passPath, JSON.stringify(passJson, null, 2));
 
     const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png', 'strip.png'] as const;
-
-
-
     for (const file of packageFiles) {
       try {
         if (file === 'pass.json') {
@@ -512,7 +498,7 @@ async function createPassPackage(params: {
           continue;
         }
 
-          if (file.startsWith('strip')) {
+        if (file.startsWith('strip')) {
           const customData = await readFile(join(tempDir, file)).catch(() => null);
           if (customData) {
             await writeFile(join(tempDir, file), customData);
@@ -526,7 +512,6 @@ async function createPassPackage(params: {
         // optional retina assets can be absent
       }
     }
-
 
     const manifest: Record<string, string> = {};
     for (const file of packageFiles) {
@@ -562,8 +547,6 @@ async function createPassPackage(params: {
 
     const archive = buildPkPassArchiveEntries();
     return await buildPkPassBuffer(tempDir, archive);
-
-    
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
@@ -575,10 +558,6 @@ export async function GET(req: Request) {
     const customerId = readCustomerId(searchParams);
     const businessId = String(searchParams.get('businessId') || searchParams.get('business_id') || '').trim();
     const businessNameInput = String(searchParams.get('businessName') || '').trim();
-    const ua = String(req.headers.get('user-agent') || '');
-    const isIosSafari = /iPhone|iPad|iPod/i.test(ua) && /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua);
-    const safariSafeMode = String(searchParams.get('safari') || '').trim() === '1' || isIosSafari;
-
     if (!customerId) {
       return NextResponse.json({ error: 'customerId requerido' }, { status: 400 });
     }
@@ -588,7 +567,6 @@ export async function GET(req: Request) {
     }
 
     const user = await prisma.user.findUnique({ where: { id: customerId }, select: { id: true, name: true } });
-
     if (!user) {
       return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
     }
@@ -612,12 +590,9 @@ export async function GET(req: Request) {
     tenantLogoData = tenant.logoData || null;
 
     const walletStyle = (await getTenantWalletStyle(prisma, tenant.id)) || defaultTenantWalletStyle(tenant.id);
-    const walletStripImageData = safariSafeMode ? '' : walletStyle.stripImageData;
-    // En modo Safari-safe evitamos strip/background, pero mantenemos imagen en logo para conservar branding.
+    const walletStripImageData = walletStyle.stripImageData;
+    // Siempre intentamos usar strip para mostrar franja superior si existe imagen válida del negocio.
     const walletLogoData = tenantLogoData || walletStyle.stripImageData || null;
-
-
-
 
     const membership = await prisma.membership.findFirst({
       where: { tenantId: tenant.id, userId: user.id },
@@ -636,27 +611,21 @@ export async function GET(req: Request) {
       walletBackgroundColor: walletStyle.backgroundColor,
       walletForegroundColor: walletStyle.foregroundColor,
       walletLabelColor: walletStyle.labelColor,
-      walletStripImageData: walletStyle.stripImageData,
       walletStripImageData,
     });
 
-
-    return new Response(new Uint8Array(pkpass), {
+    return new NextResponse(pkpass, {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.apple.pkpass',
-        'Content-Disposition': 'attachment; filename="puntoia.pkpass"',
+        'Content-Disposition': `inline; filename="puntoia.pkpass"; filename*=UTF-8''puntoia.pkpass`,
         'Content-Transfer-Encoding': 'binary',
         'Content-Length': String(pkpass.length),
-        'Content-Encoding': 'identity',
         'Accept-Ranges': 'none',
         'X-Content-Type-Options': 'nosniff',
         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
       },
     });
-
-
-
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'No se pudo generar el .pkpass';
     const status =
