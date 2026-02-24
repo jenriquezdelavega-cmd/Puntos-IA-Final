@@ -160,6 +160,7 @@ setIsSearching(false);
       ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
 
       const pngDataUrl = canvas.toDataURL('image/png');
+      resolve(pngDataUrl);
       const approxBytes = Math.ceil((pngDataUrl.length - 'data:image/png;base64,'.length) * 0.75);
       if (approxBytes > 400 * 1024) {
         reject(new Error('Imagen muy pesada después de convertirla a PNG (máx 400KB).'));
@@ -625,7 +626,9 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
     />
     <div className="mt-2 flex items-center gap-2">
       <button type="button" onClick={() => setWalletStripImageData('')} className="px-3 py-1 rounded-lg text-xs font-bold bg-gray-200 text-gray-700">Quitar imagen</button>
-      <span className="text-[11px] text-gray-500 font-semibold">Usa PNG (no JPG), máx 400KB. Recomendado: 1242x492 px (relación 2.5:1).</span>
+      <span className="text-[11px] text-gray-500 font-semibold">
+        Puedes subir PNG/JPG/WEBP. Se convierte automático a PNG strip 1242x492 (2.5:1).
+      </span>
     </div>
     {walletStripImageData ? (
       <div className="mt-3 rounded-xl overflow-hidden border border-gray-200 bg-white">
