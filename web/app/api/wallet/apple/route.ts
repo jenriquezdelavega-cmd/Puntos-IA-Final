@@ -292,7 +292,7 @@ function buildZip(entries: Array<{ name: string; data: Buffer }>) {
 
 function buildPkPassArchiveEntries() {
   const required = ['pass.json', 'manifest.json', 'signature', 'icon.png', 'logo.png'] as const;
-  const optional = ['icon@2x.png', 'logo@2x.png', 'strip.png', 'strip@2x.png'] as const;
+  const optional = ['icon@2x.png', 'logo@2x.png', 'strip.png', 'strip@2x.png', 'strip@3x.png'] as const;
   return { required, optional };
 }
 
@@ -448,11 +448,9 @@ async function createPassPackage(params: {
     if (tenantStrip && tenantStrip.length > 0) {
       await writeFile(join(tempDir, 'strip.png'), tenantStrip);
       await writeFile(join(tempDir, 'strip@2x.png'), tenantStrip);
-      await writeFile(join(tempDir, 'thumbnail.png'), tenantStrip);
-      await writeFile(join(tempDir, 'thumbnail@2x.png'), tenantStrip);
-      await writeFile(join(tempDir, 'background.png'), tenantStrip);
-      await writeFile(join(tempDir, 'background@2x.png'), tenantStrip);
-    } else {
+      await writeFile(join(tempDir, 'strip@3x.png'), tenantStrip);
+    }
+ else {
       const logoAsBackground = decodeTenantImageData(String(params.tenantLogoData || ''));
       if (logoAsBackground && logoAsBackground.length > 0) {
         await writeFile(join(tempDir, 'background.png'), logoAsBackground);
@@ -466,7 +464,8 @@ async function createPassPackage(params: {
     const passPath = join(tempDir, 'pass.json');
     await writeFile(passPath, JSON.stringify(passJson, null, 2));
 
-    const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png', 'strip.png', 'strip@2x.png', 'thumbnail.png', 'thumbnail@2x.png', 'background.png', 'background@2x.png'] as const;
+    const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png', 'strip.png', 'strip@2x.png', 'strip@3x.png'] as const;
+
 
     for (const file of packageFiles) {
       try {
