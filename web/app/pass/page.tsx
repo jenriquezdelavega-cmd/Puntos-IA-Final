@@ -105,11 +105,41 @@ export default function PassPage() {
     URL.revokeObjectURL(url);
   };
 
-  const openAppleWallet = () => {
+  const openAppleWallet = async () => {
     if (!pass?.customer_id || !pass.business?.id) return;
+
     const businessParam = `&businessId=${encodeURIComponent(pass.business.id)}&businessName=${encodeURIComponent(pass.business.name)}`;
-    const href = `/api/wallet/apple?customerId=${encodeURIComponent(pass.customer_id)}${businessParam}`;
-    window.location.href = href;
+    const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+    const isIos = /iPhone|iPad|iPod/i.test(ua);
+    const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua);
+    const safariParam = isIos && isSafari ? '&safari=1' : '';
+    const href = `/api/wallet/apple?customerId=${encodeURIComponent(pass.customer_id)}${businessParam}${safariParam}`;
+
+    // En iOS Safari conviene abrir directo la URL del .pkpass para que Wallet lo maneje.
+    if (isIos && isSafari) {
+      window.location.assign(href);
+      return;
+    }
+
+    try {
+      const res = await fetch(href, { cache: 'no-store' });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'No se pudo generar el pase para Wallet');
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'puntoia.pkpass';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      window.location.assign(href);
+    }
   };
 
   return (

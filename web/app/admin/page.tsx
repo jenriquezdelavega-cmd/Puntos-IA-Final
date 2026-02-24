@@ -26,6 +26,10 @@ const [prizeName, setPrizeName] = useState('');
 const [requiredVisits, setRequiredVisits] = useState('10');
 const [rewardPeriod, setRewardPeriod] = useState('OPEN');
 const [logoData, setLogoData] = useState<string>('');
+const [walletBackgroundColor, setWalletBackgroundColor] = useState('#1f2937');
+const [walletForegroundColor, setWalletForegroundColor] = useState('#ffffff');
+const [walletLabelColor, setWalletLabelColor] = useState('#bfdbfe');
+const [walletStripImageData, setWalletStripImageData] = useState<string>('');
 const [instagram, setInstagram] = useState('');
 const [addressSearch, setAddressSearch] = useState('');
 const [isSearching, setIsSearching] = useState(false);
@@ -67,6 +71,10 @@ setInstagram(data.tenant.instagram || '');
 setRequiredVisits(String(data.tenant.requiredVisits ?? 10));
 setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
 setLogoData(String(data.tenant.logoData ?? ''));
+setWalletBackgroundColor(String(data.tenant.walletBackgroundColor ?? '#1f2937'));
+setWalletForegroundColor(String(data.tenant.walletForegroundColor ?? '#ffffff'));
+setWalletLabelColor(String(data.tenant.walletLabelColor ?? '#bfdbfe'));
+setWalletStripImageData(String(data.tenant.walletStripImageData ?? ''));
 if (data.tenant.lat && data.tenant.lng) {
 setCoords([data.tenant.lat, data.tenant.lng]);
 if (data.tenant.address) setAddressSearch(data.tenant.address);
@@ -122,6 +130,42 @@ if (data && data.length > 0) { setCoords([parseFloat(data[0].lat), parseFloat(da
 setIsSearching(false);
 };
 
+const toPngStripDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+const reader = new FileReader();
+reader.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+reader.onload = () => {
+  const image = new Image();
+  image.onerror = () => reject(new Error('Formato inválido.'));
+  image.onload = () => {
+    const targetWidth = 624;
+    const targetHeight = 246;
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      reject(new Error('No se pudo procesar la imagen.'));
+      return;
+    }
+
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+    const scale = Math.max(targetWidth / image.width, targetHeight / image.height);
+    const drawWidth = image.width * scale;
+    const drawHeight = image.height * scale;
+    const offsetX = (targetWidth - drawWidth) / 2;
+    const offsetY = (targetHeight - drawHeight) / 2;
+    ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+
+    const pngDataUrl = canvas.toDataURL('image/png');
+    resolve(pngDataUrl);
+  };
+  image.src = String(reader.result || '');
+};
+reader.readAsDataURL(file);
+});
+
 const saveSettings = async () => {
   try {
     const res = await fetch('/api/tenant/settings', {
@@ -136,7 +180,11 @@ const saveSettings = async () => {
         lat: coords[0],
         lng: coords[1],
         address: addressSearch,
-        instagram
+        instagram: instagram,
+        walletBackgroundColor: walletBackgroundColor,
+        walletForegroundColor: walletForegroundColor,
+        walletLabelColor: walletLabelColor,
+        walletStripImageData: walletStripImageData,
       }),
     });
 
@@ -154,6 +202,10 @@ const saveSettings = async () => {
       setInstagram(data.tenant.instagram || '');
       setRequiredVisits(String(data.tenant.requiredVisits ?? 10));
       setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
+      setWalletBackgroundColor(String(data.tenant.walletBackgroundColor ?? walletBackgroundColor));
+      setWalletForegroundColor(String(data.tenant.walletForegroundColor ?? walletForegroundColor));
+      setWalletLabelColor(String(data.tenant.walletLabelColor ?? walletLabelColor));
+      setWalletStripImageData(String(data.tenant.walletStripImageData ?? walletStripImageData));
     }
 
     alert('✅ Guardado');
@@ -501,7 +553,7 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
     <div className="flex-1">
       <input
         type="file"
-        accept="image/*"
+        accept="image/png,image/jpeg,image/jpg,image/webp"
         className="w-full p-4 bg-gray-50 rounded-2xl font-medium text-gray-800 border border-transparent focus:bg-white focus:border-gray-200 outline-none transition-all"
         onChange={(e) => {
           const file = e.target.files?.[0];
@@ -526,6 +578,52 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
         <span className="text-[11px] text-gray-400 font-semibold">Se guarda como imagen pequeña (MVP).</span>
       </div>
     </div>
+  </div>
+</div>
+<div className="space-y-3 rounded-2xl border border-gray-200 p-4 bg-gray-50">
+  <p className="text-xs font-black text-gray-500 uppercase tracking-wide">Personalización Apple Wallet</p>
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <label className="text-xs font-semibold text-gray-600">Fondo
+      <input type="color" className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white" value={walletBackgroundColor} onChange={e => setWalletBackgroundColor(e.target.value)} />
+    </label>
+    <label className="text-xs font-semibold text-gray-600">Texto
+      <input type="color" className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white" value={walletForegroundColor} onChange={e => setWalletForegroundColor(e.target.value)} />
+    </label>
+    <label className="text-xs font-semibold text-gray-600">Etiquetas
+      <input type="color" className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white" value={walletLabelColor} onChange={e => setWalletLabelColor(e.target.value)} />
+    </label>
+  </div>
+  <div>
+    <label className="text-xs font-semibold text-gray-600">Imagen cabecera del pase (strip)</label>
+    <input
+      type="file"
+      accept="image/png,image/jpeg,image/jpg,image/webp"
+      className="w-full p-3 bg-white rounded-xl mt-1 text-sm font-medium text-gray-800 border border-gray-200"
+      onChange={async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) {
+          alert('Imagen muy pesada. Usa una imagen menor a 2MB para convertirla a strip.');
+          return;
+        }
+        try {
+          const pngDataUrl = await toPngStripDataUrl(file);
+          setWalletStripImageData(pngDataUrl);
+        } catch (error) {
+          alert(error instanceof Error ? error.message : 'No se pudo procesar la imagen para Wallet.');
+        }
+      }}
+    />
+    <div className="mt-2 flex items-center gap-2">
+      <button type="button" onClick={() => setWalletStripImageData('')} className="px-3 py-1 rounded-lg text-xs font-bold bg-gray-200 text-gray-700">Quitar imagen</button>
+      <span className="text-[11px] text-gray-500 font-semibold">Puedes subir PNG/JPG/WEBP. Se convierte automático a PNG strip 624x246 (2.5:1), formato recomendado para Apple Wallet.</span>
+    </div>
+    {walletStripImageData ? (
+      <div className="mt-3 rounded-xl overflow-hidden border border-gray-200 bg-white">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={walletStripImageData} alt="Preview strip wallet" className="w-full h-24 object-cover" />
+      </div>
+    ) : null}
   </div>
 </div>
 <div>

@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { generateCustomerToken } from '@/app/lib/customer-token';
 import { walletAuthTokenForSerial, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
+import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 
 const execFileAsync = promisify(execFile);
 const prisma = new PrismaClient();
@@ -288,38 +289,106 @@ function buildZip(entries: Array<{ name: string; data: Buffer }>) {
 }
 
 
+
+async function buildPkPassBuffer(tempDir: string, archive: ReturnType<typeof buildPkPassArchiveEntries>) {
+  const files: string[] = [];
+
+  for (const file of archive.required) {
+    await readFile(join(tempDir, file));
+    files.push(file);
+  }
+
+  for (const file of archive.optional) {
+    try {
+      await readFile(join(tempDir, file));
+      files.push(file);
+    } catch {
+      // optional files can be absent
+    }
+  }
+
+  const outputPath = join(tempDir, 'pass.pkpass');
+  try {
+    await execFileAsync('zip', ['-q', '-X', outputPath, ...files], { cwd: tempDir });
+    return await readFile(outputPath);
+  } catch {
+    const zipEntries: Array<{ name: string; data: Buffer }> = [];
+    for (const file of files) {
+      const data = await readFile(join(tempDir, file));
+      zipEntries.push({ name: file, data });
+    }
+    return buildZip(zipEntries);
+  }
+}
+
 function buildPkPassArchiveEntries() {
   const required = ['pass.json', 'manifest.json', 'signature', 'icon.png', 'logo.png'] as const;
-  const optional = ['icon@2x.png', 'logo@2x.png'] as const;
+  const optional = ['icon@2x.png', 'logo@2x.png', 'strip.png'] as const;
   return { required, optional };
 }
 
-function decodeTenantLogoData(logoData: string) {
-  const raw = String(logoData || '').trim();
+function isPngBuffer(buffer: Buffer) {
+  return buffer.length > 8
+    && buffer[0] === 0x89
+    && buffer[1] === 0x50
+    && buffer[2] === 0x4e
+    && buffer[3] === 0x47
+    && buffer[4] === 0x0d
+    && buffer[5] === 0x0a
+    && buffer[6] === 0x1a
+    && buffer[7] === 0x0a;
+}
+
+function decodeTenantImageData(imageData: string) {
+  const raw = String(imageData || '').trim();
   if (!raw) return null;
 
   const dataUrlMatch = raw.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
   if (dataUrlMatch) {
-    return Buffer.from(dataUrlMatch[2], 'base64');
+    const mime = String(dataUrlMatch[1] || '').toLowerCase();
+    if (mime !== 'image/png') {
+      return null;
+    }
+
+    const data = Buffer.from(dataUrlMatch[2], 'base64');
+    return isPngBuffer(data) ? data : null;
   }
 
-  if (raw.startsWith('http://') || raw.startsWith('https://')) return null;
+  if (raw.startsWith('http://') || raw.startsWith('https://')) {
+    return null;
+  }
 
   try {
     const compact = raw.replace(/\s+/g, '');
-    return Buffer.from(compact, 'base64');
+    const data = Buffer.from(compact, 'base64');
+    return isPngBuffer(data) ? data : null;
   } catch {
     return null;
   }
 }
 
+function decodeTenantLogoData(logoData: string) {
+  return decodeTenantImageData(logoData);
+}
+
+function buildStampProgress(currentVisits: number, requiredVisits: number) {
+  const total = Math.max(1, Math.min(20, Number(requiredVisits) || 10));
+  const done = Math.max(0, Math.min(total, Number(currentVisits) || 0));
+  return `${'●'.repeat(done)}${'○'.repeat(Math.max(0, total - done))}`;
+}
+
 async function createPassPackage(params: {
   customerId: string;
+  customerName: string;
   businessId: string;
   businessName: string;
   requiredVisits: number;
   currentVisits: number;
   tenantLogoData?: string | null;
+  walletBackgroundColor?: string | null;
+  walletForegroundColor?: string | null;
+  walletLabelColor?: string | null;
+  walletStripImageData?: string | null;
 }) {
   const passTypeIdentifier = requiredEnv('APPLE_PASS_TYPE_ID');
   const teamIdentifier = requiredEnv('APPLE_TEAM_ID');
@@ -355,9 +424,9 @@ async function createPassPackage(params: {
       organizationName: params.businessName || 'Negocio afiliado',
       description: `Tarjeta de lealtad · ${params.businessName || 'Negocio afiliado'}`,
       logoText: params.businessName || 'Negocio afiliado',
-      foregroundColor: 'rgb(255,255,255)',
-      backgroundColor: 'rgb(249,0,134)',
-      labelColor: 'rgb(255,199,221)',
+      foregroundColor: String(params.walletForegroundColor || 'rgb(255,255,255)'),
+      backgroundColor: String(params.walletBackgroundColor || 'rgb(31,41,55)'),
+      labelColor: String(params.walletLabelColor || 'rgb(191,219,254)'),
       barcode: {
         format: 'PKBarcodeFormatQR',
         message: `${publicBaseUrl}/v/${qrToken}`,
@@ -372,19 +441,21 @@ async function createPassPackage(params: {
       ],
       webServiceURL: `${publicBaseUrl}/api/wallet/apple/v1`,
       authenticationToken,
-      storeCard: {
+      coupon: {
         headerFields: [
           { key: 'business', label: 'Negocio', value: params.businessName || params.businessId },
         ],
         primaryFields: [{ key: 'visits', label: 'Contador de visitas', value: `${params.currentVisits}/${params.requiredVisits}` }],
         secondaryFields: [
-          { key: 'client', label: 'Cliente', value: params.customerId },
+          { key: 'client', label: 'Cliente', value: params.customerName || params.customerId },
         ],
         auxiliaryFields: [
-          { key: 'brand', label: 'Branding', value: 'Punto IA' },
+          { key: 'goal', label: 'Meta', value: `${params.requiredVisits} visitas` },
         ],
         backFields: [
-          { key: 'footbrand', label: 'Punto IA', value: 'Programa de lealtad' },
+          { key: 'stamps', label: 'Sellos', value: buildStampProgress(params.currentVisits, params.requiredVisits) },
+          { key: 'footbrand', label: 'PUNTO IA', value: 'Programa de lealtad digital' },
+          { key: 'support', label: 'Soporte', value: 'Presenta este pase al negocio para registrar visitas.' },
         ],
       },
     };
@@ -401,18 +472,41 @@ async function createPassPackage(params: {
       await writeFile(join(tempDir, 'logo@2x.png'), tenantLogo);
     }
 
+    const tenantStrip = decodeTenantImageData(String(params.walletStripImageData || ''));
+    if (tenantStrip && tenantStrip.length > 0) {
+      await writeFile(join(tempDir, 'strip.png'), tenantStrip);
+    }
+
     const passPath = join(tempDir, 'pass.json');
     await writeFile(passPath, JSON.stringify(passJson, null, 2));
 
-    const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png'] as const;
+    const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png', 'strip.png'] as const;
     for (const file of packageFiles) {
-      const source = file === 'pass.json'
-        ? passPath
-        : file.startsWith('logo')
-          ? join(tempDir, file)
-          : join(assetsDir, file);
       try {
-        const data = await readFile(source);
+        if (file === 'pass.json') {
+          const data = await readFile(passPath);
+          await writeFile(join(tempDir, file), data);
+          continue;
+        }
+
+        if (file.startsWith('logo')) {
+          const logoFromTenant = await readFile(join(tempDir, file)).catch(() => null);
+          const logoData = logoFromTenant || await readFile(join(assetsDir, file)).catch(() => null);
+          if (logoData) {
+            await writeFile(join(tempDir, file), logoData);
+          }
+          continue;
+        }
+
+        if (file.startsWith('strip')) {
+          const customData = await readFile(join(tempDir, file)).catch(() => null);
+          if (customData) {
+            await writeFile(join(tempDir, file), customData);
+          }
+          continue;
+        }
+
+        const data = await readFile(join(assetsDir, file));
         await writeFile(join(tempDir, file), data);
       } catch {
         // optional retina assets can be absent
@@ -452,23 +546,7 @@ async function createPassPackage(params: {
     ]);
 
     const archive = buildPkPassArchiveEntries();
-    const zipEntries: Array<{ name: string; data: Buffer }> = [];
-
-    for (const file of archive.required) {
-      const data = await readFile(join(tempDir, file));
-      zipEntries.push({ name: file, data });
-    }
-
-    for (const file of archive.optional) {
-      try {
-        const data = await readFile(join(tempDir, file));
-        zipEntries.push({ name: file, data });
-      } catch {
-        // optional files can be absent
-      }
-    }
-
-    return buildZip(zipEntries);
+    return await buildPkPassBuffer(tempDir, archive);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
@@ -480,7 +558,6 @@ export async function GET(req: Request) {
     const customerId = readCustomerId(searchParams);
     const businessId = String(searchParams.get('businessId') || searchParams.get('business_id') || '').trim();
     const businessNameInput = String(searchParams.get('businessName') || '').trim();
-
     if (!customerId) {
       return NextResponse.json({ error: 'customerId requerido' }, { status: 400 });
     }
@@ -489,7 +566,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'businessId requerido para crear wallet por negocio' }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: customerId }, select: { id: true } });
+    const user = await prisma.user.findUnique({ where: { id: customerId }, select: { id: true, name: true } });
     if (!user) {
       return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
     }
@@ -512,6 +589,11 @@ export async function GET(req: Request) {
     requiredVisits = tenant.requiredVisits ?? 10;
     tenantLogoData = tenant.logoData || null;
 
+    const walletStyle = (await getTenantWalletStyle(prisma, tenant.id)) || defaultTenantWalletStyle(tenant.id);
+    const walletStripImageData = walletStyle.stripImageData;
+    // Siempre intentamos usar strip para mostrar franja superior si existe imagen válida del negocio.
+    const walletLogoData = tenantLogoData || walletStyle.stripImageData || null;
+
     const membership = await prisma.membership.findFirst({
       where: { tenantId: tenant.id, userId: user.id },
       select: { currentVisits: true },
@@ -520,19 +602,28 @@ export async function GET(req: Request) {
 
     const pkpass = await createPassPackage({
       customerId: user.id,
+      customerName: String(user.name || '').trim() || 'Cliente',
       businessId,
       businessName,
       requiredVisits,
       currentVisits,
-      tenantLogoData,
+      tenantLogoData: walletLogoData,
+      walletBackgroundColor: walletStyle.backgroundColor,
+      walletForegroundColor: walletStyle.foregroundColor,
+      walletLabelColor: walletStyle.labelColor,
+      walletStripImageData,
     });
 
     return new NextResponse(pkpass, {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.apple.pkpass',
-        'Content-Disposition': 'attachment; filename="puntoia.pkpass"',
-        'Cache-Control': 'no-store',
+        'Content-Disposition': `inline; filename="puntoia.pkpass"; filename*=UTF-8''puntoia.pkpass`,
+        'Content-Transfer-Encoding': 'binary',
+        'Content-Length': String(pkpass.length),
+        'Accept-Ranges': 'none',
+        'X-Content-Type-Options': 'nosniff',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
       },
     });
   } catch (error: unknown) {

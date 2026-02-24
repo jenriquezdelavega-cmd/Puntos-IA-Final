@@ -16,7 +16,7 @@ function parseApplePassAuth(req: Request) {
   return match?.[1]?.trim() || '';
 }
 
-function splitSerial(serialNumber: string) {
+function splitSerialLegacy(serialNumber: string) {
   const value = String(serialNumber || '').trim();
   const idx = value.lastIndexOf('-');
   if (idx <= 0 || idx >= value.length - 1) return null;
@@ -24,6 +24,28 @@ function splitSerial(serialNumber: string) {
     customerId: value.slice(0, idx),
     businessId: value.slice(idx + 1),
   };
+}
+
+async function resolveSerialToIds(serialNumber: string) {
+  const value = String(serialNumber || '').trim();
+  if (!value) return null;
+
+  const rows = await prisma.$queryRaw<Array<{ userId: string; tenantId: string }>>`
+    SELECT "userId", "tenantId"
+    FROM "Membership"
+    WHERE ("userId" || '-' || "tenantId") = ${value}
+    LIMIT 1
+  `;
+
+  if (rows.length > 0) {
+    return {
+      customerId: String(rows[0].userId || '').trim(),
+      businessId: String(rows[0].tenantId || '').trim(),
+    };
+  }
+
+  // Fallback para pases viejos o seriales no encontrados en Membership.
+  return splitSerialLegacy(value);
 }
 
 function requiredPassType() {
@@ -75,7 +97,7 @@ export async function GET(req: Request, context: { params: Promise<{ segments: s
         return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
       }
 
-      const parsed = splitSerial(serialNumber);
+      const parsed = await resolveSerialToIds(serialNumber);
       if (!parsed) {
         return NextResponse.json({ error: 'serialNumber inválido' }, { status: 400 });
       }

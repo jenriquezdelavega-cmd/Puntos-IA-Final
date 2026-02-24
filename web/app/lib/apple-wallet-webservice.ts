@@ -11,26 +11,43 @@ function base64Url(input: Buffer | string) {
     .replace(/\//g, '_');
 }
 
-function walletSecret() {
-  return (
+function walletSecrets() {
+  const primary = String(
     process.env.APPLE_WALLET_AUTH_SECRET ||
     process.env.PASS_TOKEN_SECRET ||
     process.env.NEXTAUTH_SECRET ||
     'dev-wallet-auth-secret-change-me'
-  );
+  ).trim();
+
+  const previous = String(process.env.APPLE_WALLET_AUTH_SECRETS_PREVIOUS || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return [primary, ...previous];
 }
 
 export function walletSerialNumber(customerId: string, businessId: string) {
   return `${String(customerId || '').trim()}-${String(businessId || '').trim()}`;
 }
 
-export function walletAuthTokenForSerial(serialNumber: string) {
-  const digest = createHmac('sha256', walletSecret()).update(String(serialNumber || '').trim()).digest();
+function walletAuthTokenForSerialWithSecret(serialNumber: string, secret: string) {
+  const digest = createHmac('sha256', secret).update(String(serialNumber || '').trim()).digest();
   return base64Url(digest);
 }
 
+export function walletAuthTokenForSerial(serialNumber: string) {
+  const [primary] = walletSecrets();
+  return walletAuthTokenForSerialWithSecret(serialNumber, primary);
+}
+
 export function verifyWalletAuthToken(serialNumber: string, token: string) {
-  return walletAuthTokenForSerial(serialNumber) === String(token || '').trim();
+  const givenToken = String(token || '').trim();
+  if (!givenToken) return false;
+
+  return walletSecrets().some((secret) => {
+    return walletAuthTokenForSerialWithSecret(serialNumber, secret) === givenToken;
+  });
 }
 
 export async function ensureWalletRegistrationsTable(prisma: PrismaClient) {
@@ -126,8 +143,9 @@ export async function touchWalletPassRegistrations(prisma: PrismaClient, params:
   passTypeIdentifier?: string;
 }) {
   await ensureWalletRegistrationsTable(prisma);
+
   if (params.passTypeIdentifier) {
-    await prisma.$executeRawUnsafe(
+    const updatedWithPassType = await prisma.$executeRawUnsafe(
       `
         UPDATE ${TABLE_NAME}
         SET updated_at = NOW()
@@ -137,7 +155,10 @@ export async function touchWalletPassRegistrations(prisma: PrismaClient, params:
       params.serialNumber,
       params.passTypeIdentifier
     );
-    return;
+
+    if (updatedWithPassType > 0) {
+      return;
+    }
   }
 
   await prisma.$executeRawUnsafe(
