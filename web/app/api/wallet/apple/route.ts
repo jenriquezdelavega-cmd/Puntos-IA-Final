@@ -592,7 +592,9 @@ export async function GET(req: Request) {
 
     const walletStyle = (await getTenantWalletStyle(prisma, tenant.id)) || defaultTenantWalletStyle(tenant.id);
     const walletStripImageData = safariSafeMode ? '' : walletStyle.stripImageData;
-    const walletLogoData = safariSafeMode ? null : tenantLogoData;
+    // En modo Safari-safe evitamos strip/background, pero mantenemos imagen en logo para conservar branding.
+    const walletLogoData = tenantLogoData || walletStyle.stripImageData || null;
+
 
 
 
