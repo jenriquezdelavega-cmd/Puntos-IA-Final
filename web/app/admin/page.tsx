@@ -131,6 +131,47 @@ if (data && data.length > 0) { setCoords([parseFloat(data[0].lat), parseFloat(da
 } catch (e) { alert("Error"); }
 setIsSearching(false);
 };
+  const toPngStripDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+  reader.onload = () => {
+    const image = new Image();
+    image.onerror = () => reject(new Error('Formato inválido.'));
+    image.onload = () => {
+      const targetWidth = 1242;
+      const targetHeight = 492;
+      const canvas = document.createElement('canvas');
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('No se pudo procesar la imagen.'));
+        return;
+      }
+
+      ctx.fillStyle = '#111827';
+      ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+      const scale = Math.max(targetWidth / image.width, targetHeight / image.height);
+      const drawWidth = image.width * scale;
+      const drawHeight = image.height * scale;
+      const offsetX = (targetWidth - drawWidth) / 2;
+      const offsetY = (targetHeight - drawHeight) / 2;
+      ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+
+      const pngDataUrl = canvas.toDataURL('image/png');
+      const approxBytes = Math.ceil((pngDataUrl.length - 'data:image/png;base64,'.length) * 0.75);
+      if (approxBytes > 400 * 1024) {
+        reject(new Error('Imagen muy pesada después de convertirla a PNG (máx 400KB).'));
+        return;
+      }
+
+      resolve(pngDataUrl);
+    };
+    image.src = String(reader.result || '');
+  };
+  reader.readAsDataURL(file);
+  });
 
 const saveSettings = async () => {
   try {
@@ -565,19 +606,21 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
     <label className="text-xs font-semibold text-gray-600">Imagen cabecera del pase (strip)</label>
     <input
       type="file"
-      accept="image/png"
+      accept="image/png,image/jpeg,image/jpg,image/webp"
       className="w-full p-3 bg-white rounded-xl mt-1 text-sm font-medium text-gray-800 border border-gray-200"
-      onChange={(e) => {
+      onChange={async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (file.size > 400 * 1024) {
-          alert('Imagen inválida o muy pesada. Usa PNG (máx ~400KB) para wallet.');
-
+        if (file.size > 2 * 1024 * 1024) {
+          alert('Imagen muy pesada. Usa una imagen menor a 2MB para convertirla a strip.');
           return;
         }
-        const reader = new FileReader();
-        reader.onload = () => setWalletStripImageData(String(reader.result || ''));
-        reader.readAsDataURL(file);
+        try {
+          const pngDataUrl = await toPngStripDataUrl(file);
+          setWalletStripImageData(pngDataUrl);
+        } catch (error) {
+          alert(error instanceof Error ? error.message : 'No se pudo procesar la imagen para Wallet.');
+        }
       }}
     />
     <div className="mt-2 flex items-center gap-2">
