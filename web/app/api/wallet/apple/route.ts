@@ -451,7 +451,14 @@ async function createPassPackage(params: {
       await writeFile(join(tempDir, 'thumbnail@2x.png'), tenantStrip);
       await writeFile(join(tempDir, 'background.png'), tenantStrip);
       await writeFile(join(tempDir, 'background@2x.png'), tenantStrip);
+    } else {
+      const logoAsBackground = decodeTenantImageData(String(params.tenantLogoData || ''));
+      if (logoAsBackground && logoAsBackground.length > 0) {
+        await writeFile(join(tempDir, 'background.png'), logoAsBackground);
+        await writeFile(join(tempDir, 'background@2x.png'), logoAsBackground);
+      }
     }
+
 
 
 
