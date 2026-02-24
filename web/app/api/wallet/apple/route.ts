@@ -412,7 +412,7 @@ async function createPassPackage(params: {
       ],
       webServiceURL: `${publicBaseUrl}/api/wallet/apple/v1`,
       authenticationToken,
-      storeCard: {
+      COUPON: {
         headerFields: [
           { key: 'business', label: 'Negocio', value: params.businessName || params.businessId },
         ],
