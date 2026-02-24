@@ -288,6 +288,36 @@ function buildZip(entries: Array<{ name: string; data: Buffer }>) {
 
   return Buffer.concat([localDirectory, centralDirectory, endRecord]);
 }
+async function buildPkPassBuffer(tempDir: string, archive: ReturnType<typeof buildPkPassArchiveEntries>) {
+  const files: string[] = [];
+
+  for (const file of archive.required) {
+    await readFile(join(tempDir, file));
+    files.push(file);
+  }
+
+  for (const file of archive.optional) {
+    try {
+      await readFile(join(tempDir, file));
+      files.push(file);
+    } catch {
+      // optional files can be absent
+    }
+  }
+
+  const outputPath = join(tempDir, 'pass.pkpass');
+  try {
+    await execFileAsync('zip', ['-q', '-X', outputPath, ...files], { cwd: tempDir });
+    return await readFile(outputPath);
+  } catch {
+    const zipEntries: Array<{ name: string; data: Buffer }> = [];
+    for (const file of files) {
+      const data = await readFile(join(tempDir, file));
+      zipEntries.push({ name: file, data });
+    }
+    return buildZip(zipEntries);
+  }
+}
 
 
 function buildPkPassArchiveEntries() {
@@ -531,23 +561,9 @@ async function createPassPackage(params: {
     ]);
 
     const archive = buildPkPassArchiveEntries();
-    const zipEntries: Array<{ name: string; data: Buffer }> = [];
+    return await buildPkPassBuffer(tempDir, archive);
 
-    for (const file of archive.required) {
-      const data = await readFile(join(tempDir, file));
-      zipEntries.push({ name: file, data });
-    }
-
-    for (const file of archive.optional) {
-      try {
-        const data = await readFile(join(tempDir, file));
-        zipEntries.push({ name: file, data });
-      } catch {
-        // optional files can be absent
-      }
-    }
-
-    return buildZip(zipEntries);
+    
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
