@@ -292,7 +292,7 @@ function buildZip(entries: Array<{ name: string; data: Buffer }>) {
 
 function buildPkPassArchiveEntries() {
   const required = ['pass.json', 'manifest.json', 'signature', 'icon.png', 'logo.png'] as const;
-  const optional = ['icon@2x.png', 'logo@2x.png', 'strip.png', 'strip@2x.png', 'strip@3x.png', 'thumbnail.png', 'thumbnail@2x.png', 'background.png', 'background@2x.png', 'hero.png', 'hero@2x.png'] as const;
+  const optional = ['icon@2x.png', 'logo@2x.png', 'strip.png'] as const;
   return { required, optional };
 }
 
@@ -443,18 +443,10 @@ async function createPassPackage(params: {
       await writeFile(join(tempDir, 'logo@2x.png'), tenantLogo);
     }
 
-    const tenantStrip = decodeTenantImageData(String(params.walletStripImageData || ''));
-    if (tenantStrip && tenantStrip.length > 0) {
-      await writeFile(join(tempDir, 'strip.png'), tenantStrip);
-      await writeFile(join(tempDir, 'strip@2x.png'), tenantStrip);
-      await writeFile(join(tempDir, 'strip@3x.png'), tenantStrip);
-      await writeFile(join(tempDir, 'thumbnail.png'), tenantStrip);
-      await writeFile(join(tempDir, 'thumbnail@2x.png'), tenantStrip);
-      await writeFile(join(tempDir, 'background.png'), tenantStrip);
-      await writeFile(join(tempDir, 'background@2x.png'), tenantStrip);
-      await writeFile(join(tempDir, 'hero.png'), tenantStrip);
-      await writeFile(join(tempDir, 'hero@2x.png'), tenantStrip);
-    }
+      const tenantStrip = decodeTenantImageData(String(params.walletStripImageData || ''));
+      if (tenantStrip && tenantStrip.length > 0) {
+        await writeFile(join(tempDir, 'strip.png'), tenantStrip);
+      }
  else {
       const logoAsBackground = decodeTenantImageData(String(params.tenantLogoData || ''));
       if (logoAsBackground && logoAsBackground.length > 0) {
@@ -469,7 +461,8 @@ async function createPassPackage(params: {
     const passPath = join(tempDir, 'pass.json');
     await writeFile(passPath, JSON.stringify(passJson, null, 2));
 
-    const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png', 'strip.png', 'strip@2x.png', 'strip@3x.png', 'thumbnail.png', 'thumbnail@2x.png', 'background.png', 'background@2x.png', 'hero.png', 'hero@2x.png'] as const;
+    const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png', 'strip.png'] as const;
+
 
 
     for (const file of packageFiles) {
@@ -489,7 +482,7 @@ async function createPassPackage(params: {
           continue;
         }
 
-        if (file.startsWith('strip') || file.startsWith('thumbnail') || file.startsWith('background') || file.startsWith('hero')) {
+          if (file.startsWith('strip')) {
           const customData = await readFile(join(tempDir, file)).catch(() => null);
           if (customData) {
             await writeFile(join(tempDir, file), customData);
