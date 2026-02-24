@@ -413,19 +413,19 @@ async function createPassPackage(params: {
       ],
       webServiceURL: `${publicBaseUrl}/api/wallet/apple/v1`,
       authenticationToken,
-        coupon: {
+      storeCard: {
         headerFields: [
           { key: 'business', label: 'Negocio', value: params.businessName || params.businessId },
         ],
         primaryFields: [{ key: 'visits', label: 'Contador de visitas', value: `${params.currentVisits}/${params.requiredVisits}` }],
         secondaryFields: [
           { key: 'client', label: 'Cliente', value: params.customerName || params.customerId },
-          { key: 'goal', label: 'Meta', value: `${params.requiredVisits} visitas` },
         ],
         auxiliaryFields: [
-          { key: 'stamps', label: 'Sellos', value: buildStampProgress(params.currentVisits, params.requiredVisits) },
+          { key: 'goal', label: 'Meta', value: `${params.requiredVisits} visitas` },
         ],
         backFields: [
+          { key: 'stamps', label: 'Sellos', value: buildStampProgress(params.currentVisits, params.requiredVisits) },
           { key: 'footbrand', label: 'PUNTO IA', value: 'Programa de lealtad digital' },
           { key: 'support', label: 'Soporte', value: 'Presenta este pase al negocio para registrar visitas.' },
         ],
