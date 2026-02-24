@@ -115,7 +115,6 @@ export default function PassPage() {
     const safariParam = isIos && isSafari ? '&safari=1' : '';
     const href = `/api/wallet/apple?customerId=${encodeURIComponent(pass.customer_id)}${businessParam}${safariParam}`;
 
-
     // En iOS Safari conviene abrir directo la URL del .pkpass para que Wallet lo maneje.
     if (isIos && isSafari) {
       window.location.assign(href);
@@ -142,8 +141,6 @@ export default function PassPage() {
       window.location.assign(href);
     }
   };
-
-
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#ff7a59] via-[#ff3f8e] to-[#f90086] p-6 text-white flex items-center justify-center">

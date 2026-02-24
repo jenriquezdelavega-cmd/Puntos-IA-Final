@@ -34,7 +34,9 @@ export async function POST(request: Request) {
     if (user.tenant.isActive === false) {
       return NextResponse.json({ error: 'Este negocio ha sido suspendido. Contacta a soporte.' }, { status: 403 });
     }
+
     const walletStyle = (await getTenantWalletStyle(prisma, user.tenant.id)) || defaultTenantWalletStyle(user.tenant.id);
+
     return NextResponse.json({
       success: true,
       user: { id: user.id, name: user.name, role: user.role },

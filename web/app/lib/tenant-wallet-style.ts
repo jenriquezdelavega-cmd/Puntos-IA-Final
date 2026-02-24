@@ -94,7 +94,6 @@ export async function upsertTenantWalletStyle(prisma: PrismaClient, params: {
   );
 }
 
-
 export async function getTenantWalletStyle(prisma: PrismaClient, tenantId: string): Promise<TenantWalletStyle | null> {
   await ensureTenantWalletStylesTable(prisma);
 
