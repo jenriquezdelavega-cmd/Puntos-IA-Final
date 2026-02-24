@@ -625,18 +625,20 @@ export async function GET(req: Request) {
     });
 
 
-    return new NextResponse(pkpass, {
+    return new Response(new Uint8Array(pkpass), {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.apple.pkpass',
-        'Content-Disposition': `inline; filename="puntoia.pkpass"; filename*=UTF-8''puntoia.pkpass`,
+        'Content-Disposition': 'attachment; filename="puntoia.pkpass"',
         'Content-Transfer-Encoding': 'binary',
         'Content-Length': String(pkpass.length),
+        'Content-Encoding': 'identity',
         'Accept-Ranges': 'none',
         'X-Content-Type-Options': 'nosniff',
         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
       },
     });
+
 
 
   } catch (error: unknown) {
