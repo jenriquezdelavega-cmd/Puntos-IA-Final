@@ -292,9 +292,10 @@ function buildZip(entries: Array<{ name: string; data: Buffer }>) {
 
 function buildPkPassArchiveEntries() {
   const required = ['pass.json', 'manifest.json', 'signature', 'icon.png', 'logo.png'] as const;
-  const optional = ['icon@2x.png', 'logo@2x.png'] as const;
+  const optional = ['icon@2x.png', 'logo@2x.png', 'strip.png', 'strip@2x.png'] as const;
   return { required, optional };
 }
+
 
 function isPngBuffer(buffer: Buffer) {
   return buffer.length > 8
