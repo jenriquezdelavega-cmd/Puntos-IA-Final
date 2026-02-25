@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { logApiError, logApiEvent } from '@/app/lib/api-log';
 import { RewardPeriod } from '@prisma/client';
 import { touchWalletPassRegistrations, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
+import { listWalletPushTokens, pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
 import { prisma } from '@/app/lib/prisma';
 const TZ = 'America/Monterrey';
 
