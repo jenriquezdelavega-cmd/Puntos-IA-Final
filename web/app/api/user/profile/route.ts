@@ -1,6 +1,7 @@
 // web/app/api/user/profile/route.ts
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { verifyPassword } from '@/app/lib/password';
 
 const prisma = new PrismaClient();
 
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
 
     // 2. Validaciones
     if (!user) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
-    if (user.password !== password) return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
+    if (!verifyPassword(password, user.password)) return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
 
     // 3. Preparar datos bonitos para la app
     const profileData = {

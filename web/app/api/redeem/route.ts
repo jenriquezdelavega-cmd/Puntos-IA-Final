@@ -1,6 +1,7 @@
 // web/app/api/redeem/route.ts
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { verifyPassword } from '@/app/lib/password';
 
 const prisma = new PrismaClient();
 
@@ -12,8 +13,7 @@ export async function POST(request: Request) {
     const user = await prisma.user.findUnique({ where: { phone } });
     if (!user) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
 
-    // 🔐 VALIDACIÓN DE SEGURIDAD
-    if (user.password !== password) {
+    if (!verifyPassword(password, user.password)) {
       return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
     }
 
