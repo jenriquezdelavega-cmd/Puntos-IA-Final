@@ -34,7 +34,40 @@ function p12PasswordCandidates(rawPassword: string) {
   return variants.filter((v) => { if (seen.has(v)) return false; seen.add(v); return true; });
 }
 
+function getCleanEnv() {
+  const env = { ...process.env };
+  delete env.LD_LIBRARY_PATH;
+  delete env.LD_PRELOAD;
+  delete env.DYLD_LIBRARY_PATH;
+  delete env.DYLD_INSERT_LIBRARIES;
+  return env;
+}
+
+async function resolveOpenSslBin(): Promise<string> {
+  const preferred = String(process.env.OPENSSL_BIN || '').trim();
+  const candidates = [
+    preferred.startsWith('/') ? preferred : '',
+    '/usr/local/bin/openssl',
+    '/usr/bin/openssl',
+    '/bin/openssl',
+    '/opt/bin/openssl',
+    '/var/lang/bin/openssl',
+    '/var/task/bin/openssl',
+  ].filter(Boolean);
+
+  const env = getCleanEnv();
+  for (const bin of candidates) {
+    try {
+      await execFileAsync(bin, ['version'], { env });
+      return bin;
+    } catch { /* next */ }
+  }
+  throw new Error(`openssl not found. Tried: ${candidates.join(', ')}`);
+}
+
 async function extractPemFromP12(p12Buffer: Buffer, p12Password: string): Promise<{ cert: string; key: string }> {
+  const opensslBin = await resolveOpenSslBin();
+  const env = getCleanEnv();
   const tempDir = await mkdtemp(join(tmpdir(), 'apns-'));
   try {
     const p12Path = join(tempDir, 'cert.p12');
@@ -42,17 +75,11 @@ async function extractPemFromP12(p12Buffer: Buffer, p12Password: string): Promis
     const keyPath = join(tempDir, 'key.pem');
     await writeFile(p12Path, p12Buffer);
 
-    const opensslBins = ['/usr/bin/openssl', '/usr/local/bin/openssl', '/bin/openssl'];
-    let opensslBin = 'openssl';
-    for (const bin of opensslBins) {
-      try { await execFileAsync(bin, ['version']); opensslBin = bin; break; } catch { /* next */ }
-    }
-
     for (const pw of p12PasswordCandidates(p12Password)) {
       for (const legacy of [[], ['-legacy']]) {
         try {
-          await execFileAsync(opensslBin, ['pkcs12', '-in', p12Path, ...legacy, '-out', certPath, '-clcerts', '-nokeys', '-passin', `pass:${pw}`]);
-          await execFileAsync(opensslBin, ['pkcs12', '-in', p12Path, ...legacy, '-out', keyPath, '-nocerts', '-nodes', '-passin', `pass:${pw}`]);
+          await execFileAsync(opensslBin, ['pkcs12', '-in', p12Path, ...legacy, '-out', certPath, '-clcerts', '-nokeys', '-passin', `pass:${pw}`], { env });
+          await execFileAsync(opensslBin, ['pkcs12', '-in', p12Path, ...legacy, '-out', keyPath, '-nocerts', '-nodes', '-passin', `pass:${pw}`], { env });
           const cert = await readFile(certPath, 'utf8');
           const key = await readFile(keyPath, 'utf8');
           if (cert && key) return { cert, key };
