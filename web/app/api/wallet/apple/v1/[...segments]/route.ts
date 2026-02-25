@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/app/lib/prisma';
 import {
   deleteWalletRegistration,
   listUpdatedSerialsForDevice,
   upsertWalletRegistration,
   verifyWalletAuthToken
 } from '@/app/lib/apple-wallet-webservice';
-
-const prisma = new PrismaClient();
 
 function parseApplePassAuth(req: Request) {
   const auth = String(req.headers.get('authorization') || '').trim();

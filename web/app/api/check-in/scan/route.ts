@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import { logApiError, logApiEvent } from '@/app/lib/api-log';
-import { PrismaClient, RewardPeriod } from '@prisma/client';
+import { RewardPeriod } from '@prisma/client';
 import { touchWalletPassRegistrations, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/app/lib/prisma';
 const TZ = 'America/Monterrey';
 
 function dayKeyInBusinessTz(d = new Date()) {

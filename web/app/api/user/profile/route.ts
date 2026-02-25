@@ -1,9 +1,7 @@
 // web/app/api/user/profile/route.ts
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/app/lib/prisma';
 import { verifyPassword } from '@/app/lib/password';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {

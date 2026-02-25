@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/app/lib/prisma';
 import { isValidMasterPassword } from '@/app/lib/master-auth';
 import { listPrelaunchLeads } from '@/app/lib/prelaunch-leads';
-
-const prisma = new PrismaClient();
 
 type Body = {
   masterPassword?: string;

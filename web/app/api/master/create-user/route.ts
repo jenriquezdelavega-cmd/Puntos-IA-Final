@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/app/lib/prisma';
 import { isValidMasterPassword } from '@/app/lib/master-auth';
 import { hashPassword } from '@/app/lib/password';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {

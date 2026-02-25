@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/app/lib/prisma';
 import { hashPassword, isHashedPassword, verifyPassword } from '@/app/lib/password';
 import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {

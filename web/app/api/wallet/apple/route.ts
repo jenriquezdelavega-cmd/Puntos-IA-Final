@@ -5,13 +5,12 @@ import { join } from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/app/lib/prisma';
 import { generateCustomerToken } from '@/app/lib/customer-token';
 import { walletAuthTokenForSerial, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
 import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 
 const execFileAsync = promisify(execFile);
-const prisma = new PrismaClient();
 let cachedOpenSslBin: string | null = null;
 
 export const runtime = 'nodejs';

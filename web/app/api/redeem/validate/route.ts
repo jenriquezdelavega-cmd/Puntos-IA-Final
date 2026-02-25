@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { logApiError, logApiEvent } from '@/app/lib/api-log';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/app/lib/prisma';
 
 export async function POST(request: Request) {
   try {
