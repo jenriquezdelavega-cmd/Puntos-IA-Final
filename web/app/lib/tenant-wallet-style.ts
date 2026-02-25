@@ -47,10 +47,10 @@ export async function ensureTenantWalletStylesTable(prisma: PrismaClient) {
 
 export async function upsertTenantWalletStyle(prisma: PrismaClient, params: {
   tenantId: string;
-  backgroundColor?: string;
-  foregroundColor?: string;
-  labelColor?: string;
-  stripImageData?: string;
+  backgroundColor?: string | null;
+  foregroundColor?: string | null;
+  labelColor?: string | null;
+  stripImageData?: string | null;
 }) {
   await ensureTenantWalletStylesTable(prisma);
 
@@ -68,10 +68,15 @@ export async function upsertTenantWalletStyle(prisma: PrismaClient, params: {
     params.labelColor,
     current?.labelColor || DEFAULT_STYLE.labelColor
   );
-  const stripImageData =
-    params.stripImageData === undefined
-      ? current?.stripImageData || DEFAULT_STYLE.stripImageData
-      : normalizeImageData(params.stripImageData);
+
+  let stripImageData: string;
+  if (params.stripImageData === null) {
+    stripImageData = '';
+  } else if (!params.stripImageData) {
+    stripImageData = current?.stripImageData || DEFAULT_STYLE.stripImageData;
+  } else {
+    stripImageData = normalizeImageData(params.stripImageData);
+  }
 
   await prisma.$executeRawUnsafe(
     `

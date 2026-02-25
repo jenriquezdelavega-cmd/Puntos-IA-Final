@@ -29,7 +29,7 @@ const [logoData, setLogoData] = useState<string>('');
 const [walletBackgroundColor, setWalletBackgroundColor] = useState('#1f2937');
 const [walletForegroundColor, setWalletForegroundColor] = useState('#ffffff');
 const [walletLabelColor, setWalletLabelColor] = useState('#bfdbfe');
-const [walletStripImageData, setWalletStripImageData] = useState<string>('');
+const [walletStripImageData, setWalletStripImageData] = useState<string | null>('');
 
 const [instagram, setInstagram] = useState('');
 const [addressSearch, setAddressSearch] = useState('');
@@ -75,7 +75,7 @@ setLogoData(String(data.tenant.logoData ?? ''));
 setWalletBackgroundColor(String(data.tenant.walletBackgroundColor ?? '#1f2937'));
 setWalletForegroundColor(String(data.tenant.walletForegroundColor ?? '#ffffff'));
 setWalletLabelColor(String(data.tenant.walletLabelColor ?? '#bfdbfe'));
-setWalletStripImageData(String(data.tenant.walletStripImageData ?? ''));
+setWalletStripImageData(data.tenant.walletStripImageData || '');
 
 if (data.tenant.lat && data.tenant.lng) {
 setCoords([data.tenant.lat, data.tenant.lng]);
@@ -189,9 +189,9 @@ const saveSettings = async () => {
         lng: coords[1],
         address: addressSearch,
         instagram: instagram,
-        walletBackgroundColor: walletBackgroundColor,
-        walletForegroundColor: walletForegroundColor,
-        walletLabelColor: walletLabelColor,
+        walletBackgroundColor: walletBackgroundColor || undefined,
+        walletForegroundColor: walletForegroundColor || undefined,
+        walletLabelColor: walletLabelColor || undefined,
         walletStripImageData: walletStripImageData,
       }),
     });
@@ -213,7 +213,7 @@ const saveSettings = async () => {
       setWalletBackgroundColor(String(data.tenant.walletBackgroundColor ?? walletBackgroundColor));
       setWalletForegroundColor(String(data.tenant.walletForegroundColor ?? walletForegroundColor));
       setWalletLabelColor(String(data.tenant.walletLabelColor ?? walletLabelColor));
-      setWalletStripImageData(String(data.tenant.walletStripImageData ?? walletStripImageData));
+      setWalletStripImageData(data.tenant.walletStripImageData || '');
 
     }
 
@@ -625,7 +625,7 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
       }}
     />
     <div className="mt-2 flex items-center gap-2">
-      <button type="button" onClick={() => setWalletStripImageData('')} className="px-3 py-1 rounded-lg text-xs font-bold bg-gray-200 text-gray-700">Quitar imagen</button>
+      <button type="button" onClick={() => setWalletStripImageData(null)} className="px-3 py-1 rounded-lg text-xs font-bold bg-gray-200 text-gray-700">Quitar imagen</button>
       <span className="text-[11px] text-gray-500 font-semibold">
         Puedes subir PNG/JPG/WEBP. Se convierte automático a PNG strip 1242x492 (2.5:1).
       </span>
