@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/app/lib/prisma';
 import { generateCustomerPass } from '@/app/lib/customer-pass';
-
-const prisma = new PrismaClient();
 
 type Body = {
   customerId?: string;

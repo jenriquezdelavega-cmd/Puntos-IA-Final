@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/app/lib/prisma';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
 const BUSINESS_TZ = 'America/Monterrey';
 
 // Alfabeto sin caracteres confusos (sin I, O, 0, 1)

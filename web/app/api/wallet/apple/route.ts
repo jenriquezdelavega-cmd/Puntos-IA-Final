@@ -5,13 +5,12 @@ import { join } from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/app/lib/prisma';
 import { generateCustomerToken } from '@/app/lib/customer-token';
 import { walletAuthTokenForSerial, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
 import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 
 const execFileAsync = promisify(execFile);
-const prisma = new PrismaClient();
 let cachedOpenSslBin: string | null = null;
 
 export const runtime = 'nodejs';
@@ -371,6 +370,19 @@ function decodeTenantLogoData(logoData: string) {
   return decodeTenantImageData(logoData);
 }
 
+function hexToRgb(hex: string): string {
+  const m = hex.match(/^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/);
+  if (!m) return hex;
+  return `rgb(${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)})`;
+}
+
+function ensureRgbColor(value: string | null | undefined, fallback: string): string {
+  const raw = String(value || '').trim();
+  if (!raw) return fallback;
+  if (raw.startsWith('#')) return hexToRgb(raw);
+  return raw;
+}
+
 function buildStampProgress(currentVisits: number, requiredVisits: number) {
   const total = Math.max(1, Math.min(20, Number(requiredVisits) || 10));
   const done = Math.max(0, Math.min(total, Number(currentVisits) || 0));
@@ -424,9 +436,9 @@ async function createPassPackage(params: {
       organizationName: params.businessName || 'Negocio afiliado',
       description: `Tarjeta de lealtad · ${params.businessName || 'Negocio afiliado'}`,
       logoText: params.businessName || 'Negocio afiliado',
-      foregroundColor: String(params.walletForegroundColor || 'rgb(255,255,255)'),
-      backgroundColor: String(params.walletBackgroundColor || 'rgb(31,41,55)'),
-      labelColor: String(params.walletLabelColor || 'rgb(191,219,254)'),
+      foregroundColor: ensureRgbColor(params.walletForegroundColor, 'rgb(255,255,255)'),
+      backgroundColor: ensureRgbColor(params.walletBackgroundColor, 'rgb(31,41,55)'),
+      labelColor: ensureRgbColor(params.walletLabelColor, 'rgb(191,219,254)'),
       barcode: {
         format: 'PKBarcodeFormatQR',
         message: `${publicBaseUrl}/v/${qrToken}`,
@@ -439,7 +451,7 @@ async function createPassPackage(params: {
           messageEncoding: 'iso-8859-1',
         },
       ],
-      webServiceURL: `${publicBaseUrl}/api/wallet/apple/v1`,
+      webServiceURL: `${publicBaseUrl}/api/wallet/apple`,
       authenticationToken,
       coupon: {
         headerFields: [

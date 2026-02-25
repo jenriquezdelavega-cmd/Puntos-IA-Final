@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { logApiError, logApiEvent } from '@/app/lib/api-log';
-import { PrismaClient, RewardPeriod } from '@prisma/client';
+import { RewardPeriod } from '@prisma/client';
 import { touchWalletPassRegistrations, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
-
-const prisma = new PrismaClient();
+import { listWalletPushTokens, pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
+import { prisma } from '@/app/lib/prisma';
 const TZ = 'America/Monterrey';
 
 function dayKeyInBusinessTz(d = new Date()) {
@@ -146,9 +146,20 @@ export async function POST(request: Request) {
           passTypeIdentifier,
         });
 
+        logApiEvent('/api/check-in/scan#wallet-push', 'push_start', {
+          serialNumber,
+          passTypeIdentifier,
+          deviceCount: pushTokens.length,
+        });
+
         for (const pushToken of pushTokens) {
           const result = await pushWalletUpdateToDevice(pushToken, passTypeIdentifier);
-          if (!result.ok) {
+          if (result.ok) {
+            logApiEvent('/api/check-in/scan#wallet-push', 'push_sent', {
+              serialNumber,
+              status: result.status,
+            });
+          } else {
             if (result.status === 410 || result.status === 400) {
               await deleteWalletRegistrationsByPushToken(prisma, pushToken);
             }
@@ -159,6 +170,10 @@ export async function POST(request: Request) {
             });
           }
         }
+      } else {
+        logApiEvent('/api/check-in/scan#wallet-push', 'push_skipped', {
+          reason: 'APPLE_PASS_TYPE_ID not configured',
+        });
       }
     } catch (walletError) {
       logApiError('/api/check-in/scan#wallet-touch', walletError);
