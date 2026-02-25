@@ -9,10 +9,32 @@ import {
 } from '@/app/lib/apple-wallet-webservice';
 
 function parseApplePassAuth(req: Request) {
-  const auth = String(req.headers.get('authorization') || '').trim();
-  if (!auth) return '';
-  const match = auth.match(/^ApplePass\s+(.+)$/i);
-  return match?.[1]?.trim() || '';
+  const headerNames = [
+    'authorization',
+    'Authorization',
+    'x-authorization',
+    'x-forwarded-authorization',
+  ];
+
+  for (const name of headerNames) {
+    const value = String(req.headers.get(name) || '').trim();
+    if (value) {
+      const match = value.match(/^ApplePass\s+(.+)$/i);
+      if (match) return match[1].trim();
+    }
+  }
+
+  return '';
+}
+
+function dumpRequestHeaders(req: Request): Record<string, string> {
+  const out: Record<string, string> = {};
+  req.headers.forEach((value, key) => {
+    out[key] = key.toLowerCase().includes('auth')
+      ? value.substring(0, 30) + (value.length > 30 ? '...' : '')
+      : value.substring(0, 80);
+  });
+  return out;
 }
 
 function splitSerialLegacy(serialNumber: string) {
@@ -96,12 +118,10 @@ export async function GET(req: Request, context: { params: Promise<{ segments: s
         const expectedToken = walletAuthTokenForSerial(serialNumber);
         console.error('[wallet-get-pass] AUTH FAILED', JSON.stringify({
           serialNumber,
-          hasAuthHeader: !!req.headers.get('authorization'),
           receivedTokenLen: authToken.length,
-          receivedTokenPrefix: authToken.substring(0, 8),
-          expectedTokenLen: expectedToken.length,
           expectedTokenPrefix: expectedToken.substring(0, 8),
           tokensMatch: authToken === expectedToken,
+          allHeaders: dumpRequestHeaders(req),
         }));
         return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
       }
@@ -159,13 +179,10 @@ export async function POST(req: Request, context: { params: Promise<{ segments: 
       if (!authToken || !verifyWalletAuthToken(serialNumber, authToken)) {
         console.error('[wallet-register] AUTH FAILED', JSON.stringify({
           serialNumber,
-          hasAuthHeader: !!req.headers.get('authorization'),
-          authHeaderPrefix: String(req.headers.get('authorization') || '').substring(0, 20),
           receivedTokenLen: authToken.length,
-          receivedTokenPrefix: authToken.substring(0, 8),
-          expectedTokenLen: expectedToken.length,
           expectedTokenPrefix: expectedToken.substring(0, 8),
           tokensMatch: authToken === expectedToken,
+          allHeaders: dumpRequestHeaders(req),
         }));
         return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
       }
