@@ -451,7 +451,7 @@ async function createPassPackage(params: {
           messageEncoding: 'iso-8859-1',
         },
       ],
-      webServiceURL: `${publicBaseUrl}/api/wallet/apple/v1`,
+      webServiceURL: `${publicBaseUrl}/api/wallet/apple`,
       authenticationToken,
       coupon: {
         headerFields: [
