@@ -4,7 +4,8 @@ import {
   deleteWalletRegistration,
   listUpdatedSerialsForDevice,
   upsertWalletRegistration,
-  verifyWalletAuthToken
+  verifyWalletAuthToken,
+  walletAuthTokenForSerial
 } from '@/app/lib/apple-wallet-webservice';
 
 function parseApplePassAuth(req: Request) {
@@ -92,6 +93,16 @@ export async function GET(req: Request, context: { params: Promise<{ segments: s
 
       const authToken = parseApplePassAuth(req);
       if (!authToken || !verifyWalletAuthToken(serialNumber, authToken)) {
+        const expectedToken = walletAuthTokenForSerial(serialNumber);
+        console.error('[wallet-get-pass] AUTH FAILED', JSON.stringify({
+          serialNumber,
+          hasAuthHeader: !!req.headers.get('authorization'),
+          receivedTokenLen: authToken.length,
+          receivedTokenPrefix: authToken.substring(0, 8),
+          expectedTokenLen: expectedToken.length,
+          expectedTokenPrefix: expectedToken.substring(0, 8),
+          tokensMatch: authToken === expectedToken,
+        }));
         return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
       }
 
@@ -144,7 +155,18 @@ export async function POST(req: Request, context: { params: Promise<{ segments: 
       }
 
       const authToken = parseApplePassAuth(req);
+      const expectedToken = walletAuthTokenForSerial(serialNumber);
       if (!authToken || !verifyWalletAuthToken(serialNumber, authToken)) {
+        console.error('[wallet-register] AUTH FAILED', JSON.stringify({
+          serialNumber,
+          hasAuthHeader: !!req.headers.get('authorization'),
+          authHeaderPrefix: String(req.headers.get('authorization') || '').substring(0, 20),
+          receivedTokenLen: authToken.length,
+          receivedTokenPrefix: authToken.substring(0, 8),
+          expectedTokenLen: expectedToken.length,
+          expectedTokenPrefix: expectedToken.substring(0, 8),
+          tokensMatch: authToken === expectedToken,
+        }));
         return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
       }
 
