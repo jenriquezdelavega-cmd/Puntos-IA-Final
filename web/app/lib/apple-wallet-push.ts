@@ -1,7 +1,13 @@
 import { connect } from 'http2';
 import { PrismaClient } from '@prisma/client';
 import { ensureWalletRegistrationsTable } from '@/app/lib/apple-wallet-webservice';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import { mkdtemp, writeFile, readFile, rm } from 'fs/promises';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
+const execFileAsync = promisify(execFile);
 const TABLE_NAME = 'apple_wallet_registrations';
 
 function decodeP12Base64(raw: string) {
@@ -19,6 +25,44 @@ function optionalEnv(name: string) {
     return trimmed.slice(1, -1);
   }
   return trimmed;
+}
+
+function p12PasswordCandidates(rawPassword: string) {
+  const normalized = rawPassword.normalize('NFKC');
+  const variants = [rawPassword, rawPassword.trim(), normalized, normalized.trim(), ''];
+  const seen = new Set<string>();
+  return variants.filter((v) => { if (seen.has(v)) return false; seen.add(v); return true; });
+}
+
+async function extractPemFromP12(p12Buffer: Buffer, p12Password: string): Promise<{ cert: string; key: string }> {
+  const tempDir = await mkdtemp(join(tmpdir(), 'apns-'));
+  try {
+    const p12Path = join(tempDir, 'cert.p12');
+    const certPath = join(tempDir, 'cert.pem');
+    const keyPath = join(tempDir, 'key.pem');
+    await writeFile(p12Path, p12Buffer);
+
+    const opensslBins = ['/usr/bin/openssl', '/usr/local/bin/openssl', '/bin/openssl'];
+    let opensslBin = 'openssl';
+    for (const bin of opensslBins) {
+      try { await execFileAsync(bin, ['version']); opensslBin = bin; break; } catch { /* next */ }
+    }
+
+    for (const pw of p12PasswordCandidates(p12Password)) {
+      for (const legacy of [[], ['-legacy']]) {
+        try {
+          await execFileAsync(opensslBin, ['pkcs12', '-in', p12Path, ...legacy, '-out', certPath, '-clcerts', '-nokeys', '-passin', `pass:${pw}`]);
+          await execFileAsync(opensslBin, ['pkcs12', '-in', p12Path, ...legacy, '-out', keyPath, '-nocerts', '-nodes', '-passin', `pass:${pw}`]);
+          const cert = await readFile(certPath, 'utf8');
+          const key = await readFile(keyPath, 'utf8');
+          if (cert && key) return { cert, key };
+        } catch { /* try next combination */ }
+      }
+    }
+    throw new Error('Could not extract cert/key from P12 for APNS');
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
 }
 
 export async function listWalletPushTokens(prisma: PrismaClient, params: {
@@ -68,11 +112,11 @@ export async function pushWalletUpdateToDevice(pushToken: string, passTypeIdenti
   const p12Base64 = optionalEnv('APPLE_P12_BASE64');
   if (!p12Base64) return { ok: false as const, status: 0, reason: 'APPLE_P12_BASE64 no configurado' };
 
+  const p12Password = optionalEnv('APPLE_P12_PASSWORD');
   const host = optionalEnv('APPLE_APNS_HOST') || (optionalEnv('APPLE_APNS_USE_SANDBOX') === 'true' ? 'api.sandbox.push.apple.com' : 'api.push.apple.com');
-  const client = connect(`https://${host}`, {
-    pfx: decodeP12Base64(p12Base64),
-    passphrase: optionalEnv('APPLE_P12_PASSWORD') || undefined,
-  });
+
+  const { cert, key } = await extractPemFromP12(decodeP12Base64(p12Base64), p12Password);
+  const client = connect(`https://${host}`, { cert, key });
 
   try {
     const result = await new Promise<{ ok: boolean; status: number; reason?: string }>((resolve, reject) => {
