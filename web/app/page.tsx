@@ -680,45 +680,58 @@ export default function Home() {
           animate={canAnim ? screenFx.animate : false}
           exit={canAnim ? screenFx.exit : false}
           transition={canAnim ? { ...spring } : undefined}
-          className={`min-h-screen ${glow} flex flex-col items-center justify-center p-6 text-white relative overflow-hidden`}
+          className={`min-h-screen ${glow} flex flex-col items-center p-6 text-white relative overflow-hidden`}
         >
           <motion.div
             aria-hidden
-            className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/15 blur-3xl"
-            animate={canAnim ? { x: [0, 20, 0], y: [0, 12, 0] } : undefined}
-            transition={canAnim ? { duration: 6, repeat: Infinity } : undefined}
+            className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-white/12 blur-[80px]"
+            animate={canAnim ? { x: [0, 30, 0], y: [0, 20, 0] } : undefined}
+            transition={canAnim ? { duration: 8, repeat: Infinity } : undefined}
           />
           <motion.div
             aria-hidden
-            className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-white/10 blur-3xl"
-            animate={canAnim ? { x: [0, -18, 0], y: [0, -14, 0] } : undefined}
-            transition={canAnim ? { duration: 7, repeat: Infinity } : undefined}
+            className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-white/8 blur-[80px]"
+            animate={canAnim ? { x: [0, -25, 0], y: [0, -18, 0] } : undefined}
+            transition={canAnim ? { duration: 9, repeat: Infinity } : undefined}
+          />
+          <motion.div
+            aria-hidden
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-white/5 blur-[100px]"
           />
 
-          <div className="w-full max-w-sm flex flex-col items-center py-10 relative">
+          <div className="w-full max-w-md flex flex-col items-center pt-16 pb-10 relative">
             <BrandLogo />
 
-            <p className="text-white text-xl font-medium mb-6 mt-0 tracking-wide drop-shadow-md text-center leading-tight">
-              Tu experiencia Punto IA,
-              <br />
-              <span className="font-extrabold italic">más premium, más rápida.</span>
-            </p>
+            <motion.p
+              initial={canAnim ? { opacity: 0, y: 8 } : false}
+              animate={canAnim ? { opacity: 1, y: 0 } : false}
+              transition={canAnim ? { ...spring, delay: 0.1 } : undefined}
+              className="text-white/80 text-xs font-black uppercase tracking-[0.25em] mt-2 mb-6"
+            >
+              Coalición de PyMEs
+            </motion.p>
 
-            <div className="mb-8 grid w-full grid-cols-3 gap-2">
-              {[
-                { icon: '🎟️', label: 'Pase universal' },
-                { icon: '⚡', label: 'Check-in express' },
-                { icon: '🎁', label: 'Premios reales' },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-2xl border border-white/35 bg-white/15 px-3 py-3 text-center backdrop-blur-sm shadow-lg"
-                >
-                  <div className="text-xl leading-none">{item.icon}</div>
-                  <div className="mt-1 text-[10px] font-black uppercase tracking-wider text-white/90">{item.label}</div>
-                </div>
-              ))}
-            </div>
+            <motion.h1
+              initial={canAnim ? { opacity: 0, y: 10 } : false}
+              animate={canAnim ? { opacity: 1, y: 0 } : false}
+              transition={canAnim ? { ...spring, delay: 0.15 } : undefined}
+              className="text-[2rem] md:text-4xl font-black text-center leading-[1.15] tracking-tight drop-shadow-lg"
+            >
+              Visita, acumula
+              <br />
+              y gana premios
+              <br />
+              <span className="text-white/90 italic">en tus negocios favoritos</span>
+            </motion.h1>
+
+            <motion.p
+              initial={canAnim ? { opacity: 0, y: 8 } : false}
+              animate={canAnim ? { opacity: 1, y: 0 } : false}
+              transition={canAnim ? { ...spring, delay: 0.2 } : undefined}
+              className="text-white/85 text-sm md:text-base font-semibold text-center mt-5 mb-8 max-w-xs leading-relaxed"
+            >
+              Un solo pase digital para acumular puntos en cafeterías, taquerías, estéticas y más negocios cerca de ti.
+            </motion.p>
 
             {pendingCode && (
               <motion.div
@@ -731,46 +744,92 @@ export default function Home() {
               </motion.div>
             )}
 
-            <div className="space-y-4 w-full mb-12">
+            <motion.div
+              initial={canAnim ? { opacity: 0, y: 10 } : false}
+              animate={canAnim ? { opacity: 1, y: 0 } : false}
+              transition={canAnim ? { ...spring, delay: 0.25 } : undefined}
+              className="space-y-3 w-full mb-10"
+            >
               <motion.button
                 whileTap={canAnim ? { scale: 0.97 } : undefined}
                 whileHover={canAnim ? { y: -2 } : undefined}
-                onClick={() => {
-                  setMessage('');
-                  setView('LOGIN');
-                }}
-                className="relative w-full bg-white text-pink-600 py-4 rounded-2xl font-extrabold text-lg shadow-2xl hover:bg-gray-50 transition-all overflow-hidden"
+                onClick={() => { setMessage(''); setView('LOGIN'); }}
+                className="relative w-full bg-white text-pink-600 py-4 rounded-2xl font-extrabold text-lg shadow-[0_8px_32px_rgba(0,0,0,0.18)] hover:bg-gray-50 transition-all overflow-hidden"
               >
                 <Shine />
-                ✨ Iniciar Sesión
+                Iniciar Sesión
               </motion.button>
 
               <motion.button
                 whileTap={canAnim ? { scale: 0.97 } : undefined}
                 whileHover={canAnim ? { y: -2 } : undefined}
-                onClick={() => {
-                  setMessage('');
-                  setView('REGISTER');
-                }}
-                className="w-full bg-white/10 border-2 border-white/50 text-white py-4 rounded-2xl font-black text-lg hover:bg-white/20 transition-all backdrop-blur-sm"
+                onClick={() => { setMessage(''); setView('REGISTER'); }}
+                className="w-full bg-white/10 border border-white/40 text-white py-4 rounded-2xl font-black text-lg hover:bg-white/20 transition-all backdrop-blur-sm"
               >
-                🚀 Crear Cuenta
+                Crear Cuenta Gratis
               </motion.button>
-            </div>
+            </motion.div>
 
-            <div className="w-full pt-8 border-t border-white/20">
-              <p className="text-center text-white/70 text-xs font-black uppercase tracking-widest mb-6">
-                ¿CÓMO FUNCIONA?
+            <motion.div
+              initial={canAnim ? { opacity: 0 } : false}
+              animate={canAnim ? { opacity: 1 } : false}
+              transition={canAnim ? { delay: 0.4 } : undefined}
+              className="grid w-full grid-cols-3 gap-2.5 mb-10"
+            >
+              {[
+                { icon: '📱', num: '1', label: 'Escanea el QR' },
+                { icon: '⭐', num: '2', label: 'Suma visitas' },
+                { icon: '🎁', num: '3', label: 'Gana premios' },
+              ].map((item, i) => (
+                <motion.div
+                  key={item.label}
+                  initial={canAnim ? { opacity: 0, y: 12 } : false}
+                  animate={canAnim ? { opacity: 1, y: 0 } : false}
+                  transition={canAnim ? { ...spring, delay: 0.5 + i * 0.08 } : undefined}
+                  className="rounded-2xl border border-white/25 bg-white/10 px-2 py-4 text-center backdrop-blur-sm"
+                >
+                  <div className="text-2xl leading-none mb-2">{item.icon}</div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-white/70 mb-0.5">Paso {item.num}</div>
+                  <div className="text-xs font-bold text-white/95">{item.label}</div>
+                </motion.div>
+              ))}
+            </motion.div>
+
+            <motion.div
+              initial={canAnim ? { opacity: 0 } : false}
+              animate={canAnim ? { opacity: 1 } : false}
+              transition={canAnim ? { delay: 0.7 } : undefined}
+              className="w-full rounded-2xl border border-white/20 bg-white/8 backdrop-blur-sm p-5 mb-10"
+            >
+              <p className="text-center text-white/60 text-[10px] font-black uppercase tracking-[0.2em] mb-4">
+                ¿Cómo funciona?
               </p>
               <Onboarding />
-            </div>
+            </motion.div>
 
-            <Link
-              href="/aliados"
-              className="mt-12 inline-flex items-center justify-center rounded-full border border-white/50 bg-white/15 px-5 py-3 text-sm font-black tracking-wide text-white shadow-lg backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/25"
+            <motion.div
+              initial={canAnim ? { opacity: 0, y: 8 } : false}
+              animate={canAnim ? { opacity: 1, y: 0 } : false}
+              transition={canAnim ? { delay: 0.8 } : undefined}
+              className="flex flex-col items-center gap-4 w-full"
             >
-              ¿Tienes negocio? <span className="ml-2 underline">Únete a Punto IA</span>
-            </Link>
+              <div className="flex items-center gap-3 text-white/60 text-xs font-semibold">
+                <span className="h-px w-8 bg-white/20" />
+                <span>Disponible en Apple Wallet</span>
+                <span className="h-px w-8 bg-white/20" />
+              </div>
+
+              <Link
+                href="/aliados"
+                className="inline-flex items-center justify-center rounded-full border border-white/40 bg-white/10 px-6 py-3 text-sm font-black tracking-wide text-white shadow-lg backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/20"
+              >
+                ¿Tienes negocio?&nbsp;<span className="underline underline-offset-2">Únete a Punto IA</span>
+              </Link>
+
+              <p className="text-white/40 text-[10px] font-bold tracking-wider mt-2">
+                puntoia.mx · Hecho en México 🇲🇽
+              </p>
+            </motion.div>
           </div>
         </motion.div>
       )}
