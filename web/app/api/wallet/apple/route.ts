@@ -505,16 +505,12 @@ async function createPassPackage(params: {
       { key: 'support', label: 'ℹ️ Ayuda', value: 'Presenta este pase en el negocio y escanea el código QR del día para registrar tu visita.' },
     );
 
-    const prizeMessage = remaining > 0
-      ? `Al completar ${params.requiredVisits} visitas te ganas:`
-      : '¡Completaste tus visitas! Tu premio:';
-
     const passJson = {
       formatVersion: 1,
       passTypeIdentifier,
       teamIdentifier,
       serialNumber,
-      organizationName: params.businessName || 'Negocio afiliado',
+      organizationName: `${params.businessName || 'Negocio afiliado'} · punto IA`,
       description: `Tarjeta de lealtad · ${params.businessName || 'Negocio afiliado'}`,
       logoText: params.businessName || 'Negocio afiliado',
       foregroundColor: ensureRgbColor(params.walletForegroundColor, 'rgb(255,255,255)'),
@@ -540,11 +536,11 @@ async function createPassPackage(params: {
         ],
         secondaryFields: [
           { key: 'client', label: 'CLIENTE', value: params.customerName || 'Cliente' },
-          { key: 'period', label: 'PERIODO', value: formatPeriodLabel(params.rewardPeriod, params.periodKey) },
+          { key: 'brand', label: '✦ PUNTO IA', value: formatPeriodLabel(params.rewardPeriod, params.periodKey) },
         ],
         auxiliaryFields: [
-          { key: 'prize', label: prizeMessage, value: `🎁 ${params.prize}` },
-          { key: 'remaining', label: 'FALTAN', value: remaining > 0 ? `${remaining} visita${remaining === 1 ? '' : 's'}` : '¡Canjea!' },
+          { key: 'prize', label: '🎁 TU PREMIO', value: params.prize },
+          { key: 'remaining', label: remaining > 0 ? 'FALTAN' : '¡LISTO!', value: remaining > 0 ? `${remaining} visita${remaining === 1 ? '' : 's'}` : 'Canjea tu premio' },
         ],
         backFields,
       },
