@@ -499,44 +499,68 @@ return (
 )}
 
 {tab === 'team' && userRole === 'ADMIN' && (
-<div className="max-w-4xl mx-auto space-y-8 animate-fadeIn">
-<div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
-<h2 className="text-xl font-bold text-gray-800">Agregar Personal</h2>
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-<input className="p-4 bg-white rounded-2xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400" placeholder="Nombre (ej: Pedro)" value={newStaff.name} onChange={e=>setNewStaff({...newStaff, name: e.target.value})} />
+<div className="max-w-2xl mx-auto space-y-4 animate-fadeIn">
+  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-5 text-white">
+      <div className="flex items-center gap-3">
+        <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">👥</span>
+        <div>
+          <h2 className="text-lg font-black">Agregar Personal</h2>
+          <p className="text-white/80 text-xs font-semibold">Crea cuentas para tu equipo operativo o administrativo</p>
+        </div>
+      </div>
+    </div>
+    <div className="p-6 space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <input className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-300 focus:bg-white transition text-sm font-semibold" placeholder="Nombre (ej: Pedro)" value={newStaff.name} onChange={e=>setNewStaff({...newStaff, name: e.target.value})} />
+        <div className="flex items-center bg-gray-50 rounded-xl px-3.5 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-300 focus-within:bg-white transition">
+          <span className="text-gray-400 font-mono text-xs font-bold mr-1 select-none shrink-0">{tenant.codePrefix || '???'}.</span>
+          <input className="bg-transparent w-full py-3.5 outline-none font-semibold text-gray-900 placeholder:text-gray-400 text-sm" placeholder="usuario" value={newStaff.username} onChange={e=>setNewStaff({...newStaff, username: e.target.value})} />
+        </div>
+        <input type="password" className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-300 focus:bg-white transition text-sm font-semibold" placeholder="Contraseña" value={newStaff.password} onChange={e=>setNewStaff({...newStaff, password: e.target.value})} />
+        <select className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 focus:ring-2 focus:ring-purple-300 text-sm font-semibold" value={newStaff.role} onChange={e=>setNewStaff({...newStaff, role: e.target.value})}>
+          <option value="STAFF">👤 Operativo (QR + Canje)</option>
+          <option value="ADMIN">👑 Administrador (Total)</option>
+        </select>
+      </div>
+      <button onClick={createStaff} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black py-3.5 rounded-xl shadow-md text-sm hover:shadow-lg transition-all">Agregar Empleado</button>
+    </div>
+  </div>
 
-<div className="flex items-center bg-white rounded-2xl px-4 border border-gray-200 focus-within:ring-2 focus-within:ring-pink-400">
-<span className="text-gray-400 font-mono text-sm font-bold mr-1 select-none">{tenant.codePrefix || '???'}.</span>
-<input 
-className="bg-transparent w-full p-4 outline-none font-semibold text-gray-900 placeholder:text-gray-400" 
-placeholder="ej: juan" 
-value={newStaff.username} 
-onChange={e=>setNewStaff({...newStaff, username: e.target.value})} 
-/>
-</div>
-
-<input className="p-4 bg-white rounded-2xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400 shadow-sm" placeholder="Contraseña" value={newStaff.password} onChange={e=>setNewStaff({...newStaff, password: e.target.value})} />
-<select className="p-4 bg-white rounded-2xl outline-none border border-gray-200 text-gray-900 focus:ring-2 focus:ring-pink-400" value={newStaff.role} onChange={e=>setNewStaff({...newStaff, role: e.target.value})}>
-<option value="STAFF">Operativo (Solo QR/Canje)</option>
-<option value="ADMIN">Administrador (Total)</option>
-</select>
-</div>
-<button onClick={createStaff} className="w-full bg-black text-white font-bold py-4 rounded-xl hover:bg-gray-800 transition-all shadow-lg">Agregar Empleado</button>
-</div>
-
-<h2 className="text-xl font-bold text-gray-800 ml-2">Mi Equipo</h2>
-<div className="grid gap-4">
-{team.map((u: any) => (
-<div key={u.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
-<div>
-<h3 className="font-bold text-lg">{u.name}</h3>
-<p className="text-sm text-gray-500">Login: <span className="font-mono bg-gray-100 px-2 py-0.5 rounded text-gray-800 font-bold">{u.username}</span></p>
-<span className={`text-[10px] px-2 py-1 rounded font-bold mt-1 inline-block ${u.role==='ADMIN'?'bg-purple-100 text-purple-600':'bg-blue-100 text-blue-600'}`}>{u.role}</span>
-</div>
-<button onClick={() => deleteStaff(u.id)} className="bg-red-50 text-red-500 px-4 py-2 rounded-xl font-bold text-sm hover:bg-red-100">Eliminar</button>
-</div>
-))}
-</div>
+  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <h2 className="text-sm font-black text-gray-800">Mi Equipo</h2>
+        <span className="bg-gray-100 text-gray-500 text-[10px] font-black px-2 py-0.5 rounded-full">{team.length}</span>
+      </div>
+    </div>
+    <div className="divide-y divide-gray-50">
+      {team.length > 0 ? team.map((u: any) => (
+        <div key={u.id} className="px-6 py-4 flex items-center justify-between gap-3 hover:bg-gray-50/50 transition">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0 ${u.role === 'ADMIN' ? 'bg-gradient-to-br from-purple-500 to-pink-500' : 'bg-gradient-to-br from-sky-500 to-blue-600'}`}>
+              {u.name?.charAt(0)?.toUpperCase() || '?'}
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-bold text-gray-900 text-sm truncate">{u.name}</h3>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="font-mono text-[11px] text-gray-400 font-semibold truncate">{u.username}</span>
+                <span className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>{u.role === 'ADMIN' ? 'Admin' : 'Staff'}</span>
+              </div>
+            </div>
+          </div>
+          <button onClick={() => deleteStaff(u.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition shrink-0" title="Eliminar">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+          </button>
+        </div>
+      )) : (
+        <div className="px-6 py-10 text-center">
+          <p className="text-gray-300 text-3xl mb-2">👥</p>
+          <p className="text-gray-400 text-sm font-semibold">Sin empleados registrados</p>
+        </div>
+      )}
+    </div>
+  </div>
 </div>
 )}
 
@@ -625,22 +649,73 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
 
 
 {tab === 'redeem' && (
-<div className="max-w-md mx-auto mt-10 animate-fadeIn">
-<div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-pink-100 text-center">
-<h2 className="text-xl font-bold text-gray-800 mb-4">Validar Premio</h2>
-<input className="w-full p-6 text-center text-3xl font-mono font-bold tracking-[0.5em] uppercase border-2 border-gray-100 rounded-2xl mb-6 outline-none focus:border-pink-500" placeholder="0000" maxLength={4} value={redeemCode} onChange={e => setRedeemCode(e.target.value)} />
-<button onClick={validateRedeem} disabled={!redeemCode} className="w-full bg-gradient-to-r from-orange-500 to-pink-600 text-white font-bold py-4 rounded-2xl shadow-lg disabled:opacity-50">Validar Código</button>
-{msg && <div className="mt-6 p-4 bg-gray-50 rounded-2xl text-center font-bold text-gray-800 border border-gray-200">{msg}</div>}
-</div>
+<div className="max-w-md mx-auto space-y-4 animate-fadeIn">
+  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-gradient-to-r from-orange-500 to-pink-600 p-5 text-white">
+      <div className="flex items-center gap-3">
+        <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🎁</span>
+        <div>
+          <h2 className="text-lg font-black">Validar Premio</h2>
+          <p className="text-white/80 text-xs font-semibold">Ingresa el código de 4 dígitos que muestra el cliente</p>
+        </div>
+      </div>
+    </div>
+    <div className="p-6">
+      <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 mb-4">
+        <input
+          className="w-full p-4 text-center text-4xl font-mono font-black tracking-[0.5em] uppercase bg-white border-2 border-gray-200 rounded-2xl outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-100 transition-all"
+          placeholder="0000"
+          maxLength={4}
+          value={redeemCode}
+          onChange={e => setRedeemCode(e.target.value.replace(/\D/g, ''))}
+          inputMode="numeric"
+        />
+      </div>
+      <button
+        onClick={validateRedeem}
+        disabled={!redeemCode || redeemCode.length < 4}
+        className="w-full bg-gradient-to-r from-orange-500 to-pink-600 text-white font-black py-4 rounded-2xl shadow-md disabled:opacity-40 disabled:shadow-none transition-all text-sm"
+      >
+        Validar y Entregar Premio
+      </button>
+      {msg && (
+        <div className={`mt-4 p-4 rounded-2xl text-center font-bold text-sm border ${msg.includes('ENTREGAR') ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : msg.includes('❌') || msg.includes('Error') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+          {msg}
+        </div>
+      )}
+    </div>
+  </div>
+
+  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+    <p className="text-xs text-gray-500 font-semibold text-center">
+      💡 El cliente genera su código de 4 dígitos desde la app cuando completa sus visitas. Pídele el código y valídalo aquí antes de entregar el premio.
+    </p>
+  </div>
 </div>
 )}
 
 {tab === 'settings' && userRole === 'ADMIN' && (
-<div className="max-w-lg mx-auto mt-10 animate-fadeIn space-y-6">
-<div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
-<h2 className="text-xl font-bold text-gray-800">Datos del Negocio</h2>
-<div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Nombre</label><input className="w-full p-4 bg-gray-100 rounded-2xl mt-1 text-gray-500 font-bold border border-transparent cursor-not-allowed" value={tenant.name} readOnly /></div>
-<div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Premio</label><input className="w-full p-4 bg-white rounded-2xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-pink-400 outline-none transition-all shadow-sm placeholder:text-gray-400" value={prizeName} onChange={e => setPrizeName(e.target.value)} /></div>
+<div className="max-w-lg mx-auto space-y-4 animate-fadeIn">
+
+<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+  <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-5 text-white">
+    <div className="flex items-center gap-3">
+      <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">⚙️</span>
+      <div>
+        <h2 className="text-lg font-black">Configuración</h2>
+        <p className="text-white/80 text-xs font-semibold">Personaliza tu negocio, premio y pase digital</p>
+      </div>
+    </div>
+  </div>
+  <div className="p-6 space-y-4">
+    <div>
+      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Nombre del Negocio</label>
+      <input className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 text-gray-500 font-bold border border-gray-100 cursor-not-allowed text-sm" value={tenant.name} readOnly />
+    </div>
+    <div>
+      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">🎁 Premio al Completar Visitas</label>
+      <input className="w-full p-3.5 bg-white rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm placeholder:text-gray-400" value={prizeName} onChange={e => setPrizeName(e.target.value)} placeholder="Ej: Café gratis, 2x1, Descuento 20%" />
+    </div>
 <div>
   <label className="text-xs font-bold text-gray-400 uppercase ml-1">Logo del negocio</label>
   <div className="mt-2 flex items-center gap-3">
@@ -683,7 +758,16 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
     </div>
   </div>
 </div>
-<div> <div className="space-y-3 rounded-2xl border border-gray-200 p-4 bg-gray-50">
+  </div>
+</div>
+
+<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+  <div className="px-6 py-4 border-b border-gray-100">
+    <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">📱 Personalización Apple Wallet</h3>
+    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Colores e imagen del pase digital de tus clientes</p>
+  </div>
+  <div className="p-6 space-y-4">
+  <div className="space-y-3">
     <p className="text-xs font-black text-gray-500 uppercase tracking-wide">Personalización Apple Wallet</p>
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <label className="text-xs font-semibold text-gray-600">Fondo
@@ -732,40 +816,54 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
   </div>
 
   </div>
-        <label className="text-xs font-bold text-gray-400 uppercase ml-1">Visitas requeridas</label>
-        <input
-          type="number"
-          min="1"
-          className="w-full p-4 bg-gray-50 rounded-2xl mt-1 font-medium text-gray-800 border border-transparent focus:bg-white focus:border-gray-200 outline-none transition-all"
-          value={requiredVisits}
-          onChange={e => setRequiredVisits(e.target.value)}
-        />
-        <p className="text-[11px] text-gray-400 font-semibold mt-2 ml-1">
-          Meta del premio: {requiredVisits || 10} visita(s) = {(parseInt(requiredVisits || '10', 10) * 10)} puntos.
-        </p>
-      </div>
-      <div>
-        <label className="text-xs font-bold text-gray-400 uppercase ml-1">Vigencia del premio</label>
-        <select
-          className="w-full p-4 bg-gray-50 rounded-2xl mt-1 font-medium text-gray-800 border border-transparent focus:bg-white focus:border-gray-200 outline-none transition-all"
-          value={rewardPeriod}
-          onChange={e => setRewardPeriod(e.target.value)}
-        >
-          <option value="OPEN">Visitas abiertas (sin caducidad)</option>
-          <option value="MONTHLY">Mensual (mes calendario)</option>
-          <option value="QUARTERLY">Trimestral (Ene-Mar, Abr-Jun, Jul-Sep, Oct-Dic)</option>
-          <option value="SEMESTER">Semestral (Ene-Jun, Jul-Dic)</option>
-          <option value="ANNUAL">Anual (Ene-Dic)</option>
-        </select>
-      </div>
-<div><label className="text-xs font-bold text-gray-400 uppercase ml-1">Instagram</label><input className="w-full p-4 bg-pink-50 rounded-2xl mt-1 font-medium text-pink-600 border border-pink-100 focus:bg-white focus:ring-2 focus:ring-pink-400 outline-none transition-all" value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="@usuario" /></div>
+  </div>
 </div>
-<div className="bg-white p-8 rounded-[2.5rem] shadow-xl space-y-4">
-<h2 className="text-xl font-bold text-gray-800"> Ubicación</h2>
-<div className="flex gap-2 mb-2"><input className="flex-1 p-3 bg-blue-50 rounded-xl text-gray-800 text-sm border border-blue-100 outline-none focus:ring-2 focus:ring-blue-300" placeholder="Dirección..." value={addressSearch} onChange={(e) => setAddressSearch(e.target.value)} /><button onClick={searchLocation} disabled={isSearching} className="bg-blue-600 text-white px-4 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50" aria-label="Buscar">🔎</button></div>
-<div className="h-[300px] w-full rounded-2xl overflow-hidden border border-gray-200 z-0 relative"><AdminMap coords={coords} setCoords={setCoords} /></div>
+
+<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+  <div className="px-6 py-4 border-b border-gray-100">
+    <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">🎯 Reglas del Programa</h3>
+    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Visitas necesarias y periodo de vigencia</p>
+  </div>
+  <div className="p-6 space-y-4">
+    <div>
+      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Visitas para ganar premio</label>
+      <input type="number" min="1" className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm" value={requiredVisits} onChange={e => setRequiredVisits(e.target.value)} />
+      <p className="text-[11px] text-gray-400 font-semibold mt-1.5 ml-1">El cliente necesita {requiredVisits || 10} visitas para obtener su premio.</p>
+    </div>
+    <div>
+      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Vigencia del contador</label>
+      <select className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm" value={rewardPeriod} onChange={e => setRewardPeriod(e.target.value)}>
+        <option value="OPEN">♾️ Sin caducidad (acumulan siempre)</option>
+        <option value="MONTHLY">📅 Mensual (se reinicia cada mes)</option>
+        <option value="QUARTERLY">📊 Trimestral (cada 3 meses)</option>
+        <option value="SEMESTER">📆 Semestral (cada 6 meses)</option>
+        <option value="ANNUAL">🗓️ Anual (cada año)</option>
+      </select>
+    </div>
+    <div>
+      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">📸 Instagram</label>
+      <input className="w-full p-3.5 bg-pink-50 rounded-xl mt-1 font-semibold text-pink-600 border border-pink-100 focus:bg-white focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm" value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="@tu_negocio" />
+    </div>
+  </div>
 </div>
-<button onClick={saveSettings} className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold hover:bg-black transition-all shadow-lg">Guardar Todo</button>
+
+<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+  <div className="px-6 py-4 border-b border-gray-100">
+    <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">📍 Ubicación</h3>
+    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Aparece en el mapa de negocios aliados</p>
+  </div>
+  <div className="p-6 space-y-3">
+    <div className="flex gap-2">
+      <input className="flex-1 p-3 bg-gray-50 rounded-xl text-gray-800 text-sm border border-gray-200 outline-none focus:ring-2 focus:ring-blue-200 font-semibold" placeholder="Buscar dirección..." value={addressSearch} onChange={(e) => setAddressSearch(e.target.value)} />
+      <button onClick={searchLocation} disabled={isSearching} className="bg-blue-600 text-white px-4 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 shrink-0 text-sm" aria-label="Buscar">{isSearching ? '...' : '🔍'}</button>
+    </div>
+    <div className="h-[280px] w-full rounded-2xl overflow-hidden border border-gray-200 z-0 relative"><AdminMap coords={coords} setCoords={setCoords} /></div>
+  </div>
+</div>
+
+<button onClick={saveSettings} className="w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white py-4 rounded-2xl font-black shadow-md hover:shadow-lg transition-all text-sm">
+  💾 Guardar Todos los Cambios
+</button>
 </div>
 )}
 </div>
