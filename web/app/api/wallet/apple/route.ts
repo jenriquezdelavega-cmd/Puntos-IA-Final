@@ -510,7 +510,7 @@ async function createPassPackage(params: {
       passTypeIdentifier,
       teamIdentifier,
       serialNumber,
-      organizationName: `${params.businessName || 'Negocio afiliado'} · punto IA`,
+      organizationName: params.businessName || 'Negocio afiliado',
       description: `Tarjeta de lealtad · ${params.businessName || 'Negocio afiliado'}`,
       logoText: params.businessName || 'Negocio afiliado',
       foregroundColor: ensureRgbColor(params.walletForegroundColor, 'rgb(255,255,255)'),
@@ -526,6 +526,7 @@ async function createPassPackage(params: {
           format: 'PKBarcodeFormatQR',
           message: `${publicBaseUrl}/v/${qrToken}`,
           messageEncoding: 'iso-8859-1',
+          altText: 'powered by Punto IA',
         },
       ],
       webServiceURL: `${publicBaseUrl}/api/wallet/apple`,
@@ -536,7 +537,7 @@ async function createPassPackage(params: {
         ],
         secondaryFields: [
           { key: 'client', label: 'CLIENTE', value: params.customerName || 'Cliente' },
-          { key: 'brand', label: '✦ PUNTO IA', value: formatPeriodLabel(params.rewardPeriod, params.periodKey) },
+          { key: 'period', label: 'PERIODO', value: formatPeriodLabel(params.rewardPeriod, params.periodKey) },
         ],
         auxiliaryFields: [
           { key: 'prize', label: '🎁 TU PREMIO', value: params.prize },
