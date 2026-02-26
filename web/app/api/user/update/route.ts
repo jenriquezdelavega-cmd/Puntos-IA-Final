@@ -14,7 +14,7 @@ export async function POST(request: Request) {
         if (!isNaN(d.getTime())) finalDate = d;
     }
 
-    const updatedUser = await prisma.user.update({
+    await prisma.user.update({
       where: { id: id },
       data: {
         name,
@@ -26,9 +26,9 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Si el teléfono ya existe en otro usuario, Prisma lanza error P2002
-    if (error.code === 'P2002') return NextResponse.json({ error: 'Ese teléfono ya está registrado' }, { status: 400 });
+    if (error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === 'P2002') return NextResponse.json({ error: 'Ese teléfono ya está registrado' }, { status: 400 });
     return NextResponse.json({ error: 'Error al actualizar' }, { status: 500 });
   }
 }

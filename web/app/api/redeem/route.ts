@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, message: 'Canje exitoso' });
 
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Error al canjear' }, { status: 500 });
   }
 }

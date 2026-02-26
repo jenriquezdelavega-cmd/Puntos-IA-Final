@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       visits: result[1].currentVisits
     });
 
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }

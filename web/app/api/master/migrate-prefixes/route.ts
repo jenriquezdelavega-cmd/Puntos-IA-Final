@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   try {
     // Buscar negocios SIN prefijo
     const tenants = await prisma.tenant.findMany({
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
       message: `Actualizados ${updates.length} negocios con prefijos.` 
     });
 
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error' }, { status: 500 });
   }
 }

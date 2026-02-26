@@ -36,7 +36,7 @@ export async function POST() {
 
     return NextResponse.json({ success: true, message: "¡12 Usuarios inyectados!" });
 
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error' }, { status: 500 });
   }
 }
