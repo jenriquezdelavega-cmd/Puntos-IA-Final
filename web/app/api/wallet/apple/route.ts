@@ -501,7 +501,7 @@ async function createPassPackage(params: {
     }
 
     backFields.push(
-      { key: 'brand', label: 'punto IA', value: '✦ Programa de lealtad digital\nwww.puntoia.mx' },
+      { key: 'brand', label: '✦ Punto IA', value: 'Punto IA es una coalición de PyMEs unidas para premiar tu lealtad.\n\nVisita puntoia.mx' },
       { key: 'support', label: 'ℹ️ Ayuda', value: 'Presenta este pase en el negocio y escanea el código QR del día para registrar tu visita.' },
     );
 
@@ -526,7 +526,7 @@ async function createPassPackage(params: {
           format: 'PKBarcodeFormatQR',
           message: `${publicBaseUrl}/v/${qrToken}`,
           messageEncoding: 'iso-8859-1',
-          altText: 'powered by Punto IA',
+          altText: 'Visita puntoia.mx',
         },
       ],
       webServiceURL: `${publicBaseUrl}/api/wallet/apple`,
