@@ -322,7 +322,7 @@ async function buildPkPassBuffer(tempDir: string, archive: ReturnType<typeof bui
 
 function buildPkPassArchiveEntries() {
   const required = ['pass.json', 'manifest.json', 'signature', 'icon.png', 'logo.png'] as const;
-  const optional = ['icon@2x.png', 'logo@2x.png', 'strip.png'] as const;
+  const optional = ['icon@2x.png', 'logo@2x.png', 'strip.png', 'footer.png', 'footer@2x.png'] as const;
   return { required, optional };
 }
 
@@ -505,6 +505,10 @@ async function createPassPackage(params: {
       { key: 'support', label: 'ℹ️ Ayuda', value: 'Presenta este pase en el negocio y escanea el código QR del día para registrar tu visita.' },
     );
 
+    const prizeMessage = remaining > 0
+      ? `Al completar ${params.requiredVisits} visitas te ganas:`
+      : '¡Completaste tus visitas! Tu premio:';
+
     const passJson = {
       formatVersion: 1,
       passTypeIdentifier,
@@ -534,16 +538,13 @@ async function createPassPackage(params: {
         headerFields: [
           { key: 'visits', label: 'VISITAS', value: `${params.currentVisits} / ${params.requiredVisits}` },
         ],
-        primaryFields: [
-          { key: 'prize', label: 'TU PREMIO', value: params.prize },
-        ],
         secondaryFields: [
           { key: 'client', label: 'CLIENTE', value: params.customerName || 'Cliente' },
           { key: 'period', label: 'PERIODO', value: formatPeriodLabel(params.rewardPeriod, params.periodKey) },
         ],
         auxiliaryFields: [
-          { key: 'remaining', label: 'FALTAN', value: remaining > 0 ? `${remaining} visita${remaining === 1 ? '' : 's'}` : '¡Canjea tu premio!' },
-          { key: 'lastDate', label: 'ÚLTIMA VISITA', value: formatDateEs(params.lastVisitAt) },
+          { key: 'prize', label: prizeMessage, value: `🎁 ${params.prize}` },
+          { key: 'remaining', label: 'FALTAN', value: remaining > 0 ? `${remaining} visita${remaining === 1 ? '' : 's'}` : '¡Canjea!' },
         ],
         backFields,
       },
@@ -569,7 +570,7 @@ async function createPassPackage(params: {
     const passPath = join(tempDir, 'pass.json');
     await writeFile(passPath, JSON.stringify(passJson, null, 2));
 
-    const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png', 'strip.png'] as const;
+    const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png', 'strip.png', 'footer.png', 'footer@2x.png'] as const;
     for (const file of packageFiles) {
       try {
         if (file === 'pass.json') {
