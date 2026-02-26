@@ -34,6 +34,7 @@ model Tenant {
   dailyCodes  DailyCode[]
   redemptions Redemption[]
   walletStyle TenantWalletStyle?
+  pushLogs    TenantPushLog[]
 }
 
 model TenantUser {
@@ -124,12 +125,25 @@ model Redemption {
   user      User     @relation(fields: [userId], references: [id])
 }
 
+model TenantPushLog {
+  id        String   @id @default(uuid())
+  tenantId  String
+  message   String
+  devices   Int      @default(0)
+  sentAt    DateTime @default(now()) @map("sent_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_push_logs")
+}
+
 model TenantWalletStyle {
   tenantId       String   @id @map("tenant_id")
   backgroundColor String  @default("rgb(31,41,55)") @map("background_color")
   foregroundColor String  @default("rgb(255,255,255)") @map("foreground_color")
   labelColor      String  @default("rgb(191,219,254)") @map("label_color")
-  stripImageData  String  @default("") @map("strip_image_data")
+  stripImageData  String   @default("") @map("strip_image_data")
+  lastPushMessage String   @default("") @map("last_push_message")
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
   createdAt       DateTime @default(now()) @map("created_at")
 

@@ -431,6 +431,7 @@ async function createPassPackage(params: {
   memberSince: Date | null;
   address: string | null;
   instagram: string | null;
+  lastPushMessage: string;
   tenantLogoData?: string | null;
   walletBackgroundColor?: string | null;
   walletForegroundColor?: string | null;
@@ -498,6 +499,15 @@ async function createPassPackage(params: {
     }
     if (params.instagram) {
       backFields.push({ key: 'instagram', label: '📸 Instagram', value: `@${params.instagram.replace(/^@/, '')}` });
+    }
+
+    if (params.lastPushMessage) {
+      backFields.push({
+        key: 'notification',
+        label: '📢 Último aviso',
+        value: params.lastPushMessage,
+        changeMessage: '%@',
+      } as Record<string, string>);
     }
 
     backFields.push(
@@ -694,6 +704,7 @@ export async function GET(req: Request) {
       memberSince: user.createdAt || null,
       address: tenant.address || null,
       instagram: tenant.instagram || null,
+      lastPushMessage: (await prisma.tenantWalletStyle.findUnique({ where: { tenantId: tenant.id }, select: { lastPushMessage: true } }))?.lastPushMessage || '',
       tenantLogoData: walletLogoData,
       walletBackgroundColor: walletStyle.backgroundColor,
       walletForegroundColor: walletStyle.foregroundColor,
