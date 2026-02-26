@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "type-check": "tsc --noEmit",
     "boost": "node prisma/boost.ts",
-    "reset": "node prisma/reset.ts",
-    "lint": "eslint"
+    "reset": "node prisma/reset.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",
