@@ -16,5 +16,5 @@ export async function GET() {
       }
     });
     return NextResponse.json({ tenants });
-  } catch (e) { return NextResponse.json({ error: 'Error' }, { status: 500 }); }
+  } catch { return NextResponse.json({ error: 'Error' }, { status: 500 }); }
 }

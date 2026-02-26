@@ -71,7 +71,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ code: saved.code, reused: false, day });
 
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: (error instanceof Error ? error.message : 'Error') || 'Error interno' }, { status: 500 });
   }
 }

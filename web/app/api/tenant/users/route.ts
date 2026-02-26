@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     if (!tenantId) return NextResponse.json({ error: 'Falta ID' }, { status: 400 });
     const users = await prisma.tenantUser.findMany({ where: { tenantId }, orderBy: { role: 'asc' } });
     return NextResponse.json({ users });
-  } catch (e) { return NextResponse.json({ error: 'Error' }, { status: 500 }); }
+  } catch { return NextResponse.json({ error: 'Error' }, { status: 500 }); }
 }
 
 export async function POST(request: Request) {
@@ -28,12 +28,12 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ success: true, user: newUser });
-  } catch (error: any) {
-    if(error.code==='P2002') return NextResponse.json({ error: 'Usuario ya existe' }, { status: 400 });
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === 'P2002') return NextResponse.json({ error: 'Usuario ya existe' }, { status: 400 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error' }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
-  try { const body = await request.json(); await prisma.tenantUser.delete({ where: { id: body.id } }); return NextResponse.json({ success: true }); } catch (e) { return NextResponse.json({ error: 'Error' }, { status: 500 }); }
+  try { const body = await request.json(); await prisma.tenantUser.delete({ where: { id: body.id } }); return NextResponse.json({ success: true }); } catch { return NextResponse.json({ error: 'Error' }, { status: 500 }); }
 }
