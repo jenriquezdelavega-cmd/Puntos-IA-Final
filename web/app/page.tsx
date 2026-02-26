@@ -224,7 +224,7 @@ export default function Home() {
   // ✅ Tabs separados: Check-In (primero), Puntos, Mapa, Perfil
   const [activeTab, setActiveTab] = useState<'checkin' | 'points' | 'map' | 'profile'>('checkin');
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<Record<string, unknown> | null>(null);
 
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -242,7 +242,7 @@ export default function Home() {
 
   const [prizeCode, setPrizeCode] = useState<{ code: string; tenant: string } | null>(null);
 
-  const [tenants, setTenants] = useState<any[]>([]);
+  const [tenants, setTenants] = useState<Record<string, unknown>[]>([]);
   const [mapFocus, setMapFocus] = useState<[number, number] | null>(null);
   const [selectedBusiness, setSelectedBusiness] = useState<{ id: string; name: string } | null>(null);
 
@@ -250,7 +250,7 @@ export default function Home() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<Record<string, unknown>[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
   const [leadForm, setLeadForm] = useState<BusinessLeadForm>({
@@ -334,7 +334,7 @@ export default function Home() {
         setTenants(d.tenants);
 
         if (!mapFocus) {
-          const coords = (d.tenants as any[])
+          const coords = (d.tenants as Record<string, unknown>[])
             .filter((t) => typeof t?.lat === 'number' && typeof t?.lng === 'number')
             .map((t) => [t.lat as number, t.lng as number] as [number, number]);
 
@@ -512,7 +512,7 @@ export default function Home() {
       : null;
 
     const matchedMembershipByName = explicitBusinessName && Array.isArray(user?.memberships)
-      ? user.memberships.find((m: any) => String(m?.name || '').trim().toLowerCase() === explicitBusinessName.toLowerCase())
+      ? user.memberships.find((m: Record<string, unknown>) => String(m?.name || '').trim().toLowerCase() === explicitBusinessName.toLowerCase())
       : null;
 
     const selectedBusinessId = String(selectedBusiness?.id || '').trim();
@@ -1014,7 +1014,7 @@ export default function Home() {
 
                   <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                     {history.length > 0 ? (
-                      history.map((h: any, i: number) => (
+                      history.map((h: Record<string, unknown>, i: number) => (
                         <motion.div
                           key={i}
                           initial={canAnim ? { opacity: 0, y: 10 } : false}
@@ -1181,7 +1181,7 @@ export default function Home() {
             {/* TAB: PUNTOS */}
             {activeTab === 'points' && (
               <div className="space-y-4">
-                {user?.memberships?.map((m: any, idx: number) => {
+                {user?.memberships?.map((m: Record<string, unknown>, idx: number) => {
                   const logo = (m.logoData ?? m.tenant?.logoData ?? '') as string;
                   const requiredVisits = m.requiredVisits ?? 10;
                   const visits = m.visits ?? Math.round((m.points ?? 0) / 10);
@@ -1373,7 +1373,7 @@ export default function Home() {
           {/* Scanner Overlay */}
           {scanning && (
             <div className="fixed inset-0 bg-black z-50 flex flex-col">
-              <QRScanner onScan={(r: any) => r?.[0] && handleScan(r[0].rawValue)} onError={() => {}} />
+              <QRScanner onScan={(r: Array<{ rawValue: string }> | undefined) => r?.[0] && handleScan(r[0].rawValue)} onError={() => {}} />
               <motion.button
                 whileTap={canAnim ? { scale: 0.98 } : undefined}
                 onClick={() => setScanning(false)}
@@ -1478,12 +1478,12 @@ export default function Home() {
               { key: 'map', icon: '🧭', label: 'Mapa' },
               { key: 'profile', icon: '✨', label: 'Perfil' },
             ].map((t) => {
-              const active = activeTab === (t.key as any);
+              const active = activeTab === (t.key as 'checkin' | 'points' | 'map' | 'profile');
               return (
                 <motion.button
                   key={t.key}
                   whileTap={canAnim ? { scale: 0.98 } : undefined}
-                  onClick={() => setActiveTab(t.key as any)}
+                  onClick={() => setActiveTab(t.key as 'checkin' | 'points' | 'map' | 'profile')}
                   className={`flex-1 flex flex-col items-center py-4 rounded-[2rem] transition-all duration-300 ${
                     active ? 'bg-gray-950 text-white shadow-lg' : 'text-gray-400 hover:bg-white hover:text-gray-700'
                   }`}

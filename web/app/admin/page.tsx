@@ -11,13 +11,13 @@ const QRScanner = dynamic(() => import('@yudiel/react-qr-scanner').then((m) => m
 });
 
 export default function AdminPage() {
-const [tenant, setTenant] = useState<any>(null);
+const [tenant, setTenant] = useState<Record<string, unknown> | null>(null);
 const [tenantUserId, setTenantUserId] = useState<string>('');
 const [username, setUsername] = useState('');
 const [password, setPassword] = useState('');
 
 const [code, setCode] = useState('');
-const [reportData, setReportData] = useState<any>(null);
+const [reportData, setReportData] = useState<Record<string, unknown> | null>(null);
 const [baseUrl, setBaseUrl] = useState('');
 const [tab, setTab] = useState('qr');
 const [userRole, setUserRole] = useState('');
@@ -42,7 +42,7 @@ const [scannerOpen, setScannerOpen] = useState(false);
 const [scannerMsg, setScannerMsg] = useState('');
 const lastScanRef = useRef<string>('');
 
-const [team, setTeam] = useState<any[]>([]);
+const [team, setTeam] = useState<Record<string, unknown>[]>([]);
 const [newStaff, setNewStaff] = useState({ name: '', username: '', password: '', role: 'STAFF' });
 const [lastScannedCustomerId, setLastScannedCustomerId] = useState('');
 
@@ -50,13 +50,13 @@ const trendData = reportData?.chartData ?? [];
 const genderData = reportData?.genderData ?? [];
 const ageData = reportData?.ageData ?? [];
 const totalClients = reportData?.csvData?.length || 0;
-const totalCheckins = trendData.reduce((sum: number, item: any) => sum + Number(item.count || 0), 0);
-const peakDay = trendData.reduce((max: any, item: any) => {
+const totalCheckins = trendData.reduce((sum: number, item: Record<string, unknown>) => sum + Number(item.count || 0), 0);
+const peakDay = trendData.reduce((max: Record<string, unknown> | null, item: Record<string, unknown>) => {
   return Number(item.count || 0) > Number(max?.count || 0) ? item : max;
 }, null);
-const trendMax = Math.max(...trendData.map((d: any) => Number(d.count || 0)), 1);
-const genderMax = Math.max(...genderData.map((d: any) => Number(d.value || 0)), 1);
-const ageMax = Math.max(...ageData.map((d: any) => Number(d.value || 0)), 1);
+const trendMax = Math.max(...trendData.map((d: Record<string, unknown>) => Number(d.count || 0)), 1);
+const genderMax = Math.max(...genderData.map((d: Record<string, unknown>) => Number(d.value || 0)), 1);
+const ageMax = Math.max(...ageData.map((d: Record<string, unknown>) => Number(d.value || 0)), 1);
 
 const handleLogin = async (e: React.FormEvent) => {
 e.preventDefault();
@@ -90,13 +90,13 @@ loadTeam(data.tenant.id);
 } else setTab('qr');
 
 } else alert(data.error);
-} catch(e) { alert('Error'); }
+} catch { alert('Error'); }
 };
 
-const loadReports = async (tid: string) => { try { const res = await fetch('/api/admin/reports', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tid }) }); setReportData(await res.json()); } catch(e) {} };
+const loadReports = async (tid: string) => { try { const res = await fetch('/api/admin/reports', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tid }) }); setReportData(await res.json()); } catch {} };
 
 const loadTeam = async (tid: string) => {
-try { const res = await fetch(`/api/tenant/users?tenantId=${tid}`); const data = await res.json(); if(data.users) setTeam(data.users); } catch(e) {}
+try { const res = await fetch(`/api/tenant/users?tenantId=${tid}`); const data = await res.json(); if(data.users) setTeam(data.users); } catch {}
 };
 
 const createStaff = async () => {
@@ -111,15 +111,15 @@ alert("Empleado creado ");
 setNewStaff({ name: '', username: '', password: '', role: 'STAFF' }); 
 loadTeam(tenant.id); 
 } else { const d = await res.json(); alert(d.error); }
-} catch(e) { alert("Error"); }
+} catch { alert("Error"); }
 };
 
 const deleteStaff = async (id: string) => {
 if(!confirm("¿Eliminar empleado?")) return;
-try { await fetch('/api/tenant/users', { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) }); loadTeam(tenant.id); } catch(e) {}
+try { await fetch('/api/tenant/users', { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) }); loadTeam(tenant.id); } catch {}
 };
 
-const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, tenantUserId }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch (e) {} };
+const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, tenantUserId }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch {} };
 
 const searchLocation = async () => {
 if (!addressSearch) return;
@@ -128,7 +128,7 @@ try {
 const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressSearch)}`);
 const data = await res.json();
 if (data && data.length > 0) { setCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]); } else alert("No encontrado");
-} catch (e) { alert("Error"); }
+} catch { alert("Error"); }
 setIsSearching(false);
 };
   const toPngStripDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
@@ -218,13 +218,13 @@ const saveSettings = async () => {
     }
 
     alert('✅ Guardado');
-  } catch (e) {
+  } catch {
     alert('Error');
   }
 };
 
-const validateRedeem = async () => { setMsg('Validando...'); try { const res = await fetch('/api/redeem/validate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, code: redeemCode }) }); const data = await res.json(); if (res.ok) { setMsg(` ENTREGAR A: ${data.user}`); setRedeemCode(''); if(userRole==='ADMIN') loadReports(tenant.id); } else setMsg(' ' + data.error); } catch(e) { setMsg('Error'); } };
-const downloadCSV = () => { if (!reportData?.csvData) return; const headers = Object.keys(reportData.csvData[0]).join(','); const rows = reportData.csvData.map((obj: any) => Object.values(obj).join(',')).join('\n'); const encodedUri = encodeURI("data:text/csv;charset=utf-8," + headers + "\n" + rows); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `clientes_${tenant.slug}.csv`); document.body.appendChild(link); link.click(); };
+const validateRedeem = async () => { setMsg('Validando...'); try { const res = await fetch('/api/redeem/validate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, code: redeemCode }) }); const data = await res.json(); if (res.ok) { setMsg(` ENTREGAR A: ${data.user}`); setRedeemCode(''); if(userRole==='ADMIN') loadReports(tenant.id); } else setMsg(' ' + data.error); } catch { setMsg('Error'); } };
+const downloadCSV = () => { if (!reportData?.csvData) return; const headers = Object.keys(reportData.csvData[0]).join(','); const rows = reportData.csvData.map((obj: Record<string, unknown>) => Object.values(obj).join(',')).join('\n'); const encodedUri = encodeURI("data:text/csv;charset=utf-8," + headers + "\n" + rows); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `clientes_${tenant.slug}.csv`); document.body.appendChild(link); link.click(); };
 
 
 const ensureDailyCode = async () => {
@@ -445,7 +445,7 @@ return (
   <h3 className="text-lg font-bold text-gray-800 mb-1">Tendencia de check-ins</h3>
   <p className="text-xs text-gray-500 font-medium mb-5">Actividad diaria de tus clientes.</p>
   <div className="h-44 flex items-end justify-between gap-2">
-    {trendData.length > 0 ? trendData.map((d:any,i:number)=>(
+    {trendData.length > 0 ? trendData.map((d: Record<string, unknown>, i: number)=>(
       <div key={i} className="flex-1 flex flex-col items-center gap-2 min-w-0">
         <div className="w-full bg-gradient-to-t from-orange-500 to-pink-500 rounded-t-lg" style={{height:`${Math.max((Number(d.count || 0) / trendMax) * 170, 8)}px`}}></div>
         <span className="text-[10px] font-bold text-gray-400 truncate w-full text-center">{String(d.date).slice(5)}</span>
@@ -459,7 +459,7 @@ return (
     <h3 className="text-lg font-bold text-gray-800 mb-1">Distribución por género</h3>
     <p className="text-xs text-gray-500 font-medium mb-5">Clientes por segmento.</p>
     <div className="space-y-4">
-      {genderData.length > 0 ? genderData.map((item:any) => {
+      {genderData.length > 0 ? genderData.map((item: Record<string, unknown>) => {
         const width = Math.max((Number(item.value || 0) / genderMax) * 100, item.value ? 8 : 0);
         return (
           <div key={item.label}>
@@ -480,7 +480,7 @@ return (
     <h3 className="text-lg font-bold text-gray-800 mb-1">Distribución por edades</h3>
     <p className="text-xs text-gray-500 font-medium mb-5">Rangos de edad de tus clientes.</p>
     <div className="space-y-3">
-      {ageData.length > 0 ? ageData.map((item:any, idx:number) => {
+      {ageData.length > 0 ? ageData.map((item: Record<string, unknown>, idx: number) => {
         const width = Math.max((Number(item.value || 0) / ageMax) * 100, item.value ? 8 : 0);
         return (
           <div key={item.label} className="flex items-center gap-3">
@@ -535,7 +535,7 @@ return (
       </div>
     </div>
     <div className="divide-y divide-gray-50">
-      {team.length > 0 ? team.map((u: any) => (
+      {team.length > 0 ? team.map((u: Record<string, unknown>) => (
         <div key={u.id} className="px-6 py-4 flex items-center justify-between gap-3 hover:bg-gray-50/50 transition">
           <div className="flex items-center gap-3 min-w-0">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0 ${u.role === 'ADMIN' ? 'bg-gradient-to-br from-purple-500 to-pink-500' : 'bg-gradient-to-br from-sky-500 to-blue-600'}`}>

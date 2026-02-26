@@ -1,13 +1,12 @@
 'use client';
 import { useState } from 'react';
-import dynamic from 'next/dynamic';
-
-const AdminMap = dynamic(() => import('../components/AdminMap'), { ssr: false, loading: () => <div className="h-40 bg-gray-100 animate-pulse flex items-center justify-center text-gray-500">Cargando...</div> });
 
 export default function MasterPage() {
   const [auth, setAuth] = useState(false);
   const [masterPass, setMasterPass] = useState('');
-  const [tenants, setTenants] = useState<any[]>([]);
+  interface Tenant { id: string; name: string; slug: string; codePrefix?: string; isActive?: boolean; users: TenantUser[]; prize?: string; instagram?: string; address?: string; lat?: number; lng?: number }
+  interface TenantUser { id: string; name: string; username: string; role: string; password?: string }
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   
   const [tName, setTName] = useState('');
   const [tSlug, setTSlug] = useState('');
@@ -17,13 +16,13 @@ export default function MasterPage() {
   
   const [uName, setUName] = useState('');
   const [uPhone, setUPhone] = useState('');
-  const [uEmail, setUEmail] = useState('');
+  const [uEmail, _setUEmail] = useState('');
   const [uUser, setUUser] = useState('');
   const [uPass, setUPass] = useState('');
   const [uRole, setURole] = useState('ADMIN');
 
-  const [editingTenant, setEditingTenant] = useState<any>(null);
-  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
+  const [editingUser, setEditingUser] = useState<TenantUser | null>(null);
   const [editPrize, setEditPrize] = useState('');
   const [editIg, setEditIg] = useState('');
   const [editAddress, setEditAddress] = useState('');
@@ -32,7 +31,7 @@ export default function MasterPage() {
   const [msg, setMsg] = useState('');
 
   const handleAuth = (e: React.FormEvent) => { e.preventDefault(); if (masterPass === 'superadmin2026') { setAuth(true); loadTenants(); } else alert('No'); };
-  const loadTenants = async () => { try { const res = await fetch('/api/master/list-tenants', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ masterPassword: 'superadmin2026' }) }); const data = await res.json(); if(data.tenants) setTenants(data.tenants); } catch(e) {} };
+  const loadTenants = async () => { try { const res = await fetch('/api/master/list-tenants', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ masterPassword: 'superadmin2026' }) }); const data = await res.json(); if(data.tenants) setTenants(data.tenants); } catch {} };
 
   const createTenant = async () => {
     setMsg('Creando...');
@@ -43,25 +42,25 @@ export default function MasterPage() {
           setMsg(`✅ Negocio Creado. PREFIJO: ${data.tenant.codePrefix}`); 
           setTName(''); setTSlug(''); loadTenants(); 
       } else { const d = await res.json(); setMsg('❌ ' + d.error); }
-    } catch (e) { setMsg('Error'); }
+    } catch { setMsg('Error'); }
   };
 
-  const deleteTenant = async (id: string, name: string) => { if(!confirm(`¿BORRAR ${name}?`)) return; try { await fetch('/api/master/manage-tenant', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'DELETE', tenantId: id }) }); loadTenants(); } catch(e) { alert('Error'); } };
-  const updateTenant = async () => { if(!editingTenant) return; try { await fetch('/api/master/manage-tenant', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'UPDATE', tenantId: editingTenant.id, data: { ...editingTenant, prize: editPrize, instagram: editIg, address: editAddress, lat: editCoords[0], lng: editCoords[1] } }) }); setEditingTenant(null); loadTenants(); } catch(e) { alert('Error'); } };
+  const deleteTenant = async (id: string, name: string) => { if(!confirm(`¿BORRAR ${name}?`)) return; try { await fetch('/api/master/manage-tenant', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'DELETE', tenantId: id }) }); loadTenants(); } catch { alert('Error'); } };
+  const updateTenant = async () => { if(!editingTenant) return; try { await fetch('/api/master/manage-tenant', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'UPDATE', tenantId: editingTenant.id, data: { ...editingTenant, prize: editPrize, instagram: editIg, address: editAddress, lat: editCoords[0], lng: editCoords[1] } }) }); setEditingTenant(null); loadTenants(); } catch { alert('Error'); } };
 
   const createUser = async () => {
     if(!selectedTenantId) return alert("Selecciona negocio");
     try {
       const res = await fetch('/api/master/create-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, tenantId: selectedTenantId, name: uName, phone: uPhone, email: uEmail, username: uUser, password: uPass, role: uRole }) });
       if (res.ok) { setMsg('✅ Usuario Agregado'); setUName(''); setUUser(''); setUPass(''); loadTenants(); } else { const d = await res.json(); setMsg('❌ ' + d.error); }
-    } catch (e) { setMsg('Error'); }
+    } catch { setMsg('Error'); }
   };
 
-  const deleteUser = async (id: string) => { if(!confirm("¿Borrar?")) return; try { await fetch('/api/master/manage-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'DELETE', userId: id }) }); loadTenants(); } catch(e) { alert('Error'); } };
-  const updateUser = async () => { if(!editingUser) return; try { await fetch('/api/master/manage-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'UPDATE', userId: editingUser.id, data: editingUser }) }); setEditingUser(null); loadTenants(); } catch(e) { alert('Error'); } };
+  const deleteUser = async (id: string) => { if(!confirm("¿Borrar?")) return; try { await fetch('/api/master/manage-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'DELETE', userId: id }) }); loadTenants(); } catch { alert('Error'); } };
+  const updateUser = async () => { if(!editingUser) return; try { await fetch('/api/master/manage-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'UPDATE', userId: editingUser.id, data: editingUser }) }); setEditingUser(null); loadTenants(); } catch { alert('Error'); } };
   
-  const openEdit = (t: any) => { setEditingTenant(t); setEditPrize(t.prize||''); setEditIg(t.instagram||''); setEditAddress(t.address||''); if(t.lat) setEditCoords([t.lat,t.lng]); };
-  const searchAddress = async () => { if (!editAddress) return; try { const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(editAddress)}`); const data = await res.json(); if (data && data.length > 0) setEditCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]); else alert("No encontrado"); } catch (e) { alert("Error"); } };
+  const openEdit = (t: Tenant) => { setEditingTenant(t); setEditPrize(t.prize||''); setEditIg(t.instagram||''); setEditAddress(t.address||''); if(t.lat) setEditCoords([t.lat,t.lng]); };
+  const _searchAddress = async () => { if (!editAddress) return; try { const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(editAddress)}`); const data = await res.json(); if (data && data.length > 0) setEditCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]); else alert("No encontrado"); } catch { alert("Error"); } };
 
   const downloadReport = async (report: 'prelaunch' | 'tenant-users', onlySelectedTenant = false) => {
     try {
@@ -146,7 +145,7 @@ export default function MasterPage() {
              </div>
              <div className="bg-gray-900 rounded-lg p-4">
                 <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Empleados</h4>
-                {t.users.length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">{t.users.map((u: any) => (<div key={u.id} className="bg-gray-800 p-3 rounded border border-gray-700 flex justify-between items-center group hover:border-gray-500"><div><p className="font-bold text-sm text-white">{u.name}</p><p className="text-xs text-blue-400 font-mono">{u.username}</p><span className={`text-[10px] px-1 rounded ${u.role==='ADMIN'?'bg-purple-900 text-purple-200':'bg-blue-900 text-blue-200'}`}>{u.role}</span></div><div className="flex gap-1"><button onClick={() => setEditingUser(u)} className="text-gray-400 hover:text-white text-xs">✏️</button><button onClick={() => deleteUser(u.id)} className="text-red-400 hover:text-red-300 text-xs">🗑️</button></div></div>))}</div>) : <p className="text-xs text-gray-600 italic">Sin empleados.</p>}
+                {t.users.length > 0 ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">{t.users.map((u: TenantUser) => (<div key={u.id} className="bg-gray-800 p-3 rounded border border-gray-700 flex justify-between items-center group hover:border-gray-500"><div><p className="font-bold text-sm text-white">{u.name}</p><p className="text-xs text-blue-400 font-mono">{u.username}</p><span className={`text-[10px] px-1 rounded ${u.role==='ADMIN'?'bg-purple-900 text-purple-200':'bg-blue-900 text-blue-200'}`}>{u.role}</span></div><div className="flex gap-1"><button onClick={() => setEditingUser(u)} className="text-gray-400 hover:text-white text-xs">✏️</button><button onClick={() => deleteUser(u.id)} className="text-red-400 hover:text-red-300 text-xs">🗑️</button></div></div>))}</div>) : <p className="text-xs text-gray-600 italic">Sin empleados.</p>}
              </div>
           </div>
         ))}

@@ -116,7 +116,7 @@ export default function BusinessMap({
     setCenter(autoCenter);
     setFly(false);
     setLocalRadiusKm(radiusKm);
-  }, [autoCenter, radiusKm]);
+  }, [autoCenter, radiusKm]); // sync props → state (intentional)
 
   const onPick = (t: Tenant) => {
     setSelected(t);
