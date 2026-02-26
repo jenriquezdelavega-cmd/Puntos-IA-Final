@@ -46,6 +46,12 @@ const [team, setTeam] = useState<Record<string, unknown>[]>([]);
 const [newStaff, setNewStaff] = useState({ name: '', username: '', password: '', role: 'STAFF' });
 const [lastScannedCustomerId, setLastScannedCustomerId] = useState('');
 
+const [pushMessage, setPushMessage] = useState('');
+const [pushLoading, setPushLoading] = useState(false);
+const [pushResult, setPushResult] = useState('');
+const [pushRemaining, setPushRemaining] = useState<number | null>(null);
+const [pushHistory, setPushHistory] = useState<Array<{ message: string; devices: number; sentAt: string }>>([]);
+
 const trendData = reportData?.chartData ?? [];
 const genderData = reportData?.genderData ?? [];
 const ageData = reportData?.ageData ?? [];
@@ -87,6 +93,7 @@ if (data.user.role === 'ADMIN') {
 setTab('qr'); 
 loadReports(data.tenant.id); 
 loadTeam(data.tenant.id);
+loadPushStatus(data.tenant.id);
 } else setTab('qr');
 
 } else alert(data.error);
@@ -94,6 +101,40 @@ loadTeam(data.tenant.id);
 };
 
 const loadReports = async (tid: string) => { try { const res = await fetch('/api/admin/reports', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tid }) }); setReportData(await res.json()); } catch {} };
+
+const loadPushStatus = async (tid: string) => {
+  try {
+    const res = await fetch(`/api/admin/push?tenantId=${tid}`);
+    const data = await res.json();
+    if (data.remaining != null) setPushRemaining(data.remaining);
+    if (data.recent) setPushHistory(data.recent);
+  } catch {}
+};
+
+const sendPush = async () => {
+  if (!tenant || !pushMessage.trim()) return;
+  setPushLoading(true);
+  setPushResult('');
+  try {
+    const res = await fetch('/api/admin/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenantId: (tenant as Record<string, unknown>).id, message: pushMessage.trim() }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setPushResult(`✅ ${data.message}`);
+      setPushMessage('');
+      if (data.remaining != null) setPushRemaining(data.remaining);
+      loadPushStatus(String((tenant as Record<string, unknown>).id));
+    } else {
+      setPushResult(`❌ ${data.error}`);
+    }
+  } catch {
+    setPushResult('❌ Error de conexión');
+  }
+  setPushLoading(false);
+};
 
 const loadTeam = async (tid: string) => {
 try { const res = await fetch(`/api/tenant/users?tenantId=${tid}`); const data = await res.json(); if(data.users) setTeam(data.users); } catch {}
@@ -342,6 +383,16 @@ return (
     <span className="text-xl leading-none">🎁</span>
     <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">Canje</span>
   </button>
+
+  {userRole === 'ADMIN' && (
+    <button
+      onClick={()=>setTab('push')}
+      className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab==='push'?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
+    >
+      <span className="text-xl leading-none">📢</span>
+      <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">Push</span>
+    </button>
+  )}
 
   {userRole === 'ADMIN' && (
     <button
@@ -689,6 +740,94 @@ return (
   <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
     <p className="text-xs text-gray-500 font-semibold text-center">
       💡 El cliente genera su código de 4 dígitos desde la app cuando completa sus visitas. Pídele el código y valídalo aquí antes de entregar el premio.
+    </p>
+  </div>
+</div>
+)}
+
+{tab === 'push' && userRole === 'ADMIN' && (
+<div className="max-w-lg mx-auto space-y-4 animate-fadeIn">
+  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-gradient-to-r from-violet-600 to-purple-600 p-5 text-white">
+      <div className="flex items-center gap-3">
+        <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">📢</span>
+        <div>
+          <h2 className="text-lg font-black">Enviar Notificación</h2>
+          <p className="text-white/80 text-xs font-semibold">Se envía a todos los clientes con pase instalado</p>
+        </div>
+      </div>
+    </div>
+    <div className="p-6 space-y-4">
+      <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3 border border-gray-100">
+        <div>
+          <p className="text-xs font-black text-gray-500 uppercase tracking-wider">Envíos esta semana</p>
+          <p className="text-2xl font-black text-gray-900 mt-0.5">
+            {pushRemaining != null ? `${2 - pushRemaining}/2` : '—'}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs font-black text-gray-500 uppercase tracking-wider">Disponibles</p>
+          <p className={`text-2xl font-black mt-0.5 ${pushRemaining === 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+            {pushRemaining != null ? pushRemaining : '—'}
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Mensaje de notificación</label>
+        <textarea
+          className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-purple-300 outline-none transition-all text-sm resize-none placeholder:text-gray-400"
+          rows={3}
+          maxLength={200}
+          placeholder="Ej: ¡Hoy 2x1 en café! Ven y acumula puntos dobles"
+          value={pushMessage}
+          onChange={(e) => setPushMessage(e.target.value)}
+        />
+        <p className="text-[10px] text-gray-400 font-semibold mt-1 ml-1 text-right">{pushMessage.length}/200</p>
+      </div>
+
+      <button
+        onClick={sendPush}
+        disabled={pushLoading || !pushMessage.trim() || pushRemaining === 0}
+        className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-black py-3.5 rounded-xl shadow-md disabled:opacity-40 disabled:shadow-none transition-all text-sm"
+      >
+        {pushLoading ? 'Enviando...' : pushRemaining === 0 ? 'Límite semanal alcanzado' : '📢 Enviar Notificación'}
+      </button>
+
+      {pushResult && (
+        <div className={`p-3 rounded-xl text-center font-bold text-sm border ${pushResult.startsWith('✅') ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+          {pushResult}
+        </div>
+      )}
+    </div>
+  </div>
+
+  {pushHistory.length > 0 && (
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100">
+        <h3 className="text-sm font-black text-gray-800">Historial de envíos</h3>
+      </div>
+      <div className="divide-y divide-gray-50">
+        {pushHistory.map((p, i) => (
+          <div key={i} className="px-6 py-3 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-800 truncate">{p.message}</p>
+              <p className="text-[10px] text-gray-400 font-semibold mt-0.5">
+                {new Date(p.sentAt).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+              </p>
+            </div>
+            <span className="text-[10px] font-black text-gray-400 bg-gray-50 px-2 py-1 rounded-lg shrink-0">
+              {p.devices} dispositivo{p.devices === 1 ? '' : 's'}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+
+  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+    <p className="text-xs text-gray-500 font-semibold text-center">
+      💡 La notificación aparece en la pantalla de bloqueo de tus clientes que tienen el pase en Apple Wallet. Máximo 2 envíos por semana.
     </p>
   </div>
 </div>
