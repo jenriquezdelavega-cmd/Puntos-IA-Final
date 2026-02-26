@@ -579,97 +579,142 @@ export default function Home() {
   };
 
   return prelaunchMode && !showClientPortal ? (
-    <main className={`min-h-screen ${glow} text-white relative overflow-hidden`}>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_18%,rgba(255,255,255,0.22),transparent_36%),radial-gradient(circle_at_82%_8%,rgba(255,255,255,0.18),transparent_35%),radial-gradient(circle_at_88%_88%,rgba(255,255,255,0.12),transparent_40%)]" />
+    <main className="min-h-screen bg-[#080812] text-white relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-[#ff7a59]/20 via-transparent to-[#f90086]/10" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-br from-[#ff7a59]/30 via-[#ff3f8e]/20 to-transparent rounded-full blur-[120px] opacity-60" />
 
-      <section className="relative z-10 mx-auto w-full max-w-6xl px-6 py-12 md:py-16">
-        <div className="flex flex-col items-center text-center">
-          <BrandLogo />
-          <p className="mt-4 inline-block rounded-full border border-white/35 bg-white/10 px-4 py-1 text-xs font-black tracking-widest uppercase">
-            PRE-LANZAMIENTO
-          </p>
-          <h1 className="mt-6 text-4xl md:text-6xl font-black leading-tight max-w-4xl">
-            Muy pronto lanzamos Punto IA para transformar la lealtad de tus clientes.
-          </h1>
-          <p className="mt-6 max-w-2xl text-white/90 text-sm md:text-base font-semibold leading-relaxed">
-            Estamos preparando una experiencia de fidelización más inteligente para negocios y clientes. Mientras tanto,
-            conoce el teaser y deja tus datos para entrar como aliado fundador.
-          </p>
+      <nav className="relative z-20 mx-auto max-w-6xl px-6 py-6 flex items-center justify-between">
+        <div className="scale-[0.65] origin-left"><BrandLogo animate={false} /></div>
+        <div className="flex items-center gap-3">
+          <Link href="/negocios" className="text-white/60 text-sm font-bold hover:text-white transition hidden sm:block">Para Negocios</Link>
+          <Link href="/?clientes=1" className="bg-white/10 border border-white/20 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-white/20 transition">
+            Soy Cliente
+          </Link>
         </div>
+      </nav>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr,1fr]">
-          <div className="rounded-3xl border border-white/30 bg-white/12 backdrop-blur-md p-5 md:p-6 shadow-2xl">
-            <p className="text-xs uppercase tracking-[0.22em] font-black text-white/75 mb-3">Teaser video</p>
-            <div className="aspect-video rounded-2xl border border-white/30 bg-black/30 overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
-              <iframe
-                className="h-full w-full"
-                src="https://player.vimeo.com/video/1165202097?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479"
-                title="Genera_un_video_1080p_202602141913"
-                allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
-                referrerPolicy="strict-origin-when-cross-origin"
-                loading="lazy"
-                allowFullScreen
-              />
-            </div>
-            <p className="text-white/80 text-xs mt-3">Presentación oficial Punto IA · producto en etapa de pre-lanzamiento.</p>
+      <section className="relative z-10 mx-auto max-w-6xl px-6 pt-8 md:pt-16 pb-12">
+        <div className="flex flex-col items-center text-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[#ff3f8e]/40 bg-[#ff3f8e]/15 px-4 py-1.5 text-[11px] font-black tracking-[0.2em] uppercase text-pink-200 mb-6">
+            <span className="w-2 h-2 rounded-full bg-[#ff3f8e] animate-pulse" />
+            Pre-lanzamiento · Cupo limitado
+          </span>
+
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black leading-[1.08] max-w-4xl tracking-tight">
+            Tus clientes regresan.
+            <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#a855f7]">Tu negocio crece.</span>
+          </h1>
+
+          <p className="mt-6 max-w-2xl text-white/70 text-base md:text-lg font-medium leading-relaxed">
+            Punto IA es la primera coalición de lealtad para PyMEs en México.
+            Un solo pase digital para que tus clientes acumulen puntos en cafeterías, taquerías, estéticas y más negocios aliados.
+          </p>
+
+          <div className="mt-8 flex flex-wrap gap-3 justify-center">
+            <a href="#registro" className="bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#a855f7] text-white font-black px-8 py-4 rounded-2xl shadow-[0_8px_32px_rgba(255,63,142,0.4)] hover:shadow-[0_12px_40px_rgba(255,63,142,0.5)] transition-all text-lg">
+              Registra tu negocio
+            </a>
+            <Link href="/negocios" className="border border-white/25 bg-white/5 text-white font-bold px-6 py-4 rounded-2xl hover:bg-white/10 transition">
+              Conoce más →
+            </Link>
           </div>
+        </div>
+      </section>
 
-          <div className="rounded-3xl border border-white/35 bg-white/15 backdrop-blur-md p-5 md:p-6 shadow-2xl">
-            <h2 className="text-2xl font-black">Preinscripción para negocios</h2>
-            <p className="text-sm text-white/85 mt-1 mb-4">Te contactamos para sumarte como aliado fundador.</p>
+      <section className="relative z-10 mx-auto max-w-5xl px-6 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { icon: '📱', title: 'Un pase, muchos negocios', desc: 'Tus clientes acumulan puntos en toda la red de aliados con un solo pase en Apple Wallet.' },
+            { icon: '🔄', title: 'Visitas que se convierten en lealtad', desc: 'Cada check-in suma. Al completar las visitas, tu cliente gana su premio automáticamente.' },
+            { icon: '📊', title: 'Datos reales de tu negocio', desc: 'Dashboard con tendencias de visita, perfil de clientes y reportes exportables.' },
+          ].map((item) => (
+            <div key={item.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
+              <span className="text-3xl">{item.icon}</span>
+              <h3 className="mt-3 text-lg font-black">{item.title}</h3>
+              <p className="mt-2 text-white/60 text-sm font-medium leading-relaxed">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-            <div className="space-y-3">
-              <input
-                className="w-full rounded-2xl border border-white/35 bg-white/95 text-gray-900 p-3 font-semibold"
-                placeholder="Nombre del negocio"
-                value={leadForm.businessName}
-                onChange={(e) => handleLeadField('businessName', e.target.value)}
-              />
-              <input
-                className="w-full rounded-2xl border border-white/35 bg-white/95 text-gray-900 p-3 font-semibold"
-                placeholder="Tu nombre"
-                value={leadForm.contactName}
-                onChange={(e) => handleLeadField('contactName', e.target.value)}
-              />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input
-                  className="w-full rounded-2xl border border-white/35 bg-white/95 text-gray-900 p-3 font-semibold"
-                  placeholder="Teléfono"
-                  value={leadForm.phone}
-                  onChange={(e) => handleLeadField('phone', e.target.value)}
-                />
-                <input
-                  className="w-full rounded-2xl border border-white/35 bg-white/95 text-gray-900 p-3 font-semibold"
-                  placeholder="Ciudad"
-                  value={leadForm.city}
-                  onChange={(e) => handleLeadField('city', e.target.value)}
+      <section className="relative z-10 mx-auto max-w-6xl px-6 py-10">
+        <div className="grid gap-6 lg:grid-cols-[1.15fr,1fr]">
+          <div>
+            <p className="text-[11px] font-black tracking-[0.2em] uppercase text-white/40 mb-3">Conoce Punto IA</p>
+            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 shadow-2xl">
+              <div className="aspect-video rounded-2xl bg-black/40 overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
+                <iframe
+                  className="h-full w-full"
+                  src="https://player.vimeo.com/video/1165202097?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479"
+                  title="Presentación Punto IA"
+                  allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  loading="lazy"
+                  allowFullScreen
                 />
               </div>
-              <input
-                type="email"
-                className="w-full rounded-2xl border border-white/35 bg-white/95 text-gray-900 p-3 font-semibold"
-                placeholder="Email"
-                value={leadForm.email}
-                onChange={(e) => handleLeadField('email', e.target.value)}
-              />
+            </div>
 
-              <button
-                onClick={submitLead}
-                disabled={leadLoading}
-                className="w-full rounded-2xl bg-white text-pink-600 font-black py-3.5 shadow-xl hover:bg-pink-50 transition disabled:opacity-70"
-              >
-                {leadLoading ? 'Enviando...' : 'Quiero preinscribirme como negocio'}
-              </button>
-
-              {leadStatus ? <p className="text-sm font-semibold text-white/95">{leadStatus}</p> : null}
+            <div className="mt-6 grid grid-cols-3 gap-3">
+              {[
+                { num: '5x–7x', label: 'más rentable retener que adquirir nuevos' },
+                { num: '+40%', label: 'más recurrencia con programa de lealtad' },
+                { num: '4 sem', label: 'para crear un hábito de visita' },
+              ].map((s) => (
+                <div key={s.num} className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-center">
+                  <p className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e]">{s.num}</p>
+                  <p className="text-[10px] text-white/50 font-semibold mt-1 leading-tight">{s.label}</p>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
 
-        <p className="mt-6 text-white/90 max-w-2xl text-sm md:text-base font-semibold mx-auto text-center">
-          Sistema de puntos multi-negocio para pymes en México. Deja tus datos y sé de los primeros aliados en activar la plataforma.
-        </p>
+          <div id="registro" className="rounded-3xl border border-white/15 bg-gradient-to-b from-white/[0.08] to-white/[0.03] backdrop-blur-md p-6 shadow-2xl scroll-mt-24">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e] flex items-center justify-center text-lg">🚀</span>
+              <div>
+                <h2 className="text-xl font-black">Sé aliado fundador</h2>
+                <p className="text-xs text-white/60 font-semibold">Cupo limitado · Pre-lanzamiento sin costo</p>
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              <input className="w-full rounded-xl border border-white/15 bg-white/95 text-gray-900 p-3 text-sm font-semibold placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400 outline-none" placeholder="Nombre del negocio" value={leadForm.businessName} onChange={(e) => handleLeadField('businessName', e.target.value)} />
+              <input className="w-full rounded-xl border border-white/15 bg-white/95 text-gray-900 p-3 text-sm font-semibold placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400 outline-none" placeholder="Tu nombre" value={leadForm.contactName} onChange={(e) => handleLeadField('contactName', e.target.value)} />
+              <div className="grid grid-cols-2 gap-2.5">
+                <input className="w-full rounded-xl border border-white/15 bg-white/95 text-gray-900 p-3 text-sm font-semibold placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400 outline-none" placeholder="Teléfono" value={leadForm.phone} onChange={(e) => handleLeadField('phone', e.target.value)} />
+                <input className="w-full rounded-xl border border-white/15 bg-white/95 text-gray-900 p-3 text-sm font-semibold placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400 outline-none" placeholder="Ciudad" value={leadForm.city} onChange={(e) => handleLeadField('city', e.target.value)} />
+              </div>
+              <input type="email" className="w-full rounded-xl border border-white/15 bg-white/95 text-gray-900 p-3 text-sm font-semibold placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400 outline-none" placeholder="Email" value={leadForm.email} onChange={(e) => handleLeadField('email', e.target.value)} />
+
+              <button onClick={submitLead} disabled={leadLoading} className="w-full bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#a855f7] text-white font-black py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-60 text-sm">
+                {leadLoading ? 'Enviando...' : 'Quiero ser aliado fundador →'}
+              </button>
+
+              {leadStatus && <p className="text-sm font-semibold text-center text-white/90">{leadStatus}</p>}
+            </div>
+
+            <p className="text-[10px] text-white/40 font-medium text-center mt-3">
+              Sin compromiso · Te contactamos en menos de 24 hrs
+            </p>
+          </div>
+        </div>
       </section>
+
+      <footer className="relative z-10 border-t border-white/10 mt-8">
+        <div className="mx-auto max-w-6xl px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="scale-[0.5] origin-left"><BrandLogo animate={false} /></div>
+            <p className="text-white/40 text-xs font-semibold">Coalición de PyMEs · Hecho en México 🇲🇽</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link href="/negocios" className="text-white/40 text-xs font-bold hover:text-white/70 transition">Para Negocios</Link>
+            <Link href="/?clientes=1" className="text-white/40 text-xs font-bold hover:text-white/70 transition">Soy Cliente</Link>
+            <Link href="/aliados" className="text-white/40 text-xs font-bold hover:text-white/70 transition">Aliados</Link>
+          </div>
+        </div>
+      </footer>
     </main>
   ) : (
     <AnimatePresence mode="wait">
