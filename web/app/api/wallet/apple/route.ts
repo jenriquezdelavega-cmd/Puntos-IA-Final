@@ -383,10 +383,37 @@ function ensureRgbColor(value: string | null | undefined, fallback: string): str
   return raw;
 }
 
-function buildStampProgress(currentVisits: number, requiredVisits: number) {
+function buildStampBubbles(currentVisits: number, requiredVisits: number) {
   const total = Math.max(1, Math.min(20, Number(requiredVisits) || 10));
   const done = Math.max(0, Math.min(total, Number(currentVisits) || 0));
-  return `${'●'.repeat(done)}${'○'.repeat(Math.max(0, total - done))}`;
+  const rows: string[] = [];
+  for (let i = 0; i < total; i += 5) {
+    const chunk = Math.min(5, total - i);
+    let row = '';
+    for (let j = 0; j < chunk; j++) {
+      row += (i + j < done) ? '⬤ ' : '○ ';
+    }
+    rows.push(row.trim());
+  }
+  return rows.join('\n');
+}
+
+function formatPeriodLabel(period: string, periodKey: string) {
+  switch (period) {
+    case 'MONTHLY': return `Mensual (${periodKey})`;
+    case 'QUARTERLY': return `Trimestral (${periodKey})`;
+    case 'SEMESTER': return `Semestral (${periodKey})`;
+    case 'ANNUAL': return `Anual (${periodKey})`;
+    default: return 'Sin límite';
+  }
+}
+
+function formatDateEs(date: Date | null) {
+  if (!date) return '—';
+  return new Intl.DateTimeFormat('es-MX', {
+    day: 'numeric', month: 'long', year: 'numeric',
+    timeZone: 'America/Monterrey',
+  }).format(date);
 }
 
 async function createPassPackage(params: {
@@ -396,6 +423,14 @@ async function createPassPackage(params: {
   businessName: string;
   requiredVisits: number;
   currentVisits: number;
+  totalVisits: number;
+  prize: string;
+  rewardPeriod: string;
+  periodKey: string;
+  lastVisitAt: Date | null;
+  memberSince: Date | null;
+  address: string | null;
+  instagram: string | null;
   tenantLogoData?: string | null;
   walletBackgroundColor?: string | null;
   walletForegroundColor?: string | null;
@@ -428,6 +463,48 @@ async function createPassPackage(params: {
     // Export all certs from p12 as chain; if user included WWDR chain in p12 this is enough.
     await exportPkcs12(p12Path, chainPath, p12Password, ['-nokeys']);
 
+    const remaining = Math.max(0, params.requiredVisits - params.currentVisits);
+
+    const backFields = [
+      {
+        key: 'stamps',
+        label: '🎯 Sellos de Visita',
+        value: buildStampBubbles(params.currentVisits, params.requiredVisits),
+      },
+      {
+        key: 'prizeDetail',
+        label: '🎁 Premio',
+        value: `${params.prize}${remaining > 0 ? ` · Faltan ${remaining} visita${remaining === 1 ? '' : 's'}` : ' · ¡Listo para canjear!'}`,
+      },
+      {
+        key: 'lifetime',
+        label: '📊 Historial',
+        value: `${params.totalVisits} visita${params.totalVisits === 1 ? '' : 's'} en total`,
+      },
+      {
+        key: 'lastVisit',
+        label: '📅 Última visita',
+        value: formatDateEs(params.lastVisitAt),
+      },
+      {
+        key: 'memberSince',
+        label: '🗓️ Miembro desde',
+        value: formatDateEs(params.memberSince),
+      },
+    ];
+
+    if (params.address && params.address !== 'Dirección pendiente') {
+      backFields.push({ key: 'address', label: '📍 Ubicación', value: params.address });
+    }
+    if (params.instagram) {
+      backFields.push({ key: 'instagram', label: '📸 Instagram', value: `@${params.instagram.replace(/^@/, '')}` });
+    }
+
+    backFields.push(
+      { key: 'brand', label: 'punto IA', value: '✦ Programa de lealtad digital\nwww.puntoia.mx' },
+      { key: 'support', label: 'ℹ️ Ayuda', value: 'Presenta este pase en el negocio y escanea el código QR del día para registrar tu visita.' },
+    );
+
     const passJson = {
       formatVersion: 1,
       passTypeIdentifier,
@@ -453,22 +530,22 @@ async function createPassPackage(params: {
       ],
       webServiceURL: `${publicBaseUrl}/api/wallet/apple`,
       authenticationToken,
-      coupon: {
+      storeCard: {
         headerFields: [
-          { key: 'business', label: 'Negocio', value: params.businessName || params.businessId },
+          { key: 'visits', label: 'VISITAS', value: `${params.currentVisits} / ${params.requiredVisits}` },
         ],
-        primaryFields: [{ key: 'visits', label: 'Contador de visitas', value: `${params.currentVisits}/${params.requiredVisits}` }],
+        primaryFields: [
+          { key: 'prize', label: 'TU PREMIO', value: params.prize },
+        ],
         secondaryFields: [
-          { key: 'client', label: 'Cliente', value: params.customerName || params.customerId },
+          { key: 'client', label: 'CLIENTE', value: params.customerName || 'Cliente' },
+          { key: 'period', label: 'PERIODO', value: formatPeriodLabel(params.rewardPeriod, params.periodKey) },
         ],
         auxiliaryFields: [
-          { key: 'goal', label: 'Meta', value: `${params.requiredVisits} visitas` },
+          { key: 'remaining', label: 'FALTAN', value: remaining > 0 ? `${remaining} visita${remaining === 1 ? '' : 's'}` : '¡Canjea tu premio!' },
+          { key: 'lastDate', label: 'ÚLTIMA VISITA', value: formatDateEs(params.lastVisitAt) },
         ],
-        backFields: [
-          { key: 'stamps', label: 'Sellos', value: buildStampProgress(params.currentVisits, params.requiredVisits) },
-          { key: 'footbrand', label: 'PUNTO IA', value: 'Programa de lealtad digital' },
-          { key: 'support', label: 'Soporte', value: 'Presenta este pase al negocio para registrar visitas.' },
-        ],
+        backFields,
       },
     };
 
@@ -578,52 +655,52 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'businessId requerido para crear wallet por negocio' }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: customerId }, select: { id: true, name: true } });
+    const user = await prisma.user.findUnique({ where: { id: customerId }, select: { id: true, name: true, createdAt: true } });
     if (!user) {
       return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
     }
 
-    let businessName = businessNameInput || 'Negocio afiliado';
-    let requiredVisits = 10;
-    let currentVisits = 0;
-    let tenantLogoData: string | null = null;
-
     const tenant = await prisma.tenant.findUnique({
       where: { id: businessId },
-      select: { id: true, name: true, requiredVisits: true, logoData: true },
+      select: {
+        id: true, name: true, requiredVisits: true, rewardPeriod: true,
+        prize: true, address: true, instagram: true, logoData: true,
+      },
     });
 
     if (!tenant) {
       return NextResponse.json({ error: 'Negocio no encontrado para este wallet' }, { status: 404 });
     }
 
-    businessName = tenant.name || businessName;
-    requiredVisits = tenant.requiredVisits ?? 10;
-    tenantLogoData = tenant.logoData || null;
-
+    const businessName = tenant.name || businessNameInput || 'Negocio afiliado';
     const walletStyle = (await getTenantWalletStyle(prisma, tenant.id)) || defaultTenantWalletStyle(tenant.id);
-    const walletStripImageData = walletStyle.stripImageData;
-    // Siempre intentamos usar strip para mostrar franja superior si existe imagen válida del negocio.
-    const walletLogoData = tenantLogoData || walletStyle.stripImageData || null;
+    const walletLogoData = tenant.logoData || walletStyle.stripImageData || null;
 
     const membership = await prisma.membership.findFirst({
       where: { tenantId: tenant.id, userId: user.id },
-      select: { currentVisits: true },
+      select: { currentVisits: true, totalVisits: true, lastVisitAt: true, periodKey: true, periodType: true },
     });
-    currentVisits = membership?.currentVisits ?? 0;
 
     const pkpass = await createPassPackage({
       customerId: user.id,
       customerName: String(user.name || '').trim() || 'Cliente',
       businessId,
       businessName,
-      requiredVisits,
-      currentVisits,
+      requiredVisits: tenant.requiredVisits ?? 10,
+      currentVisits: membership?.currentVisits ?? 0,
+      totalVisits: membership?.totalVisits ?? 0,
+      prize: tenant.prize || 'Premio Sorpresa',
+      rewardPeriod: String(tenant.rewardPeriod || 'OPEN'),
+      periodKey: membership?.periodKey || 'OPEN',
+      lastVisitAt: membership?.lastVisitAt || null,
+      memberSince: user.createdAt || null,
+      address: tenant.address || null,
+      instagram: tenant.instagram || null,
       tenantLogoData: walletLogoData,
       walletBackgroundColor: walletStyle.backgroundColor,
       walletForegroundColor: walletStyle.foregroundColor,
       walletLabelColor: walletStyle.labelColor,
-      walletStripImageData,
+      walletStripImageData: walletStyle.stripImageData,
     });
 
     return new NextResponse(pkpass, {
