@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Este negocio ha sido suspendido. Contacta a soporte.' }, { status: 403 });
     }
 
-    const walletStyle = (await getTenantWalletStyle(prisma, user.tenant.id)) || defaultTenantWalletStyle(user.tenant.id);
+    const walletStyle = (await getTenantWalletStyle(user.tenant.id)) || defaultTenantWalletStyle(user.tenant.id);
 
     return NextResponse.json({
       success: true,

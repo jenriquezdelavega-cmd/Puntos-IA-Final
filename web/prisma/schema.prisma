@@ -33,6 +33,7 @@ model Tenant {
   memberships Membership[]
   dailyCodes  DailyCode[]
   redemptions Redemption[]
+  walletStyle TenantWalletStyle?
 }
 
 model TenantUser {
@@ -121,6 +122,20 @@ model Redemption {
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model TenantWalletStyle {
+  tenantId       String   @id @map("tenant_id")
+  backgroundColor String  @default("rgb(31,41,55)") @map("background_color")
+  foregroundColor String  @default("rgb(255,255,255)") @map("foreground_color")
+  labelColor      String  @default("rgb(191,219,254)") @map("label_color")
+  stripImageData  String  @default("") @map("strip_image_data")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_wallet_styles")
 }
 
 enum RewardPeriod {

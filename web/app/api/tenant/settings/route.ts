@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       }
     });
 
-    await upsertTenantWalletStyle(prisma, {
+    await upsertTenantWalletStyle({
       tenantId,
       backgroundColor: walletBackgroundColor as string | undefined,
       foregroundColor: walletForegroundColor as string | undefined,
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       stripImageData: walletStripImageData as string | null | undefined,
     });
 
-    const walletStyle = await getTenantWalletStyle(prisma, tenantId);
+    const walletStyle = await getTenantWalletStyle(tenantId);
 
     return NextResponse.json({
       success: true,

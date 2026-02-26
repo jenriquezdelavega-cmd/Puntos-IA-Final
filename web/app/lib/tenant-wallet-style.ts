@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const TABLE_NAME = 'tenant_wallet_styles';
+import { prisma } from '@/app/lib/prisma';
 
 export type TenantWalletStyle = {
   tenantId: string;
@@ -31,30 +29,14 @@ function normalizeImageData(value: unknown) {
   return raw;
 }
 
-export async function ensureTenantWalletStylesTable(prisma: PrismaClient) {
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
-      tenant_id TEXT PRIMARY KEY,
-      background_color TEXT NOT NULL DEFAULT 'rgb(31,41,55)',
-      foreground_color TEXT NOT NULL DEFAULT 'rgb(255,255,255)',
-      label_color TEXT NOT NULL DEFAULT 'rgb(191,219,254)',
-      strip_image_data TEXT NOT NULL DEFAULT '',
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
-}
-
-export async function upsertTenantWalletStyle(prisma: PrismaClient, params: {
+export async function upsertTenantWalletStyle(params: {
   tenantId: string;
   backgroundColor?: string | null;
   foregroundColor?: string | null;
   labelColor?: string | null;
   stripImageData?: string | null;
 }) {
-  await ensureTenantWalletStylesTable(prisma);
-
-  const current = await getTenantWalletStyle(prisma, params.tenantId);
+  const current = await getTenantWalletStyle(params.tenantId);
 
   const backgroundColor = normalizeColor(
     params.backgroundColor,
@@ -78,55 +60,32 @@ export async function upsertTenantWalletStyle(prisma: PrismaClient, params: {
     stripImageData = normalizeImageData(params.stripImageData);
   }
 
-  await prisma.$executeRawUnsafe(
-    `
-      INSERT INTO ${TABLE_NAME}
-        (tenant_id, background_color, foreground_color, label_color, strip_image_data, updated_at)
-      VALUES ($1, $2, $3, $4, $5, NOW())
-      ON CONFLICT (tenant_id)
-      DO UPDATE SET
-        background_color = EXCLUDED.background_color,
-        foreground_color = EXCLUDED.foreground_color,
-        label_color = EXCLUDED.label_color,
-        strip_image_data = EXCLUDED.strip_image_data,
-        updated_at = NOW()
-    `,
-    params.tenantId,
-    backgroundColor,
-    foregroundColor,
-    labelColor,
-    stripImageData
-  );
+  await prisma.tenantWalletStyle.upsert({
+    where: { tenantId: params.tenantId },
+    update: { backgroundColor, foregroundColor, labelColor, stripImageData },
+    create: {
+      tenantId: params.tenantId,
+      backgroundColor,
+      foregroundColor,
+      labelColor,
+      stripImageData,
+    },
+  });
 }
 
-export async function getTenantWalletStyle(prisma: PrismaClient, tenantId: string): Promise<TenantWalletStyle | null> {
-  await ensureTenantWalletStylesTable(prisma);
+export async function getTenantWalletStyle(tenantId: string): Promise<TenantWalletStyle | null> {
+  const row = await prisma.tenantWalletStyle.findUnique({
+    where: { tenantId },
+  });
 
-  const rows = await prisma.$queryRawUnsafe<Array<{
-    tenant_id: string;
-    background_color: string;
-    foreground_color: string;
-    label_color: string;
-    strip_image_data: string;
-  }>>(
-    `
-      SELECT tenant_id, background_color, foreground_color, label_color, strip_image_data
-      FROM ${TABLE_NAME}
-      WHERE tenant_id = $1
-      LIMIT 1
-    `,
-    tenantId
-  );
+  if (!row) return null;
 
-  if (!rows.length) return null;
-
-  const row = rows[0];
   return {
-    tenantId: String(row.tenant_id || '').trim(),
-    backgroundColor: normalizeColor(row.background_color, DEFAULT_STYLE.backgroundColor),
-    foregroundColor: normalizeColor(row.foreground_color, DEFAULT_STYLE.foregroundColor),
-    labelColor: normalizeColor(row.label_color, DEFAULT_STYLE.labelColor),
-    stripImageData: normalizeImageData(row.strip_image_data),
+    tenantId: String(row.tenantId || '').trim(),
+    backgroundColor: normalizeColor(row.backgroundColor, DEFAULT_STYLE.backgroundColor),
+    foregroundColor: normalizeColor(row.foregroundColor, DEFAULT_STYLE.foregroundColor),
+    labelColor: normalizeColor(row.labelColor, DEFAULT_STYLE.labelColor),
+    stripImageData: normalizeImageData(row.stripImageData),
   };
 }
 

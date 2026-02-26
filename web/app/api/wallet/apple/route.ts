@@ -671,7 +671,7 @@ export async function GET(req: Request) {
     }
 
     const businessName = tenant.name || businessNameInput || 'Negocio afiliado';
-    const walletStyle = (await getTenantWalletStyle(prisma, tenant.id)) || defaultTenantWalletStyle(tenant.id);
+    const walletStyle = (await getTenantWalletStyle(tenant.id)) || defaultTenantWalletStyle(tenant.id);
     const walletLogoData = tenant.logoData || walletStyle.stripImageData || null;
 
     const membership = await prisma.membership.findFirst({
