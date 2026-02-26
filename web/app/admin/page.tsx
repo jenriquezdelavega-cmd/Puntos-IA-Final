@@ -359,19 +359,86 @@ return (
 
 <div className="flex-1 p-6 md:p-8 overflow-y-auto pb-32 md:pb-0">
 {tab === 'dashboard' && userRole === 'ADMIN' && (
-<div className="space-y-8 animate-fadeIn">
-<div className="flex items-center justify-between gap-4 flex-wrap">
-  <div>
-    <h2 className="text-3xl font-bold text-gray-800">Dashboard</h2>
-    <p className="text-sm text-gray-500 font-medium mt-1">Tendencia de check-ins, género y edades de tus clientes.</p>
+<div className="space-y-6 animate-fadeIn">
+<div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 md:p-8 rounded-3xl text-white relative overflow-hidden">
+  <div className="absolute -top-20 -right-20 w-48 h-48 bg-pink-500/10 rounded-full blur-3xl" />
+  <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-orange-500/10 rounded-full blur-3xl" />
+  <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div>
+      <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Panel de administración</p>
+      <h2 className="text-2xl md:text-3xl font-black mt-1">¡Hola, {tenant.name}!</h2>
+      <p className="text-gray-400 text-sm font-medium mt-1">{new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+    </div>
+    <div className="flex gap-2">
+      <button className="bg-white/10 border border-white/20 px-4 py-2.5 rounded-xl text-white font-bold text-sm hover:bg-white/20 transition" onClick={() => { loadReports(tenant.id); loadTeam(tenant.id); }}>🔄 Actualizar</button>
+      <button className="bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-2.5 rounded-xl shadow-lg text-white font-bold text-sm" onClick={downloadCSV}>📥 Exportar CSV</button>
+    </div>
   </div>
-  <button className="bg-gradient-to-br from-orange-400 to-pink-500 px-5 py-3 rounded-2xl shadow-lg text-white font-black text-sm" onClick={downloadCSV}>Exportar base (CSV)</button>
 </div>
 
-<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-<div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100"><p className="text-gray-400 text-xs font-bold uppercase">Clientes registrados</p><p className="text-4xl font-black text-gray-900 mt-2">{totalClients}</p></div>
-<div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100"><p className="text-gray-400 text-xs font-bold uppercase">Check-ins acumulados</p><p className="text-4xl font-black text-gray-900 mt-2">{totalCheckins}</p></div>
-<div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100"><p className="text-gray-400 text-xs font-bold uppercase">Día más fuerte</p><p className="text-xl font-black text-gray-900 mt-2">{peakDay ? `${peakDay.date} · ${peakDay.count}` : 'Sin datos'}</p></div>
+<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+  <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+    <div className="flex items-center gap-2 mb-2">
+      <span className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-lg">👥</span>
+      <p className="text-gray-400 text-[10px] font-black uppercase tracking-wider">Clientes</p>
+    </div>
+    <p className="text-3xl font-black text-gray-900">{totalClients}</p>
+    <p className="text-[11px] text-gray-400 font-semibold mt-1">registrados</p>
+  </div>
+  <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+    <div className="flex items-center gap-2 mb-2">
+      <span className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-lg">✅</span>
+      <p className="text-gray-400 text-[10px] font-black uppercase tracking-wider">Check-ins</p>
+    </div>
+    <p className="text-3xl font-black text-gray-900">{totalCheckins}</p>
+    <p className="text-[11px] text-gray-400 font-semibold mt-1">acumulados</p>
+  </div>
+  <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+    <div className="flex items-center gap-2 mb-2">
+      <span className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-lg">🔥</span>
+      <p className="text-gray-400 text-[10px] font-black uppercase tracking-wider">Día top</p>
+    </div>
+    <p className="text-xl font-black text-gray-900">{peakDay ? peakDay.count : '—'}</p>
+    <p className="text-[11px] text-gray-400 font-semibold mt-1 truncate">{peakDay ? String(peakDay.date).slice(5) : 'sin datos'}</p>
+  </div>
+  <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+    <div className="flex items-center gap-2 mb-2">
+      <span className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-lg">⭐</span>
+      <p className="text-gray-400 text-[10px] font-black uppercase tracking-wider">Promedio</p>
+    </div>
+    <p className="text-3xl font-black text-gray-900">{trendData.length > 0 ? (totalCheckins / trendData.length).toFixed(1) : '—'}</p>
+    <p className="text-[11px] text-gray-400 font-semibold mt-1">visitas/día</p>
+  </div>
+</div>
+
+<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+  <button onClick={() => setTab('qr')} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left hover:shadow-md hover:border-gray-200 transition-all group">
+    <div className="flex items-center gap-3">
+      <span className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📷</span>
+      <div>
+        <p className="text-sm font-black text-gray-800">Generar QR del día</p>
+        <p className="text-[11px] text-gray-400 font-semibold">Abre el código para tus clientes</p>
+      </div>
+    </div>
+  </button>
+  <button onClick={() => setTab('redeem')} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left hover:shadow-md hover:border-gray-200 transition-all group">
+    <div className="flex items-center gap-3">
+      <span className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">🎁</span>
+      <div>
+        <p className="text-sm font-black text-gray-800">Validar canje</p>
+        <p className="text-[11px] text-gray-400 font-semibold">Entrega un premio a tu cliente</p>
+      </div>
+    </div>
+  </button>
+  <button onClick={() => setTab('settings')} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left hover:shadow-md hover:border-gray-200 transition-all group">
+    <div className="flex items-center gap-3">
+      <span className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">⚙️</span>
+      <div>
+        <p className="text-sm font-black text-gray-800">Configuración</p>
+        <p className="text-[11px] text-gray-400 font-semibold">Premio, wallet, ubicación</p>
+      </div>
+    </div>
+  </button>
 </div>
 
 <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
@@ -474,26 +541,52 @@ onChange={e=>setNewStaff({...newStaff, username: e.target.value})}
 )}
 
 {tab === 'qr' && (
-<div className="flex flex-col items-center justify-center h-full animate-fadeIn">
-<div className="bg-white p-10 rounded-[3rem] shadow-xl text-center border border-gray-100 max-w-md w-full">
-<h2 className="text-2xl font-bold text-gray-800 mb-6">Código de Hoy</h2>
-<div className="bg-gray-50 p-6 rounded-3xl mb-6 flex justify-center">{qrValue ? <QRCode value={qrValue} size={200} /> : <div className="h-[200px] w-[200px] bg-gray-200 rounded-xl flex items-center justify-center text-gray-400">Sin QR</div>}</div>
-{code && <p className="text-4xl font-mono font-black text-gray-900 tracking-widest mb-6">{code}</p>}
-<button onClick={generateCode} className="w-full bg-black text-white py-4 rounded-2xl font-bold shadow-lg">Generar Nuevo</button>
+<div className="max-w-lg mx-auto space-y-4 animate-fadeIn">
+  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-5 text-white">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-black">Código QR del Día</h2>
+          <p className="text-gray-400 text-xs font-semibold mt-0.5">Muestra este QR a tus clientes para que registren su visita</p>
+        </div>
+        <button onClick={generateCode} className="bg-white/10 border border-white/20 px-4 py-2 rounded-xl text-sm font-bold hover:bg-white/20 transition shrink-0">
+          {code ? '🔄 Nuevo' : '▶ Generar'}
+        </button>
+      </div>
+    </div>
+    <div className="p-6 flex flex-col items-center">
+      <div className="bg-white p-4 rounded-2xl shadow-inner border border-gray-100">
+        {qrValue ? <QRCode value={qrValue} size={220} /> : <div className="h-[220px] w-[220px] bg-gray-50 rounded-xl flex flex-col items-center justify-center text-gray-300"><span className="text-5xl mb-2">📷</span><span className="text-xs font-bold">Presiona &quot;Generar&quot;</span></div>}
+      </div>
+      {code && (
+        <div className="mt-4 bg-gray-50 px-6 py-3 rounded-xl border border-gray-100">
+          <p className="text-2xl font-mono font-black text-gray-900 tracking-[0.3em] text-center">{code}</p>
+        </div>
+      )}
+    </div>
+  </div>
 
-<div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-left">
-  <h3 className="text-sm font-black text-emerald-700 uppercase tracking-wider">Escanear pase de cliente</h3>
-  <p className="text-xs text-emerald-700/80 mt-1">Aquí se escanea el QR que el cliente guardó en Apple Wallet para contar una visita.</p>
-  <button
-    onClick={() => { setScannerOpen(true); setScannerMsg('Apunta al QR del pase del cliente'); }}
-    className="mt-3 w-full px-4 py-3 rounded-xl bg-emerald-600 text-white font-black"
-  >
-    Abrir cámara y escanear pase
-  </button>
-</div>
-{scannerMsg ? <p className="mt-3 text-xs font-bold text-gray-600 text-left">{scannerMsg}</p> : null}
-{lastScannedCustomerId ? <p className="mt-1 text-[11px] font-mono text-gray-500 text-left">Cliente: {lastScannedCustomerId}</p> : null}
-</div>
+  <div className="bg-white rounded-3xl shadow-sm border border-emerald-100 overflow-hidden">
+    <div className="bg-emerald-50 p-5 border-b border-emerald-100">
+      <div className="flex items-center gap-3">
+        <span className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-xl">📱</span>
+        <div>
+          <h3 className="text-sm font-black text-emerald-800">Escanear pase de cliente</h3>
+          <p className="text-[11px] text-emerald-600 font-semibold">Escanea el QR del Apple Wallet del cliente para registrar su visita</p>
+        </div>
+      </div>
+    </div>
+    <div className="p-5">
+      <button
+        onClick={() => { setScannerOpen(true); setScannerMsg('Apunta al QR del pase del cliente'); }}
+        className="w-full px-4 py-4 rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-md hover:bg-emerald-700 transition flex items-center justify-center gap-2"
+      >
+        <span className="text-lg">📷</span> Abrir Cámara
+      </button>
+      {scannerMsg && <p className="mt-3 text-sm font-bold text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-100">{scannerMsg}</p>}
+      {lastScannedCustomerId && <p className="mt-2 text-[11px] font-mono text-gray-400">Último cliente: {lastScannedCustomerId.slice(0, 8)}...</p>}
+    </div>
+  </div>
 </div>
 )}
 
