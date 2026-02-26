@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { logApiError, logApiEvent } from '@/app/lib/api-log';
 import { RewardPeriod } from '@prisma/client';
 import { prisma } from '@/app/lib/prisma';
+import { touchWalletPassRegistrations, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
+import { listWalletPushTokens, pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
 const TZ = 'America/Monterrey';
 
 function tzParts(d: Date) {
@@ -93,6 +95,30 @@ export async function POST(request: Request) {
     ]);
 
     logApiEvent('/api/redeem/request', 'redemption_requested', { userId, tenantId, code });
+
+    try {
+      const serialNumber = walletSerialNumber(userId, tenantId);
+      const passTypeIdentifier = String(process.env.APPLE_PASS_TYPE_ID || '').trim() || undefined;
+
+      await touchWalletPassRegistrations(prisma, { serialNumber, passTypeIdentifier });
+
+      if (passTypeIdentifier) {
+        const pushTokens = await listWalletPushTokens(prisma, { serialNumber, passTypeIdentifier });
+        for (const pushToken of pushTokens) {
+          const result = await pushWalletUpdateToDevice(pushToken, passTypeIdentifier);
+          if (result.ok) {
+            logApiEvent('/api/redeem/request#wallet-push', 'push_sent', { serialNumber, status: result.status });
+          } else {
+            if (result.status === 410 || result.status === 400) {
+              await deleteWalletRegistrationsByPushToken(prisma, pushToken);
+            }
+            logApiEvent('/api/redeem/request#wallet-push', 'push_failed', { serialNumber, status: result.status, reason: result.reason || 'unknown' });
+          }
+        }
+      }
+    } catch (walletError) {
+      logApiError('/api/redeem/request#wallet-push', walletError);
+    }
 
     return NextResponse.json({ success: true, code });
 
