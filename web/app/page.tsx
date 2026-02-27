@@ -688,51 +688,39 @@ export default function Home() {
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-white/5 blur-[100px]"
           />
 
-          <div className="w-full max-w-md flex flex-col items-center pt-16 pb-10 relative">
+          <div className="w-full max-w-sm flex flex-col items-center pt-20 pb-12 relative">
             <BrandLogo />
-
-            <motion.p
-              initial={canAnim ? { opacity: 0, y: 8 } : false}
-              animate={canAnim ? { opacity: 1, y: 0 } : false}
-              transition={canAnim ? { ...spring, delay: 0.1 } : undefined}
-              className="text-white/80 text-xs font-black uppercase tracking-[0.25em] mt-2 mb-6"
-            >
-              Coalición de PyMEs
-            </motion.p>
 
             <motion.h1
               initial={canAnim ? { opacity: 0, y: 10 } : false}
               animate={canAnim ? { opacity: 1, y: 0 } : false}
-              transition={canAnim ? { ...spring, delay: 0.15 } : undefined}
-              className="text-[2rem] md:text-4xl font-black text-center leading-[1.15] tracking-tight drop-shadow-lg"
+              transition={canAnim ? { ...spring, delay: 0.1 } : undefined}
+              className="text-[1.75rem] md:text-3xl font-black text-center leading-[1.2] tracking-tight mt-4"
             >
-              Visita, acumula
+              Tu pase de lealtad
               <br />
-              y gana premios
-              <br />
-              <span className="text-white/90 italic">en tus negocios favoritos</span>
+              <span className="text-white/85 italic">en un solo lugar</span>
             </motion.h1>
 
             <motion.p
               initial={canAnim ? { opacity: 0, y: 8 } : false}
               animate={canAnim ? { opacity: 1, y: 0 } : false}
-              transition={canAnim ? { ...spring, delay: 0.2 } : undefined}
-              className="text-white/85 text-sm md:text-base font-semibold text-center mt-5 mb-8 max-w-xs leading-relaxed"
+              transition={canAnim ? { ...spring, delay: 0.15 } : undefined}
+              className="text-white/60 text-[13px] font-medium text-center mt-3 mb-10 max-w-[280px] leading-relaxed"
             >
-              Un solo pase digital para acumular puntos en cafeterías, taquerías, estéticas y más negocios cerca de ti.
+              Acumula puntos en tus negocios favoritos y gana premios reales.
             </motion.p>
 
             <motion.div
               initial={canAnim ? { opacity: 0, y: 10 } : false}
               animate={canAnim ? { opacity: 1, y: 0 } : false}
-              transition={canAnim ? { ...spring, delay: 0.25 } : undefined}
-              className="space-y-3 w-full mb-10"
+              transition={canAnim ? { ...spring, delay: 0.2 } : undefined}
+              className="w-full space-y-3 mb-12"
             >
               <motion.button
                 whileTap={canAnim ? { scale: 0.97 } : undefined}
-                whileHover={canAnim ? { y: -2 } : undefined}
                 onClick={() => { setMessage(''); setView('LOGIN'); }}
-                className="relative w-full bg-white text-pink-600 py-4 rounded-2xl font-extrabold text-lg shadow-[0_8px_32px_rgba(0,0,0,0.18)] hover:bg-gray-50 transition-all overflow-hidden"
+                className="relative w-full bg-white text-pink-600 py-4 rounded-2xl font-black text-base shadow-[0_6px_24px_rgba(0,0,0,0.15)] hover:bg-gray-50 transition-all overflow-hidden"
               >
                 <Shine />
                 Iniciar Sesión
@@ -740,73 +728,55 @@ export default function Home() {
 
               <motion.button
                 whileTap={canAnim ? { scale: 0.97 } : undefined}
-                whileHover={canAnim ? { y: -2 } : undefined}
                 onClick={() => { setMessage(''); setView('REGISTER'); }}
-                className="w-full bg-white/10 border border-white/40 text-white py-4 rounded-2xl font-black text-lg hover:bg-white/20 transition-all backdrop-blur-sm"
+                className="w-full bg-white/10 border border-white/30 text-white py-4 rounded-2xl font-bold text-base hover:bg-white/15 transition-all"
               >
                 Crear Cuenta Gratis
               </motion.button>
             </motion.div>
 
-            <motion.div
-              initial={canAnim ? { opacity: 0 } : false}
-              animate={canAnim ? { opacity: 1 } : false}
-              transition={canAnim ? { delay: 0.4 } : undefined}
-              className="grid w-full grid-cols-3 gap-2.5 mb-10"
-            >
+            <div className="w-full space-y-3 mb-12">
               {[
-                { icon: '📱', num: '1', label: 'Escanea el QR' },
-                { icon: '⭐', num: '2', label: 'Suma visitas' },
-                { icon: '🎁', num: '3', label: 'Gana premios' },
-              ].map((item, i) => (
+                { num: '1', title: 'Crea tu pase', desc: 'Regístrate y obtén tu pase digital en Apple Wallet' },
+                { num: '2', title: 'Suma visitas', desc: 'Muestra tu pase cada vez que visites un negocio aliado' },
+                { num: '3', title: 'Gana premios', desc: 'Al completar tus visitas, canjea tu recompensa' },
+              ].map((step, i) => (
                 <motion.div
-                  key={item.label}
-                  initial={canAnim ? { opacity: 0, y: 12 } : false}
-                  animate={canAnim ? { opacity: 1, y: 0 } : false}
-                  transition={canAnim ? { ...spring, delay: 0.5 + i * 0.08 } : undefined}
-                  className="rounded-2xl border border-white/25 bg-white/10 px-2 py-4 text-center backdrop-blur-sm"
+                  key={step.num}
+                  initial={canAnim ? { opacity: 0, x: -12 } : false}
+                  animate={canAnim ? { opacity: 1, x: 0 } : false}
+                  transition={canAnim ? { ...spring, delay: 0.35 + i * 0.1 } : undefined}
+                  className="flex items-center gap-4 bg-white/8 border border-white/15 rounded-2xl px-4 py-3.5 backdrop-blur-sm"
                 >
-                  <div className="text-2xl leading-none mb-2">{item.icon}</div>
-                  <div className="text-[10px] font-black uppercase tracking-wider text-white/70 mb-0.5">Paso {item.num}</div>
-                  <div className="text-xs font-bold text-white/95">{item.label}</div>
+                  <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#ff7a59] to-[#ff3f8e] flex items-center justify-center text-white text-sm font-black shrink-0 shadow-sm">
+                    {step.num}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-white text-[13px] font-black leading-tight">{step.title}</p>
+                    <p className="text-white/45 text-[11px] font-medium mt-0.5 leading-snug">{step.desc}</p>
+                  </div>
                 </motion.div>
               ))}
-            </motion.div>
+            </div>
 
             <motion.div
               initial={canAnim ? { opacity: 0 } : false}
               animate={canAnim ? { opacity: 1 } : false}
               transition={canAnim ? { delay: 0.7 } : undefined}
-              className="w-full rounded-2xl border border-white/20 bg-white/8 backdrop-blur-sm p-5 mb-10"
+              className="flex flex-col items-center gap-5"
             >
-              <p className="text-center text-white/60 text-[10px] font-black uppercase tracking-[0.2em] mb-4">
-                ¿Cómo funciona?
-              </p>
-              <Onboarding />
-            </motion.div>
-
-            <motion.div
-              initial={canAnim ? { opacity: 0, y: 8 } : false}
-              animate={canAnim ? { opacity: 1, y: 0 } : false}
-              transition={canAnim ? { delay: 0.8 } : undefined}
-              className="flex flex-col items-center gap-4 w-full"
-            >
-              <div className="flex items-center gap-3 text-white/60 text-xs font-semibold">
-                <span className="h-px w-8 bg-white/20" />
-                <span>Disponible en Apple Wallet</span>
-                <span className="h-px w-8 bg-white/20" />
+              <div className="flex items-center gap-3 text-white/40 text-[11px] font-semibold">
+                <span className="h-px w-6 bg-white/15" />
+                Disponible en Apple Wallet
+                <span className="h-px w-6 bg-white/15" />
               </div>
 
               <Link
                 href="/aliados"
-                className="inline-flex items-center justify-center rounded-full border border-white/40 bg-white/10 px-6 py-3 text-sm font-black tracking-wide text-white shadow-lg backdrop-blur-sm transition hover:-translate-y-0.5 hover:bg-white/20"
+                className="text-white/50 text-[12px] font-bold hover:text-white/80 transition"
               >
-                ¿Tienes negocio?&nbsp;<span className="underline underline-offset-2">Únete a Punto IA</span>
+                ¿Tienes negocio? <span className="underline underline-offset-2">Únete a Punto IA</span>
               </Link>
-
-              <p className="text-white/40 text-[10px] font-bold tracking-wider mt-2">
-                puntoia.mx · Hecho en México 🇲🇽
-              </p>
             </motion.div>
           </div>
         </motion.div>
