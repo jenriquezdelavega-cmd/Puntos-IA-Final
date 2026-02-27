@@ -457,14 +457,10 @@ export default function Home() {
     const businessParam = `&business_id=${encodeURIComponent(resolvedBusinessId)}`;
     const passUrl = `/pass?customer_id=${encodeURIComponent(user.id)}${label}${businessParam}`;
 
-    const popup = window.open('', '_blank', 'noopener,noreferrer');
-    if (!popup) {
-      alert('No se pudo abrir el pase en una nueva pestaña. Habilita pop-ups para Punto IA e inténtalo de nuevo.');
-      return;
+    const newTab = window.open(passUrl, '_blank', 'noopener,noreferrer');
+    if (!newTab) {
+      window.location.href = passUrl;
     }
-
-    popup.opener = null;
-    popup.location.href = passUrl;
   };
 
 
