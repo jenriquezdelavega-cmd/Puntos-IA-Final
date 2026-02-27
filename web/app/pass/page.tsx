@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'react-qr-code';
 
+const PASS_CACHE_PREFIX = 'punto_pass_cache:';
+const PASS_CACHE_TTL_MS = 60_000;
+
 type PassResponse = {
   customer_id: string;
   name: string;
@@ -26,13 +29,43 @@ function extractPassQuery() {
   };
 }
 
+
+function passCacheKey(customerId: string, businessId: string) {
+  return `${PASS_CACHE_PREFIX}${customerId}:${businessId}`;
+}
+
+function readPassCache(customerId: string, businessId: string): PassResponse | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = localStorage.getItem(passCacheKey(customerId, businessId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { ts?: number; data?: PassResponse };
+    if (!parsed?.ts || !parsed?.data) return null;
+    if (Date.now() - parsed.ts > PASS_CACHE_TTL_MS) return null;
+    return parsed.data;
+  } catch {
+    return null;
+  }
+}
+
+function writePassCache(customerId: string, businessId: string, data: PassResponse) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    localStorage.setItem(passCacheKey(customerId, businessId), JSON.stringify({ ts: Date.now(), data }));
+  } catch {
+    // ignoramos problemas de storage para no bloquear el flujo principal
+  }
+}
+
 export default function PassPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [pass, setPass] = useState<PassResponse | null>(null);
   const [sourceBusinessName, setSourceBusinessName] = useState('');
 
-  const loadPass = async (customerId: string, businessId: string) => {
+  const loadPass = async (customerId: string, businessId: string, silent = false) => {
     const cleanCustomerId = String(customerId || '').trim();
     const cleanBusinessId = String(businessId || '').trim();
 
@@ -42,7 +75,7 @@ export default function PassPage() {
       return;
     }
 
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError('');
 
     try {
@@ -53,12 +86,14 @@ export default function PassPage() {
         setError((data as { error?: string }).error || 'No se pudo cargar el pase');
         return;
       }
-      setPass(data as PassResponse);
+      const passData = data as PassResponse;
+      setPass(passData);
+      writePassCache(cleanCustomerId, cleanBusinessId, passData);
     } catch {
       setPass(null);
       setError('No se pudo cargar el pase');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -67,7 +102,13 @@ export default function PassPage() {
     setSourceBusinessName(query.from);
 
     if (query.customerId && query.businessId) {
-      void loadPass(query.customerId, query.businessId);
+      const cached = readPassCache(query.customerId, query.businessId);
+      if (cached) {
+        setPass(cached);
+        void loadPass(query.customerId, query.businessId, true);
+      } else {
+        void loadPass(query.customerId, query.businessId);
+      }
       return;
     }
 
