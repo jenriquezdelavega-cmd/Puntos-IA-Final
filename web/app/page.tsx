@@ -1046,31 +1046,25 @@ export default function Home() {
           </AnimatePresence>
 
           {/* Header */}
-          <div className="bg-white/95 backdrop-blur px-8 pt-16 pb-6 sticky top-0 z-20 shadow-sm border-b border-pink-100/80 flex justify-between items-center">
-            <div>
-              <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Hola,</p>
-              <h1 className="text-3xl font-black text-gray-900 tracking-tight">{user?.name?.split(' ')?.[0] ?? '👋'}</h1>
+          <div className="bg-white/95 backdrop-blur-xl px-6 pt-14 pb-5 sticky top-0 z-20 shadow-[0_1px_0_rgba(0,0,0,0.04)] flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff7a59] via-[#ff3f8e] to-[#a855f7] flex items-center justify-center shadow-sm">
+                <span className="text-white text-[11px] font-black tracking-tight">P.IA</span>
+              </div>
+              <div>
+                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-[0.15em]">Hola,</p>
+                <h1 className="text-xl font-black text-gray-900 tracking-tight leading-tight">{user?.name?.split(' ')?.[0] ?? '👋'}</h1>
+              </div>
             </div>
 
-            <div className="flex gap-2">
-              <motion.button
-                whileTap={canAnim ? { scale: 0.95 } : undefined}
-                onClick={() => setShowTutorial(true)}
-                className="h-12 w-12 bg-gradient-to-r from-orange-500 to-pink-600 text-white rounded-full font-black border border-white/30 flex items-center justify-center hover:brightness-110 transition-all shadow-md"
-                title="Ayuda"
-              >
-                ✨
-              </motion.button>
-
-              <motion.button
-                whileTap={canAnim ? { scale: 0.95 } : undefined}
-                onClick={handleLogout}
-                className="h-12 w-12 bg-red-50 text-red-500 rounded-full font-black border border-red-100 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                title="Salir"
-              >
-                ✕
-              </motion.button>
-            </div>
+            <motion.button
+              whileTap={canAnim ? { scale: 0.95 } : undefined}
+              onClick={handleLogout}
+              className="h-9 w-9 bg-gray-100 text-gray-400 rounded-xl font-bold text-sm flex items-center justify-center hover:bg-gray-200 hover:text-gray-600 transition-all"
+              title="Salir"
+            >
+              ✕
+            </motion.button>
           </div>
 
           {/* Body */}
@@ -1280,133 +1274,136 @@ export default function Home() {
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
                 animate={canAnim ? { opacity: 1, y: 0 } : false}
                 transition={canAnim ? { ...spring } : undefined}
-                className="h-[52vh] md:h-[58vh] w-full rounded-3xl overflow-hidden shadow-xl border border-gray-100 relative"
+                className="space-y-4"
               >
-                <div className="absolute top-3 left-3 z-10 rounded-full bg-white/90 px-3 py-1 text-xs font-black text-pink-600 shadow">
-                  Mapa de aliados Punto IA
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-black text-gray-900 tracking-tight">Negocios aliados</h2>
+                    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">{tenants.length} negocio{tenants.length === 1 ? '' : 's'} en la coalición</p>
+                  </div>
+                  {selectedBusiness && (
+                    <motion.button
+                      whileTap={canAnim ? { scale: 0.96 } : undefined}
+                      onClick={() => openPass(selectedBusiness?.name, selectedBusiness?.id)}
+                      className="bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e] text-white px-4 py-2 rounded-xl text-[11px] font-black shadow-sm"
+                    >
+                      🎟️ Descargar Pase
+                    </motion.button>
+                  )}
                 </div>
-                <button
-                  onClick={() => openPass(selectedBusiness?.name, selectedBusiness?.id)}
-                  className="absolute top-3 right-3 z-10 rounded-full bg-white px-4 py-2 text-xs font-black text-orange-600 shadow-lg border border-orange-100 hover:bg-orange-50 transition"
-                >
-                  Ver mi Pase
-                </button>
-                <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={50} />
+                <div className="h-[55vh] md:h-[60vh] w-full rounded-2xl overflow-hidden shadow-[0_2px_16px_rgba(0,0,0,0.06)] border border-gray-100 relative">
+                  <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={50} />
+                </div>
+                <p className="text-center text-gray-300 text-[10px] font-semibold">Toca un negocio en el mapa para ver su información</p>
               </motion.div>
             )}
           </div>
 
           {/* TAB: PERFIL */}
           {activeTab === 'profile' && (
-            <div className="p-6 pt-0">
+            <div className="p-6 pt-0 space-y-4">
               <motion.div
                 initial={canAnim ? { opacity: 0, y: 10 } : false}
                 animate={canAnim ? { opacity: 1, y: 0 } : false}
                 transition={canAnim ? { ...spring } : undefined}
-                className="bg-white p-6 md:p-7 rounded-3xl shadow-md border border-gray-100 relative overflow-hidden"
+                className="rounded-[2rem] overflow-hidden bg-white shadow-[0_2px_16px_rgba(0,0,0,0.04)]"
               >
-                <span className="pointer-events-none absolute -top-24 -right-24 h-48 w-48 rounded-full bg-pink-200/35 blur-3xl" />
-                <span className="pointer-events-none absolute -bottom-24 -left-24 h-48 w-48 rounded-full bg-orange-200/35 blur-3xl" />
-
-                <div className="flex items-center gap-5 mb-10 relative">
-                  <div className="h-20 w-20 bg-gradient-to-br from-orange-100 to-pink-100 rounded-[1.5rem] flex items-center justify-center text-4xl shadow-inner text-pink-600">
-                    PI
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-black text-gray-900">Mi Perfil</h2>
-                    <p className="text-sm text-pink-500 font-bold">Tu identidad Punto IA</p>
+                <div className="bg-gradient-to-r from-gray-950 via-gray-900 to-gray-800 p-5 relative overflow-hidden">
+                  <div className="absolute -top-16 -right-16 w-40 h-40 bg-gradient-to-br from-[#ff7a59]/20 via-[#ff3f8e]/10 to-transparent rounded-full blur-3xl" />
+                  <div className="relative flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#ff7a59] via-[#ff3f8e] to-[#a855f7] flex items-center justify-center text-white font-black text-lg shadow-lg shrink-0">
+                      {(user?.name as string)?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                    <div>
+                      <h2 className="text-white font-black text-base tracking-tight">{user?.name as string}</h2>
+                      <p className="text-white/40 text-[10px] font-semibold mt-0.5">Miembro Punto IA</p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-6 relative">
+                <div className="p-5 space-y-4">
                   <div>
-                    <label className={clsLabel}>Nombre</label>
-                    <input className={clsInput} value={name} onChange={(e) => setName(e.target.value)} />
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.12em] ml-0.5 mb-1.5 block">Nombre</label>
+                    <input className="w-full p-3 bg-gray-50 rounded-xl text-gray-900 font-semibold text-sm border border-gray-100 outline-none focus:ring-2 focus:ring-pink-200 focus:bg-white transition" value={name} onChange={(e) => setName(e.target.value)} />
                   </div>
-
                   <div>
-                    <label className={clsLabel}>Teléfono</label>
-                    <input
-                      type="tel"
-                      maxLength={10}
-                      className={clsInput}
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                    />
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.12em] ml-0.5 mb-1.5 block">Teléfono</label>
+                    <input type="tel" maxLength={10} className="w-full p-3 bg-gray-50 rounded-xl text-gray-900 font-semibold text-sm border border-gray-100 outline-none focus:ring-2 focus:ring-pink-200 focus:bg-white transition" value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))} />
                   </div>
-
                   <div>
-                    <label className={clsLabel}>Email</label>
-                    <input type="email" className={clsInput} value={email} onChange={(e) => setEmail(e.target.value)} />
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.12em] ml-0.5 mb-1.5 block">Email</label>
+                    <input type="email" className="w-full p-3 bg-gray-50 rounded-xl text-gray-900 font-semibold text-sm border border-gray-100 outline-none focus:ring-2 focus:ring-pink-200 focus:bg-white transition" value={email} onChange={(e) => setEmail(e.target.value)} />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4 items-end">
-                    <div className="flex-1">
-                      <label className={clsLabel}>Fecha de nacimiento</label>
-                      <input type="date" className={clsInputFixed} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.12em] ml-0.5 mb-1.5 block">Nacimiento</label>
+                      <input type="date" className="w-full p-3 bg-gray-50 rounded-xl text-gray-900 font-semibold text-sm border border-gray-100 outline-none focus:ring-2 focus:ring-pink-200 focus:bg-white transition" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} />
                     </div>
-
-                    <div className="flex-1">
-                      <label className={clsLabel}>Género</label>
-                      <select className={clsInput} value={gender} onChange={(e) => setGender(e.target.value)}>
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.12em] ml-0.5 mb-1.5 block">Género</label>
+                      <select className="w-full p-3 bg-gray-50 rounded-xl text-gray-900 font-semibold text-sm border border-gray-100 outline-none focus:ring-2 focus:ring-pink-200 transition" value={gender} onChange={(e) => setGender(e.target.value)}>
                         <option value="Hombre">Masculino</option>
                         <option value="Mujer">Femenino</option>
                       </select>
                     </div>
                   </div>
+
+                  <motion.button
+                    whileTap={canAnim ? { scale: 0.97 } : undefined}
+                    onClick={handleUpdate}
+                    className="w-full bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#a855f7] text-white p-3.5 rounded-xl font-black text-sm shadow-sm mt-2"
+                  >
+                    Guardar Cambios
+                  </motion.button>
+
+                  {message && (
+                    <p className={`text-center text-sm font-bold p-3 rounded-xl ${message.includes('✅') ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                      {message}
+                    </p>
+                  )}
                 </div>
-
-                <motion.button
-                  whileTap={canAnim ? { scale: 0.98 } : undefined}
-                  onClick={loadHistory}
-                  className="w-full bg-yellow-400 text-yellow-950 p-4 rounded-2xl font-black mt-6 shadow-md hover:bg-yellow-300 transition-all text-base flex items-center justify-center gap-2"
-                >
-                  <span>🗂️</span> Ver Historial de Premios
-                </motion.button>
-
-                <motion.button
-                  whileTap={canAnim ? { scale: 0.98 } : undefined}
-                  onClick={handleUpdate}
-                  className="relative w-full bg-gradient-to-r from-gray-950 to-gray-800 text-white p-4 rounded-2xl font-black mt-3 shadow-lg transition-all text-base hover:from-black hover:to-gray-900 overflow-hidden"
-                >
-                  <Shine />
-                  Guardar Cambios ✨
-                </motion.button>
-
-                {message && (
-                  <p className="text-center text-green-700 mt-6 font-black bg-green-50 p-4 rounded-2xl border border-green-100">
-                    {message}
-                  </p>
-                )}
               </motion.div>
+
+              <motion.button
+                initial={canAnim ? { opacity: 0, y: 8 } : false}
+                animate={canAnim ? { opacity: 1, y: 0 } : false}
+                transition={canAnim ? { ...spring, delay: 0.1 } : undefined}
+                whileTap={canAnim ? { scale: 0.97 } : undefined}
+                onClick={loadHistory}
+                className="w-full bg-white p-4 rounded-2xl font-bold text-sm text-gray-600 shadow-[0_2px_16px_rgba(0,0,0,0.04)] flex items-center justify-center gap-2 hover:bg-gray-50 transition"
+              >
+                <span className="text-base">🏆</span> Ver Historial de Premios
+              </motion.button>
+
+              <p className="text-center text-gray-300 text-[10px] font-semibold pt-2">
+                punto IA · Coalición de PyMEs 🇲🇽
+              </p>
             </div>
           )}
 
           {/* Bottom Tabs */}
-          <div className="fixed bottom-6 left-6 right-6 bg-white/80 backdrop-blur-xl border border-white/40 p-2 rounded-[2.5rem] shadow-2xl flex justify-between items-center z-40 ring-1 ring-black/5">
+          <div className="fixed bottom-5 left-5 right-5 bg-white/90 backdrop-blur-2xl border border-gray-200/50 p-1.5 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] flex items-center z-40">
             {[
-              { key: 'points', icon: '⭐', label: 'Puntos' },
-              { key: 'map', icon: '🗺️', label: 'Mapa' },
-              { key: 'profile', icon: '👤', label: 'Perfil' },
+              { key: 'points', label: 'Puntos', isOrb: true },
+              { key: 'map', label: 'Mapa', icon: '📍' },
+              { key: 'profile', label: 'Perfil', icon: '👤' },
             ].map((t) => {
               const active = activeTab === (t.key as 'points' | 'map' | 'profile');
               return (
                 <motion.button
                   key={t.key}
-                  whileTap={canAnim ? { scale: 0.98 } : undefined}
-                  onClick={() => setActiveTab(t.key as 'checkin' | 'points' | 'map' | 'profile')}
-                  className={`flex-1 flex flex-col items-center py-4 rounded-[2rem] transition-all duration-300 ${
-                    active ? 'bg-gray-950 text-white shadow-lg' : 'text-gray-400 hover:bg-white hover:text-gray-700'
+                  whileTap={canAnim ? { scale: 0.96 } : undefined}
+                  onClick={() => setActiveTab(t.key as 'points' | 'map' | 'profile')}
+                  className={`flex-1 flex flex-col items-center py-3 rounded-xl transition-all duration-200 ${
+                    active ? 'bg-gradient-to-br from-gray-900 to-gray-800 text-white shadow-md' : 'text-gray-400'
                   }`}
                 >
-                  <motion.span
-                    animate={active && canAnim ? { y: [0, -2, 0] } : undefined}
-                    transition={active && canAnim ? { duration: 1.6, repeat: Infinity } : undefined}
-                    className="text-xl mb-1"
-                  >
-                    {t.icon}
-                  </motion.span>
-                  <span className="text-[10px] font-black uppercase tracking-widest">{t.label}</span>
+                  {(t as Record<string, unknown>).isOrb ? (
+                    <span className={`w-5 h-5 rounded-full mb-1 ${active ? 'bg-gradient-to-br from-[#ff7a59] to-[#ff3f8e] shadow-[0_0_8px_rgba(255,63,142,0.5)]' : 'bg-gray-300'}`} />
+                  ) : (
+                    <span className="text-base mb-0.5">{(t as Record<string, unknown>).icon as string}</span>
+                  )}
+                  <span className="text-[9px] font-black uppercase tracking-[0.1em]">{t.label}</span>
                 </motion.button>
               );
             })}
