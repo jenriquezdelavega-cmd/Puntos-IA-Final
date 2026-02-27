@@ -458,8 +458,71 @@ export default function Home() {
     const businessParam = `&business_id=${encodeURIComponent(resolvedBusinessId)}`;
     const passUrl = `/pass?customer_id=${encodeURIComponent(customerId)}${label}${businessParam}`;
 
+    const newTab = window.open('about:blank', '_blank');
+    if (!newTab) {
+      alert('No se pudo abrir el pase en una nueva pestaña. Habilita pop-ups para Punto IA e inténtalo de nuevo.');
+      return;
+    }
+
+    try {
+      newTab.document.write(`<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Punto IA · Cargando pase</title>
+    <style>
+      :root { color-scheme: light; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, #ff7a59 0%, #ff3f8e 55%, #f90086 100%);
+        color: #fff;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
+      .card {
+        background: rgba(255,255,255,0.14);
+        border: 1px solid rgba(255,255,255,0.34);
+        backdrop-filter: blur(8px);
+        padding: 20px;
+        border-radius: 20px;
+        text-align: center;
+        width: min(90vw, 340px);
+      }
+      .dots { display: inline-flex; gap: 5px; margin-top: 8px; }
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.8);
+        animation: pulse 1.1s infinite ease-in-out;
+      }
+      .dot:nth-child(2) { animation-delay: .12s; }
+      .dot:nth-child(3) { animation-delay: .24s; }
+      @keyframes pulse { 0%, 80%, 100% { transform: scale(.7); opacity: .4; } 40% { transform: scale(1); opacity: 1; } }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div style="font-size:12px;font-weight:800;letter-spacing:.2em;opacity:.9;">PUNTO IA</div>
+      <h1 style="margin:8px 0 4px;font-size:22px;line-height:1.2;">Preparando tu pase</h1>
+      <p style="margin:0;font-size:13px;opacity:.9;">Estamos cargando tu QR y wallet…</p>
+      <span class="dots" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>
+    </div>
+  </body>
+</html>`);
+      newTab.document.close();
+    } catch {
+      // ignoramos errores de escritura en la pestaña para no bloquear navegación
+    }
+
     const prefetchUrl = `/api/pass/${encodeURIComponent(customerId)}?businessId=${encodeURIComponent(resolvedBusinessId)}`;
-    void fetch(prefetchUrl, { cache: 'no-store' })
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 1000);
+
+    void fetch(prefetchUrl, { cache: 'no-store', signal: controller.signal })
       .then(async (res) => {
         if (!res.ok || typeof window === 'undefined') return;
         const data = await res.json();
@@ -468,12 +531,11 @@ export default function Home() {
           JSON.stringify({ ts: Date.now(), data })
         );
       })
-      .catch(() => undefined);
-
-    const newTab = window.open(passUrl, '_blank', 'noopener,noreferrer');
-    if (!newTab) {
-      alert('No se pudo abrir el pase en una nueva pestaña. Habilita pop-ups para Punto IA e inténtalo de nuevo.');
-    }
+      .catch(() => undefined)
+      .finally(() => {
+        window.clearTimeout(timeout);
+        newTab.location.replace(passUrl);
+      });
   };
 
 
@@ -1067,6 +1129,13 @@ export default function Home() {
                   const showStamps = requiredVisits <= MAX_STAMPS;
                   const stamps = showStamps ? Array.from({ length: requiredVisits }, (_, i) => i < visits) : [];
                   const periodInfo = formatRewardPeriod(m.rewardPeriod as string);
+                  const membershipTenantId = String(m.tenantId || '').trim();
+                  const tenantFromMembership = tenants.find((t) => String(t.id || '').trim() === membershipTenantId);
+                  const membershipLat = Number(tenantFromMembership?.lat);
+                  const membershipLng = Number(tenantFromMembership?.lng);
+                  const membershipMapsHref = Number.isFinite(membershipLat) && Number.isFinite(membershipLng)
+                    ? `https://www.google.com/maps/search/?api=1&query=${membershipLat},${membershipLng}`
+                    : '';
 
                   return (
                     <motion.div
@@ -1211,6 +1280,7 @@ export default function Home() {
                         <div className="flex gap-2">
                           {[
                             { icon: '🎟️', label: 'Mi Pase', action: (e: React.MouseEvent) => { e.stopPropagation(); openPass(String(m?.name || '').trim(), String(m?.tenantId || '').trim()); } },
+                            ...(membershipMapsHref ? [{ icon: '🗺️', label: 'Ubicación', action: null, href: membershipMapsHref }] : []),
                             ...(m.instagram ? [{ icon: '📸', label: 'Instagram', action: null, href: `https://instagram.com/${String(m.instagram).replace('@', '')}` }] : []),
                           ].map((btn) => btn.href ? (
                             <a
@@ -1349,7 +1419,7 @@ export default function Home() {
                                           rel="noopener noreferrer"
                                           className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl font-bold text-[11px] no-underline text-center"
                                         >
-                                          📍 Cómo llegar
+                                          🗺️ Ubicación
                                         </a>
                                       )}
                                       {ig && (
