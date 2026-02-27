@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { getTenantWalletStyle, upsertTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 import { logApiError, logApiEvent } from '@/app/lib/api-log';
-import { ensureWalletRegistrationsTable, touchWalletPassRegistrations } from '@/app/lib/apple-wallet-webservice';
+import { touchWalletPassRegistrations } from '@/app/lib/apple-wallet-webservice';
 import { pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
 
 export async function POST(request: Request) {
@@ -58,7 +58,6 @@ export async function POST(request: Request) {
     try {
       const passTypeIdentifier = String(process.env.APPLE_PASS_TYPE_ID || '').trim();
       if (passTypeIdentifier) {
-        await ensureWalletRegistrationsTable(prisma);
         const regs = await prisma.$queryRawUnsafe<Array<{ push_token: string; serial_number: string }>>(
           `SELECT DISTINCT push_token, serial_number FROM apple_wallet_registrations WHERE serial_number LIKE $1 AND pass_type_identifier = $2`,
           `%-${tenantId}`, passTypeIdentifier

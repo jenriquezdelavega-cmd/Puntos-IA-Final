@@ -75,7 +75,6 @@ export async function upsertWalletRegistration(prisma: PrismaClient, params: {
   pushToken: string;
   authToken: string;
 }) {
-  await ensureWalletRegistrationsTable(prisma);
   await prisma.$executeRawUnsafe(
     `
       INSERT INTO ${TABLE_NAME}
@@ -100,7 +99,6 @@ export async function deleteWalletRegistration(prisma: PrismaClient, params: {
   passTypeIdentifier: string;
   deviceLibraryIdentifier: string;
 }) {
-  await ensureWalletRegistrationsTable(prisma);
   await prisma.$executeRawUnsafe(
     `
       DELETE FROM ${TABLE_NAME}
@@ -119,8 +117,6 @@ export async function listUpdatedSerialsForDevice(prisma: PrismaClient, params: 
   deviceLibraryIdentifier: string;
   passesUpdatedSince?: string;
 }) {
-  await ensureWalletRegistrationsTable(prisma);
-
   const rows = await prisma.$queryRawUnsafe<Array<{ serial_number: string; updated_at: Date }>>(
     `
       SELECT serial_number, updated_at
@@ -145,8 +141,6 @@ export async function touchWalletPassRegistrations(prisma: PrismaClient, params:
   serialNumber: string;
   passTypeIdentifier?: string;
 }) {
-  await ensureWalletRegistrationsTable(prisma);
-
   if (params.passTypeIdentifier) {
     const updatedWithPassType = await prisma.$executeRawUnsafe(
       `
