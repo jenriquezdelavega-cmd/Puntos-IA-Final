@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { logApiError, logApiEvent } from '@/app/lib/api-log';
-import { ensureWalletRegistrationsTable } from '@/app/lib/apple-wallet-webservice';
 import { pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
 
 const MAX_PUSHES_PER_WEEK = 2;
@@ -46,8 +45,6 @@ export async function POST(request: Request) {
       update: { lastPushMessage: trimmedMessage },
       create: { tenantId, lastPushMessage: trimmedMessage },
     });
-
-    await ensureWalletRegistrationsTable(prisma);
 
     const registrations = await prisma.$queryRawUnsafe<Array<{ push_token: string; serial_number: string }>>(
       `SELECT DISTINCT push_token, serial_number

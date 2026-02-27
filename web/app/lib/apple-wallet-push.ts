@@ -1,6 +1,5 @@
 import { connect } from 'http2';
 import { PrismaClient } from '@prisma/client';
-import { ensureWalletRegistrationsTable } from '@/app/lib/apple-wallet-webservice';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { mkdtemp, writeFile, readFile, rm } from 'fs/promises';
@@ -96,8 +95,6 @@ export async function listWalletPushTokens(prisma: PrismaClient, params: {
   serialNumber: string;
   passTypeIdentifier?: string;
 }) {
-  await ensureWalletRegistrationsTable(prisma);
-
   const rows = params.passTypeIdentifier
     ? await prisma.$queryRawUnsafe<Array<{ push_token: string }>>(
       `
@@ -124,8 +121,6 @@ export async function listWalletPushTokens(prisma: PrismaClient, params: {
 }
 
 export async function deleteWalletRegistrationsByPushToken(prisma: PrismaClient, pushToken: string) {
-  await ensureWalletRegistrationsTable(prisma);
-
   await prisma.$executeRawUnsafe(
     `
       DELETE FROM ${TABLE_NAME}

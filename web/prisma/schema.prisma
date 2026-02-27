@@ -125,6 +125,19 @@ model Redemption {
   user      User     @relation(fields: [userId], references: [id])
 }
 
+model AppleWalletRegistration {
+  serialNumber            String   @map("serial_number")
+  passTypeIdentifier      String   @map("pass_type_identifier")
+  deviceLibraryIdentifier String   @map("device_library_identifier")
+  pushToken               String   @map("push_token")
+  authToken               String   @map("auth_token")
+  updatedAt               DateTime @default(now()) @map("updated_at")
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  @@id([serialNumber, passTypeIdentifier, deviceLibraryIdentifier])
+  @@map("apple_wallet_registrations")
+}
+
 model TenantPushLog {
   id        String   @id @default(uuid())
   tenantId  String
