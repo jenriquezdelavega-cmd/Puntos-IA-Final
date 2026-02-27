@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
@@ -237,8 +237,6 @@ export default function Home() {
   const [leadStatus, setLeadStatus] = useState('');
   const [showClientPortal, setShowClientPortal] = useState(false);
 
-  const lastPassOpenAtRef = useRef(0);
-
   const handleLeadField = (key: keyof BusinessLeadForm, value: string) => {
     setLeadForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -406,10 +404,6 @@ export default function Home() {
 
 
   const openPass = (tenantName?: string, tenantId?: string) => {
-    const now = Date.now();
-    if (now - lastPassOpenAtRef.current < 900) return;
-    lastPassOpenAtRef.current = now;
-
     if (!user?.id) {
       alert('Primero inicia sesión para ver tu pase.');
       return;
