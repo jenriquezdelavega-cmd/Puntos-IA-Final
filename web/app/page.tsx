@@ -1241,10 +1241,9 @@ export default function Home() {
                   const isWinner = visits >= requiredVisits;
                   const remaining = Math.max(requiredVisits - visits, 0);
 
-                  const stamps = [];
-                  for (let i = 0; i < requiredVisits; i++) {
-                    stamps.push(i < visits);
-                  }
+                  const MAX_STAMPS = 20;
+                  const showStamps = requiredVisits <= MAX_STAMPS;
+                  const stamps = showStamps ? Array.from({ length: requiredVisits }, (_, i) => i < visits) : [];
 
                   return (
                     <motion.div
@@ -1279,23 +1278,32 @@ export default function Home() {
                       </div>
 
                       <div className="p-5">
-                        <div className="flex flex-wrap gap-1.5 justify-center mb-4">
-                          {stamps.map((filled, i) => (
-                            <motion.div
-                              key={i}
-                              initial={canAnim ? { scale: 0 } : false}
-                              animate={canAnim ? { scale: 1 } : false}
-                              transition={canAnim ? { ...spring, delay: 0.15 + i * 0.03 } : undefined}
-                              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all ${
-                                filled
-                                  ? 'bg-gradient-to-br from-orange-400 via-pink-500 to-purple-500 text-white shadow-[0_2px_8px_rgba(236,72,153,0.4)]'
-                                  : 'bg-gray-100 text-gray-300 border border-gray-200'
-                              }`}
-                            >
-                              {filled ? '✓' : (i + 1)}
-                            </motion.div>
-                          ))}
-                        </div>
+                        {showStamps ? (
+                          <div className="flex flex-wrap gap-1.5 justify-center mb-4">
+                            {stamps.map((filled, i) => (
+                              <motion.div
+                                key={i}
+                                initial={canAnim ? { scale: 0 } : false}
+                                animate={canAnim ? { scale: 1 } : false}
+                                transition={canAnim ? { ...spring, delay: 0.15 + i * 0.03 } : undefined}
+                                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all ${
+                                  filled
+                                    ? 'bg-gradient-to-br from-orange-400 via-pink-500 to-purple-500 text-white shadow-[0_2px_8px_rgba(236,72,153,0.4)]'
+                                    : 'bg-gray-100 text-gray-300 border border-gray-200'
+                                }`}
+                              >
+                                {filled ? '✓' : (i + 1)}
+                              </motion.div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-3 mb-4 py-2">
+                            <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-600">{visits}</span>
+                            <span className="text-gray-400 text-lg font-bold">/</span>
+                            <span className="text-4xl font-black text-gray-300">{requiredVisits}</span>
+                            <span className="text-xs font-black text-gray-400 uppercase tracking-wider ml-1">visitas</span>
+                          </div>
+                        )}
 
                         <div className="relative w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-4">
                           <motion.div
