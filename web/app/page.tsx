@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
@@ -237,6 +237,8 @@ export default function Home() {
   const [leadStatus, setLeadStatus] = useState('');
   const [showClientPortal, setShowClientPortal] = useState(false);
 
+  const lastPassOpenAtRef = useRef(0);
+
   const handleLeadField = (key: keyof BusinessLeadForm, value: string) => {
     setLeadForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -404,6 +406,10 @@ export default function Home() {
 
 
   const openPass = (tenantName?: string, tenantId?: string) => {
+    const now = Date.now();
+    if (now - lastPassOpenAtRef.current < 900) return;
+    lastPassOpenAtRef.current = now;
+
     if (!user?.id) {
       alert('Primero inicia sesión para ver tu pase.');
       return;
@@ -420,9 +426,6 @@ export default function Home() {
       ? user.memberships.find((m: Record<string, unknown>) => String(m?.name || '').trim().toLowerCase() === explicitBusinessName.toLowerCase())
       : null;
 
-    const selectedBusinessId = String(selectedBusiness?.id || '').trim();
-    const selectedBusinessName = String(selectedBusiness?.name || '').trim();
-
     const storedBusinessId =
       typeof window !== 'undefined' ? String(localStorage.getItem('punto_last_business_id') || '').trim() : '';
     const storedBusinessName =
@@ -436,7 +439,6 @@ export default function Home() {
       explicitBusinessId ||
       String(matchedByName?.id || '').trim() ||
       String(matchedMembershipByName?.tenantId || '').trim() ||
-      selectedBusinessId ||
       storedBusinessId ||
       String(fallbackMembership?.tenantId || '').trim();
 
@@ -444,7 +446,6 @@ export default function Home() {
       explicitBusinessName ||
       String(matchedByName?.name || '').trim() ||
       String(matchedMembershipByName?.name || '').trim() ||
-      selectedBusinessName ||
       storedBusinessName ||
       String(fallbackMembership?.name || '').trim();
 
@@ -462,10 +463,14 @@ export default function Home() {
     const businessParam = `&business_id=${encodeURIComponent(resolvedBusinessId)}`;
     const passUrl = `/pass?customer_id=${encodeURIComponent(user.id)}${label}${businessParam}`;
 
-    const newTab = window.open(passUrl, '_blank', 'noopener,noreferrer');
-    if (!newTab) {
-      window.location.href = passUrl;
+    const popup = window.open('', '_blank', 'noopener,noreferrer');
+    if (!popup) {
+      alert('No se pudo abrir el pase en una nueva pestaña. Habilita pop-ups para Punto IA e inténtalo de nuevo.');
+      return;
     }
+
+    popup.opener = null;
+    popup.location.href = passUrl;
   };
 
 
