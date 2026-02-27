@@ -15,18 +15,6 @@ const BusinessMap = dynamic(() => import('./components/BusinessMap'), {
   ),
 });
 
-// Scanner: dinámica para evitar broncas en build/SSR
-const QRScanner = dynamic(() => import('@yudiel/react-qr-scanner').then((m) => m.Scanner), {
-  ssr: false,
-  loading: () => (
-    <div className="flex-1 flex items-center justify-center text-white/80">
-      <div className="text-center">
-        <div className="text-4xl mb-3">📷</div>
-        <div className="text-xs font-black uppercase tracking-widest">Cargando cámara…</div>
-      </div>
-    </div>
-  ),
-});
 
 type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
 
@@ -221,8 +209,7 @@ export default function Home() {
   // ✅ ESTE ERA EL QUE TE FALTABA (y por eso truena el build)
   const [view, setView] = useState<ViewState>('WELCOME');
 
-  // ✅ Tabs separados: Check-In (primero), Puntos, Mapa, Perfil
-  const [activeTab, setActiveTab] = useState<'checkin' | 'points' | 'map' | 'profile'>('checkin');
+  const [activeTab, setActiveTab] = useState<'points' | 'map' | 'profile'>('points');
 
   const [user, setUser] = useState<Record<string, unknown> | null>(null);
 
@@ -233,12 +220,8 @@ export default function Home() {
   const [gender, setGender] = useState('');
   const [birthDate, setBirthDate] = useState('');
 
-  const [scanning, setScanning] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const [manualCode, setManualCode] = useState('');
-  const [pendingCode, setPendingCode] = useState<string | null>(null);
 
   const [prizeCode, setPrizeCode] = useState<{ code: string; tenant: string } | null>(null);
 
@@ -304,11 +287,6 @@ export default function Home() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const p = new URLSearchParams(window.location.search);
-      const c = p.get('code');
-      if (c) {
-        setPendingCode(c);
-        if (!user) setMessage('👋 Código detectado.');
-      }
       if (p.get('clientes') === '1') {
         setShowClientPortal(true);
       }
@@ -316,15 +294,6 @@ export default function Home() {
     loadMapData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (user && pendingCode) {
-      handleScan(pendingCode);
-      setPendingCode(null);
-      if (typeof window !== 'undefined') window.history.replaceState({}, '', '/');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, pendingCode]);
 
   const loadMapData = async () => {
     try {
@@ -383,8 +352,7 @@ export default function Home() {
         if (data.birthDate) setBirthDate(data.birthDate.split('T')[0]);
         else setBirthDate('');
 
-        // ✅ Entra a Cliente y abre CHECK-IN primero
-        setActiveTab('checkin');
+        setActiveTab('points');
         setView('APP');
       } else setMessage('⚠️ ' + data.error);
     } catch {
@@ -438,30 +406,6 @@ export default function Home() {
       }
     } catch {
       setMessage('🔥 Error de red');
-    }
-  };
-
-  const handleScan = async (result: string) => {
-    if (!result) return;
-    setScanning(false);
-
-    let finalCode = result;
-    if (result.includes('code=')) finalCode = result.split('code=')[1].split('&')[0];
-
-    try {
-      const res = await fetch('/api/check-in/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user?.id, code: finalCode }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        alert(data.message);
-        handleLogin();
-        setManualCode('');
-      } else alert('❌ ' + data.error);
-    } catch {
-      if (user) alert('Error');
     }
   };
 
@@ -777,17 +721,6 @@ export default function Home() {
             >
               Un solo pase digital para acumular puntos en cafeterías, taquerías, estéticas y más negocios cerca de ti.
             </motion.p>
-
-            {pendingCode && (
-              <motion.div
-                initial={canAnim ? { opacity: 0, y: 10 } : false}
-                animate={canAnim ? { opacity: 1, y: 0 } : false}
-                transition={canAnim ? { ...spring } : undefined}
-                className="bg-white/20 p-4 rounded-2xl mb-4 border border-white/30 backdrop-blur-sm w-full text-center"
-              >
-                <p className="font-black">🎉 ¡Código detectado!</p>
-              </motion.div>
-            )}
 
             <motion.div
               initial={canAnim ? { opacity: 0, y: 10 } : false}
@@ -1172,57 +1105,6 @@ export default function Home() {
 
           {/* Body */}
           <div className="p-6">
-            {/* TAB: CHECK-IN */}
-            {activeTab === 'checkin' && !scanning && (
-              <div className="flex flex-col gap-6">
-                <div className="bg-white border border-gray-100 rounded-3xl p-5 md:p-6 shadow-md relative overflow-hidden">
-                  <span className="pointer-events-none absolute -top-20 -right-20 h-40 w-40 rounded-full bg-pink-100/50 blur-3xl" />
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-black text-gray-900">Hacer Check-In</h2>
-                      <p className="text-sm text-gray-600 mt-1">Escanea el QR del negocio para registrar tu visita.</p>
-                    </div>
-
-                    <motion.button
-                      whileTap={canAnim ? { scale: 0.98 } : undefined}
-                      whileHover={canAnim ? { y: -1 } : undefined}
-                      onClick={() => setScanning(true)}
-                      className="shrink-0 bg-gradient-to-r from-gray-950 to-gray-800 text-white font-black px-5 py-3 rounded-2xl shadow-md"
-                    >
-                      Escanear QR
-                    </motion.button>
-                  </div>
-                </div>
-
-                <div className="bg-white border border-gray-100 rounded-3xl p-5 md:p-6 shadow-md relative overflow-hidden">
-                  <span className="pointer-events-none absolute -bottom-24 -left-24 h-44 w-44 rounded-full bg-orange-100/40 blur-3xl" />
-                  <div>
-                    <h3 className="text-base font-black text-gray-900">Escribir manual</h3>
-                    <p className="text-sm text-gray-600 mt-1">Si no puedes escanear, escribe el código del QR.</p>
-                  </div>
-
-                  <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                    <input
-                      value={manualCode}
-                      onChange={(e) => setManualCode(e.target.value)}
-                      placeholder="Ej. ABCD-1234-EFGH"
-                      className="w-full sm:flex-1 px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-pink-200"
-                    />
-                    <motion.button
-                      whileTap={canAnim ? { scale: 0.98 } : undefined}
-                      onClick={() => {
-                        if (!manualCode.trim()) return;
-                        handleScan(manualCode.trim());
-                      }}
-                      className="bg-gradient-to-r from-gray-950 to-gray-800 text-white font-black px-6 py-3 rounded-2xl shadow-sm"
-                    >
-                      OK
-                    </motion.button>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* TAB: PUNTOS */}
             {activeTab === 'points' && (
               <div className="space-y-6">
@@ -1444,20 +1326,6 @@ export default function Home() {
             )}
           </div>
 
-          {/* Scanner Overlay */}
-          {scanning && (
-            <div className="fixed inset-0 bg-black z-50 flex flex-col">
-              <QRScanner onScan={(r: Array<{ rawValue: string }> | undefined) => r?.[0] && handleScan(r[0].rawValue)} onError={() => {}} />
-              <motion.button
-                whileTap={canAnim ? { scale: 0.98 } : undefined}
-                onClick={() => setScanning(false)}
-                className="absolute bottom-12 left-8 right-8 bg-white/20 backdrop-blur-md text-white p-5 rounded-3xl font-black border border-white/20 shadow-2xl"
-              >
-                Cancelar Escaneo
-              </motion.button>
-            </div>
-          )}
-
           {/* TAB: PERFIL */}
           {activeTab === 'profile' && (
             <div className="p-6 pt-0">
@@ -1547,12 +1415,11 @@ export default function Home() {
           {/* Bottom Tabs */}
           <div className="fixed bottom-6 left-6 right-6 bg-white/80 backdrop-blur-xl border border-white/40 p-2 rounded-[2.5rem] shadow-2xl flex justify-between items-center z-40 ring-1 ring-black/5">
             {[
-              { key: 'checkin', icon: '⚡', label: 'Check-In' },
-              { key: 'points', icon: '🎯', label: 'Puntos' },
-              { key: 'map', icon: '🧭', label: 'Mapa' },
-              { key: 'profile', icon: '✨', label: 'Perfil' },
+              { key: 'points', icon: '⭐', label: 'Puntos' },
+              { key: 'map', icon: '🗺️', label: 'Mapa' },
+              { key: 'profile', icon: '👤', label: 'Perfil' },
             ].map((t) => {
-              const active = activeTab === (t.key as 'checkin' | 'points' | 'map' | 'profile');
+              const active = activeTab === (t.key as 'points' | 'map' | 'profile');
               return (
                 <motion.button
                   key={t.key}
