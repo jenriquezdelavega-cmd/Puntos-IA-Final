@@ -12,7 +12,8 @@ export async function GET() {
         lng: true,
         address: true,
         prize: true,
-        instagram: true
+        instagram: true,
+        logoData: true,
       }
     });
     return NextResponse.json({ tenants });

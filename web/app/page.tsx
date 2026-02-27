@@ -1280,8 +1280,8 @@ export default function Home() {
                         <div className="flex gap-2">
                           {[
                             { icon: '🎟️', label: 'Mi Pase', action: (e: React.MouseEvent) => { e.stopPropagation(); openPass(String(m?.name || '').trim(), String(m?.tenantId || '').trim()); } },
-                            ...(membershipMapsHref ? [{ icon: '🗺️', label: 'Ubicación', action: null, href: membershipMapsHref }] : []),
-                            ...(m.instagram ? [{ icon: '📸', label: 'Instagram', action: null, href: `https://instagram.com/${String(m.instagram).replace('@', '')}` }] : []),
+                            ...(membershipMapsHref ? [{ icon: '🗺️', label: 'Ubicacion', action: null, href: membershipMapsHref }] : []),
+                            ...(m.instagram ? [{ icon: '📸', label: 'IG', action: null, href: `https://instagram.com/${String(m.instagram).replace('@', '')}` }] : []),
                           ].map((btn) => btn.href ? (
                             <a
                               key={btn.label}
@@ -1374,6 +1374,7 @@ export default function Home() {
                               const ig = String(t.instagram || '').trim();
                               const lat = Number(t.lat);
                               const lng = Number(t.lng);
+                              const logoData = String(t.logoData || '').trim();
 
                               return (
                                 <motion.div
@@ -1383,8 +1384,12 @@ export default function Home() {
                                   className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.03)] overflow-hidden cursor-pointer"
                                 >
                                   <div className="px-4 py-3 flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gray-900 to-gray-700 flex items-center justify-center text-white font-black text-xs shrink-0">
-                                      {String(t.name || '').charAt(0)}
+                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gray-900 to-gray-700 overflow-hidden flex items-center justify-center text-white font-black text-xs shrink-0">
+                                      {logoData ? (
+                                        <img src={logoData} alt={`Logo de ${String(t.name || '')}`} className="w-full h-full object-cover" />
+                                      ) : (
+                                        String(t.name || '').charAt(0)
+                                      )}
                                     </div>
                                     <div className="min-w-0 flex-1">
                                       <p className="text-[13px] font-black text-gray-900 truncate">{String(t.name)}</p>
@@ -1409,7 +1414,7 @@ export default function Home() {
                                         onClick={(e) => { e.stopPropagation(); openPass(String(t.name), tid); }}
                                         className="flex-1 bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e] text-white py-2.5 rounded-xl font-black text-[11px] shadow-sm"
                                       >
-                                        🎟️ Crear Pase
+                                        🎟️ Mi Pase
                                       </button>
                                       {Number.isFinite(lat) && Number.isFinite(lng) && (
                                         <a
@@ -1419,7 +1424,7 @@ export default function Home() {
                                           rel="noopener noreferrer"
                                           className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl font-bold text-[11px] no-underline text-center"
                                         >
-                                          🗺️ Ubicación
+                                          🗺️ Ubicacion
                                         </a>
                                       )}
                                       {ig && (
@@ -1430,7 +1435,7 @@ export default function Home() {
                                           rel="noopener noreferrer"
                                           className="bg-gray-100 text-gray-600 px-3 py-2.5 rounded-xl font-bold text-[11px] no-underline"
                                         >
-                                          📸
+                                          📸 IG
                                         </a>
                                       )}
                                     </motion.div>
