@@ -398,12 +398,12 @@ function buildStampBubbles(currentVisits: number, requiredVisits: number) {
   return rows.join('\n');
 }
 
-function formatPeriodLabel(period: string, periodKey: string) {
+function formatPeriodLabel(period: string) {
   switch (period) {
-    case 'MONTHLY': return `Mensual (${periodKey})`;
-    case 'QUARTERLY': return `Trimestral (${periodKey})`;
-    case 'SEMESTER': return `Semestral (${periodKey})`;
-    case 'ANNUAL': return `Anual (${periodKey})`;
+    case 'MONTHLY': return 'Mensual';
+    case 'QUARTERLY': return 'Trimestral';
+    case 'SEMESTER': return 'Semestral';
+    case 'ANNUAL': return 'Anual';
     default: return 'Sin límite';
   }
 }
@@ -547,7 +547,7 @@ async function createPassPackage(params: {
         ],
         secondaryFields: [
           { key: 'client', label: 'CLIENTE', value: params.customerName || 'Cliente' },
-          { key: 'period', label: 'PERIODO', value: formatPeriodLabel(params.rewardPeriod, params.periodKey) },
+          { key: 'period', label: 'PERIODO', value: formatPeriodLabel(params.rewardPeriod) },
         ],
         auxiliaryFields: [
           { key: 'prize', label: '🎁 TU PREMIO', value: params.prize },
