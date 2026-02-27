@@ -453,9 +453,22 @@ export default function Home() {
       if (resolvedBusinessName) localStorage.setItem('punto_last_business_name', resolvedBusinessName);
     }
 
+    const customerId = String(user.id);
     const label = resolvedBusinessName ? `&from=${encodeURIComponent(resolvedBusinessName)}` : '';
     const businessParam = `&business_id=${encodeURIComponent(resolvedBusinessId)}`;
-    const passUrl = `/pass?customer_id=${encodeURIComponent(user.id)}${label}${businessParam}`;
+    const passUrl = `/pass?customer_id=${encodeURIComponent(customerId)}${label}${businessParam}`;
+
+    const prefetchUrl = `/api/pass/${encodeURIComponent(customerId)}?businessId=${encodeURIComponent(resolvedBusinessId)}`;
+    void fetch(prefetchUrl, { cache: 'no-store' })
+      .then(async (res) => {
+        if (!res.ok || typeof window === 'undefined') return;
+        const data = await res.json();
+        localStorage.setItem(
+          `punto_pass_cache:${customerId}:${resolvedBusinessId}`,
+          JSON.stringify({ ts: Date.now(), data })
+        );
+      })
+      .catch(() => undefined);
 
     const newTab = window.open(passUrl, '_blank', 'noopener,noreferrer');
     if (!newTab) {
