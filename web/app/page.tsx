@@ -459,7 +459,7 @@ export default function Home() {
 
     const newTab = window.open(passUrl, '_blank', 'noopener,noreferrer');
     if (!newTab) {
-      window.location.href = passUrl;
+      alert('No se pudo abrir el pase en una nueva pestaña. Habilita pop-ups para Punto IA e inténtalo de nuevo.');
     }
   };
 
