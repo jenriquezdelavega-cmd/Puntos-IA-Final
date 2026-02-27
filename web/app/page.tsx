@@ -420,9 +420,6 @@ export default function Home() {
       ? user.memberships.find((m: Record<string, unknown>) => String(m?.name || '').trim().toLowerCase() === explicitBusinessName.toLowerCase())
       : null;
 
-    const selectedBusinessId = String(selectedBusiness?.id || '').trim();
-    const selectedBusinessName = String(selectedBusiness?.name || '').trim();
-
     const storedBusinessId =
       typeof window !== 'undefined' ? String(localStorage.getItem('punto_last_business_id') || '').trim() : '';
     const storedBusinessName =
@@ -436,7 +433,6 @@ export default function Home() {
       explicitBusinessId ||
       String(matchedByName?.id || '').trim() ||
       String(matchedMembershipByName?.tenantId || '').trim() ||
-      selectedBusinessId ||
       storedBusinessId ||
       String(fallbackMembership?.tenantId || '').trim();
 
@@ -444,7 +440,6 @@ export default function Home() {
       explicitBusinessName ||
       String(matchedByName?.name || '').trim() ||
       String(matchedMembershipByName?.name || '').trim() ||
-      selectedBusinessName ||
       storedBusinessName ||
       String(fallbackMembership?.name || '').trim();
 
@@ -462,10 +457,13 @@ export default function Home() {
     const businessParam = `&business_id=${encodeURIComponent(resolvedBusinessId)}`;
     const passUrl = `/pass?customer_id=${encodeURIComponent(user.id)}${label}${businessParam}`;
 
-    const newTab = window.open(passUrl, '_blank', 'noopener,noreferrer');
-    if (!newTab) {
-      window.location.href = passUrl;
+    const newTab = window.open(passUrl, '_blank');
+    if (newTab) {
+      newTab.opener = null;
+      return;
     }
+
+    window.location.href = passUrl;
   };
 
 
