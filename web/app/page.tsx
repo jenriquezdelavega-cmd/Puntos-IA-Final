@@ -1129,6 +1129,13 @@ export default function Home() {
                   const showStamps = requiredVisits <= MAX_STAMPS;
                   const stamps = showStamps ? Array.from({ length: requiredVisits }, (_, i) => i < visits) : [];
                   const periodInfo = formatRewardPeriod(m.rewardPeriod as string);
+                  const membershipTenantId = String(m.tenantId || '').trim();
+                  const tenantFromMembership = tenants.find((t) => String(t.id || '').trim() === membershipTenantId);
+                  const membershipLat = Number(tenantFromMembership?.lat);
+                  const membershipLng = Number(tenantFromMembership?.lng);
+                  const membershipMapsHref = Number.isFinite(membershipLat) && Number.isFinite(membershipLng)
+                    ? `https://www.google.com/maps/search/?api=1&query=${membershipLat},${membershipLng}`
+                    : '';
 
                   return (
                     <motion.div
@@ -1273,6 +1280,7 @@ export default function Home() {
                         <div className="flex gap-2">
                           {[
                             { icon: '🎟️', label: 'Mi Pase', action: (e: React.MouseEvent) => { e.stopPropagation(); openPass(String(m?.name || '').trim(), String(m?.tenantId || '').trim()); } },
+                            ...(membershipMapsHref ? [{ icon: '🗺️', label: 'Ubicación', action: null, href: membershipMapsHref }] : []),
                             ...(m.instagram ? [{ icon: '📸', label: 'Instagram', action: null, href: `https://instagram.com/${String(m.instagram).replace('@', '')}` }] : []),
                           ].map((btn) => btn.href ? (
                             <a
@@ -1411,7 +1419,7 @@ export default function Home() {
                                           rel="noopener noreferrer"
                                           className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl font-bold text-[11px] no-underline text-center"
                                         >
-                                          📍 Cómo llegar
+                                          🗺️ Ubicación
                                         </a>
                                       )}
                                       {ig && (
