@@ -2,18 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
-const BusinessMap = dynamic(() => import('./components/BusinessMap'), {
-  ssr: false,
-  loading: () => (
-    <div className="h-full w-full bg-gray-50 flex flex-col items-center justify-center text-gray-400 animate-pulse">
-      <span className="text-4xl mb-2">🗺️</span>
-      <span className="text-xs font-black uppercase tracking-widest">Cargando...</span>
-    </div>
-  ),
-});
 
 
 type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
@@ -209,7 +199,7 @@ export default function Home() {
   // ✅ ESTE ERA EL QUE TE FALTABA (y por eso truena el build)
   const [view, setView] = useState<ViewState>('WELCOME');
 
-  const [activeTab, setActiveTab] = useState<'points' | 'map' | 'profile'>('points');
+  const [activeTab, setActiveTab] = useState<'points' | 'aliados' | 'profile'>('points');
 
   const [user, setUser] = useState<Record<string, unknown> | null>(null);
 
@@ -226,8 +216,8 @@ export default function Home() {
   const [prizeCode, setPrizeCode] = useState<{ code: string; tenant: string } | null>(null);
 
   const [tenants, setTenants] = useState<Record<string, unknown>[]>([]);
-  const [mapFocus, setMapFocus] = useState<[number, number] | null>(null);
-  const [selectedBusiness, setSelectedBusiness] = useState<{ id: string; name: string } | null>(null);
+  const [aliadosSearch, setAliadosSearch] = useState('');
+  const [expandedAliadoId, setExpandedAliadoId] = useState<string | null>(null);
 
 
   const [showTutorial, setShowTutorial] = useState(false);
@@ -291,29 +281,15 @@ export default function Home() {
         setShowClientPortal(true);
       }
     }
-    loadMapData();
+    loadTenants();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadMapData = async () => {
+  const loadTenants = async () => {
     try {
       const res = await fetch('/api/map/tenants');
       const d = await res.json();
-      if (d.tenants) {
-        setTenants(d.tenants);
-
-        if (!mapFocus) {
-          const coords = (d.tenants as Record<string, unknown>[])
-            .filter((t) => typeof t?.lat === 'number' && typeof t?.lng === 'number')
-            .map((t) => [t.lat as number, t.lng as number] as [number, number]);
-
-          if (coords.length) {
-            const avgLat = coords.reduce((acc, c) => acc + c[0], 0) / coords.length;
-            const avgLng = coords.reduce((acc, c) => acc + c[1], 0) / coords.length;
-            setMapFocus([avgLat, avgLng]);
-          }
-        }
-      }
+      if (d.tenants) setTenants(d.tenants);
     } catch {}
   };
 
@@ -425,21 +401,6 @@ export default function Home() {
     }
   };
 
-  const goToBusinessMap = (tName: string) => {
-    const normalizedName = String(tName || '').trim().toLowerCase();
-    const target = tenants.find((t) => String(t?.name || '').trim().toLowerCase() === normalizedName);
-
-    const lat = Number(target?.lat);
-    const lng = Number(target?.lng);
-
-    if (target && Number.isFinite(lat) && Number.isFinite(lng)) {
-      setMapFocus([lat, lng]);
-      setSelectedBusiness({ id: String(target.id || ''), name: String(target.name || '') });
-      setActiveTab('map');
-    } else {
-      alert('Ubicación no disponible.');
-    }
-  };
 
 
   const openPass = (tenantName?: string, tenantId?: string) => {
@@ -1241,9 +1202,8 @@ export default function Home() {
 
                         <div className="flex gap-2">
                           {[
-                            { icon: '📍', label: 'Mapa', action: (e: React.MouseEvent) => { e.stopPropagation(); goToBusinessMap(m.name as string); } },
-                            { icon: '🎟️', label: 'Pase', action: (e: React.MouseEvent) => { e.stopPropagation(); openPass(String(m?.name || '').trim(), String(m?.tenantId || '').trim()); } },
-                            ...(m.instagram ? [{ icon: '📸', label: 'IG', action: null, href: `https://instagram.com/${String(m.instagram).replace('@', '')}` }] : []),
+                            { icon: '🎟️', label: 'Mi Pase', action: (e: React.MouseEvent) => { e.stopPropagation(); openPass(String(m?.name || '').trim(), String(m?.tenantId || '').trim()); } },
+                            ...(m.instagram ? [{ icon: '📸', label: 'Instagram', action: null, href: `https://instagram.com/${String(m.instagram).replace('@', '')}` }] : []),
                           ].map((btn) => btn.href ? (
                             <a
                               key={btn.label}
@@ -1273,42 +1233,141 @@ export default function Home() {
               </div>
             )}
 
-            {/* TAB: MAPA */}
-            {activeTab === 'map' && (
-              <motion.div
-                initial={canAnim ? { opacity: 0, y: 10 } : false}
-                animate={canAnim ? { opacity: 1, y: 0 } : false}
-                transition={canAnim ? { ...spring } : undefined}
-                className="space-y-4"
-              >
-                <div className="flex items-center justify-between">
+            {/* TAB: ALIADOS */}
+            {activeTab === 'aliados' && (() => {
+              const q = aliadosSearch.trim().toLowerCase();
+              const filtered = tenants.filter((t) =>
+                !q || String(t.name || '').toLowerCase().includes(q) ||
+                String(t.address || '').toLowerCase().includes(q) ||
+                String(t.prize || '').toLowerCase().includes(q)
+              );
+              const sorted = [...filtered].sort((a, b) =>
+                String(a.name || '').localeCompare(String(b.name || ''), 'es')
+              );
+              const grouped: Record<string, typeof sorted> = {};
+              for (const t of sorted) {
+                const letter = (String(t.name || '')[0] || '#').toUpperCase();
+                if (!grouped[letter]) grouped[letter] = [];
+                grouped[letter].push(t);
+              }
+              const letters = Object.keys(grouped).sort((a, b) => a.localeCompare(b, 'es'));
+
+              return (
+                <motion.div
+                  initial={canAnim ? { opacity: 0, y: 10 } : false}
+                  animate={canAnim ? { opacity: 1, y: 0 } : false}
+                  transition={canAnim ? { ...spring } : undefined}
+                  className="space-y-4"
+                >
                   <div>
-                    <h2 className="text-lg font-black text-gray-900 tracking-tight">Negocios aliados</h2>
-                    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">{tenants.length} negocio{tenants.length === 1 ? '' : 's'} en la coalición</p>
+                    <h2 className="text-lg font-black text-gray-900 tracking-tight">Aliados</h2>
+                    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">{tenants.length} negocio{tenants.length === 1 ? '' : 's'} en la coalición Punto IA</p>
                   </div>
-                  {selectedBusiness && (
-                    <motion.button
-                      whileTap={canAnim ? { scale: 0.96 } : undefined}
-                      onClick={() => openPass(selectedBusiness?.name, selectedBusiness?.id)}
-                      className="bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e] text-white px-4 py-2 rounded-xl text-[11px] font-black shadow-sm"
-                    >
-                      🎟️ Descargar Pase
-                    </motion.button>
+
+                  <div className="relative">
+                    <input
+                      value={aliadosSearch}
+                      onChange={(e) => setAliadosSearch(e.target.value)}
+                      placeholder="Buscar negocio, ciudad o premio..."
+                      className="w-full pl-10 pr-4 py-3 bg-white rounded-xl border border-gray-100 text-sm font-semibold text-gray-900 placeholder:text-gray-300 outline-none focus:ring-2 focus:ring-pink-200 shadow-[0_2px_8px_rgba(0,0,0,0.03)]"
+                    />
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-300 text-sm">🔍</span>
+                  </div>
+
+                  {sorted.length === 0 ? (
+                    <div className="text-center py-12">
+                      <span className="text-3xl block mb-3">🔍</span>
+                      <p className="text-sm font-bold text-gray-400">No se encontraron negocios</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {letters.map((letter) => (
+                        <div key={letter}>
+                          <div className="flex items-center gap-2 mb-2 mt-1">
+                            <span className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-[11px] font-black text-gray-500">{letter}</span>
+                            <span className="h-px flex-1 bg-gray-100" />
+                          </div>
+                          <div className="space-y-2">
+                            {grouped[letter].map((t) => {
+                              const tid = String(t.id || '');
+                              const isOpen = expandedAliadoId === tid;
+                              const address = String(t.address || '').trim();
+                              const prize = String(t.prize || '').trim();
+                              const ig = String(t.instagram || '').trim();
+                              const lat = Number(t.lat);
+                              const lng = Number(t.lng);
+
+                              return (
+                                <motion.div
+                                  key={tid}
+                                  layout
+                                  onClick={() => setExpandedAliadoId(isOpen ? null : tid)}
+                                  className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.03)] overflow-hidden cursor-pointer"
+                                >
+                                  <div className="px-4 py-3 flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gray-900 to-gray-700 flex items-center justify-center text-white font-black text-xs shrink-0">
+                                      {String(t.name || '').charAt(0)}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-[13px] font-black text-gray-900 truncate">{String(t.name)}</p>
+                                      {address && address !== 'Dirección pendiente' && (
+                                        <p className="text-[10px] text-gray-400 font-semibold truncate mt-0.5">{address}</p>
+                                      )}
+                                    </div>
+                                    {prize && (
+                                      <span className="shrink-0 text-[9px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e] max-w-[80px] truncate">
+                                        🎁 {prize}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {isOpen && (
+                                    <motion.div
+                                      initial={canAnim ? { opacity: 0, height: 0 } : false}
+                                      animate={canAnim ? { opacity: 1, height: 'auto' } : false}
+                                      className="px-4 pb-3 flex gap-2"
+                                    >
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); openPass(String(t.name), tid); }}
+                                        className="flex-1 bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e] text-white py-2.5 rounded-xl font-black text-[11px] shadow-sm"
+                                      >
+                                        🎟️ Crear Pase
+                                      </button>
+                                      {Number.isFinite(lat) && Number.isFinite(lng) && (
+                                        <a
+                                          onClick={(e) => e.stopPropagation()}
+                                          href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex-1 bg-gray-100 text-gray-600 py-2.5 rounded-xl font-bold text-[11px] no-underline text-center"
+                                        >
+                                          📍 Cómo llegar
+                                        </a>
+                                      )}
+                                      {ig && (
+                                        <a
+                                          onClick={(e) => e.stopPropagation()}
+                                          href={`https://instagram.com/${ig.replace('@', '')}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="bg-gray-100 text-gray-600 px-3 py-2.5 rounded-xl font-bold text-[11px] no-underline"
+                                        >
+                                          📸
+                                        </a>
+                                      )}
+                                    </motion.div>
+                                  )}
+                                </motion.div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                </div>
-                <div className="h-[55vh] md:h-[60vh] w-full rounded-2xl overflow-hidden shadow-[0_2px_16px_rgba(0,0,0,0.06)] border border-gray-100 relative">
-                  <BusinessMap
-                    tenants={tenants}
-                    focusCoords={mapFocus}
-                    radiusKm={50}
-                    onCreatePass={(t: Record<string, unknown>) => {
-                      if (t.id) openPass(t.name as string, t.id as string);
-                    }}
-                  />
-                </div>
-                <p className="text-center text-gray-300 text-[10px] font-semibold">Toca un negocio para crear tu pase y empezar a acumular</p>
-              </motion.div>
-            )}
+                </motion.div>
+              );
+            })()}
           </div>
 
           {/* TAB: PERFIL */}
@@ -1397,15 +1456,15 @@ export default function Home() {
           <div className="fixed bottom-5 left-5 right-5 bg-white/90 backdrop-blur-2xl border border-gray-200/50 p-1.5 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] flex items-center z-40">
             {[
               { key: 'points', label: 'Puntos', isOrb: true },
-              { key: 'map', label: 'Mapa', icon: '📍' },
+              { key: 'aliados', label: 'Aliados', icon: '🤝' },
               { key: 'profile', label: 'Perfil', icon: '👤' },
             ].map((t) => {
-              const active = activeTab === (t.key as 'points' | 'map' | 'profile');
+              const active = activeTab === (t.key as 'points' | 'aliados' | 'profile');
               return (
                 <motion.button
                   key={t.key}
                   whileTap={canAnim ? { scale: 0.96 } : undefined}
-                  onClick={() => setActiveTab(t.key as 'points' | 'map' | 'profile')}
+                  onClick={() => setActiveTab(t.key as 'points' | 'aliados' | 'profile')}
                   className={`flex-1 flex flex-col items-center py-3 rounded-xl transition-all duration-200 ${
                     active ? 'bg-gradient-to-br from-gray-900 to-gray-800 text-white shadow-md' : 'text-gray-400'
                   }`}
