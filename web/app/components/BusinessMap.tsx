@@ -11,6 +11,7 @@ type Tenant = {
   lat: number;
   lng: number;
   address?: string;
+  prize?: string;
   instagram?: string | null;
 };
 
@@ -77,10 +78,12 @@ export default function BusinessMap({
   tenants,
   focusCoords,
   radiusKm = 50,
+  onCreatePass,
 }: {
   tenants: Tenant[];
   focusCoords: [number, number] | null;
   radiusKm?: number;
+  onCreatePass?: (tenant: Tenant) => void;
 }) {
   const valid = useMemo(
     () =>
@@ -148,38 +151,14 @@ export default function BusinessMap({
               eventHandlers={{ click: () => onPick(t) }}
             >
               <Popup>
-                <div className="min-w-[220px]">
-                  <div className="font-black text-gray-900">{t.name}</div>
-
-                  {(t.address || '').trim() ? (
-                    <div className="text-xs text-gray-600 mt-1">{t.address}</div>
-                  ) : (
-                    <div className="text-xs text-gray-500 mt-1">
-                      {t.lat.toFixed(5)}, {t.lng.toFixed(5)}
-                    </div>
+                <div className="min-w-[200px]">
+                  <div className="font-black text-gray-900 text-sm">{t.name}</div>
+                  {(t.address || '').trim() && (
+                    <div className="text-[11px] text-gray-500 mt-0.5">{t.address}</div>
                   )}
-
-                  <div className="mt-3 grid grid-cols-1 gap-2">
-                    <a
-                      className="inline-flex items-center justify-center w-full px-3 py-2 rounded-xl bg-black text-white font-black text-sm no-underline"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      href={`https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}`}
-                    >
-                      Abrir en Google Maps
-                    </a>
-
-                    {ig && (
-                      <a
-                        className="inline-flex items-center justify-center w-full px-3 py-2 rounded-xl border border-gray-300 bg-white text-gray-900 font-black text-sm no-underline"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        href={ig}
-                      >
-                        Instagram
-                      </a>
-                    )}
-                  </div>
+                  {t.prize && (
+                    <div className="text-[10px] font-bold text-pink-500 mt-1">🎁 {t.prize}</div>
+                  )}
                 </div>
               </Popup>
             </Marker>
@@ -188,37 +167,53 @@ export default function BusinessMap({
       </MapContainer>
 
       {selected && (
-        <div className="pointer-events-none absolute bottom-4 left-4 right-4">
-          <div className="pointer-events-auto bg-white/95 backdrop-blur-md border border-gray-200 rounded-2xl px-4 py-3 shadow-xl flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-sm font-black text-gray-900 truncate">{selected.name}</div>
-              <div className="text-xs text-gray-500 truncate">
-                {(selected.address || '').trim()
-                  ? selected.address
-                  : `${selected.lat.toFixed(5)}, ${selected.lng.toFixed(5)}`}
+        <div className="pointer-events-none absolute bottom-3 left-3 right-3">
+          <div className="pointer-events-auto bg-white/95 backdrop-blur-xl border border-gray-100 rounded-2xl p-3.5 shadow-[0_4px_24px_rgba(0,0,0,0.1)]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-900 to-gray-700 flex items-center justify-center text-white font-black text-sm shrink-0">
+                {selected.name?.charAt(0)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] font-black text-gray-900 truncate">{selected.name}</div>
+                <div className="text-[10px] text-gray-400 font-semibold truncate mt-0.5">
+                  {(selected.address || '').trim() || `${selected.lat.toFixed(4)}, ${selected.lng.toFixed(4)}`}
+                </div>
               </div>
             </div>
 
-            <div className="shrink-0 flex items-center gap-2">
-              {instagramUrl(selected.instagram) && (
-                <a
-                  className="inline-flex items-center justify-center px-3 py-2 rounded-xl border border-gray-300 bg-white text-gray-900 font-black text-xs no-underline"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  href={instagramUrl(selected.instagram)!}
-                >
-                  Instagram
-                </a>
-              )}
+            {selected.prize && (
+              <div className="mt-2 bg-gradient-to-r from-orange-50 to-pink-50 rounded-lg px-3 py-1.5 border border-orange-100/50">
+                <span className="text-[10px] font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-500">🎁 {selected.prize}</span>
+              </div>
+            )}
 
+            <div className="mt-2.5 flex gap-2">
+              {onCreatePass && (
+                <button
+                  onClick={() => onCreatePass(selected)}
+                  className="flex-1 bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e] text-white py-2 rounded-xl font-black text-[11px] shadow-sm"
+                >
+                  🎟️ Crear Pase
+                </button>
+              )}
               <a
-                className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-black text-white font-black text-xs no-underline"
+                className="flex-1 bg-gray-100 text-gray-600 py-2 rounded-xl font-bold text-[11px] no-underline text-center"
                 target="_blank"
                 rel="noopener noreferrer"
                 href={`https://www.google.com/maps/search/?api=1&query=${selected.lat},${selected.lng}`}
               >
-                Google Maps
+                📍 Cómo llegar
               </a>
+              {instagramUrl(selected.instagram) && (
+                <a
+                  className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-bold text-[11px] no-underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  href={instagramUrl(selected.instagram)!}
+                >
+                  📸
+                </a>
+              )}
             </div>
           </div>
         </div>

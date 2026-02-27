@@ -1179,20 +1179,25 @@ export default function Home() {
 
                       <div className="px-5 pt-4 pb-5">
                         {showStamps ? (
-                          <div className="flex flex-wrap gap-[6px] justify-center mb-5">
+                          <div className="flex flex-wrap gap-2 justify-center mb-5">
                             {stamps.map((filled, i) => (
                               <motion.div
                                 key={i}
                                 initial={canAnim ? { scale: 0, opacity: 0 } : false}
                                 animate={canAnim ? { scale: 1, opacity: 1 } : false}
                                 transition={canAnim ? { type: 'spring', stiffness: 500, damping: 25, delay: 0.2 + i * 0.035 } : undefined}
-                                className={`w-8 h-8 rounded-[10px] flex items-center justify-center text-[11px] font-black ${
-                                  filled
-                                    ? 'bg-gradient-to-br from-[#ff7a59] via-[#ff3f8e] to-[#a855f7] text-white shadow-[0_2px_10px_rgba(255,63,142,0.35)]'
-                                    : 'bg-gray-50 text-gray-300 border border-gray-150'
-                                }`}
+                                className="relative"
                               >
-                                {filled ? '✓' : i + 1}
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black ${
+                                  filled
+                                    ? 'bg-gradient-to-br from-[#ff7a59] to-[#ff3f8e] text-white shadow-[0_0_12px_rgba(255,122,89,0.5)]'
+                                    : 'bg-gray-100 text-gray-300'
+                                }`}>
+                                  {filled ? '✓' : i + 1}
+                                </div>
+                                {filled && (
+                                  <span className="absolute inset-0 rounded-full bg-gradient-to-br from-[#ff7a59]/40 to-[#ff3f8e]/20 blur-[6px] -z-10" />
+                                )}
                               </motion.div>
                             ))}
                           </div>
@@ -1292,9 +1297,16 @@ export default function Home() {
                   )}
                 </div>
                 <div className="h-[55vh] md:h-[60vh] w-full rounded-2xl overflow-hidden shadow-[0_2px_16px_rgba(0,0,0,0.06)] border border-gray-100 relative">
-                  <BusinessMap tenants={tenants} focusCoords={mapFocus} radiusKm={50} />
+                  <BusinessMap
+                    tenants={tenants}
+                    focusCoords={mapFocus}
+                    radiusKm={50}
+                    onCreatePass={(t: Record<string, unknown>) => {
+                      if (t.id) openPass(t.name as string, t.id as string);
+                    }}
+                  />
                 </div>
-                <p className="text-center text-gray-300 text-[10px] font-semibold">Toca un negocio en el mapa para ver su información</p>
+                <p className="text-center text-gray-300 text-[10px] font-semibold">Toca un negocio para crear tu pase y empezar a acumular</p>
               </motion.div>
             )}
           </div>
