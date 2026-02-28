@@ -64,7 +64,7 @@ export async function GET(req: Request) {
             programName: tenant.name,
             programLogo: {
               sourceUri: {
-                uri: 'https://www.puntoia.mx/icon.svg',
+                uri: 'https://www.puntoia.mx/wallet-assets/logo.png',
               },
             },
             hexBackgroundColor: '#f43f5e',
