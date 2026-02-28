@@ -1,36 +1,21 @@
 import { GoogleAuth } from 'google-auth-library';
 import { NextResponse } from 'next/server';
+import { getGoogleWalletIssuerId, googleWalletConfigErrorResponse, parseGoogleServiceAccount } from '@/app/lib/google-wallet';
 
 export const runtime = 'nodejs';
 
 const WALLET_SCOPE = 'https://www.googleapis.com/auth/wallet_object.issuer';
 const WALLET_CLASS_URL = 'https://walletobjects.googleapis.com/walletobjects/v1/loyaltyClass';
 
-function parseServiceAccount() {
-  const encoded = process.env.GOOGLE_WALLET_SA_B64;
-
-  if (!encoded) {
-    throw new Error('Missing GOOGLE_WALLET_SA_B64 env var');
-  }
-
-  const decoded = Buffer.from(encoded, 'base64').toString('utf8');
-
-  try {
-    return JSON.parse(decoded) as Record<string, unknown>;
-  } catch {
-    throw new Error('Invalid GOOGLE_WALLET_SA_B64 content. Expected base64-encoded JSON.');
-  }
-}
-
 export async function GET() {
-  const issuerId = process.env.GOOGLE_WALLET_ISSUER_ID;
+  const issuerId = getGoogleWalletIssuerId();
 
   if (!issuerId) {
-    return NextResponse.json({ error: 'Missing GOOGLE_WALLET_ISSUER_ID env var' }, { status: 500 });
+    return NextResponse.json(googleWalletConfigErrorResponse(), { status: 500 });
   }
 
   try {
-    const credentials = parseServiceAccount();
+    const credentials = parseGoogleServiceAccount();
 
     const auth = new GoogleAuth({
       credentials,
@@ -46,7 +31,7 @@ export async function GET() {
     }
 
     const payload = {
-      id: `${issuerId}.puntoia_demo`,
+      id: `${issuerId}.puntoia_loyalty`,
       issuerName: 'Punto IA',
       programName: 'Punto IA',
       countryCode: 'MX',

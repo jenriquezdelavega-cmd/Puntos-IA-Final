@@ -146,6 +146,26 @@ export default function PassPage() {
     URL.revokeObjectURL(url);
   };
 
+  const openGoogleWallet = async () => {
+    if (!pass?.customer_id || !pass.business?.id) return;
+
+    const href = `/api/wallet/google?customerId=${encodeURIComponent(pass.customer_id)}&businessId=${encodeURIComponent(pass.business.id)}`;
+
+    try {
+      const res = await fetch(href, { cache: 'no-store' });
+      const data = (await res.json()) as { saveUrl?: string; error?: string };
+
+      if (!res.ok || !data?.saveUrl) {
+        throw new Error(data?.error || 'No se pudo generar el pase de Google Wallet');
+      }
+
+      window.location.assign(data.saveUrl);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo generar el pase de Google Wallet';
+      setError(message);
+    }
+  };
+
   const openAppleWallet = async () => {
     if (!pass?.customer_id || !pass.business?.id) return;
 
@@ -231,6 +251,14 @@ export default function PassPage() {
                 className="w-full rounded-xl border-2 border-black bg-black py-2 text-sm font-black text-white hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 🍎 Descargar en Apple Wallet (.pkpass)
+              </button>
+              <button
+                type="button"
+                onClick={openGoogleWallet}
+                disabled={!pass.business?.id}
+                className="w-full rounded-xl border-2 border-slate-900 bg-white py-2 text-sm font-black text-slate-900 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                🇬 Descargar en Google Wallet
               </button>
             </div>
           </div>
