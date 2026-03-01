@@ -111,14 +111,17 @@ function BrandLogo({ animate = true }: { animate?: boolean }) {
       transition={canAnim ? { ...spring } : undefined}
       className="mb-3 select-none"
     >
-      <Image
-        src="/logo.png"
-        alt="Punto IA"
-        width={320}
-        height={96}
-        priority
-        className="h-auto w-[220px] sm:w-[260px] md:w-[320px]"
-      />
+      <div className="flex flex-col items-center gap-2">
+        <Image
+          src="/logo.png"
+          alt="Logo Punto IA"
+          width={128}
+          height={128}
+          priority
+          className="h-20 w-20 sm:h-24 sm:w-24 object-contain"
+        />
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white drop-shadow-md">Punto IA</h1>
+      </div>
       <p className="mt-2 text-center text-xs font-semibold tracking-wide text-white/80">
         Premiamos tu lealtad en tus negocios favoritos.
       </p>

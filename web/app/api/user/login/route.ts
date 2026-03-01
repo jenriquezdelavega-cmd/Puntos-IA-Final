@@ -3,7 +3,7 @@ import { hashPassword, isHashedPassword, verifyPassword } from '@/app/lib/passwo
 import { generateUserSessionToken } from '@/app/lib/user-session-token';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
-import { asTrimmedString, isStrongEnoughPassword, isValidPhone, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import { asTrimmedString, isValidPhone, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 
 
 export async function POST(req: Request) {
@@ -70,13 +70,13 @@ export async function POST(req: Request) {
     }
 
     if (typeof user.password === 'string' && user.password.length > 0) {
-      const inputPassword = asTrimmedString(body.password);
-      if (!isStrongEnoughPassword(inputPassword)) {
+      const inputPassword = String(body.password ?? '');
+      if (!inputPassword) {
         return apiError({
           requestId,
           status: 400,
           code: 'BAD_REQUEST',
-          message: 'Contraseña inválida',
+          message: 'Contraseña requerida',
         });
       }
 
