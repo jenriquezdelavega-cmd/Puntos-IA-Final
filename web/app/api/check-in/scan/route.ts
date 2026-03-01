@@ -4,6 +4,7 @@ import { RewardPeriod } from '@prisma/client';
 import { touchWalletPassRegistrations, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
 import { listWalletPushTokens, pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
 import { prisma } from '@/app/lib/prisma';
+import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 const TZ = 'America/Monterrey';
 
 function dayKeyInBusinessTz(d = new Date()) {
@@ -42,10 +43,10 @@ function periodKey(period: RewardPeriod, now = new Date()) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userId, code } = body;
+    const { userId, code, tenantUserId, tenantSessionToken } = body;
 
-    if (!userId || !code) {
-      logApiEvent('/api/check-in/scan', 'validation_error', { hasUserId: Boolean(userId), hasCode: Boolean(code) });
+    if (!userId || !code || !tenantUserId || !tenantSessionToken) {
+      logApiEvent('/api/check-in/scan', 'validation_error', { hasUserId: Boolean(userId), hasCode: Boolean(code), hasTenantUserId: Boolean(tenantUserId), hasTenantSessionToken: Boolean(tenantSessionToken) });
       return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
     }
 
@@ -59,6 +60,16 @@ export async function POST(request: Request) {
     if (!validCode) {
       logApiEvent('/api/check-in/scan', 'invalid_code', { userId });
       return NextResponse.json({ error: 'Código inválido o no es de hoy' }, { status: 404 });
+    }
+
+    const access = await requireTenantRoleAccess({
+      tenantId: validCode.tenantId,
+      tenantUserId,
+      tenantSessionToken,
+      allowedRoles: ['ADMIN', 'STAFF'],
+    });
+    if (!access.ok) {
+      return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
     let membership = await prisma.membership.findFirst({

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { hashPassword, isHashedPassword, verifyPassword } from '@/app/lib/password';
 import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
+import { generateTenantSessionToken } from '@/app/lib/tenant-session-token';
 
 export async function POST(request: Request) {
   try {
@@ -34,10 +35,12 @@ export async function POST(request: Request) {
     }
 
     const walletStyle = (await getTenantWalletStyle(user.tenant.id)) || defaultTenantWalletStyle(user.tenant.id);
+    const tenantSessionToken = generateTenantSessionToken({ tenantUserId: user.id, tenantId: user.tenant.id, role: user.role });
 
     return NextResponse.json({
       success: true,
       user: { id: user.id, name: user.name, role: user.role },
+      tenantSessionToken,
       tenant: {
         id: user.tenant.id,
         name: user.tenant.name,

@@ -13,6 +13,7 @@ const QRScanner = dynamic(() => import('@yudiel/react-qr-scanner').then((m) => m
 export default function AdminPage() {
 const [tenant, setTenant] = useState<Record<string, unknown> | null>(null);
 const [tenantUserId, setTenantUserId] = useState<string>('');
+const [tenantSessionToken, setTenantSessionToken] = useState<string>('');
 const [username, setUsername] = useState('');
 const [password, setPassword] = useState('');
 
@@ -73,6 +74,7 @@ if(res.ok) {
 setTenant(data.tenant);
 setUserRole(data.user.role);
 setTenantUserId(data.user.id || '');
+setTenantSessionToken(String(data.tenantSessionToken || ''));
 setPrizeName(data.tenant.prize || '');
 setInstagram(data.tenant.instagram || '');
 setRequiredVisits(String(data.tenant.requiredVisits ?? 10));
@@ -91,20 +93,20 @@ if (typeof window !== 'undefined') setBaseUrl(window.location.origin);
 
 if (data.user.role === 'ADMIN') { 
 setTab('qr'); 
-loadReports(data.tenant.id); 
-loadTeam(data.tenant.id);
-loadPushStatus(data.tenant.id);
+loadReports(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || '')); 
+loadTeam(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
+loadPushStatus(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
 } else setTab('qr');
 
 } else alert(data.error);
 } catch { alert('Error'); }
 };
 
-const loadReports = async (tid: string) => { try { const res = await fetch('/api/admin/reports', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tid }) }); setReportData(await res.json()); } catch {} };
+const loadReports = async (tid: string, currentTenantUserId = tenantUserId, currentTenantSessionToken = tenantSessionToken) => { try { const res = await fetch('/api/admin/reports', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tid, tenantUserId: currentTenantUserId, tenantSessionToken: currentTenantSessionToken }) }); setReportData(await res.json()); } catch {} };
 
-const loadPushStatus = async (tid: string) => {
+const loadPushStatus = async (tid: string, currentTenantUserId = tenantUserId, currentTenantSessionToken = tenantSessionToken) => {
   try {
-    const res = await fetch(`/api/admin/push?tenantId=${tid}`);
+    const res = await fetch(`/api/admin/push?tenantId=${tid}&tenantUserId=${currentTenantUserId}&tenantSessionToken=${encodeURIComponent(currentTenantSessionToken)}`);
     const data = await res.json();
     if (data.remaining != null) setPushRemaining(data.remaining);
     if (data.recent) setPushHistory(data.recent);
@@ -119,7 +121,7 @@ const sendPush = async () => {
     const res = await fetch('/api/admin/push', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tenantId: (tenant as Record<string, unknown>).id, message: pushMessage.trim() }),
+      body: JSON.stringify({ tenantId: (tenant as Record<string, unknown>).id, tenantUserId, tenantSessionToken, message: pushMessage.trim() }),
     });
     const data = await res.json();
     if (res.ok) {
@@ -136,8 +138,8 @@ const sendPush = async () => {
   setPushLoading(false);
 };
 
-const loadTeam = async (tid: string) => {
-try { const res = await fetch(`/api/tenant/users?tenantId=${tid}`); const data = await res.json(); if(data.users) setTeam(data.users); } catch {}
+const loadTeam = async (tid: string, currentTenantUserId = tenantUserId, currentTenantSessionToken = tenantSessionToken) => {
+try { const res = await fetch(`/api/tenant/users?tenantId=${tid}&tenantUserId=${currentTenantUserId}&tenantSessionToken=${encodeURIComponent(currentTenantSessionToken)}`); const data = await res.json(); if(data.users) setTeam(data.users); } catch {}
 };
 
 const createStaff = async () => {
@@ -145,22 +147,22 @@ if(!newStaff.name || !newStaff.username || !newStaff.password) return alert("Fal
 try {
 const res = await fetch('/api/tenant/users', { 
 method: 'POST', headers: {'Content-Type': 'application/json'}, 
-body: JSON.stringify({ tenantId: tenant.id, ...newStaff }) 
+body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken, ...newStaff }) 
 });
 if(res.ok) { 
 alert("Empleado creado "); 
 setNewStaff({ name: '', username: '', password: '', role: 'STAFF' }); 
-loadTeam(tenant.id); 
+loadTeam(tenant.id, tenantUserId); 
 } else { const d = await res.json(); alert(d.error); }
 } catch { alert("Error"); }
 };
 
 const deleteStaff = async (id: string) => {
 if(!confirm("¿Eliminar empleado?")) return;
-try { await fetch('/api/tenant/users', { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id }) }); loadTeam(tenant.id); } catch {}
+try { await fetch('/api/tenant/users', { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id, tenantId: tenant.id, tenantUserId, tenantSessionToken }) }); loadTeam(tenant.id, tenantUserId); } catch {}
 };
 
-const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, tenantUserId }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch {} };
+const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch {} };
 
 const searchLocation = async () => {
 if (!addressSearch) return;
@@ -222,6 +224,8 @@ const saveSettings = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         tenantId: tenant.id,
+        tenantUserId,
+        tenantSessionToken,
         prize: prizeName,
         requiredVisits,
         rewardPeriod,
@@ -264,7 +268,7 @@ const saveSettings = async () => {
   }
 };
 
-const validateRedeem = async () => { setMsg('Validando...'); try { const res = await fetch('/api/redeem/validate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, code: redeemCode }) }); const data = await res.json(); if (res.ok) { setMsg(` ENTREGAR A: ${data.user}`); setRedeemCode(''); if(userRole==='ADMIN') loadReports(tenant.id); } else setMsg(' ' + data.error); } catch { setMsg('Error'); } };
+const validateRedeem = async () => { setMsg('Validando...'); try { const res = await fetch('/api/redeem/validate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken, code: redeemCode }) }); const data = await res.json(); if (res.ok) { setMsg(` ENTREGAR A: ${data.user}`); setRedeemCode(''); if(userRole==='ADMIN') loadReports(tenant.id, tenantUserId); } else setMsg(' ' + data.error); } catch { setMsg('Error'); } };
 const downloadCSV = () => { if (!reportData?.csvData) return; const headers = Object.keys(reportData.csvData[0]).join(','); const rows = reportData.csvData.map((obj: Record<string, unknown>) => Object.values(obj).join(',')).join('\n'); const encodedUri = encodeURI("data:text/csv;charset=utf-8," + headers + "\n" + rows); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `clientes_${tenant.slug}.csv`); document.body.appendChild(link); link.click(); };
 
 
@@ -272,7 +276,7 @@ const ensureDailyCode = async () => {
   const res = await fetch('/api/admin/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tenantId: tenant.id, tenantUserId }),
+    body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken }),
   });
   const data = await res.json();
   if (!res.ok || !data?.code) throw new Error(data?.error || 'No se pudo generar código diario');
@@ -317,7 +321,7 @@ const handleAdminScan = async (rawValue: string) => {
     const res = await fetch('/api/check-in/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: customerId, code: todayCode }),
+      body: JSON.stringify({ userId: customerId, code: todayCode, tenantUserId, tenantSessionToken }),
     });
 
     const data = await res.json();
@@ -421,7 +425,7 @@ return (
       <p className="text-gray-400 text-sm font-medium mt-1">{new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
     </div>
     <div className="flex gap-2">
-      <button className="bg-white/10 border border-white/20 px-4 py-2.5 rounded-xl text-white font-bold text-sm hover:bg-white/20 transition" onClick={() => { loadReports(tenant.id); loadTeam(tenant.id); }}>🔄 Actualizar</button>
+      <button className="bg-white/10 border border-white/20 px-4 py-2.5 rounded-xl text-white font-bold text-sm hover:bg-white/20 transition" onClick={() => { loadReports(tenant.id, tenantUserId); loadTeam(tenant.id, tenantUserId); }}>🔄 Actualizar</button>
       <button className="bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-2.5 rounded-xl shadow-lg text-white font-bold text-sm" onClick={downloadCSV}>📥 Exportar CSV</button>
     </div>
   </div>

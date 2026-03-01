@@ -4,12 +4,15 @@ import { getTenantWalletStyle, upsertTenantWalletStyle } from '@/app/lib/tenant-
 import { logApiError, logApiEvent } from '@/app/lib/api-log';
 import { touchWalletPassRegistrations } from '@/app/lib/apple-wallet-webservice';
 import { pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
+import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const {
       tenantId,
+      tenantUserId,
+      tenantSessionToken,
       prize,
       requiredVisits,
       rewardPeriod,
@@ -24,7 +27,10 @@ export async function POST(request: Request) {
       walletStripImageData,
     } = body;
 
-    if (!tenantId) return NextResponse.json({ error: 'tenantId requerido' }, { status: 400 });
+    const access = await requireTenantRoleAccess({ tenantId, tenantUserId, tenantSessionToken, allowedRoles: ['ADMIN'] });
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+
+    const authorizedTenantId = access.tenantId;
 
     const parsedVisits =
       requiredVisits === undefined || requiredVisits === null || requiredVisits === ''
@@ -32,7 +38,7 @@ export async function POST(request: Request) {
         : Math.max(1, parseInt(String(requiredVisits), 10));
 
     const updated = await prisma.tenant.update({
-      where: { id: tenantId },
+      where: { id: authorizedTenantId },
       data: {
         ...(prize !== undefined ? { prize } : {}),
         ...(instagram !== undefined ? { instagram } : {}),
@@ -46,21 +52,21 @@ export async function POST(request: Request) {
     });
 
     await upsertTenantWalletStyle({
-      tenantId,
+      tenantId: authorizedTenantId,
       backgroundColor: walletBackgroundColor as string | undefined,
       foregroundColor: walletForegroundColor as string | undefined,
       labelColor: walletLabelColor as string | undefined,
       stripImageData: walletStripImageData as string | null | undefined,
     });
 
-    const walletStyle = await getTenantWalletStyle(tenantId);
+    const walletStyle = await getTenantWalletStyle(authorizedTenantId);
 
     try {
       const passTypeIdentifier = String(process.env.APPLE_PASS_TYPE_ID || '').trim();
       if (passTypeIdentifier) {
         const regs = await prisma.$queryRawUnsafe<Array<{ push_token: string; serial_number: string }>>(
           `SELECT DISTINCT push_token, serial_number FROM apple_wallet_registrations WHERE serial_number LIKE $1 AND pass_type_identifier = $2`,
-          `%-${tenantId}`, passTypeIdentifier
+          `%-${authorizedTenantId}`, passTypeIdentifier
         );
 
         for (const reg of regs) {
@@ -78,7 +84,7 @@ export async function POST(request: Request) {
           }
         }
 
-        logApiEvent('/api/tenant/settings', 'settings_push_sent', { tenantId, devices: seen.size });
+        logApiEvent('/api/tenant/settings', 'settings_push_sent', { tenantId: authorizedTenantId, devices: seen.size });
       }
     } catch (pushErr) {
       logApiError('/api/tenant/settings#wallet-push', pushErr);
