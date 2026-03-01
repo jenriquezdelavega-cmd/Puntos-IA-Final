@@ -100,7 +100,7 @@ function Shine() {
   );
 }
 
-function BrandLogo({ animate = true }: { animate?: boolean }) {
+function BrandLogo({ animate = true, compact = false }: { animate?: boolean; compact?: boolean }) {
   const reduce = useReducedMotion();
   const canAnim = animate && !reduce;
 
@@ -115,16 +115,22 @@ function BrandLogo({ animate = true }: { animate?: boolean }) {
         <Image
           src="/logo.png"
           alt="Logo Punto IA"
-          width={128}
-          height={128}
+          width={compact ? 120 : 220}
+          height={compact ? 80 : 140}
           priority
-          className="h-20 w-20 sm:h-24 sm:w-24 object-contain"
+          className={`${compact ? 'h-12 w-20 sm:h-14 sm:w-24' : 'h-20 w-28 sm:h-24 sm:w-36'} object-contain`}
         />
-        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white drop-shadow-md">Punto IA</h1>
+        {!compact && (
+          <Image
+            src="/slogan.png"
+            alt="Slogan de Punto IA"
+            width={280}
+            height={92}
+            priority
+            className="h-9 w-44 sm:h-10 sm:w-52 object-contain opacity-95"
+          />
+        )}
       </div>
-      <p className="mt-2 text-center text-xs font-semibold tracking-wide text-white/80">
-        Premiamos tu lealtad en tus negocios favoritos.
-      </p>
     </motion.div>
   );
 }
@@ -559,7 +565,7 @@ export default function Home() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-br from-[#ff7a59]/30 via-[#ff3f8e]/20 to-transparent rounded-full blur-[120px] opacity-60" />
 
       <nav className="relative z-20 mx-auto max-w-6xl px-6 py-6 flex items-center justify-between">
-        <div className="scale-[0.65] origin-left"><BrandLogo animate={false} /></div>
+        <div className="scale-[0.7] origin-left"><BrandLogo animate={false} compact /></div>
         <div className="flex items-center gap-3">
           <Link href="/negocios" className="text-white/60 text-sm font-bold hover:text-white transition hidden sm:block">Para Negocios</Link>
           <Link href="/?clientes=1" className="bg-white/10 border border-white/20 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-white/20 transition">
@@ -680,7 +686,7 @@ export default function Home() {
       <footer className="relative z-10 border-t border-white/10 mt-8">
         <div className="mx-auto max-w-6xl px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="scale-[0.5] origin-left"><BrandLogo animate={false} /></div>
+            <div className="scale-[0.55] origin-left"><BrandLogo animate={false} compact /></div>
             <p className="text-white/40 text-xs font-semibold">Coalición de PyMEs · Hecho en México 🇲🇽</p>
           </div>
           <div className="flex items-center gap-4">
