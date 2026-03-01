@@ -2,12 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { isValidMasterPassword } from '@/app/lib/master-auth';
 import { listPrelaunchLeads } from '@/app/lib/prelaunch-leads';
-
-type Body = {
-  masterPassword?: string;
-  report?: 'prelaunch' | 'tenant-users';
-  tenantId?: string;
-};
+import { apiError, getRequestId } from '@/app/lib/api-response';
+import { optionalString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 
 const esc = (v: unknown) => {
   const s = String(v ?? '');
@@ -19,20 +15,56 @@ function csv(headers: string[], rows: Array<Array<unknown>>) {
   return [headers.map(esc).join(','), ...rows.map((r) => r.map(esc).join(','))].join('\n');
 }
 
+function parseReportType(value: unknown): 'prelaunch' | 'tenant-users' | null {
+  const raw = optionalString(value);
+  if (!raw || raw === 'prelaunch') return 'prelaunch';
+  if (raw === 'tenant-users') return 'tenant-users';
+  return null;
+}
+
 export async function POST(req: Request) {
+  const requestId = getRequestId(req);
+
   try {
-    const body = (await req.json()) as Body;
-    if (!isValidMasterPassword(body.masterPassword)) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    const body = await parseJsonObject(req);
+    if (!body) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'JSON inválido',
+      });
+    }
+    const parsedBody = parseWithSchema(body, {
+      masterPassword: requiredString,
+      report: parseReportType,
+      tenantId: optionalString,
+    });
+    if (!parsedBody.ok) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: `Campo inválido: ${String(parsedBody.field)}`,
+      });
     }
 
-    const report = body.report || 'prelaunch';
+    const { masterPassword, report, tenantId } = parsedBody.data;
+
+    if (!isValidMasterPassword(masterPassword)) {
+      return apiError({
+        requestId,
+        status: 401,
+        code: 'UNAUTHORIZED',
+        message: 'No autorizado',
+      });
+    }
 
     if (report === 'prelaunch') {
       const leads = await listPrelaunchLeads();
       const content = csv(
         ['createdAt', 'businessName', 'contactName', 'phone', 'email', 'city'],
-        leads.map((l) => [l.createdAt, l.businessName, l.contactName, l.phone, l.email, l.city])
+        leads.map((l) => [l.createdAt, l.businessName, l.contactName, l.phone, l.email, l.city]),
       );
 
       return new NextResponse(content, {
@@ -41,11 +73,12 @@ export async function POST(req: Request) {
           'Content-Type': 'text/csv; charset=utf-8',
           'Content-Disposition': `attachment; filename="preinscritos-negocios-${new Date().toISOString().slice(0, 10)}.csv"`,
           'Cache-Control': 'no-store',
+          'x-request-id': requestId,
         },
       });
     }
 
-    const where = body.tenantId ? { id: body.tenantId } : undefined;
+    const where = tenantId ? { id: tenantId } : undefined;
     const tenants = await prisma.tenant.findMany({
       where,
       include: {
@@ -65,23 +98,13 @@ export async function POST(req: Request) {
       }
 
       for (const m of t.memberships) {
-        rows.push([
-          t.id,
-          t.name,
-          t.slug,
-          m.userId,
-          m.user?.name || '',
-          m.user?.phone || '',
-          m.user?.email || '',
-          m.totalVisits,
-          m.currentVisits,
-        ]);
+        rows.push([t.id, t.name, t.slug, m.userId, m.user?.name || '', m.user?.phone || '', m.user?.email || '', m.totalVisits, m.currentVisits]);
       }
     }
 
     const content = csv(
       ['tenantId', 'tenantName', 'tenantSlug', 'userId', 'userName', 'userPhone', 'userEmail', 'totalVisits', 'currentVisits'],
-      rows
+      rows,
     );
 
     return new NextResponse(content, {
@@ -90,9 +113,15 @@ export async function POST(req: Request) {
         'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition': `attachment; filename="clientes-por-negocio-${new Date().toISOString().slice(0, 10)}.csv"`,
         'Cache-Control': 'no-store',
+        'x-request-id': requestId,
       },
     });
   } catch {
-    return NextResponse.json({ error: 'Error generando reporte' }, { status: 500 });
+    return apiError({
+      requestId,
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: 'Error generando reporte',
+    });
   }
 }

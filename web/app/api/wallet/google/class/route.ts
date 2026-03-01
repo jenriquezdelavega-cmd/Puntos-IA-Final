@@ -1,34 +1,30 @@
-import { GoogleAuth } from 'google-auth-library';
-import { NextResponse } from 'next/server';
-import { getGoogleWalletIssuerId, googleWalletConfigErrorResponse, parseGoogleServiceAccount } from '@/app/lib/google-wallet';
+import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
+import {
+  getGoogleServiceAccountAccessToken,
+  getGoogleWalletIssuerId,
+  googleWalletConfigErrorResponse,
+} from '@/app/lib/google-wallet';
 
 export const runtime = 'nodejs';
 
 const WALLET_SCOPE = 'https://www.googleapis.com/auth/wallet_object.issuer';
 const WALLET_CLASS_URL = 'https://walletobjects.googleapis.com/walletobjects/v1/loyaltyClass';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const requestId = getRequestId(request);
   const issuerId = getGoogleWalletIssuerId();
 
   if (!issuerId) {
-    return NextResponse.json(googleWalletConfigErrorResponse(), { status: 500 });
+    return apiError({
+      requestId,
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: googleWalletConfigErrorResponse().error,
+    });
   }
 
   try {
-    const credentials = parseGoogleServiceAccount();
-
-    const auth = new GoogleAuth({
-      credentials,
-      scopes: [WALLET_SCOPE],
-    });
-
-    const tokenClient = await auth.getClient();
-    const accessTokenResponse = await tokenClient.getAccessToken();
-    const accessToken = accessTokenResponse.token;
-
-    if (!accessToken) {
-      return NextResponse.json({ error: 'Unable to obtain Google access token' }, { status: 500 });
-    }
+    const accessToken = await getGoogleServiceAccountAccessToken([WALLET_SCOPE]);
 
     const payload = {
       id: `${issuerId}.puntoia_loyalty`,
@@ -59,30 +55,44 @@ export async function GET() {
     }
 
     if (response.status === 200 || response.status === 201) {
-      return NextResponse.json(responseBody, { status: response.status });
+      return apiSuccess({
+        requestId,
+        status: response.status,
+        data: {
+          class: responseBody,
+        },
+      });
     }
 
     if (response.status === 409) {
-      return NextResponse.json(
-        {
-          message: 'already exists',
+      return apiError({
+        requestId,
+        status: 409,
+        code: 'CONFLICT',
+        message: 'already exists',
+        details: {
           classId: payload.id,
           details: responseBody,
         },
-        { status: 409 },
-      );
+      });
     }
 
-    return NextResponse.json(
-      {
-        error: 'Google Wallet API request failed',
+    return apiError({
+      requestId,
+      status: response.status,
+      code: 'INTERNAL_ERROR',
+      message: 'Google Wallet API request failed',
+      details: {
         status: response.status,
         body: responseBody,
       },
-      { status: response.status },
-    );
+    });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unexpected error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return apiError({
+      requestId,
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: error instanceof Error ? error.message : 'Unexpected error',
+    });
   }
 }

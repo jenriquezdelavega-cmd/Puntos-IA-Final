@@ -1,14 +1,28 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { getTenantWalletStyle, upsertTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 import { logApiError, logApiEvent } from '@/app/lib/api-log';
 import { touchWalletPassRegistrations } from '@/app/lib/apple-wallet-webservice';
 import { pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
 import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
+import { apiError, apiSuccess, type ApiErrorCode, getRequestId } from '@/app/lib/api-response';
+import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
+
+function accessStatusToCode(status: number): ApiErrorCode {
+  if (status === 400) return 'BAD_REQUEST';
+  if (status === 401) return 'UNAUTHORIZED';
+  if (status === 403) return 'FORBIDDEN';
+  if (status === 404) return 'NOT_FOUND';
+  return 'INTERNAL_ERROR';
+}
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
-    const body = (await request.json()) as Record<string, unknown>;
+    const body = await parseJsonObject(request);
+    if (!body) {
+      return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'JSON inválido' });
+    }
     const {
       tenantId,
       tenantUserId,
@@ -28,7 +42,14 @@ export async function POST(request: Request) {
     } = body;
 
     const access = await requireTenantRoleAccess({ tenantId, tenantUserId, tenantSessionToken, allowedRoles: ['ADMIN'] });
-    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+    if (!access.ok) {
+      return apiError({
+        requestId,
+        status: access.status,
+        code: accessStatusToCode(access.status),
+        message: access.error,
+      });
+    }
 
     const authorizedTenantId = access.tenantId;
 
@@ -48,7 +69,7 @@ export async function POST(request: Request) {
         ...(parsedVisits !== undefined ? { requiredVisits: parsedVisits } : {}),
         ...(rewardPeriod !== undefined ? { rewardPeriod } : {}),
         ...(logoData !== undefined ? { logoData } : {}),
-      }
+      },
     });
 
     await upsertTenantWalletStyle({
@@ -62,11 +83,12 @@ export async function POST(request: Request) {
     const walletStyle = await getTenantWalletStyle(authorizedTenantId);
 
     try {
-      const passTypeIdentifier = String(process.env.APPLE_PASS_TYPE_ID || '').trim();
+      const passTypeIdentifier = asTrimmedString(process.env.APPLE_PASS_TYPE_ID);
       if (passTypeIdentifier) {
         const regs = await prisma.$queryRawUnsafe<Array<{ push_token: string; serial_number: string }>>(
           `SELECT DISTINCT push_token, serial_number FROM apple_wallet_registrations WHERE serial_number LIKE $1 AND pass_type_identifier = $2`,
-          `%-${authorizedTenantId}`, passTypeIdentifier
+          `%-${authorizedTenantId}`,
+          passTypeIdentifier,
         );
 
         for (const reg of regs) {
@@ -75,7 +97,7 @@ export async function POST(request: Request) {
 
         const seen = new Set<string>();
         for (const reg of regs) {
-          const token = String(reg.push_token || '').trim();
+          const token = asTrimmedString(reg.push_token);
           if (!token || seen.has(token)) continue;
           seen.add(token);
           const result = await pushWalletUpdateToDevice(token, passTypeIdentifier);
@@ -90,17 +112,25 @@ export async function POST(request: Request) {
       logApiError('/api/tenant/settings#wallet-push', pushErr);
     }
 
-    return NextResponse.json({
-      success: true,
-      tenant: {
-        ...updated,
-        walletBackgroundColor: walletStyle?.backgroundColor || null,
-        walletForegroundColor: walletStyle?.foregroundColor || null,
-        walletLabelColor: walletStyle?.labelColor || null,
-        walletStripImageData: walletStyle?.stripImageData || '',
+    return apiSuccess({
+      requestId,
+      data: {
+        success: true,
+        tenant: {
+          ...updated,
+          walletBackgroundColor: walletStyle?.backgroundColor || null,
+          walletForegroundColor: walletStyle?.foregroundColor || null,
+          walletLabelColor: walletStyle?.labelColor || null,
+          walletStripImageData: walletStyle?.stripImageData || '',
+        },
       },
     });
   } catch (e: unknown) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Error' }, { status: 500 });
+    return apiError({
+      requestId,
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: e instanceof Error ? e.message : 'Error',
+    });
   }
 }

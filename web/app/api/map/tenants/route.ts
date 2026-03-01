@@ -1,10 +1,12 @@
-import { NextResponse } from 'next/server';
+import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { prisma } from '@/app/lib/prisma';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
     const tenants = await prisma.tenant.findMany({
-      where: { isActive: true }, // 🔒 Solo activos
+      where: { isActive: true },
       select: {
         id: true,
         name: true,
@@ -14,8 +16,19 @@ export async function GET() {
         prize: true,
         instagram: true,
         logoData: true,
-      }
+      },
     });
-    return NextResponse.json({ tenants });
-  } catch { return NextResponse.json({ error: 'Error' }, { status: 500 }); }
+
+    return apiSuccess({
+      requestId,
+      data: { tenants },
+    });
+  } catch {
+    return apiError({
+      requestId,
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: 'Error al listar negocios del mapa',
+    });
+  }
 }

@@ -1,52 +1,82 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { verifyUserSessionToken } from '@/app/lib/user-session-token';
+import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
+import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
+
+type UserHistoryBody = {
+  userId?: string;
+  sessionToken?: string;
+};
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
-    const body = await request.json();
-    const { userId, sessionToken } = body as { userId?: string; sessionToken?: string };
+    const body = await parseJsonObject(request);
+    if (!body) {
+      return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'JSON inválido' });
+    }
 
-    const normalizedUserId = String(userId || '').trim();
-    if (!normalizedUserId) return NextResponse.json({ error: 'Falta ID' }, { status: 400 });
+    const normalizedUserId = asTrimmedString(body.userId);
+    if (!normalizedUserId) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Falta ID',
+      });
+    }
 
-    const session = verifyUserSessionToken(String(sessionToken || ''));
+    const session = verifyUserSessionToken(asTrimmedString(body.sessionToken));
     if (session.uid !== normalizedUserId) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+      return apiError({
+        requestId,
+        status: 401,
+        code: 'UNAUTHORIZED',
+        message: 'No autorizado',
+      });
     }
 
     const redemptions = await prisma.redemption.findMany({
-      where: { 
+      where: {
         userId: normalizedUserId,
-        isUsed: true // Solo premios ya cobrados
+        isUsed: true,
       },
       include: {
         tenant: {
-          select: { name: true, prize: true }
-        }
+          select: { name: true, prize: true },
+        },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
 
-    // Formatear fecha bonita
-    const history = redemptions.map(r => ({
-      id: r.id,
-      tenant: r.tenant.name,
-      prize: r.tenant.prize,
-      date: new Date(r.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }),
-      time: new Date(r.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+    const history = redemptions.map((redemption) => ({
+      id: redemption.id,
+      tenant: redemption.tenant.name,
+      prize: redemption.tenant.prize,
+      date: new Date(redemption.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }),
+      time: new Date(redemption.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
     }));
 
-    return NextResponse.json({ history });
-
+    return apiSuccess({ requestId, data: { history } });
   } catch (error: unknown) {
     if (error && typeof error === 'object' && 'message' in error) {
       const message = String((error as { message?: string }).message || '');
       if (message.startsWith('sessionToken')) {
-        return NextResponse.json({ error: 'Sesión inválida, vuelve a iniciar sesión' }, { status: 401 });
+        return apiError({
+          requestId,
+          status: 401,
+          code: 'UNAUTHORIZED',
+          message: 'Sesión inválida, vuelve a iniciar sesión',
+        });
       }
     }
 
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error' }, { status: 500 });
+    return apiError({
+      requestId,
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: error instanceof Error ? error.message : 'Error',
+    });
   }
 }

@@ -30,8 +30,35 @@ export default function MasterPage() {
   
   const [msg, setMsg] = useState('');
 
-  const handleAuth = (e: React.FormEvent) => { e.preventDefault(); if (masterPass === 'superadmin2026') { setAuth(true); loadTenants(); } else alert('No'); };
-  const loadTenants = async () => { try { const res = await fetch('/api/master/list-tenants', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ masterPassword: 'superadmin2026' }) }); const data = await res.json(); if(data.tenants) setTenants(data.tenants); } catch {} };
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const ok = await loadTenants(masterPass);
+    if (ok) {
+      setAuth(true);
+    } else {
+      alert('Contraseña maestra incorrecta o sin permisos');
+    }
+  };
+
+  const loadTenants = async (passwordOverride?: string) => {
+    try {
+      const res = await fetch('/api/master/list-tenants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ masterPassword: passwordOverride ?? masterPass }),
+      });
+
+      if (!res.ok) {
+        return false;
+      }
+
+      const data = await res.json();
+      if (data.tenants) setTenants(data.tenants);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   const createTenant = async () => {
     setMsg('Creando...');

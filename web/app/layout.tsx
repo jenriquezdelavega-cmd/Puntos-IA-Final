@@ -16,9 +16,9 @@ export const metadata: Metadata = {
   title: "Punto IA | Loyalty para negocios",
   description: "Punto IA: coalición de PyMEs unidas para premiar tu lealtad. Check-ins, puntos y recompensas en tus negocios favoritos.",
   icons: {
-    icon: "/icon.svg",
-    shortcut: "/icon.svg",
-    apple: "/icon.svg",
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
   },
   openGraph: {
     title: "Punto IA | Loyalty para negocios",

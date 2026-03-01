@@ -1,11 +1,20 @@
-import { NextResponse } from 'next/server';
+import { apiError, apiSuccess, getRequestId, type ApiErrorCode } from '@/app/lib/api-response';
 import { logApiError, logApiEvent } from '@/app/lib/api-log';
 import { RewardPeriod } from '@prisma/client';
 import { touchWalletPassRegistrations, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
 import { listWalletPushTokens, pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
 import { prisma } from '@/app/lib/prisma';
 import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
+import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 const TZ = 'America/Monterrey';
+
+function accessStatusToCode(status: number): ApiErrorCode {
+  if (status === 400) return 'BAD_REQUEST';
+  if (status === 401) return 'UNAUTHORIZED';
+  if (status === 403) return 'FORBIDDEN';
+  if (status === 404) return 'NOT_FOUND';
+  return 'INTERNAL_ERROR';
+}
 
 function dayKeyInBusinessTz(d = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -41,14 +50,30 @@ function periodKey(period: RewardPeriod, now = new Date()) {
 }
 
 export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { userId, code, tenantUserId, tenantSessionToken } = body;
+  const requestId = getRequestId(request);
 
-    if (!userId || !code || !tenantUserId || !tenantSessionToken) {
-      logApiEvent('/api/check-in/scan', 'validation_error', { hasUserId: Boolean(userId), hasCode: Boolean(code), hasTenantUserId: Boolean(tenantUserId), hasTenantSessionToken: Boolean(tenantSessionToken) });
-      return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
+  try {
+    const body = await parseJsonObject(request);
+    if (!body) {
+      return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'JSON inválido' });
     }
+    const parsedBody = parseWithSchema(body, {
+      userId: requiredString,
+      code: requiredString,
+      tenantUserId: requiredString,
+      tenantSessionToken: requiredString,
+    });
+    if (!parsedBody.ok) {
+      logApiEvent('/api/check-in/scan', 'validation_error', { field: String(parsedBody.field) });
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: `Campo inválido: ${String(parsedBody.field)}`,
+      });
+    }
+
+    const { userId, code, tenantUserId, tenantSessionToken } = parsedBody.data;
 
     const dayUTC = dayKeyInBusinessTz();
 
@@ -59,7 +84,12 @@ export async function POST(request: Request) {
 
     if (!validCode) {
       logApiEvent('/api/check-in/scan', 'invalid_code', { userId });
-      return NextResponse.json({ error: 'Código inválido o no es de hoy' }, { status: 404 });
+      return apiError({
+        requestId,
+        status: 404,
+        code: 'NOT_FOUND',
+        message: 'Código inválido o no es de hoy',
+      });
     }
 
     const access = await requireTenantRoleAccess({
@@ -69,7 +99,12 @@ export async function POST(request: Request) {
       allowedRoles: ['ADMIN', 'STAFF'],
     });
     if (!access.ok) {
-      return NextResponse.json({ error: access.error }, { status: access.status });
+      return apiError({
+        requestId,
+        status: access.status,
+        code: accessStatusToCode(access.status),
+        message: access.error,
+      });
     }
 
     let membership = await prisma.membership.findFirst({
@@ -96,7 +131,12 @@ export async function POST(request: Request) {
     });
     if (alreadyToday) {
       logApiEvent('/api/check-in/scan', 'duplicate_visit', { userId, tenantId: validCode.tenantId, visitDay });
-      return NextResponse.json({ error: '¡Ya registraste tu visita hoy!' }, { status: 400 });
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: '¡Ya registraste tu visita hoy!',
+      });
     }
 
     const now = new Date();
@@ -144,7 +184,7 @@ export async function POST(request: Request) {
 
     try {
       const serialNumber = walletSerialNumber(userId, validCode.tenantId);
-      const passTypeIdentifier = String(process.env.APPLE_PASS_TYPE_ID || '').trim() || undefined;
+      const passTypeIdentifier = asTrimmedString(process.env.APPLE_PASS_TYPE_ID) || undefined;
 
       await touchWalletPassRegistrations(prisma, {
         serialNumber,
@@ -192,16 +232,24 @@ export async function POST(request: Request) {
 
     logApiEvent('/api/check-in/scan', 'visit_registered', { userId, tenantId: validCode.tenantId, visitDay });
 
-    return NextResponse.json({
-      success: true,
-      visits: updatedMembership.currentVisits,
-      requiredVisits: validCode.tenant.requiredVisits ?? 10,
-      rewardPeriod: validCode.tenant.rewardPeriod,
-      message: `¡Visita registrada en ${validCode.tenant.name}!`,
+    return apiSuccess({
+      requestId,
+      data: {
+        success: true,
+        visits: updatedMembership.currentVisits,
+        requiredVisits: validCode.tenant.requiredVisits ?? 10,
+        rewardPeriod: validCode.tenant.rewardPeriod,
+        message: `¡Visita registrada en ${validCode.tenant.name}!`,
+      },
     });
 
   } catch (error: unknown) {
     logApiError('/api/check-in/scan', error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error técnico' }, { status: 500 });
+    return apiError({
+      requestId,
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: error instanceof Error ? error.message : 'Error técnico',
+    });
   }
 }

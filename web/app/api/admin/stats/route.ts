@@ -1,41 +1,83 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
+import { apiError, apiSuccess, type ApiErrorCode, getRequestId } from '@/app/lib/api-response';
+import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+
+function accessStatusToCode(status: number): ApiErrorCode {
+  if (status === 400) return 'BAD_REQUEST';
+  if (status === 401) return 'UNAUTHORIZED';
+  if (status === 403) return 'FORBIDDEN';
+  if (status === 404) return 'NOT_FOUND';
+  return 'INTERNAL_ERROR';
+}
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
-    const body = await request.json();
-    const { tenantId, tenantUserId, tenantSessionToken } = body;
+    const body = await parseJsonObject(request);
+    if (!body) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'JSON inválido',
+      });
+    }
+    const parsedBody = parseWithSchema(body, {
+      tenantId: requiredString,
+      tenantUserId: requiredString,
+      tenantSessionToken: requiredString,
+    });
+    if (!parsedBody.ok) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: `Campo inválido: ${String(parsedBody.field)}`,
+      });
+    }
 
+    const { tenantId, tenantUserId, tenantSessionToken } = parsedBody.data;
     const access = await requireTenantRoleAccess({ tenantId, tenantUserId, tenantSessionToken, allowedRoles: ['ADMIN'] });
-    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+    if (!access.ok) {
+      return apiError({
+        requestId,
+        status: access.status,
+        code: accessStatusToCode(access.status),
+        message: access.error,
+      });
+    }
 
-    // 1. Contar Membresías de ESTE negocio
     const memberships = await prisma.membership.findMany({
       where: { tenantId: access.tenantId },
-      include: { user: true }
+      include: { user: true },
     });
 
-    const total = memberships.length;
+    const stats: Record<string, number> = { Hombre: 0, Mujer: 0 };
 
-    // 2. Agrupar por género manualmente (ya que gender está en User, no en Membership)
-    const stats: Record<string, number> = { 'Hombre': 0, 'Mujer': 0 };
-    
-    memberships.forEach(m => {
-      const g = (m.user.gender || '').toLowerCase();
-      if(['hombre','male','m'].includes(g)) stats['Hombre']++;
-      else if(['mujer','female','f'].includes(g)) stats['Mujer']++;
+    memberships.forEach((membership) => {
+      const gender = (membership.user.gender || '').toLowerCase();
+      if (['hombre', 'male', 'm'].includes(gender)) stats.Hombre++;
+      else if (['mujer', 'female', 'f'].includes(gender)) stats.Mujer++;
     });
 
-    return NextResponse.json({ 
-      total: total, 
-      breakdown: [
-        { gender: 'Hombre', _count: { gender: stats['Hombre'] } },
-        { gender: 'Mujer', _count: { gender: stats['Mujer'] } }
-      ]
+    return apiSuccess({
+      requestId,
+      data: {
+        total: memberships.length,
+        breakdown: [
+          { gender: 'Hombre', _count: { gender: stats.Hombre } },
+          { gender: 'Mujer', _count: { gender: stats.Mujer } },
+        ],
+      },
     });
-
   } catch (error: unknown) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error' }, { status: 500 });
+    return apiError({
+      requestId,
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: error instanceof Error ? error.message : 'Error interno en estadísticas',
+    });
   }
 }

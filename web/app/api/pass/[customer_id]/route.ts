@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { prisma } from '@/app/lib/prisma';
+import { asTrimmedString } from '@/app/lib/request-validation';
 import { generateCustomerPass } from '@/app/lib/customer-pass';
 
 type Params = {
@@ -7,12 +8,19 @@ type Params = {
 };
 
 export async function GET(req: Request, { params }: Params) {
+  const requestId = getRequestId(req);
+
   try {
     const { customer_id } = await params;
-    const customerId = String(customer_id || '').trim();
+    const customerId = asTrimmedString(customer_id);
 
     if (!customerId) {
-      return NextResponse.json({ error: 'customer_id requerido' }, { status: 400 });
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'customer_id requerido',
+      });
     }
 
     const user = await prisma.user.findUnique({
@@ -21,11 +29,16 @@ export async function GET(req: Request, { params }: Params) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
+      return apiError({
+        requestId,
+        status: 404,
+        code: 'NOT_FOUND',
+        message: 'Cliente no encontrado',
+      });
     }
 
     const url = new URL(req.url);
-    const businessId = String(url.searchParams.get('businessId') || url.searchParams.get('business_id') || '').trim();
+    const businessId = asTrimmedString(url.searchParams.get('businessId') || url.searchParams.get('business_id'));
 
     let business: {
       id: string;
@@ -62,21 +75,28 @@ export async function GET(req: Request, { params }: Params) {
 
     const pass = generateCustomerPass(user.id);
 
-    return NextResponse.json({
-      customer_id: user.id,
-      name: user.name || 'Cliente Punto IA',
-      branding: {
-        app: 'Punto IA',
-        theme: 'orange-pink',
+    return apiSuccess({
+      requestId,
+      data: {
+        customer_id: user.id,
+        name: user.name || 'Cliente Punto IA',
+        branding: {
+          app: 'Punto IA',
+          theme: 'orange-pink',
+        },
+        qr: {
+          token: pass.token,
+          value: pass.qrValue,
+        },
+        business,
       },
-      qr: {
-        token: pass.token,
-        value: pass.qrValue,
-      },
-      business,
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Error interno';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return apiError({
+      requestId,
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: error instanceof Error ? error.message : 'Error interno',
+    });
   }
 }

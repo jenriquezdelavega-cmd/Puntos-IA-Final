@@ -1,81 +1,121 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
+import { apiError, apiSuccess, type ApiErrorCode, getRequestId } from '@/app/lib/api-response';
+import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+
+function accessStatusToCode(status: number): ApiErrorCode {
+  if (status === 400) return 'BAD_REQUEST';
+  if (status === 401) return 'UNAUTHORIZED';
+  if (status === 403) return 'FORBIDDEN';
+  if (status === 404) return 'NOT_FOUND';
+  return 'INTERNAL_ERROR';
+}
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
-    const body = await request.json();
-    const { tenantId, tenantUserId, tenantSessionToken } = body;
+    const body = await parseJsonObject(request);
+    if (!body) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'JSON inválido',
+      });
+    }
+    const parsedBody = parseWithSchema(body, {
+      tenantId: requiredString,
+      tenantUserId: requiredString,
+      tenantSessionToken: requiredString,
+    });
+    if (!parsedBody.ok) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: `Campo inválido: ${String(parsedBody.field)}`,
+      });
+    }
 
+    const { tenantId, tenantUserId, tenantSessionToken } = parsedBody.data;
     const access = await requireTenantRoleAccess({ tenantId, tenantUserId, tenantSessionToken, allowedRoles: ['ADMIN'] });
-    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+    if (!access.ok) {
+      return apiError({
+        requestId,
+        status: access.status,
+        code: accessStatusToCode(access.status),
+        message: access.error,
+      });
+    }
 
-    // 1. VISITAS
     const visits = await prisma.visit.findMany({
       where: { membership: { tenantId: access.tenantId } },
-      orderBy: { visitedAt: 'asc' }
+      orderBy: { visitedAt: 'asc' },
     });
 
     const visitsByDate: Record<string, number> = {};
-    visits.forEach(v => {
-      const date = v.visitedAt.toISOString().split('T')[0];
+    visits.forEach((visit) => {
+      const date = visit.visitedAt.toISOString().split('T')[0];
       visitsByDate[date] = (visitsByDate[date] || 0) + 1;
     });
-    const chartData = Object.keys(visitsByDate).map(d => ({ date: d, count: visitsByDate[d] }));
 
-    // 2. DEMOGRAFÍA
+    const chartData = Object.keys(visitsByDate).map((date) => ({ date, count: visitsByDate[date] }));
+
     const memberships = await prisma.membership.findMany({
       where: { tenantId: access.tenantId },
-      include: { user: true }
+      include: { user: true },
     });
 
-    let male = 0, female = 0, other = 0;
-    
-    // 🆕 NUEVOS RANGOS DE EDAD
+    let male = 0;
+    let female = 0;
+    let other = 0;
+
     const ages = { '<18': 0, '18-25': 0, '26-35': 0, '36-45': 0, '46-65': 0, '>65': 0 };
 
-    memberships.forEach(m => {
-      // Género
-      const g = (m.user.gender || '').toLowerCase();
-      if (g === 'hombre' || g === 'm') male++;
-      else if (g === 'mujer' || g === 'f') female++;
+    memberships.forEach((membership) => {
+      const gender = (membership.user.gender || '').toLowerCase();
+      if (gender === 'hombre' || gender === 'm') male++;
+      else if (gender === 'mujer' || gender === 'f') female++;
       else other++;
 
-      // Edad
-      if (m.user.birthDate) {
-        const birth = new Date(m.user.birthDate);
+      if (membership.user.birthDate) {
+        const birth = new Date(membership.user.birthDate);
         const age = new Date().getFullYear() - birth.getFullYear();
-        
+
         if (age < 18) ages['<18']++;
-        else if (age >= 18 && age <= 25) ages['18-25']++;
-        else if (age >= 26 && age <= 35) ages['26-35']++;
-        else if (age >= 36 && age <= 45) ages['36-45']++;
-        else if (age >= 46 && age <= 65) ages['46-65']++;
-        else if (age > 65) ages['>65']++;
+        else if (age <= 25) ages['18-25']++;
+        else if (age <= 35) ages['26-35']++;
+        else if (age <= 45) ages['36-45']++;
+        else if (age <= 65) ages['46-65']++;
+        else ages['>65']++;
       }
     });
 
     const genderData = [
       { label: 'Hombres', value: male, color: '#3b82f6' },
       { label: 'Mujeres', value: female, color: '#ec4899' },
-      { label: 'Otros', value: other, color: '#9ca3af' }
+      { label: 'Otros', value: other, color: '#9ca3af' },
     ];
 
-    const ageData = Object.keys(ages).map(k => ({ label: k, value: ages[k as keyof typeof ages] }));
+    const ageData = Object.keys(ages).map((key) => ({ label: key, value: ages[key as keyof typeof ages] }));
 
-    // CSV
-    const csvData = memberships.map(m => ({
-      Nombre: m.user.name || 'Anónimo',
-      Telefono: m.user.phone,
-      Email: m.user.email || '',
-      Genero: m.user.gender || '',
-      Visitas: m.totalVisits,
-      Ultima: m.lastVisitAt ? m.lastVisitAt.toISOString().split('T')[0] : '-'
+    const csvData = memberships.map((membership) => ({
+      Nombre: membership.user.name || 'Anónimo',
+      Telefono: membership.user.phone,
+      Email: membership.user.email || '',
+      Genero: membership.user.gender || '',
+      Visitas: membership.totalVisits,
+      Ultima: membership.lastVisitAt ? membership.lastVisitAt.toISOString().split('T')[0] : '-',
     }));
 
-    return NextResponse.json({ chartData, genderData, ageData, csvData });
-
+    return apiSuccess({ requestId, data: { chartData, genderData, ageData, csvData } });
   } catch (error: unknown) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error' }, { status: 500 });
+    return apiError({
+      requestId,
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: error instanceof Error ? error.message : 'Error interno al generar reportes',
+    });
   }
 }
