@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "lint:fix": "eslint --fix",
+    "lint": "eslint --no-warn-ignored",
+    "lint:fix": "eslint --fix --no-warn-ignored",
     "type-check": "tsc --noEmit",
     "boost": "node prisma/boost.ts",
     "reset": "node prisma/reset.ts"

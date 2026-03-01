@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { hashPassword, isHashedPassword, verifyPassword } from '@/app/lib/password';
+import { generateUserSessionToken } from '@/app/lib/user-session-token';
+import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 
 type LoginBody = {
   phone?: string;
@@ -14,6 +16,15 @@ export async function POST(req: Request) {
 
     if (!normalizedPhone) {
       return NextResponse.json({ error: 'Teléfono requerido' }, { status: 400 });
+    }
+
+    const rateLimit = checkRateLimit({
+      key: buildRateLimitKey('user-login', req, normalizedPhone),
+      limit: 10,
+      windowMs: 60_000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: `Demasiados intentos. Intenta de nuevo en ${rateLimit.retryAfterSeconds}s` }, { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } });
     }
 
     const user = await prisma.user.findUnique({
@@ -62,6 +73,8 @@ export async function POST(req: Request) {
         };
       });
 
+    const sessionToken = generateUserSessionToken({ uid: user.id, phone: user.phone });
+
     return NextResponse.json({
       id: user.id,
       phone: user.phone,
@@ -70,6 +83,7 @@ export async function POST(req: Request) {
       gender: user.gender ?? '',
       birthDate: user.birthDate ?? null,
       memberships,
+      sessionToken,
     });
   } catch (error: unknown) {
     const message =

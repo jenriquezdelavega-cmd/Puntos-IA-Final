@@ -299,7 +299,7 @@ export default function Home() {
       const res = await fetch('/api/user/history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId: user.id, sessionToken: typeof window !== 'undefined' ? localStorage.getItem('punto_user_session_token') || '' : '' }),
       });
       const data = await res.json();
       if (data.history) setHistory(data.history);
@@ -322,6 +322,7 @@ export default function Home() {
       const data = await res.json();
       if (res.ok) {
         setUser(data);
+        if (typeof window !== 'undefined' && data.sessionToken) localStorage.setItem('punto_user_session_token', String(data.sessionToken));
         setName(data.name);
         setEmail(data.email || '');
         setGender(data.gender || '');
@@ -367,10 +368,11 @@ export default function Home() {
 
     setMessage('Guardando...');
     try {
+      const sessionToken = typeof window !== 'undefined' ? localStorage.getItem('punto_user_session_token') || '' : '';
       const res = await fetch('/api/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: user.id, name, email, gender, birthDate, phone }),
+        body: JSON.stringify({ id: user.id, name, email, gender, birthDate, phone, sessionToken }),
       });
 
       if (res.ok) {
@@ -391,7 +393,7 @@ export default function Home() {
       const res = await fetch('/api/redeem/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, tenantId }),
+        body: JSON.stringify({ userId: user.id, tenantId, sessionToken: typeof window !== 'undefined' ? localStorage.getItem('punto_user_session_token') || '' : '' }),
       });
       const data = await res.json();
       if (res.ok) setPrizeCode({ code: data.code, tenant: tenantName });
@@ -542,6 +544,7 @@ export default function Home() {
   const handleLogout = () => {
     if (confirm('¿Salir?')) {
       setUser(null);
+      if (typeof window !== 'undefined') localStorage.removeItem('punto_user_session_token');
       setView('WELCOME');
       setPhone('');
       setPassword('');

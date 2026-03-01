@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import crypto from 'crypto';
+import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 const BUSINESS_TZ = 'America/Monterrey';
 
 // Alfabeto sin caracteres confusos (sin I, O, 0, 1)
@@ -34,18 +35,23 @@ function dayKeyInBusinessTz(d = new Date()) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { tenantId, tenantUserId } = body;
+    const { tenantId, tenantUserId, tenantSessionToken } = body;
 
-    if (!tenantId) return NextResponse.json({ error: 'Falta Tenant ID' }, { status: 400 });
-    if (!tenantUserId) return NextResponse.json({ error: 'Falta TenantUser ID' }, { status: 400 });
+    const access = await requireTenantRoleAccess({
+      tenantId,
+      tenantUserId,
+      tenantSessionToken,
+      allowedRoles: ['ADMIN', 'STAFF'],
+    });
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
     const day = dayKeyInBusinessTz();
 
     // Si el empleado ya generó hoy, regresa el existente (no crea otro)
     const existing = await prisma.dailyCode.findFirst({
       where: {
-        tenantId,
-        generatedById: tenantUserId,
+        tenantId: access.tenantId,
+        generatedById: access.userId,
         day,
         isActive: true,
       },
@@ -62,8 +68,8 @@ export async function POST(request: Request) {
     const saved = await prisma.dailyCode.create({
       data: {
         code: finalCode,
-        tenantId,
-        generatedById: tenantUserId,
+        tenantId: access.tenantId,
+        generatedById: access.userId,
         day,
         isActive: true,
       },

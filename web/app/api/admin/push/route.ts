@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { logApiError, logApiEvent } from '@/app/lib/api-log';
 import { pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
+import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
+import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 
 const MAX_PUSHES_PER_WEEK = 2;
 
@@ -17,9 +19,19 @@ function startOfWeek() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { tenantId, message } = body;
+    const { tenantId, tenantUserId, tenantSessionToken, message } = body;
 
-    if (!tenantId) return NextResponse.json({ error: 'tenantId requerido' }, { status: 400 });
+    const rateLimit = checkRateLimit({
+      key: buildRateLimitKey('admin-push', request, `${tenantId}:${tenantUserId}`),
+      limit: 6,
+      windowMs: 60_000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: `Demasiadas solicitudes. Intenta de nuevo en ${rateLimit.retryAfterSeconds}s`, remaining: 0 }, { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } });
+    }
+
+    const access = await requireTenantRoleAccess({ tenantId, tenantUserId, tenantSessionToken, allowedRoles: ['ADMIN'] });
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
     if (!message || !String(message).trim()) return NextResponse.json({ error: 'Escribe un mensaje para la notificación' }, { status: 400 });
     if (String(message).length > 200) return NextResponse.json({ error: 'El mensaje no puede tener más de 200 caracteres' }, { status: 400 });
 
@@ -28,7 +40,7 @@ export async function POST(request: Request) {
 
     const weekStart = startOfWeek();
     const pushesThisWeek = await prisma.tenantPushLog.count({
-      where: { tenantId, sentAt: { gte: weekStart } },
+      where: { tenantId: access.tenantId, sentAt: { gte: weekStart } },
     });
 
     if (pushesThisWeek >= MAX_PUSHES_PER_WEEK) {
@@ -41,9 +53,9 @@ export async function POST(request: Request) {
     const trimmedMessage = String(message).trim();
 
     await prisma.tenantWalletStyle.upsert({
-      where: { tenantId },
+      where: { tenantId: access.tenantId },
       update: { lastPushMessage: trimmedMessage },
-      create: { tenantId, lastPushMessage: trimmedMessage },
+      create: { tenantId: access.tenantId, lastPushMessage: trimmedMessage },
     });
 
     const registrations = await prisma.$queryRawUnsafe<Array<{ push_token: string; serial_number: string }>>(
@@ -51,14 +63,14 @@ export async function POST(request: Request) {
        FROM apple_wallet_registrations
        WHERE serial_number LIKE $1
          AND pass_type_identifier = $2`,
-      `%-${tenantId}`,
+      `%-${access.tenantId}`,
       passTypeIdentifier
     );
 
     await prisma.$executeRawUnsafe(
       `UPDATE apple_wallet_registrations SET updated_at = NOW()
        WHERE serial_number LIKE $1 AND pass_type_identifier = $2`,
-      `%-${tenantId}`,
+      `%-${access.tenantId}`,
       passTypeIdentifier
     );
 
@@ -87,11 +99,11 @@ export async function POST(request: Request) {
     }
 
     await prisma.tenantPushLog.create({
-      data: { tenantId, message: trimmedMessage, devices: sent },
+      data: { tenantId: access.tenantId, message: trimmedMessage, devices: sent },
     });
 
     logApiEvent('/api/admin/push', 'push_broadcast', {
-      tenantId,
+      tenantId: access.tenantId,
       message: trimmedMessage,
       totalRegistrations: registrations.length,
       sent,
@@ -116,15 +128,28 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId');
-    if (!tenantId) return NextResponse.json({ error: 'tenantId requerido' }, { status: 400 });
+    const tenantUserId = searchParams.get('tenantUserId');
+    const tenantSessionToken = searchParams.get('tenantSessionToken');
+
+    const rateLimit = checkRateLimit({
+      key: buildRateLimitKey('admin-push', request, `${tenantId}:${tenantUserId}`),
+      limit: 6,
+      windowMs: 60_000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: `Demasiadas solicitudes. Intenta de nuevo en ${rateLimit.retryAfterSeconds}s`, remaining: 0 }, { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } });
+    }
+
+    const access = await requireTenantRoleAccess({ tenantId, tenantUserId, tenantSessionToken, allowedRoles: ['ADMIN'] });
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
     const weekStart = startOfWeek();
     const pushesThisWeek = await prisma.tenantPushLog.count({
-      where: { tenantId, sentAt: { gte: weekStart } },
+      where: { tenantId: access.tenantId, sentAt: { gte: weekStart } },
     });
 
     const recentPushes = await prisma.tenantPushLog.findMany({
-      where: { tenantId },
+      where: { tenantId: access.tenantId },
       orderBy: { sentAt: 'desc' },
       take: 10,
     });

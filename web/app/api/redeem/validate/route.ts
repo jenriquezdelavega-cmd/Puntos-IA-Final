@@ -1,29 +1,46 @@
 import { NextResponse } from 'next/server';
 import { logApiError, logApiEvent } from '@/app/lib/api-log';
 import { prisma } from '@/app/lib/prisma';
+import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
+import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const tenantId = String(body?.tenantId || '').trim();
+    const tenantUserId = String(body?.tenantUserId || '').trim();
+    const tenantSessionToken = String(body?.tenantSessionToken || '').trim();
     const code = String(body?.code || '').trim();
 
-    if (!tenantId || !code) {
-      logApiEvent('/api/redeem/validate', 'validation_error', { hasTenantId: Boolean(tenantId), hasCode: Boolean(code) });
+    const rateLimit = checkRateLimit({
+      key: buildRateLimitKey('redeem-validate', request, `${tenantId}:${tenantUserId}`),
+      limit: 30,
+      windowMs: 60_000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: `Demasiadas validaciones. Intenta de nuevo en ${rateLimit.retryAfterSeconds}s` }, { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } });
+    }
+
+    const access = await requireTenantRoleAccess({ tenantId, tenantUserId, tenantSessionToken, allowedRoles: ['ADMIN', 'STAFF'] });
+    if (!access.ok) {
+      return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
+    if (!code) {
+      logApiEvent('/api/redeem/validate', 'validation_error', { tenantId: access.tenantId, hasCode: false });
       return NextResponse.json(
-        { error: 'tenantId y code son requeridos' },
+        { error: 'code es requerido' },
         { status: 400 }
       );
     }
 
-    // VALIDAR premio YA GANADO (NO recalcula puntos/visitas)
     const redemption = await prisma.redemption.findFirst({
-      where: { tenantId, code, isUsed: false },
+      where: { tenantId: access.tenantId, code, isUsed: false },
       include: { user: true },
     });
 
     if (!redemption) {
-      logApiEvent('/api/redeem/validate', 'invalid_or_used_code', { tenantId, code });
+      logApiEvent('/api/redeem/validate', 'invalid_or_used_code', { tenantId: access.tenantId, code });
       return NextResponse.json(
         { error: 'Código inválido o ya fue canjeado' },
         { status: 404 }
@@ -35,7 +52,7 @@ export async function POST(request: Request) {
       data: { isUsed: true },
     });
 
-    logApiEvent('/api/redeem/validate', 'redemption_validated', { tenantId, code, redemptionId: redemption.id });
+    logApiEvent('/api/redeem/validate', 'redemption_validated', { tenantId: access.tenantId, code, redemptionId: redemption.id });
 
     return NextResponse.json({
       ok: true,

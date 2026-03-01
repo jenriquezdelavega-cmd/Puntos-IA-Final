@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
+import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { tenantId } = body;
+    const { tenantId, tenantUserId, tenantSessionToken } = body;
 
-    if (!tenantId) return NextResponse.json({ error: 'Falta Tenant ID' }, { status: 400 });
+    const access = await requireTenantRoleAccess({ tenantId, tenantUserId, tenantSessionToken, allowedRoles: ['ADMIN'] });
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
     // 1. Contar Membresías de ESTE negocio
     const memberships = await prisma.membership.findMany({
-      where: { tenantId: tenantId },
+      where: { tenantId: access.tenantId },
       include: { user: true }
     });
 

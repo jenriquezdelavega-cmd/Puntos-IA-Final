@@ -4,6 +4,8 @@ import { RewardPeriod } from '@prisma/client';
 import { prisma } from '@/app/lib/prisma';
 import { touchWalletPassRegistrations, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
 import { listWalletPushTokens, pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
+import { verifyUserSessionToken } from '@/app/lib/user-session-token';
+import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 const TZ = 'America/Monterrey';
 
 function tzParts(d: Date) {
@@ -28,25 +30,42 @@ function periodKey(period: RewardPeriod, now = new Date()) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userId, tenantId } = body;
+    const { userId, tenantId, sessionToken } = body as { userId?: string; tenantId?: string; sessionToken?: string };
 
-    if (!userId || !tenantId) {
-      logApiEvent('/api/redeem/request', 'validation_error', { hasUserId: Boolean(userId), hasTenantId: Boolean(tenantId) });
+    const normalizedUserId = String(userId || '').trim();
+    const normalizedTenantId = String(tenantId || '').trim();
+
+    const rateLimit = checkRateLimit({
+      key: buildRateLimitKey('redeem-request', request, normalizedUserId),
+      limit: 10,
+      windowMs: 60_000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: `Demasiadas solicitudes. Intenta de nuevo en ${rateLimit.retryAfterSeconds}s` }, { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } });
+    }
+
+    if (!normalizedUserId || !normalizedTenantId) {
+      logApiEvent('/api/redeem/request', 'validation_error', { hasUserId: Boolean(normalizedUserId), hasTenantId: Boolean(normalizedTenantId) });
       return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
     }
 
-    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    const session = verifyUserSessionToken(String(sessionToken || ''));
+    if (session.uid !== normalizedUserId) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    const tenant = await prisma.tenant.findUnique({ where: { id: normalizedTenantId } });
     if (!tenant) {
-      logApiEvent('/api/redeem/request', 'tenant_not_found', { tenantId });
+      logApiEvent('/api/redeem/request', 'tenant_not_found', { tenantId: normalizedTenantId });
       return NextResponse.json({ error: 'Negocio no encontrado' }, { status: 404 });
     }
 
     let membership = await prisma.membership.findUnique({
-      where: { tenantId_userId: { tenantId, userId } }
+      where: { tenantId_userId: { tenantId: normalizedTenantId, userId: normalizedUserId } }
     });
 
     if (!membership) {
-      logApiEvent('/api/redeem/request', 'membership_not_found', { userId, tenantId });
+      logApiEvent('/api/redeem/request', 'membership_not_found', { userId: normalizedUserId, tenantId: normalizedTenantId });
       return NextResponse.json({ error: 'No tienes membresía' }, { status: 400 });
     }
 
@@ -78,7 +97,7 @@ export async function POST(request: Request) {
     const currentVisits = membership.currentVisits ?? 0;
 
     if (currentVisits < requiredVisits) {
-      logApiEvent('/api/redeem/request', 'insufficient_visits', { userId, tenantId, currentVisits, requiredVisits });
+      logApiEvent('/api/redeem/request', 'insufficient_visits', { userId: normalizedUserId, tenantId: normalizedTenantId, currentVisits, requiredVisits });
       return NextResponse.json({ error: `Te faltan ${requiredVisits - currentVisits} visita(s) para canjear` }, { status: 400 });
     }
 
@@ -86,7 +105,7 @@ export async function POST(request: Request) {
 
     await prisma.$transaction([
       prisma.redemption.create({
-        data: { code, userId, tenantId, isUsed: false }
+        data: { code, userId: normalizedUserId, tenantId: normalizedTenantId, isUsed: false }
       }),
       prisma.membership.update({
         where: { id: membership.id },
@@ -94,10 +113,10 @@ export async function POST(request: Request) {
       })
     ]);
 
-    logApiEvent('/api/redeem/request', 'redemption_requested', { userId, tenantId, code });
+    logApiEvent('/api/redeem/request', 'redemption_requested', { userId: normalizedUserId, tenantId: normalizedTenantId, code });
 
     try {
-      const serialNumber = walletSerialNumber(userId, tenantId);
+      const serialNumber = walletSerialNumber(normalizedUserId, normalizedTenantId);
       const passTypeIdentifier = String(process.env.APPLE_PASS_TYPE_ID || '').trim() || undefined;
 
       await touchWalletPassRegistrations(prisma, { serialNumber, passTypeIdentifier });
@@ -123,6 +142,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, code });
 
   } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'message' in error) {
+      const message = String((error as { message?: string }).message || '');
+      if (message.startsWith('sessionToken')) {
+        return NextResponse.json({ error: 'Sesión inválida, vuelve a iniciar sesión' }, { status: 401 });
+      }
+    }
+
     logApiError('/api/redeem/request', error);
     return NextResponse.json({ error: 'Error técnico: ' + (error instanceof Error ? error.message : '') }, { status: 500 });
   }
