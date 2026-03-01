@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { verifyCustomerToken } from '@/app/lib/customer-token';
+import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
 
 function extractToken(value: string) {
-  const raw = String(value || '').trim();
+  const raw = asTrimmedString(value);
   if (!raw) return '';
 
   try {
@@ -24,20 +25,35 @@ function extractToken(value: string) {
 }
 
 export async function POST(req: Request) {
+  const requestId = getRequestId(req);
+
   try {
-    const body = await req.json();
-    const rawInput = String(body?.token || body?.qrValue || '').trim();
+    const body = await parseJsonObject(req);
+    if (!body) {
+      return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'JSON inválido' });
+    }
+    const rawInput = asTrimmedString(body?.token || body?.qrValue);
     const token = extractToken(rawInput);
     if (!token) {
-      return NextResponse.json({ error: 'token requerido' }, { status: 400 });
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'token requerido',
+      });
     }
 
     const payload = verifyCustomerToken(token);
-    return NextResponse.json({ customerId: payload.cid });
+    return apiSuccess({
+      requestId,
+      data: { customerId: payload.cid },
+    });
   } catch (error: unknown) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'No se pudo resolver QR' },
-      { status: 400 }
-    );
+    return apiError({
+      requestId,
+      status: 400,
+      code: 'BAD_REQUEST',
+      message: error instanceof Error ? error.message : 'No se pudo resolver QR',
+    });
   }
 }

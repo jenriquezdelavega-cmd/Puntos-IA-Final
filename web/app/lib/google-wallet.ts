@@ -14,7 +14,10 @@ const SERVICE_ACCOUNT_CANDIDATES = [
 type ServiceAccount = {
   client_email?: string;
   private_key?: string;
+  token_uri?: string;
 };
+
+const GOOGLE_TOKEN_URI = 'https://oauth2.googleapis.com/token';
 
 function firstEnv(names: readonly string[]) {
   for (const name of names) {
@@ -48,6 +51,47 @@ export function parseGoogleServiceAccount() {
   } catch {
     throw new Error('Invalid GOOGLE_WALLET_SA_B64 content. Expected base64-encoded service account JSON.');
   }
+}
+
+export async function getGoogleServiceAccountAccessToken(scopes: string[]) {
+  if (!scopes.length) {
+    throw new Error('At least one Google OAuth scope is required');
+  }
+
+  const credentials = parseGoogleServiceAccount();
+  const now = Math.floor(Date.now() / 1000);
+  const tokenUri = credentials.token_uri || GOOGLE_TOKEN_URI;
+
+  const assertion = signSaveToWalletJwt(
+    {
+      iss: credentials.client_email,
+      sub: credentials.client_email,
+      aud: tokenUri,
+      iat: now,
+      exp: now + 3600,
+      scope: scopes.join(' '),
+    },
+    credentials.private_key,
+  );
+
+  const response = await fetch(tokenUri, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion,
+    }),
+  });
+
+  const responseBody = (await response.json().catch(() => null)) as { access_token?: string } | null;
+
+  if (!response.ok || !responseBody?.access_token) {
+    throw new Error('Unable to obtain Google access token');
+  }
+
+  return responseBody.access_token;
 }
 
 function base64url(input: string | Buffer) {

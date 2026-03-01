@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 
@@ -104,31 +105,27 @@ function BrandLogo({ animate = true }: { animate?: boolean }) {
   const canAnim = animate && !reduce;
 
   return (
-    <div className="mb-2 select-none scale-90">
-      <motion.div
-        initial={canAnim ? { opacity: 0, y: 8 } : false}
-        animate={canAnim ? { opacity: 1, y: 0 } : false}
-        transition={canAnim ? { ...spring } : undefined}
-        className="brand-lockup relative inline-flex items-end justify-center gap-3"
-      >
-        <span className="brand-punto-wrap">
-          <span className="brand-word brand-word-punto">punt</span>
-          <span className="brand-o-wrap">
-            <span className="brand-word brand-word-punto">o</span>
-            <motion.span
-              initial={canAnim ? { scale: 0.85, opacity: 0 } : false}
-              animate={canAnim ? { scale: 1, opacity: 1 } : false}
-              transition={canAnim ? { ...spring, delay: 0.08 } : undefined}
-              className="brand-orb"
-            >
-              <span className="brand-orb-glow" />
-              <span className="brand-orb-shine" />
-            </motion.span>
-          </span>
-        </span>
-        <span className="brand-word brand-word-ia">IA</span>
-      </motion.div>
-    </div>
+    <motion.div
+      initial={canAnim ? { opacity: 0, y: 8 } : false}
+      animate={canAnim ? { opacity: 1, y: 0 } : false}
+      transition={canAnim ? { ...spring } : undefined}
+      className="mb-3 select-none"
+    >
+      <div className="flex flex-col items-center gap-2">
+        <Image
+          src="/logo.png"
+          alt="Logo Punto IA"
+          width={128}
+          height={128}
+          priority
+          className="h-20 w-20 sm:h-24 sm:w-24 object-contain"
+        />
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white drop-shadow-md">Punto IA</h1>
+      </div>
+      <p className="mt-2 text-center text-xs font-semibold tracking-wide text-white/80">
+        Premiamos tu lealtad en tus negocios favoritos.
+      </p>
+    </motion.div>
   );
 }
 

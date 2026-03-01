@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  lint-and-build:
+  lint-type-test-build:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -33,7 +33,9 @@ jobs:
 
       - name: Type check
         run: npx tsc --noEmit
-        continue-on-error: true
+
+      - name: Contract tests
+        run: npm run test
 
       - name: Build
         run: npm run build

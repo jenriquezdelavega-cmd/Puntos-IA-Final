@@ -71,11 +71,11 @@ Después de una revisión estática del código en `web/`, el producto ya tiene 
 
 ## 5) Entregables de la siguiente sprint
 
-- [ ] Middleware/guard reusable para App Router API.
-- [ ] Matriz de permisos por endpoint.
-- [ ] 100% de rutas críticas con validación de esquema.
-- [ ] CI con lint + type-check + tests.
-- [ ] Documento de runbook de seguridad (rotación de secretos + incident response básico).
+- [x] Middleware/guard reusable para App Router API.
+- [x] Matriz de permisos por endpoint.
+- [x] 100% de rutas críticas con validación de esquema.
+- [x] CI con lint + type-check + tests.
+- [x] Documento de runbook de seguridad (rotación de secretos + incident response básico).
 
 ## 6) Criterios de éxito
 

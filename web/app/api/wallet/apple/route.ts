@@ -5,10 +5,12 @@ import { join } from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { NextResponse } from 'next/server';
+import { apiError, getRequestId } from '@/app/lib/api-response';
 import { prisma } from '@/app/lib/prisma';
 import { generateCustomerToken } from '@/app/lib/customer-token';
 import { walletAuthTokenForSerial, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
 import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
+import { asTrimmedString } from '@/app/lib/request-validation';
 
 const execFileAsync = promisify(execFile);
 let cachedOpenSslBin: string | null = null;
@@ -125,16 +127,16 @@ function optionalEnv(name: string, fallback = '') {
 }
 
 function readCustomerId(searchParams: URLSearchParams) {
-  const direct = String(searchParams.get('customerId') || '').trim();
+  const direct = asTrimmedString(searchParams.get('customerId'));
   if (direct) return direct;
   // Compatibilidad con enlaces existentes en frontend (`customer_id`).
-  return String(searchParams.get('customer_id') || '').trim();
+  return asTrimmedString(searchParams.get('customer_id'));
 }
 
 async function resolveOpenSslBin() {
   if (cachedOpenSslBin) return cachedOpenSslBin;
 
-  const preferredRaw = String(process.env.OPENSSL_BIN || '').trim();
+  const preferredRaw = asTrimmedString(process.env.OPENSSL_BIN);
   const preferred = preferredRaw.startsWith('/') ? preferredRaw : '';
   const candidates = [
     preferred,
@@ -339,7 +341,7 @@ function isPngBuffer(buffer: Buffer) {
 }
 
 function decodeTenantImageData(imageData: string) {
-  const raw = String(imageData || '').trim();
+  const raw = asTrimmedString(imageData);
   if (!raw) return null;
 
   const dataUrlMatch = raw.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
@@ -377,7 +379,7 @@ function hexToRgb(hex: string): string {
 }
 
 function ensureRgbColor(value: string | null | undefined, fallback: string): string {
-  const raw = String(value || '').trim();
+  const raw = asTrimmedString(value);
   if (!raw) return fallback;
   if (raw.startsWith('#')) return hexToRgb(raw);
   return raw;
@@ -650,22 +652,24 @@ async function createPassPackage(params: {
 }
 
 export async function GET(req: Request) {
+  const requestId = getRequestId(req);
+
   try {
     const { searchParams } = new URL(req.url);
     const customerId = readCustomerId(searchParams);
-    const businessId = String(searchParams.get('businessId') || searchParams.get('business_id') || '').trim();
-    const businessNameInput = String(searchParams.get('businessName') || '').trim();
+    const businessId = asTrimmedString(searchParams.get('businessId') || searchParams.get('business_id'));
+    const businessNameInput = asTrimmedString(searchParams.get('businessName'));
     if (!customerId) {
-      return NextResponse.json({ error: 'customerId requerido' }, { status: 400 });
+      return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'customerId requerido' });
     }
 
     if (!businessId) {
-      return NextResponse.json({ error: 'businessId requerido para crear wallet por negocio' }, { status: 400 });
+      return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'businessId requerido para crear wallet por negocio' });
     }
 
     const user = await prisma.user.findUnique({ where: { id: customerId }, select: { id: true, name: true, createdAt: true } });
     if (!user) {
-      return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
+      return apiError({ requestId, status: 404, code: 'NOT_FOUND', message: 'Cliente no encontrado' });
     }
 
     const tenant = await prisma.tenant.findUnique({
@@ -677,7 +681,7 @@ export async function GET(req: Request) {
     });
 
     if (!tenant) {
-      return NextResponse.json({ error: 'Negocio no encontrado para este wallet' }, { status: 404 });
+      return apiError({ requestId, status: 404, code: 'NOT_FOUND', message: 'Negocio no encontrado para este wallet' });
     }
 
     const businessName = tenant.name || businessNameInput || 'Negocio afiliado';
@@ -691,7 +695,7 @@ export async function GET(req: Request) {
 
     const pkpass = await createPassPackage({
       customerId: user.id,
-      customerName: String(user.name || '').trim() || 'Cliente',
+      customerName: asTrimmedString(user.name) || 'Cliente',
       businessId,
       businessName,
       requiredVisits: tenant.requiredVisits ?? 10,
@@ -722,6 +726,7 @@ export async function GET(req: Request) {
         'Accept-Ranges': 'none',
         'X-Content-Type-Options': 'nosniff',
         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'x-request-id': requestId,
       },
     });
   } catch (error: unknown) {
@@ -732,9 +737,11 @@ export async function GET(req: Request) {
       message.includes('Verifica APPLE_P12_PASSWORD')
         ? 400
         : 500;
-    return NextResponse.json(
-      { error: message },
-      { status }
-    );
+    return apiError({
+      requestId,
+      status,
+      code: status === 400 ? 'BAD_REQUEST' : 'INTERNAL_ERROR',
+      message,
+    });
   }
 }

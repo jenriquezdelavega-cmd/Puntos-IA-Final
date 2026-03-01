@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { prisma } from '@/app/lib/prisma';
+import { asTrimmedString } from '@/app/lib/request-validation';
 import {
   getGoogleWalletIssuerId,
   googleWalletConfigErrorResponse,
@@ -14,19 +15,31 @@ function sanitizeIdPart(value: string) {
 }
 
 export async function GET(req: Request) {
+  const requestId = getRequestId(req);
+
   try {
     const issuerId = getGoogleWalletIssuerId();
 
     if (!issuerId) {
-      return NextResponse.json(googleWalletConfigErrorResponse(), { status: 500 });
+      return apiError({
+        requestId,
+        status: 500,
+        code: 'INTERNAL_ERROR',
+        message: googleWalletConfigErrorResponse().error,
+      });
     }
 
     const url = new URL(req.url);
-    const customerId = String(url.searchParams.get('customerId') || '').trim();
-    const businessId = String(url.searchParams.get('businessId') || '').trim();
+    const customerId = asTrimmedString(url.searchParams.get('customerId'));
+    const businessId = asTrimmedString(url.searchParams.get('businessId'));
 
     if (!customerId || !businessId) {
-      return NextResponse.json({ error: 'customerId y businessId son requeridos' }, { status: 400 });
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'customerId y businessId son requeridos',
+      });
     }
 
     const [user, tenant, membership] = await Promise.all([
@@ -44,7 +57,12 @@ export async function GET(req: Request) {
     ]);
 
     if (!user || !tenant) {
-      return NextResponse.json({ error: 'Cliente o negocio no encontrado' }, { status: 404 });
+      return apiError({
+        requestId,
+        status: 404,
+        code: 'NOT_FOUND',
+        message: 'Cliente o negocio no encontrado',
+      });
     }
 
     const classId = `${issuerId}.puntoia_loyalty`;
@@ -103,13 +121,20 @@ export async function GET(req: Request) {
 
     const token = signSaveToWalletJwt(jwtPayload, account.private_key || '');
 
-    return NextResponse.json({
-      saveUrl: `https://pay.google.com/gp/v/save/${token}`,
-      classId,
-      objectId,
+    return apiSuccess({
+      requestId,
+      data: {
+        saveUrl: `https://pay.google.com/gp/v/save/${token}`,
+        classId,
+        objectId,
+      },
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Error interno';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return apiError({
+      requestId,
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: error instanceof Error ? error.message : 'Error interno',
+    });
   }
 }

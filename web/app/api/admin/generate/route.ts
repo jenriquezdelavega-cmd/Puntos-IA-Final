@@ -1,23 +1,23 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import crypto from 'crypto';
 import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
+import { apiError, apiSuccess, type ApiErrorCode, getRequestId } from '@/app/lib/api-response';
+import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+
 const BUSINESS_TZ = 'America/Monterrey';
 
-// Alfabeto sin caracteres confusos (sin I, O, 0, 1)
-const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-// Código robusto (12 chars + guion): XXXX-XXXX-XXXX
 function generateRobustCode() {
   const parts = [4, 4, 4].map((len) => {
-    let out = "";
+    let out = '';
     for (let i = 0; i < len; i++) {
       const idx = crypto.randomInt(0, ALPHABET.length);
       out += ALPHABET[idx];
     }
     return out;
   });
-  return parts.join("-");
+  return parts.join('-');
 }
 
 function dayKeyInBusinessTz(d = new Date()) {
@@ -29,13 +29,46 @@ function dayKeyInBusinessTz(d = new Date()) {
   }).formatToParts(d);
 
   const get = (type: string) => parts.find((part) => part.type === type)?.value || '';
-  return `${get('year')}-${get('month')}-${get('day')}`; // YYYY-MM-DD
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+
+function accessStatusToCode(status: number): ApiErrorCode {
+  if (status === 400) return 'BAD_REQUEST';
+  if (status === 401) return 'UNAUTHORIZED';
+  if (status === 403) return 'FORBIDDEN';
+  if (status === 404) return 'NOT_FOUND';
+  return 'INTERNAL_ERROR';
 }
 
 export async function POST(request: Request) {
+  const requestId = getRequestId(request);
+
   try {
-    const body = await request.json();
-    const { tenantId, tenantUserId, tenantSessionToken } = body;
+    const body = await parseJsonObject(request);
+    if (!body) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'JSON inválido',
+      });
+    }
+    const parsedBody = parseWithSchema(body, {
+      tenantId: requiredString,
+      tenantUserId: requiredString,
+      tenantSessionToken: requiredString,
+    });
+    if (!parsedBody.ok) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: `Campo inválido: ${String(parsedBody.field)}`,
+      });
+    }
+
+    const { tenantId, tenantUserId, tenantSessionToken } = parsedBody.data;
 
     const access = await requireTenantRoleAccess({
       tenantId,
@@ -43,11 +76,18 @@ export async function POST(request: Request) {
       tenantSessionToken,
       allowedRoles: ['ADMIN', 'STAFF'],
     });
-    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+
+    if (!access.ok) {
+      return apiError({
+        requestId,
+        status: access.status,
+        code: accessStatusToCode(access.status),
+        message: access.error,
+      });
+    }
 
     const day = dayKeyInBusinessTz();
 
-    // Si el empleado ya generó hoy, regresa el existente (no crea otro)
     const existing = await prisma.dailyCode.findFirst({
       where: {
         tenantId: access.tenantId,
@@ -59,15 +99,12 @@ export async function POST(request: Request) {
     });
 
     if (existing) {
-      return NextResponse.json({ code: existing.code, reused: true, day });
+      return apiSuccess({ requestId, data: { code: existing.code, reused: true, day } });
     }
-
-    // Genera y guarda
-    const finalCode = generateRobustCode();
 
     const saved = await prisma.dailyCode.create({
       data: {
-        code: finalCode,
+        code: generateRobustCode(),
         tenantId: access.tenantId,
         generatedById: access.userId,
         day,
@@ -75,9 +112,13 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ code: saved.code, reused: false, day });
-
+    return apiSuccess({ requestId, data: { code: saved.code, reused: false, day } });
   } catch (error: unknown) {
-    return NextResponse.json({ error: (error instanceof Error ? error.message : 'Error') || 'Error interno' }, { status: 500 });
+    return apiError({
+      requestId,
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: (error instanceof Error ? error.message : 'Error') || 'Error interno',
+    });
   }
 }

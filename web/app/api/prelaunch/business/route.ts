@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { addPrelaunchLead } from '@/app/lib/prelaunch-leads';
+import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
 
 type LeadBody = {
   businessName?: string;
@@ -10,21 +11,36 @@ type LeadBody = {
 };
 
 export async function POST(request: Request) {
-  try {
-    const body = (await request.json()) as LeadBody;
+  const requestId = getRequestId(request);
 
-    const businessName = String(body.businessName || '').trim();
-    const contactName = String(body.contactName || '').trim();
-    const phone = String(body.phone || '').trim();
-    const email = String(body.email || '').trim();
-    const city = String(body.city || '').trim();
+  try {
+    const body = await parseJsonObject(request);
+    if (!body) {
+      return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'JSON inválido' });
+    }
+
+    const businessName = asTrimmedString(body.businessName);
+    const contactName = asTrimmedString(body.contactName);
+    const phone = asTrimmedString(body.phone);
+    const email = asTrimmedString(body.email);
+    const city = asTrimmedString(body.city);
 
     if (!businessName || !contactName || !phone || !email) {
-      return NextResponse.json({ error: 'Faltan datos obligatorios.' }, { status: 400 });
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Faltan datos obligatorios.',
+      });
     }
 
     if (!/^\S+@\S+\.\S+$/.test(email)) {
-      return NextResponse.json({ error: 'Email inválido.' }, { status: 400 });
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Email inválido.',
+      });
     }
 
     const createdAt = new Date().toISOString();
@@ -55,12 +71,25 @@ export async function POST(request: Request) {
     );
 
     if (!saved.ok) {
-      return NextResponse.json({ error: 'No se pudo guardar en almacenamiento. Revisa permisos del servidor.' }, { status: 500 });
+      return apiError({
+        requestId,
+        status: 500,
+        code: 'INTERNAL_ERROR',
+        message: 'No se pudo guardar en almacenamiento. Revisa permisos del servidor.',
+      });
     }
 
-    return NextResponse.json({ ok: true });
+    return apiSuccess({
+      requestId,
+      data: { ok: true },
+    });
   } catch (error) {
     console.error('prelaunch_business_error', error);
-    return NextResponse.json({ error: 'No se pudo procesar la solicitud.' }, { status: 500 });
+    return apiError({
+      requestId,
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: 'No se pudo procesar la solicitud.',
+    });
   }
 }

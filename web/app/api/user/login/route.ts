@@ -1,21 +1,39 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { hashPassword, isHashedPassword, verifyPassword } from '@/app/lib/password';
 import { generateUserSessionToken } from '@/app/lib/user-session-token';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
+import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
+import { asTrimmedString, isValidPhone, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 
-type LoginBody = {
-  phone?: string;
-  password?: string;
-};
 
 export async function POST(req: Request) {
-  try {
-    const { phone, password } = (await req.json()) as LoginBody;
-    const normalizedPhone = String(phone || '').trim();
+  const requestId = getRequestId(req);
 
-    if (!normalizedPhone) {
-      return NextResponse.json({ error: 'Teléfono requerido' }, { status: 400 });
+  try {
+    const body = await parseJsonObject(req);
+    if (!body) {
+      return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'JSON inválido' });
+    }
+    const parsedBody = parseWithSchema(body, {
+      phone: requiredString,
+    });
+    if (!parsedBody.ok) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: `Campo inválido: ${String(parsedBody.field)}`,
+      });
+    }
+
+    const normalizedPhone = parsedBody.data.phone;
+    if (!isValidPhone(normalizedPhone)) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Formato de teléfono inválido',
+      });
     }
 
     const rateLimit = checkRateLimit({
@@ -24,7 +42,13 @@ export async function POST(req: Request) {
       windowMs: 60_000,
     });
     if (!rateLimit.allowed) {
-      return NextResponse.json({ error: `Demasiados intentos. Intenta de nuevo en ${rateLimit.retryAfterSeconds}s` }, { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) } });
+      return apiError({
+        requestId,
+        status: 429,
+        code: 'FORBIDDEN',
+        message: `Demasiados intentos. Intenta de nuevo en ${rateLimit.retryAfterSeconds}s`,
+        headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) },
+      });
     }
 
     const user = await prisma.user.findUnique({
@@ -36,14 +60,35 @@ export async function POST(req: Request) {
       },
     });
 
-    if (!user) return NextResponse.json({ error: 'Usuario no existe' }, { status: 401 });
+    if (!user) {
+      return apiError({
+        requestId,
+        status: 401,
+        code: 'UNAUTHORIZED',
+        message: 'Usuario no existe',
+      });
+    }
 
     if (typeof user.password === 'string' && user.password.length > 0) {
-      const inputPassword = String(password || '');
+      const inputPassword = String(body.password ?? '');
+      if (!inputPassword) {
+        return apiError({
+          requestId,
+          status: 400,
+          code: 'BAD_REQUEST',
+          message: 'Contraseña requerida',
+        });
+      }
+
       const validPassword = verifyPassword(inputPassword, user.password);
 
       if (!validPassword) {
-        return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
+        return apiError({
+          requestId,
+          status: 401,
+          code: 'UNAUTHORIZED',
+          message: 'Contraseña incorrecta',
+        });
       }
 
       if (!isHashedPassword(user.password)) {
@@ -75,15 +120,18 @@ export async function POST(req: Request) {
 
     const sessionToken = generateUserSessionToken({ uid: user.id, phone: user.phone });
 
-    return NextResponse.json({
-      id: user.id,
-      phone: user.phone,
-      name: user.name ?? '',
-      email: user.email ?? '',
-      gender: user.gender ?? '',
-      birthDate: user.birthDate ?? null,
-      memberships,
-      sessionToken,
+    return apiSuccess({
+      requestId,
+      data: {
+        id: user.id,
+        phone: user.phone,
+        name: user.name ?? '',
+        email: user.email ?? '',
+        gender: user.gender ?? '',
+        birthDate: user.birthDate ?? null,
+        memberships,
+        sessionToken,
+      },
     });
   } catch (error: unknown) {
     const message =
@@ -91,6 +139,11 @@ export async function POST(req: Request) {
         ? String((error as { message?: string }).message || 'Error')
         : 'Error';
 
-    return NextResponse.json({ error: message }, { status: 500 });
+    return apiError({
+      requestId,
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message,
+    });
   }
 }

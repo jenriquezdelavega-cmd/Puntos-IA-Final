@@ -1,52 +1,103 @@
-// web/app/api/user/profile/route.ts
-import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { verifyPassword } from '@/app/lib/password';
+import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
+import { asTrimmedString, isStrongEnoughPassword, isValidPhone, parseJsonObject } from '@/app/lib/request-validation';
+
+type UserProfileBody = {
+  phone?: string;
+  password?: string;
+};
 
 export async function POST(request: Request) {
-  try {
-    const { phone, password } = await request.json();
+  const requestId = getRequestId(request);
 
-    if (!phone || !password) {
-        return NextResponse.json({ error: 'Faltan credenciales' }, { status: 400 });
+  try {
+    const body = await parseJsonObject(request);
+    if (!body) {
+      return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'JSON inválido' });
+    }
+    const normalizedPhone = asTrimmedString(body.phone);
+    const normalizedPassword = asTrimmedString(body.password);
+
+    if (!normalizedPhone || !normalizedPassword) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Faltan credenciales',
+      });
     }
 
-    // 1. Buscar usuario con todas sus membresías y visitas recientes
+    if (!isValidPhone(normalizedPhone)) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Formato de teléfono inválido',
+      });
+    }
+
+    if (!isStrongEnoughPassword(normalizedPassword)) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Contraseña inválida',
+      });
+    }
+
     const user = await prisma.user.findUnique({
-      where: { phone },
+      where: { phone: normalizedPhone },
       include: {
         memberships: {
           include: {
             tenant: true,
             visits: {
-              take: 5, // Traer las últimas 5 visitas
-              orderBy: { visitedAt: 'desc' }
-            }
-          }
-        }
-      }
+              take: 5,
+              orderBy: { visitedAt: 'desc' },
+            },
+          },
+        },
+      },
     });
 
-    // 2. Validaciones
-    if (!user) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
-    if (!verifyPassword(password, user.password)) return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 });
+    if (!user) {
+      return apiError({
+        requestId,
+        status: 404,
+        code: 'NOT_FOUND',
+        message: 'Usuario no encontrado',
+      });
+    }
 
-    // 3. Preparar datos bonitos para la app
+    if (!verifyPassword(normalizedPassword, user.password)) {
+      return apiError({
+        requestId,
+        status: 401,
+        code: 'UNAUTHORIZED',
+        message: 'Contraseña incorrecta',
+      });
+    }
+
     const profileData = {
       name: user.name,
       phone: user.phone,
       joinedAt: user.createdAt,
-      memberships: user.memberships.map(m => ({
-        businessName: m.tenant.name,
-        currentPoints: m.currentVisits,
-        totalLifetimeVisits: m.totalVisits,
-        history: m.visits
-      }))
+      memberships: user.memberships.map((membership) => ({
+        businessName: membership.tenant.name,
+        currentPoints: membership.currentVisits,
+        totalLifetimeVisits: membership.totalVisits,
+        history: membership.visits,
+      })),
     };
 
-    return NextResponse.json({ success: true, data: profileData });
-
+    return apiSuccess({ requestId, data: { success: true, data: profileData } });
   } catch {
-    return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
+    return apiError({
+      requestId,
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: 'Error del servidor',
+    });
   }
 }
