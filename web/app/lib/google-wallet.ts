@@ -215,6 +215,61 @@ export function buildGoogleLoyaltyClassPayload() {
               },
             },
           },
+          {
+            twoItems: {
+              startItem: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['periodo']" }],
+                },
+              },
+              endItem: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['historial']" }],
+                },
+              },
+            },
+          },
+          {
+            oneItem: {
+              item: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['sellos']" }],
+                },
+              },
+            },
+          },
+          {
+            twoItems: {
+              startItem: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['ultima-visita']" }],
+                },
+              },
+              endItem: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['miembro-desde']" }],
+                },
+              },
+            },
+          },
+          {
+            oneItem: {
+              item: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['ultimo-aviso']" }],
+                },
+              },
+            },
+          },
+          {
+            oneItem: {
+              item: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['ayuda']" }],
+                },
+              },
+            },
+          },
         ],
       },
     },

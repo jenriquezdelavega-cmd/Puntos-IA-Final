@@ -44,6 +44,11 @@ function formatDateEs(date: Date | null | undefined) {
   return new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
 }
 
+function buildStampBubbles(currentVisits: number, requiredVisits: number) {
+  const safeRequired = Math.max(1, requiredVisits);
+  return Array.from({ length: safeRequired }, (_, index) => (index < currentVisits ? '●' : '○')).join(' ');
+}
+
 function formatPeriodLabel(period: string) {
   const normalized = String(period || '').toUpperCase();
   if (normalized === 'WEEKLY') return 'Semanal';
@@ -202,6 +207,11 @@ export async function GET(req: Request) {
       kind: 'strip',
     });
     const instagramHandle = normalizeInstagramHandle(tenant.instagram);
+    const walletStyleRow = await prisma.tenantWalletStyle.findUnique({
+      where: { tenantId: tenant.id },
+      select: { lastPushMessage: true },
+    });
+    const lastPushMessage = asTrimmedString(walletStyleRow?.lastPushMessage);
 
     const account = parseGoogleServiceAccount();
 
@@ -312,6 +322,11 @@ export async function GET(req: Request) {
                 body: `${currentVisits}/${requiredVisits} visitas`,
               },
               {
+                id: 'sellos',
+                header: '🎯 Sellos de visita',
+                body: buildStampBubbles(currentVisits, requiredVisits),
+              },
+              {
                 id: 'premio',
                 header: '🎁 Tu premio',
                 body: tenant.prize || 'Premio Sorpresa',
@@ -345,6 +360,25 @@ export async function GET(req: Request) {
                 id: 'id-miembro',
                 header: 'ID de miembro',
                 body: user.id,
+              },
+              ...(lastPushMessage
+                ? [
+                  {
+                    id: 'ultimo-aviso',
+                    header: '📢 Último aviso',
+                    body: lastPushMessage,
+                  },
+                ]
+                : []),
+              {
+                id: 'ayuda',
+                header: 'ℹ️ Ayuda',
+                body: 'Muestra este pase y escanea el QR del día para registrar tu visita.',
+              },
+              {
+                id: 'brand',
+                header: '✦ Punto IA',
+                body: 'Coalición de PyMEs que premia tu lealtad. Visita puntoia.mx',
               },
             ],
             ...(tenant.address || instagramHandle
