@@ -81,6 +81,12 @@ function resolveGoogleWalletImageUrl(params: {
   return imageUrl.toString();
 }
 
+function normalizeInstagramHandle(value: string | null | undefined) {
+  const normalized = asTrimmedString(value);
+  if (!normalized) return '';
+  return normalized.replace(/^@+/, '');
+}
+
 export async function GET(req: Request) {
   const requestId = getRequestId(req);
 
@@ -179,6 +185,7 @@ export async function GET(req: Request) {
     });
     const foregroundHex = parseRgbToHex(walletStyle.foregroundColor, '#FFFFFF');
     const labelHex = parseRgbToHex(walletStyle.labelColor, '#BFDFFE');
+    const instagramHandle = normalizeInstagramHandle(tenant.instagram);
 
     const account = parseGoogleServiceAccount();
 
@@ -225,12 +232,40 @@ export async function GET(req: Request) {
               : {}),
             ...(stripUri
               ? {
+                wideLogo: {
+                  sourceUri: { uri: stripUri },
+                  contentDescription: {
+                    defaultValue: { language: 'es-MX', value: `Logo horizontal de ${tenant.name || 'Punto IA'}` },
+                  },
+                },
+              }
+              : {}),
+            ...(stripUri
+              ? {
                 heroImage: {
                   sourceUri: { uri: stripUri },
                   contentDescription: {
                     defaultValue: { language: 'es-MX', value: `Imagen del pase de ${tenant.name || 'Punto IA'}` },
                   },
                 },
+              }
+              : {}),
+            ...(stripUri
+              ? {
+                imageModulesData: [
+                  {
+                    id: 'imagen-negocio',
+                    mainImage: {
+                      sourceUri: { uri: stripUri },
+                      contentDescription: {
+                        defaultValue: {
+                          language: 'es-MX',
+                          value: `Imagen promocional de ${tenant.name || 'Punto IA'}`,
+                        },
+                      },
+                    },
+                  },
+                ],
               }
               : {}),
             barcode: {
@@ -285,8 +320,13 @@ export async function GET(req: Request) {
                 header: 'Estilo del pase',
                 body: `Texto ${foregroundHex} · Etiquetas ${labelHex}`,
               },
+              {
+                id: 'id-miembro',
+                header: 'ID de miembro',
+                body: user.id,
+              },
             ],
-            ...(tenant.address || tenant.instagram
+            ...(tenant.address || instagramHandle
               ? {
                 linksModuleData: {
                   uris: [
@@ -299,12 +339,12 @@ export async function GET(req: Request) {
                         },
                       ]
                       : []),
-                    ...(tenant.instagram
+                    ...(instagramHandle
                       ? [
                         {
                           id: 'instagram',
                           description: '📸 Instagram',
-                          uri: `https://instagram.com/${tenant.instagram.replace(/^@/, '')}`,
+                          uri: `https://instagram.com/${instagramHandle}`,
                         },
                       ]
                       : []),
