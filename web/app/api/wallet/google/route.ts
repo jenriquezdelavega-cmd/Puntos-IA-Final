@@ -195,6 +195,7 @@ export async function GET(req: Request) {
     const currentVisits = membership?.currentVisits ?? 0;
     const requiredVisits = tenant.requiredVisits ?? 10;
     const remainingVisits = Math.max(0, requiredVisits - currentVisits);
+    const totalVisits = membership?.totalVisits ?? currentVisits;
     const logoUri = resolveBusinessLogoUrl({
       logoValue: tenant.logoData,
       origin: qrBaseUrl,
@@ -354,19 +355,33 @@ export async function GET(req: Request) {
               {
                 id: 'historial',
                 header: 'Historial',
-                body: `${membership?.totalVisits ?? currentVisits} visita${(membership?.totalVisits ?? currentVisits) === 1 ? '' : 's'} en total`,
+                body: `${totalVisits} visita${totalVisits === 1 ? '' : 's'} en total`,
               },
               {
                 id: 'id-miembro',
                 header: 'ID de miembro',
                 body: user.id,
               },
-              ...(lastPushMessage
+              {
+                id: 'ultimo-aviso',
+                header: '📢 Último aviso',
+                body: lastPushMessage || 'Sin avisos recientes',
+              },
+              ...(tenant.address
                 ? [
                   {
-                    id: 'ultimo-aviso',
-                    header: '📢 Último aviso',
-                    body: lastPushMessage,
+                    id: 'ubicacion',
+                    header: '📍 Ubicación',
+                    body: tenant.address,
+                  },
+                ]
+                : []),
+              ...(instagramHandle
+                ? [
+                  {
+                    id: 'instagram',
+                    header: '📸 Instagram',
+                    body: `@${instagramHandle}`,
                   },
                 ]
                 : []),
