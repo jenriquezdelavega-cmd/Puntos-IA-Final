@@ -238,6 +238,33 @@ export function buildGoogleLoyaltyClassPayload() {
               },
             },
           },
+          {
+            oneItem: {
+              item: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['sellos']" }],
+                },
+              },
+            },
+          },
+          {
+            oneItem: {
+              item: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['ayuda']" }],
+                },
+              },
+            },
+          },
+          {
+            oneItem: {
+              item: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['ultimo-aviso']" }],
+                },
+              },
+            },
+          },
         ],
       },
     },
