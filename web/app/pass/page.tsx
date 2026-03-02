@@ -202,6 +202,11 @@ export default function PassPage() {
       window.location.assign(href);
     }
   };
+  const goToPoints = () => {
+    if (typeof window === 'undefined') return;
+    window.location.assign('/?clientes=1');
+  };
+
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#ff7a59] via-[#ff3f8e] to-[#f90086] p-6 text-white flex items-center justify-center">
@@ -209,7 +214,7 @@ export default function PassPage() {
         <p className="text-xs font-black tracking-[0.2em] uppercase text-white/80">Pase de Lealtad</p>
         <h1 className="text-3xl font-black mt-2">Punto IA</h1>
         <p className="mt-2 text-sm text-white/90">
-          Tu QR universal para registrar visitas. Este pase se personaliza automáticamente con el negocio desde donde lo abriste.
+          Muestra este QR en caja para registrar visitas y acumular puntos en el negocio actual.
         </p>
 
         {sourceBusinessName ? (
@@ -237,10 +242,7 @@ export default function PassPage() {
             <div id="punto-pass-qr" className="mt-5 rounded-xl border border-pink-100 p-4 flex items-center justify-center bg-white">
               <QRCode value={pass.qr.value} size={240} />
             </div>
-            <p className="text-[11px] text-gray-500 mt-3 font-semibold">
-              QR universal firmado (mismo cliente en todos los negocios). Contador y wallet se muestran por negocio.
-            </p>
-            <div className="mt-3 grid gap-2">
+            <div className="mt-4 grid gap-2">
               <button onClick={downloadQrSvg} className="w-full rounded-xl border border-pink-100 bg-pink-50 py-2 text-sm font-black text-pink-700 hover:bg-pink-100">
                 Descargar QR (SVG)
               </button>
@@ -259,6 +261,13 @@ export default function PassPage() {
                 className="w-full rounded-xl border-2 border-slate-900 bg-white py-2 text-sm font-black text-slate-900 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 🇬 Descargar en Google Wallet
+              </button>
+              <button
+                type="button"
+                onClick={goToPoints}
+                className="w-full rounded-xl border border-indigo-200 bg-indigo-50 py-2.5 text-sm font-black text-indigo-700 hover:bg-indigo-100"
+              >
+                ⬅️ Regresar a mi sección de puntos
               </button>
             </div>
           </div>

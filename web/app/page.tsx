@@ -360,6 +360,7 @@ export default function Home() {
       }
       if (authMode === 'register') setView('REGISTER');
       if (authMode === 'login') setView('LOGIN');
+      if (authMode === 'welcome') setView('WELCOME');
       if (!authMode && flow === 'create-pass') setView('LOGIN');
     }
     loadTenants();
