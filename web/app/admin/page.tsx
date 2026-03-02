@@ -49,7 +49,7 @@ const [tenantSessionToken, setTenantSessionToken] = useState<string>('');
 const [username, setUsername] = useState('');
 const [password, setPassword] = useState('');
 
-const [code, setCode] = useState('');
+const [, setCode] = useState('');
 const [reportData, setReportData] = useState<ReportView | null>(null);
 const [baseUrl, setBaseUrl] = useState('');
 const [tab, setTab] = useState('qr');
@@ -194,8 +194,6 @@ if(!confirm("¿Eliminar empleado?")) return;
 try { await fetch('/api/tenant/users', { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id, tenantId: tenant.id, tenantUserId, tenantSessionToken }) }); loadTeam(tenant.id, tenantUserId); } catch {}
 };
 
-const generateCode = async () => { try { const res = await fetch('/api/admin/generate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken }) }); const data = await res.json(); if (data.code) setCode(data.code); } catch {} };
-
 const searchLocation = async () => {
 if (!addressSearch) return;
 setIsSearching(true);
@@ -303,6 +301,12 @@ const saveSettings = async () => {
 const validateRedeem = async () => { setMsg('Validando...'); try { const res = await fetch('/api/redeem/validate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken, code: redeemCode }) }); const data = await res.json(); if (res.ok) { setMsg(` ENTREGAR A: ${data.user}`); setRedeemCode(''); if(userRole==='ADMIN') loadReports(tenant.id, tenantUserId); } else setMsg(' ' + data.error); } catch { setMsg('Error'); } };
 const downloadCSV = () => { if (!reportData?.csvData) return; const headers = Object.keys(reportData.csvData[0]).join(','); const rows = reportData.csvData.map((obj: Record<string, unknown>) => Object.values(obj).join(',')).join('\n'); const encodedUri = encodeURI("data:text/csv;charset=utf-8," + headers + "\n" + rows); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `clientes_${tenant.slug}.csv`); document.body.appendChild(link); link.click(); };
 
+const onboardingQrValue = tenant?.id ? `${baseUrl || (typeof window !== 'undefined' ? window.location.origin : '')}/?clientes=1&business_id=${encodeURIComponent(String(tenant.id))}&flow=create-pass` : '';
+
+const printOnboardingQr = () => {
+  if (typeof window === 'undefined') return;
+  window.print();
+};
 
 const ensureDailyCode = async () => {
   const res = await fetch('/api/admin/generate', {
@@ -375,7 +379,6 @@ const handleAdminScan = async (rawValue: string) => {
 
 if (!tenant) return <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4"><div className="bg-gray-800 p-8 rounded-2xl w-full max-w-sm shadow-2xl border border-gray-700"><div className="text-center mb-8"><h1 className="text-3xl font-black text-white tracking-tighter">punto<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500">IA</span></h1><p className="text-gray-400 text-sm mt-2">Acceso de Personal</p></div><form onSubmit={handleLogin} className="space-y-4"><input className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Usuario (Ej: PIZZA.juan)" value={username} onChange={e=>setUsername(e.target.value)} /><input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Contraseña" value={password} onChange={e=>setPassword(e.target.value)} /><button className="w-full bg-gradient-to-r from-orange-500 to-pink-600 font-bold py-4 rounded-xl text-white shadow-lg">Iniciar Sesión</button></form></div></div>;
 
-const qrValue = code ? `${baseUrl}/?code=${code}` : '';
 
 return (
 <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
@@ -653,27 +656,28 @@ return (
 
 {tab === 'qr' && (
 <div className="max-w-lg mx-auto space-y-4 animate-fadeIn">
-  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-    <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-5 text-white">
-      <div className="flex items-center justify-between">
+  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden print:shadow-none print:border-gray-300">
+    <div className="bg-gradient-to-r from-[#111827] via-[#1f2937] to-[#111827] p-5 text-white print:bg-none print:text-gray-900 print:border-b print:border-gray-300">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-black">Código QR del Día</h2>
-          <p className="text-gray-400 text-xs font-semibold mt-0.5">Muestra este QR a tus clientes para que registren su visita</p>
+          <p className="text-[10px] uppercase tracking-[0.2em] font-black text-pink-200 print:text-pink-700">Punto IA</p>
+          <h2 className="text-lg font-black">QR para crear pase</h2>
+          <p className="text-gray-300 text-xs font-semibold mt-0.5 print:text-gray-600">Tus clientes escanean, se registran/inician sesión y descargan su pase en Apple o Google Wallet.</p>
         </div>
-        <button onClick={generateCode} className="bg-white/10 border border-white/20 px-4 py-2 rounded-xl text-sm font-bold hover:bg-white/20 transition shrink-0">
-          {code ? '🔄 Nuevo' : '▶ Generar'}
+        <button onClick={printOnboardingQr} className="bg-white/10 border border-white/20 px-4 py-2 rounded-xl text-sm font-bold hover:bg-white/20 transition shrink-0 print:hidden">
+          🖨️ Imprimir
         </button>
       </div>
     </div>
-    <div className="p-6 flex flex-col items-center">
-      <div className="bg-white p-4 rounded-2xl shadow-inner border border-gray-100">
-        {qrValue ? <QRCode value={qrValue} size={220} /> : <div className="h-[220px] w-[220px] bg-gray-50 rounded-xl flex flex-col items-center justify-center text-gray-300"><span className="text-5xl mb-2">📷</span><span className="text-xs font-bold">Presiona &quot;Generar&quot;</span></div>}
-      </div>
-      {code && (
-        <div className="mt-4 bg-gray-50 px-6 py-3 rounded-xl border border-gray-100">
-          <p className="text-2xl font-mono font-black text-gray-900 tracking-[0.3em] text-center">{code}</p>
+    <div className="p-6 flex flex-col items-center gap-5">
+      <div className="w-full rounded-3xl border-2 border-dashed border-pink-200 bg-gradient-to-br from-pink-50 via-white to-orange-50 p-5 text-center">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-pink-600">Escanea y activa tu pase</p>
+        <p className="mt-1 text-xs text-gray-600 font-semibold">1) Crea tu cuenta · 2) Abre tu pase · 3) Guárdalo en tu wallet</p>
+        <div className="mt-4 bg-white p-4 rounded-2xl shadow-inner border border-gray-100 inline-flex">
+          {onboardingQrValue ? <QRCode value={onboardingQrValue} size={220} /> : <div className="h-[220px] w-[220px] bg-gray-50 rounded-xl flex flex-col items-center justify-center text-gray-300"><span className="text-5xl mb-2">📷</span><span className="text-xs font-bold">Cargando QR…</span></div>}
         </div>
-      )}
+        <p className="mt-4 text-[11px] text-gray-500 font-semibold">Programa de lealtad digital powered by <span className="font-black text-pink-600">Punto IA</span>.</p>
+      </div>
     </div>
   </div>
 

@@ -265,6 +265,8 @@ export default function Home() {
   const [leadLoading, setLeadLoading] = useState(false);
   const [leadStatus, setLeadStatus] = useState('');
   const [showClientPortal, setShowClientPortal] = useState(false);
+  const [entryBusinessId, setEntryBusinessId] = useState('');
+  const [autoOpenPassAfterAuth, setAutoOpenPassAfterAuth] = useState(false);
 
   const handleLeadField = (key: keyof BusinessLeadForm, value: string) => {
     setLeadForm((prev) => ({ ...prev, [key]: value }));
@@ -309,6 +311,19 @@ export default function Home() {
       if (p.get('clientes') === '1') {
         setShowClientPortal(true);
       }
+
+      const businessId = String(p.get('business_id') || '').trim();
+      const flow = String(p.get('flow') || '').trim();
+      const authMode = String(p.get('auth') || '').trim().toLowerCase();
+
+      if (businessId) setEntryBusinessId(businessId);
+      if (flow === 'create-pass') {
+        setShowClientPortal(true);
+        setAutoOpenPassAfterAuth(true);
+      }
+      if (authMode === 'register') setView('REGISTER');
+      if (authMode === 'login') setView('LOGIN');
+      if (!authMode && flow === 'create-pass') setView('LOGIN');
     }
     loadTenants();
   }, []);
@@ -359,6 +374,12 @@ export default function Home() {
 
         setActiveTab('points');
         setView('APP');
+
+        if (autoOpenPassAfterAuth && entryBusinessId) {
+          setTimeout(() => {
+            openPass(undefined, entryBusinessId, { sameTab: true });
+          }, 150);
+        }
       } else setMessage('⚠️ ' + data.error);
     } catch {
       setMessage('🔥 Error de conexión');
@@ -433,7 +454,7 @@ export default function Home() {
 
 
 
-  const openPass = (tenantName?: string, tenantId?: string) => {
+  const openPass = (tenantName?: string, tenantId?: string, options?: { sameTab?: boolean }) => {
     if (!user?.id) {
       alert('Primero inicia sesión para ver tu pase.');
       return;
@@ -487,6 +508,11 @@ export default function Home() {
     const label = resolvedBusinessName ? `&from=${encodeURIComponent(resolvedBusinessName)}` : '';
     const businessParam = `&business_id=${encodeURIComponent(resolvedBusinessId)}`;
     const passUrl = `/pass?customer_id=${encodeURIComponent(customerId)}${label}${businessParam}`;
+
+    if (options?.sameTab) {
+      window.location.assign(passUrl);
+      return;
+    }
 
     const newTab = window.open('about:blank', '_blank');
     if (!newTab) {
@@ -567,6 +593,7 @@ export default function Home() {
         newTab.location.replace(passUrl);
       });
   };
+
 
 
   const handleLogout = () => {
