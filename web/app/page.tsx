@@ -41,6 +41,11 @@ type HistoryItem = {
   date?: string;
 };
 
+type PendingPassIntent = {
+  businessId: string;
+  businessName?: string;
+};
+
 type BusinessLeadForm = {
   businessName: string;
   contactName: string;
@@ -266,7 +271,32 @@ export default function Home() {
   const [leadStatus, setLeadStatus] = useState('');
   const [showClientPortal, setShowClientPortal] = useState(false);
   const [entryBusinessId, setEntryBusinessId] = useState('');
+  const [entryBusinessName, setEntryBusinessName] = useState('');
   const [autoOpenPassAfterAuth, setAutoOpenPassAfterAuth] = useState(false);
+
+  const setPendingPassIntent = (intent: PendingPassIntent | null) => {
+    if (typeof window === 'undefined') return;
+    if (!intent?.businessId) {
+      localStorage.removeItem('punto_pending_pass_intent');
+      return;
+    }
+    localStorage.setItem('punto_pending_pass_intent', JSON.stringify(intent));
+  };
+
+  const consumePendingPassIntent = () => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem('punto_pending_pass_intent');
+      if (!raw) return null;
+      localStorage.removeItem('punto_pending_pass_intent');
+      const parsed = JSON.parse(raw) as PendingPassIntent;
+      if (!parsed?.businessId) return null;
+      return parsed;
+    } catch {
+      localStorage.removeItem('punto_pending_pass_intent');
+      return null;
+    }
+  };
 
   const handleLeadField = (key: keyof BusinessLeadForm, value: string) => {
     setLeadForm((prev) => ({ ...prev, [key]: value }));
@@ -313,13 +343,20 @@ export default function Home() {
       }
 
       const businessId = String(p.get('business_id') || '').trim();
+      const businessName = String(p.get('from') || '').trim();
       const flow = String(p.get('flow') || '').trim();
       const authMode = String(p.get('auth') || '').trim().toLowerCase();
 
-      if (businessId) setEntryBusinessId(businessId);
+      if (businessId) {
+        setEntryBusinessId(businessId);
+        setEntryBusinessName(businessName);
+        localStorage.setItem('punto_last_business_id', businessId);
+        if (businessName) localStorage.setItem('punto_last_business_name', businessName);
+      }
       if (flow === 'create-pass') {
         setShowClientPortal(true);
         setAutoOpenPassAfterAuth(true);
+        if (businessId) setPendingPassIntent({ businessId, businessName });
       }
       if (authMode === 'register') setView('REGISTER');
       if (authMode === 'login') setView('LOGIN');
@@ -365,7 +402,10 @@ export default function Home() {
       const data = await res.json();
       if (res.ok) {
         setUser(data);
-        if (typeof window !== 'undefined' && data.sessionToken) localStorage.setItem('punto_user_session_token', String(data.sessionToken));
+        if (typeof window !== 'undefined') {
+          if (data.sessionToken) localStorage.setItem('punto_user_session_token', String(data.sessionToken));
+          localStorage.setItem('punto_user', JSON.stringify({ id: data.id }));
+        }
         setName(data.name);
         setEmail(data.email || '');
         setGender(data.gender || '');
@@ -375,12 +415,22 @@ export default function Home() {
         setActiveTab('points');
         setView('APP');
 
-        if (autoOpenPassAfterAuth && entryBusinessId) {
-          setTimeout(() => {
-            openPass(undefined, entryBusinessId, { sameTab: true });
-          }, 150);
+        if (autoOpenPassAfterAuth) {
+          const pendingIntent = consumePendingPassIntent();
+          const targetBusinessId = String(pendingIntent?.businessId || entryBusinessId || '').trim();
+          if (targetBusinessId) {
+            openPass(pendingIntent?.businessName || entryBusinessName, targetBusinessId, { sameTab: true, userOverride: data });
+          }
         }
-      } else setMessage('⚠️ ' + data.error);
+      } else {
+        const backendError = String(data?.error || 'No se pudo iniciar sesión');
+        if (autoOpenPassAfterAuth && /no encontrado|no existe|registrad/i.test(backendError)) {
+          setView('REGISTER');
+          setMessage('🆕 No encontramos tu cuenta. Crea una cuenta para generar tu pase y te llevamos automáticamente al negocio.');
+        } else {
+          setMessage('⚠️ ' + backendError);
+        }
+      }
     } catch {
       setMessage('🔥 Error de conexión');
     }
@@ -454,8 +504,20 @@ export default function Home() {
 
 
 
-  const openPass = (tenantName?: string, tenantId?: string, options?: { sameTab?: boolean }) => {
-    if (!user?.id) {
+  const openPass = (tenantName?: string, tenantId?: string, options?: { sameTab?: boolean; userOverride?: UserView | null }) => {
+    const activeUser = options?.userOverride?.id ? options.userOverride : user;
+
+    if (!activeUser?.id) {
+      if (tenantId) {
+        setShowClientPortal(true);
+        setAutoOpenPassAfterAuth(true);
+        setEntryBusinessId(String(tenantId));
+        setEntryBusinessName(String(tenantName || ''));
+        setPendingPassIntent({ businessId: String(tenantId), businessName: String(tenantName || '') });
+        setView('LOGIN');
+        setMessage('🔐 Inicia sesión o crea tu cuenta para generar tu pase de este negocio.');
+        return;
+      }
       alert('Primero inicia sesión para ver tu pase.');
       return;
     }
@@ -467,8 +529,8 @@ export default function Home() {
       ? tenants.find((t) => String(t?.name || '').trim().toLowerCase() === explicitBusinessName.toLowerCase())
       : null;
 
-    const matchedMembershipByName = explicitBusinessName && Array.isArray(user?.memberships)
-      ? user.memberships.find((m: Record<string, unknown>) => String(m?.name || '').trim().toLowerCase() === explicitBusinessName.toLowerCase())
+    const matchedMembershipByName = explicitBusinessName && Array.isArray(activeUser?.memberships)
+      ? activeUser.memberships.find((m: Record<string, unknown>) => String(m?.name || '').trim().toLowerCase() === explicitBusinessName.toLowerCase())
       : null;
 
     const storedBusinessId =
@@ -476,8 +538,8 @@ export default function Home() {
     const storedBusinessName =
       typeof window !== 'undefined' ? String(localStorage.getItem('punto_last_business_name') || '').trim() : '';
 
-    const fallbackMembership = Array.isArray(user?.memberships) && user.memberships.length > 0
-      ? user.memberships[0]
+    const fallbackMembership = Array.isArray(activeUser?.memberships) && activeUser.memberships.length > 0
+      ? activeUser.memberships[0]
       : null;
 
     const resolvedBusinessId =
@@ -504,7 +566,7 @@ export default function Home() {
       if (resolvedBusinessName) localStorage.setItem('punto_last_business_name', resolvedBusinessName);
     }
 
-    const customerId = String(user.id);
+    const customerId = String(activeUser.id);
     const label = resolvedBusinessName ? `&from=${encodeURIComponent(resolvedBusinessName)}` : '';
     const businessParam = `&business_id=${encodeURIComponent(resolvedBusinessId)}`;
     const passUrl = `/pass?customer_id=${encodeURIComponent(customerId)}${label}${businessParam}`;
@@ -599,7 +661,12 @@ export default function Home() {
   const handleLogout = () => {
     if (confirm('¿Salir?')) {
       setUser(null);
-      if (typeof window !== 'undefined') localStorage.removeItem('punto_user_session_token');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('punto_user_session_token');
+        localStorage.removeItem('punto_user');
+        localStorage.removeItem('punto_pending_pass_intent');
+      }
+      setAutoOpenPassAfterAuth(false);
       setView('WELCOME');
       setPhone('');
       setPassword('');
