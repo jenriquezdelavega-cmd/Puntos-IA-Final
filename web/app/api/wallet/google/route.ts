@@ -50,6 +50,37 @@ function formatPeriodLabel(period: string) {
   return 'Abierto';
 }
 
+function asPublicHttpUrl(value: string | null | undefined) {
+  const raw = asTrimmedString(value);
+  if (!raw) return '';
+
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+    return parsed.toString();
+  } catch {
+    return '';
+  }
+}
+
+function resolveGoogleWalletImageUrl(params: {
+  imageValue: string | null | undefined;
+  origin: string;
+  businessId: string;
+  kind: 'logo' | 'strip';
+}) {
+  const directUrl = asPublicHttpUrl(params.imageValue);
+  if (directUrl) return directUrl;
+
+  const normalized = asTrimmedString(params.imageValue);
+  if (!normalized) return '';
+
+  const imageUrl = new URL('/api/wallet/google/image', params.origin);
+  imageUrl.searchParams.set('businessId', params.businessId);
+  imageUrl.searchParams.set('kind', params.kind);
+  return imageUrl.toString();
+}
+
 export async function GET(req: Request) {
   const requestId = getRequestId(req);
 
@@ -128,12 +159,24 @@ export async function GET(req: Request) {
     const walletStyle = (await getTenantWalletStyle(tenant.id)) || defaultTenantWalletStyle(tenant.id);
     const qrToken = generateCustomerToken(user.id);
     const publicBaseUrl = String(process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
-    const qrValue = publicBaseUrl ? `${publicBaseUrl}/v/${qrToken}` : `puntoia://scan/${user.id}`;
+    const requestOrigin = new URL(req.url).origin;
+    const qrBaseUrl = publicBaseUrl || requestOrigin;
+    const qrValue = `${qrBaseUrl}/v/${qrToken}`;
     const currentVisits = membership?.currentVisits ?? 0;
     const requiredVisits = tenant.requiredVisits ?? 10;
     const remainingVisits = Math.max(0, requiredVisits - currentVisits);
-    const logoUri = asTrimmedString(tenant.logoData) || asTrimmedString(walletStyle.stripImageData);
-    const stripUri = asTrimmedString(walletStyle.stripImageData);
+    const logoUri = resolveGoogleWalletImageUrl({
+      imageValue: tenant.logoData || walletStyle.stripImageData,
+      origin: qrBaseUrl,
+      businessId: tenant.id,
+      kind: 'logo',
+    });
+    const stripUri = resolveGoogleWalletImageUrl({
+      imageValue: walletStyle.stripImageData,
+      origin: qrBaseUrl,
+      businessId: tenant.id,
+      kind: 'strip',
+    });
     const foregroundHex = parseRgbToHex(walletStyle.foregroundColor, '#FFFFFF');
     const labelHex = parseRgbToHex(walletStyle.labelColor, '#BFDFFE');
 
