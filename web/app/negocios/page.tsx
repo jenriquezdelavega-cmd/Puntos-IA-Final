@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 function PuntoIALogo() {
   return (
-    <div className="inline-flex items-end justify-center gap-3 select-none">
+    <div className="inline-flex flex-col items-center justify-center gap-2 select-none">
       <span className="brand-punto-wrap">
         <span className="brand-word brand-word-punto">punt</span>
         <span className="brand-o-wrap">
@@ -14,6 +14,7 @@ function PuntoIALogo() {
         </span>
       </span>
       <span className="brand-word brand-word-ia">IA</span>
+      <p className="text-[11px] sm:text-xs font-black tracking-wide text-white/85">Premiamos tu lealtad, facil y YA.</p>
     </div>
   );
 }
@@ -103,7 +104,7 @@ export default function NegociosPage() {
   return (
     <main className="min-h-screen bg-[#080812] text-white">
       <nav className="mx-auto max-w-6xl px-6 py-6 flex items-center justify-between">
-        <Link href="/" className="scale-[0.6] origin-left"><PuntoIALogo /></Link>
+        <Link href="/" className="scale-[0.85] sm:scale-100 origin-left"><PuntoIALogo /></Link>
         <div className="flex items-center gap-3">
           <Link href="/" className="text-white/50 text-sm font-bold hover:text-white transition hidden sm:block">Inicio</Link>
           <Link href="/?clientes=1" className="bg-white/10 border border-white/20 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-white/20 transition">
@@ -121,7 +122,9 @@ export default function NegociosPage() {
             Para dueños de negocio
           </span>
 
-          <h1 className="mt-7 text-4xl md:text-6xl lg:text-7xl font-black leading-[1.08] tracking-tight max-w-5xl mx-auto">
+          <div className="mt-8 flex justify-center scale-110 sm:scale-125"><PuntoIALogo /></div>
+
+          <h1 className="mt-9 text-4xl md:text-6xl lg:text-7xl font-black leading-[1.08] tracking-tight max-w-5xl mx-auto">
             Que tus clientes regresen
             <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#a855f7]">
