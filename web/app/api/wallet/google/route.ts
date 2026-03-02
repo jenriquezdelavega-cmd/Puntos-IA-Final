@@ -298,7 +298,7 @@ export async function GET(req: Request) {
             barcode: {
               type: 'QR_CODE',
               value: qrValue,
-              alternateText: 'Escanea en caja para registrar tu visita',
+              alternateText: 'Visita puntoia.mx',
             },
             loyaltyPoints: {
               label: 'Visitas',
@@ -307,11 +307,6 @@ export async function GET(req: Request) {
               },
             },
             textModulesData: [
-              {
-                id: 'negocio',
-                header: 'Negocio',
-                body: tenant.name || 'Negocio afiliado',
-              },
               {
                 id: 'cliente',
                 header: 'Cliente',
@@ -343,19 +338,9 @@ export async function GET(req: Request) {
                 body: formatPeriodLabel(tenant.rewardPeriod || membership?.periodType || 'OPEN'),
               },
               {
-                id: 'miembro-desde',
-                header: 'Miembro desde',
-                body: formatDateEs(user.createdAt),
-              },
-              {
                 id: 'ultima-visita',
                 header: 'Última visita',
                 body: formatDateEs(membership?.lastVisitAt),
-              },
-              {
-                id: 'historial',
-                header: 'Historial',
-                body: `${totalVisits} visita${totalVisits === 1 ? '' : 's'} en total`,
               },
               {
                 id: 'id-miembro',
@@ -363,9 +348,14 @@ export async function GET(req: Request) {
                 body: user.id,
               },
               {
-                id: 'ultimo-aviso',
-                header: '📢 Último aviso',
-                body: lastPushMessage || 'Sin avisos recientes',
+                id: 'historial',
+                header: 'Historial',
+                body: `${totalVisits} visita${totalVisits === 1 ? '' : 's'} en total`,
+              },
+              {
+                id: 'miembro-desde',
+                header: 'Miembro desde',
+                body: formatDateEs(user.createdAt),
               },
               ...(tenant.address
                 ? [
@@ -388,13 +378,22 @@ export async function GET(req: Request) {
               {
                 id: 'ayuda',
                 header: 'ℹ️ Ayuda',
-                body: 'Muestra este pase y escanea el QR del día para registrar tu visita.',
+                body: 'Presenta este pase en el negocio y escanea el código QR del día para registrar tu visita.',
               },
               {
                 id: 'brand',
                 header: '✦ Punto IA',
-                body: 'Coalición de PyMEs que premia tu lealtad. Visita puntoia.mx',
+                body: 'Punto IA es una coalición de PyMEs unidas para premiar tu lealtad. Visita puntoia.mx',
               },
+              ...(lastPushMessage
+                ? [
+                  {
+                    id: 'ultimo-aviso',
+                    header: '📢 Último aviso',
+                    body: lastPushMessage,
+                  },
+                ]
+                : []),
             ],
             ...(tenant.address || instagramHandle
               ? {
