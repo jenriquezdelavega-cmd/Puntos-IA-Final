@@ -1,20 +1,18 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 function PuntoIALogo() {
   return (
-    <div className="inline-flex flex-col items-center justify-center gap-2 select-none">
-      <span className="brand-punto-wrap">
-        <span className="brand-word brand-word-punto">punt</span>
-        <span className="brand-o-wrap">
-          <span className="brand-word brand-word-punto">o</span>
-          <span className="brand-orb">
-            <span className="brand-orb-glow" />
-            <span className="brand-orb-shine" />
-          </span>
-        </span>
-      </span>
-      <span className="brand-word brand-word-ia">IA</span>
-      <p className="text-[11px] sm:text-xs font-black tracking-wide text-white/85">Premiamos tu lealtad, facil y YA.</p>
+    <div className="inline-flex flex-col items-start justify-center gap-1.5 select-none">
+      <Image
+        src="/logo.png"
+        alt="Logo Punto IA"
+        width={320}
+        height={170}
+        priority
+        className="h-20 w-52 sm:h-24 sm:w-64 object-contain"
+      />
+      <p className="text-xs sm:text-sm font-black tracking-wide text-white/85">Premiamos tu lealtad, facil y YA.</p>
     </div>
   );
 }
@@ -104,7 +102,7 @@ export default function NegociosPage() {
   return (
     <main className="min-h-screen bg-[#080812] text-white">
       <nav className="mx-auto max-w-6xl px-6 py-6 flex items-center justify-between">
-        <Link href="/" className="scale-[0.85] sm:scale-100 origin-left"><PuntoIALogo /></Link>
+        <Link href="/" className="scale-100 origin-left"><PuntoIALogo /></Link>
         <div className="flex items-center gap-3">
           <Link href="/" className="text-white/50 text-sm font-bold hover:text-white transition hidden sm:block">Inicio</Link>
           <Link href="/?clientes=1" className="bg-white/10 border border-white/20 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-white/20 transition">
@@ -122,7 +120,6 @@ export default function NegociosPage() {
             Para dueños de negocio
           </span>
 
-          <div className="mt-8 flex justify-center scale-110 sm:scale-125"><PuntoIALogo /></div>
 
           <h1 className="mt-9 text-4xl md:text-6xl lg:text-7xl font-black leading-[1.08] tracking-tight max-w-5xl mx-auto">
             Que tus clientes regresen
