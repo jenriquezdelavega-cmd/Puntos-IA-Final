@@ -1,4 +1,6 @@
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
+import { generateCustomerToken } from '@/app/lib/customer-token';
+import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 import { prisma } from '@/app/lib/prisma';
 import { asTrimmedString } from '@/app/lib/request-validation';
 import {
@@ -13,6 +15,39 @@ export const runtime = 'nodejs';
 
 function sanitizeIdPart(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9._-]/g, '_').slice(0, 40);
+}
+
+function parseRgbToHex(input: string, fallback: string) {
+  const value = String(input || '').trim();
+  if (!value) return fallback;
+
+  const hexMatch = value.match(/^#([0-9a-fA-F]{6})$/);
+  if (hexMatch) return `#${hexMatch[1].toUpperCase()}`;
+
+  const rgbMatch = value.match(/^rgb\((\d{1,3}),(\d{1,3}),(\d{1,3})\)$/i) ||
+    value.replace(/\s+/g, '').match(/^rgb\((\d{1,3}),(\d{1,3}),(\d{1,3})\)$/i);
+
+  if (!rgbMatch) return fallback;
+
+  const channels = rgbMatch.slice(1).map((channel) => {
+    const numeric = Number(channel);
+    if (!Number.isFinite(numeric)) return 0;
+    return Math.min(255, Math.max(0, numeric));
+  });
+
+  return `#${channels.map((channel) => channel.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+}
+
+function formatDateEs(date: Date | null | undefined) {
+  if (!date) return 'Sin registro';
+  return new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
+}
+
+function formatPeriodLabel(period: string) {
+  const normalized = String(period || '').toUpperCase();
+  if (normalized === 'WEEKLY') return 'Semanal';
+  if (normalized === 'MONTHLY') return 'Mensual';
+  return 'Abierto';
 }
 
 export async function GET(req: Request) {
@@ -44,8 +79,17 @@ export async function GET(req: Request) {
     }
 
     const [user, tenant, membership] = await Promise.all([
-      prisma.user.findUnique({ where: { id: customerId }, select: { id: true, name: true } }),
-      prisma.tenant.findUnique({ where: { id: businessId }, select: { id: true, name: true, requiredVisits: true } }),
+      prisma.user.findUnique({ where: { id: customerId }, select: { id: true, name: true, createdAt: true } }),
+      prisma.tenant.findUnique({
+        where: { id: businessId },
+        select: {
+          id: true,
+          name: true,
+          requiredVisits: true,
+          rewardPeriod: true,
+          prize: true,
+        },
+      }),
       prisma.membership.findUnique({
         where: {
           tenantId_userId: {
@@ -53,7 +97,7 @@ export async function GET(req: Request) {
             userId: customerId,
           },
         },
-        select: { currentVisits: true },
+        select: { currentVisits: true, totalVisits: true, lastVisitAt: true, periodType: true },
       }),
     ]);
 
@@ -78,6 +122,15 @@ export async function GET(req: Request) {
     }
 
     const objectId = `${issuerId}.${sanitizeIdPart(`${tenant.id}_${user.id}`)}`;
+    const walletStyle = (await getTenantWalletStyle(tenant.id)) || defaultTenantWalletStyle(tenant.id);
+    const qrToken = generateCustomerToken(user.id);
+    const publicBaseUrl = String(process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
+    const qrValue = publicBaseUrl ? `${publicBaseUrl}/v/${qrToken}` : `puntoia://scan/${user.id}`;
+    const currentVisits = membership?.currentVisits ?? 0;
+    const requiredVisits = tenant.requiredVisits ?? 10;
+    const remainingVisits = Math.max(0, requiredVisits - currentVisits);
+    const foregroundHex = parseRgbToHex(walletStyle.foregroundColor, '#FFFFFF');
+    const labelHex = parseRgbToHex(walletStyle.labelColor, '#BFDFFE');
 
     const account = parseGoogleServiceAccount();
 
@@ -93,9 +146,10 @@ export async function GET(req: Request) {
             state: 'ACTIVE',
             accountName: user.name || 'Cliente Punto IA',
             accountId: user.id,
+            hexBackgroundColor: parseRgbToHex(walletStyle.backgroundColor, '#1F2937'),
             barcode: {
               type: 'QR_CODE',
-              value: `puntoia://scan/${user.id}`,
+              value: qrValue,
               alternateText: 'Escanea en caja para registrar tu visita',
             },
             loyaltyPoints: {
@@ -108,7 +162,42 @@ export async function GET(req: Request) {
               {
                 id: 'meta-visitas',
                 header: 'Meta',
-                body: `${membership?.currentVisits ?? 0}/${tenant.requiredVisits} visitas`,
+                body: `${currentVisits}/${requiredVisits} visitas`,
+              },
+              {
+                id: 'premio',
+                header: '🎁 Tu premio',
+                body: tenant.prize || 'Premio Sorpresa',
+              },
+              {
+                id: 'faltan',
+                header: remainingVisits > 0 ? 'Faltan' : '¡Listo!',
+                body: remainingVisits > 0 ? `${remainingVisits} visita${remainingVisits === 1 ? '' : 's'}` : 'Canjea tu premio',
+              },
+              {
+                id: 'periodo',
+                header: 'Periodo',
+                body: formatPeriodLabel(tenant.rewardPeriod || membership?.periodType || 'OPEN'),
+              },
+              {
+                id: 'miembro-desde',
+                header: 'Miembro desde',
+                body: formatDateEs(user.createdAt),
+              },
+              {
+                id: 'ultima-visita',
+                header: 'Última visita',
+                body: formatDateEs(membership?.lastVisitAt),
+              },
+              {
+                id: 'historial',
+                header: 'Historial',
+                body: `${membership?.totalVisits ?? currentVisits} visita${(membership?.totalVisits ?? currentVisits) === 1 ? '' : 's'} en total`,
+              },
+              {
+                id: 'colores',
+                header: 'Estilo del pase',
+                body: `Texto ${foregroundHex} · Etiquetas ${labelHex}`,
               },
             ],
           },
