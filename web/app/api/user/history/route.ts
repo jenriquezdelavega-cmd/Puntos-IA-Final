@@ -3,10 +3,6 @@ import { verifyUserSessionToken } from '@/app/lib/user-session-token';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
 
-type UserHistoryBody = {
-  userId?: string;
-  sessionToken?: string;
-};
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);

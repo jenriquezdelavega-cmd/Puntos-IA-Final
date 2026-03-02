@@ -3,7 +3,7 @@ import { hashPassword, isHashedPassword, verifyPassword } from '@/app/lib/passwo
 import { generateUserSessionToken } from '@/app/lib/user-session-token';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
-import { asTrimmedString, isValidPhone, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import { isValidPhone, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 
 
 export async function POST(req: Request) {

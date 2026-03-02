@@ -280,7 +280,6 @@ export default function Home() {
       }
     }
     loadTenants();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadTenants = async () => {
@@ -1142,10 +1141,9 @@ export default function Home() {
 
                         <div className="relative px-5 pt-5 pb-4">
                           <div className="flex items-center gap-3">
-                            <div className="h-11 w-11 rounded-[0.85rem] bg-white/10 backdrop-blur border border-white/15 flex items-center justify-center shadow-lg overflow-hidden shrink-0">
+                            <div className="h-11 w-11 rounded-[0.85rem] bg-white/10 backdrop-blur border border-white/15 flex items-center justify-center shadow-lg overflow-hidden shrink-0 relative">
                               {logo ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={logo} alt="" className="w-full h-full object-cover" />
+                                <Image src={logo} alt="" fill className="object-cover" />
                               ) : (
                                 <span className="text-white/80 font-black text-[15px]">{(m.name as string)?.charAt(0)}</span>
                               )}
@@ -1374,9 +1372,9 @@ export default function Home() {
                                   className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.03)] overflow-hidden cursor-pointer"
                                 >
                                   <div className="px-4 py-3 flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gray-900 to-gray-700 overflow-hidden flex items-center justify-center text-white font-black text-xs shrink-0">
+                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gray-900 to-gray-700 overflow-hidden flex items-center justify-center text-white font-black text-xs shrink-0 relative">
                                       {logoData ? (
-                                        <img src={logoData} alt={`Logo de ${String(t.name || '')}`} className="w-full h-full object-cover" />
+                                        <Image src={logoData} alt={`Logo de ${String(t.name || '')}`} fill className="object-cover" />
                                       ) : (
                                         String(t.name || '').charAt(0)
                                       )}

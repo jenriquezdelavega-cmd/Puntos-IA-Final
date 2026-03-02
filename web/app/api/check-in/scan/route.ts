@@ -5,7 +5,7 @@ import { touchWalletPassRegistrations, walletSerialNumber } from '@/app/lib/appl
 import { listWalletPushTokens, pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
 import { prisma } from '@/app/lib/prisma';
 import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
-import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 const TZ = 'America/Monterrey';
 
 function accessStatusToCode(status: number): ApiErrorCode {

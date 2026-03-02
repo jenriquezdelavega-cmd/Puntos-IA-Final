@@ -2,13 +2,6 @@ import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { addPrelaunchLead } from '@/app/lib/prelaunch-leads';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
 
-type LeadBody = {
-  businessName?: string;
-  contactName?: string;
-  phone?: string;
-  email?: string;
-  city?: string;
-};
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
