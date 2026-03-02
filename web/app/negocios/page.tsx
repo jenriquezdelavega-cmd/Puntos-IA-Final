@@ -1,19 +1,20 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 function PuntoIALogo() {
   return (
-    <div className="inline-flex items-end justify-center gap-3 select-none">
-      <span className="brand-punto-wrap">
-        <span className="brand-word brand-word-punto">punt</span>
-        <span className="brand-o-wrap">
-          <span className="brand-word brand-word-punto">o</span>
-          <span className="brand-orb">
-            <span className="brand-orb-glow" />
-            <span className="brand-orb-shine" />
-          </span>
-        </span>
-      </span>
-      <span className="brand-word brand-word-ia">IA</span>
+    <div className="flex flex-col items-center gap-2 select-none">
+      <Image
+        src="/logo.png"
+        alt="Logo Punto IA"
+        width={420}
+        height={260}
+        priority
+        className="h-40 w-64 sm:h-48 sm:w-80 object-contain"
+      />
+      <p className="px-5 py-2 rounded-full border border-white/25 bg-white/10 text-white/95 text-[11px] sm:text-sm font-bold tracking-wide text-center shadow-[0_8px_24px_rgba(0,0,0,0.14)]">
+        Premiamos tu lealtad, facil y YA.
+      </p>
     </div>
   );
 }
@@ -102,8 +103,8 @@ const testimonials = [
 export default function NegociosPage() {
   return (
     <main className="min-h-screen bg-[#080812] text-white">
-      <nav className="mx-auto max-w-6xl px-6 py-6 flex items-center justify-between">
-        <Link href="/" className="scale-[0.6] origin-left"><PuntoIALogo /></Link>
+      <nav className="mx-auto max-w-6xl px-6 py-6 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <Link href="/" className="flex justify-center md:justify-start"><PuntoIALogo /></Link>
         <div className="flex items-center gap-3">
           <Link href="/" className="text-white/50 text-sm font-bold hover:text-white transition hidden sm:block">Inicio</Link>
           <Link href="/?clientes=1" className="bg-white/10 border border-white/20 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-white/20 transition">
