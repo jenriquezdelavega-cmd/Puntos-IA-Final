@@ -6,6 +6,11 @@ const ISSUER_ID_CANDIDATES = [
   'WALLET_ISSUER_ID',
 ] as const;
 
+const CLASS_ID_CANDIDATES = [
+  'GOOGLE_WALLET_CLASS_ID',
+  'GOOGLE_CLASS_ID',
+] as const;
+
 const SERVICE_ACCOUNT_CANDIDATES = [
   'GOOGLE_WALLET_SA_B64',
   'GOOGLE_SERVICE_ACCOUNT_B64',
@@ -29,6 +34,17 @@ function firstEnv(names: readonly string[]) {
 
 export function getGoogleWalletIssuerId() {
   return firstEnv(ISSUER_ID_CANDIDATES);
+}
+
+export function getGoogleWalletClassId() {
+  const issuerId = getGoogleWalletIssuerId();
+  const classId = firstEnv(CLASS_ID_CANDIDATES);
+
+  if (classId) {
+    return classId;
+  }
+
+  return issuerId ? `${issuerId}.LOYALTY` : '';
 }
 
 export function parseGoogleServiceAccount() {
@@ -125,6 +141,6 @@ export function signSaveToWalletJwt(payload: Record<string, unknown>, privateKey
 export function googleWalletConfigErrorResponse() {
   return {
     error:
-      'Google Wallet no está configurado. Define GOOGLE_WALLET_ISSUER_ID y GOOGLE_WALLET_SA_B64 en Vercel.',
+      'Google Wallet no está configurado. Define GOOGLE_WALLET_ISSUER_ID, GOOGLE_WALLET_SA_B64 y (opcional) GOOGLE_WALLET_CLASS_ID en Vercel.',
   };
 }

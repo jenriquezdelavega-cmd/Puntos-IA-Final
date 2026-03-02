@@ -1,6 +1,7 @@
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import {
   getGoogleServiceAccountAccessToken,
+  getGoogleWalletClassId,
   getGoogleWalletIssuerId,
   googleWalletConfigErrorResponse,
 } from '@/app/lib/google-wallet';
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
     const accessToken = await getGoogleServiceAccountAccessToken([WALLET_SCOPE]);
 
     const payload = {
-      id: `${issuerId}.puntoia_loyalty`,
+      id: getGoogleWalletClassId(),
       issuerName: 'Punto IA',
       programName: 'Punto IA',
       countryCode: 'MX',

@@ -8,7 +8,7 @@ Runbook operativo mínimo para rotación de secretos y respuesta básica a incid
 - `DATABASE_URL`
 - `APPLE_PASS_TYPE_ID`
 - Secrets Apple Wallet (`APPLE_WWDR_PEM`, `APPLE_SIGNER_CERT_PEM`, `APPLE_SIGNER_KEY_PEM`)
-- Secrets Google Wallet (`GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`, `GOOGLE_WALLET_ISSUER_ID`)
+- Secrets Google Wallet (`GOOGLE_WALLET_SA_B64`, `GOOGLE_WALLET_ISSUER_ID`, `GOOGLE_WALLET_CLASS_ID` opcional)
 
 ## Rotación de secretos
 
