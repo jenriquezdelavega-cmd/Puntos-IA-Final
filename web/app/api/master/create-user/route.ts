@@ -1,4 +1,5 @@
 import { prisma } from '@/app/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { isValidMasterPassword } from '@/app/lib/master-auth';
 import { hashPassword } from '@/app/lib/password';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
@@ -61,16 +62,18 @@ export async function POST(request: Request) {
     const prefix = tenant.codePrefix || tenant.slug.substring(0, 4).toUpperCase();
     const fullUsername = `${prefix}.${username}`;
 
+    const createData: Prisma.TenantUserUncheckedCreateInput = {
+      tenantId,
+      name: name || null,
+      phone: phone || null,
+      email: email || null,
+      password: hashPassword(password),
+      role: asTrimmedString(role || 'STAFF'),
+      username: fullUsername,
+    };
+
     const newUser = await prisma.tenantUser.create({
-      data: {
-        tenantId,
-        name: name || null,
-        phone: phone || null,
-        email: email || null,
-        password: hashPassword(password),
-        role: asTrimmedString(role || 'STAFF'),
-        username: fullUsername,
-      },
+      data: createData,
     });
 
     return apiSuccess({ requestId, data: { success: true, user: newUser } });

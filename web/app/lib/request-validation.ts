@@ -68,7 +68,7 @@ export function optionalString(value: unknown) {
 export function parseWithSchema<T extends Record<string, unknown>>(
   body: Record<string, unknown>,
   schema: ObjectSchema<T>
-): { ok: true; data: T } | { ok: false; field: keyof T } {
+): { ok: true; data: T; field: null } | { ok: false; data: null; field: keyof T } {
   const parsed: Partial<T> = {};
 
   for (const key of Object.keys(schema) as Array<keyof T>) {
@@ -76,11 +76,11 @@ export function parseWithSchema<T extends Record<string, unknown>>(
     const value = parser(body[key as string]);
 
     if (value === null) {
-      return { ok: false, field: key };
+      return { ok: false, data: null, field: key };
     }
 
     parsed[key] = value;
   }
 
-  return { ok: true, data: parsed as T };
+  return { ok: true, data: parsed as T, field: null };
 }

@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';

@@ -59,19 +59,21 @@ export async function getGoogleServiceAccountAccessToken(scopes: string[]) {
   }
 
   const credentials = parseGoogleServiceAccount();
+  const clientEmail = credentials.client_email || '';
+  const privateKey = credentials.private_key || '';
   const now = Math.floor(Date.now() / 1000);
   const tokenUri = credentials.token_uri || GOOGLE_TOKEN_URI;
 
   const assertion = signSaveToWalletJwt(
     {
-      iss: credentials.client_email,
-      sub: credentials.client_email,
+      iss: clientEmail,
+      sub: clientEmail,
       aud: tokenUri,
       iat: now,
       exp: now + 3600,
       scope: scopes.join(' '),
     },
-    credentials.private_key,
+    privateKey,
   );
 
   const response = await fetch(tokenUri, {

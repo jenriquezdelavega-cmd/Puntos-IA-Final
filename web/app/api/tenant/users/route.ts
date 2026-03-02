@@ -3,24 +3,6 @@ import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { apiError, apiSuccess, type ApiErrorCode, getRequestId } from '@/app/lib/api-response';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
 
-type AccessBody = {
-  tenantId?: string;
-  tenantUserId?: string;
-  tenantSessionToken?: string;
-};
-
-type CreateTenantUserBody = AccessBody & {
-  name?: string;
-  username?: string;
-  password?: string;
-  role?: string;
-  phone?: string;
-  email?: string;
-};
-
-type DeleteTenantUserBody = AccessBody & {
-  id?: string;
-};
 
 function accessStatusToCode(status: number): ApiErrorCode {
   if (status === 400) return 'BAD_REQUEST';
@@ -69,7 +51,15 @@ export async function POST(request: Request) {
     if (!body) {
       return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'JSON inválido' });
     }
-    const { tenantId, tenantUserId, tenantSessionToken, name, username, password, role, phone, email } = body;
+    const tenantId = asTrimmedString(body.tenantId);
+    const tenantUserId = asTrimmedString(body.tenantUserId);
+    const tenantSessionToken = asTrimmedString(body.tenantSessionToken);
+    const name = asTrimmedString(body.name);
+    const username = asTrimmedString(body.username);
+    const password = asTrimmedString(body.password);
+    const role = asTrimmedString(body.role);
+    const phone = asTrimmedString(body.phone);
+    const email = asTrimmedString(body.email);
 
     const access = await requireTenantRoleAccess({ tenantId, tenantUserId, tenantSessionToken, allowedRoles: ['ADMIN'] });
     if (!access.ok) {
@@ -107,8 +97,8 @@ export async function POST(request: Request) {
     const newUser = await prisma.tenantUser.create({
       data: {
         tenantId: access.tenantId,
-        name,
-        password,
+        name: name || '',
+        password: password || '',
         role: role || 'STAFF',
         phone: phone || '',
         email: email || '',
@@ -144,7 +134,10 @@ export async function DELETE(request: Request) {
     if (!body) {
       return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'JSON inválido' });
     }
-    const { id, tenantId, tenantUserId, tenantSessionToken } = body;
+    const id = asTrimmedString(body.id);
+    const tenantId = asTrimmedString(body.tenantId);
+    const tenantUserId = asTrimmedString(body.tenantUserId);
+    const tenantSessionToken = asTrimmedString(body.tenantSessionToken);
 
     const access = await requireTenantRoleAccess({ tenantId, tenantUserId, tenantSessionToken, allowedRoles: ['ADMIN'] });
     if (!access.ok) {

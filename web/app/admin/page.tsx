@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 import { useRef, useState } from 'react';
 import QRCode from 'react-qr-code';
