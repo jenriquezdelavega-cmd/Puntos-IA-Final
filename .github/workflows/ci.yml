@@ -26,14 +26,13 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma client
-        run: npm run prisma:generate
+        run: npx prisma generate
 
       - name: Lint
-        run: npm run lint -- --max-warnings 100
+        run: npx eslint . --max-warnings 100
 
-      - name: Type check (non-blocking)
-        continue-on-error: true
-        run: npm run type-check
+      - name: Type check
+        run: npx tsc --noEmit
 
       - name: Contract tests
         run: npm run test
