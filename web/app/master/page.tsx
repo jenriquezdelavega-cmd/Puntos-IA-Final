@@ -16,7 +16,7 @@ export default function MasterPage() {
   
   const [uName, setUName] = useState('');
   const [uPhone, setUPhone] = useState('');
-  const [uEmail, _setUEmail] = useState('');
+  const [uEmail] = useState('');
   const [uUser, setUUser] = useState('');
   const [uPass, setUPass] = useState('');
   const [uRole, setURole] = useState('ADMIN');
@@ -87,7 +87,7 @@ export default function MasterPage() {
   const updateUser = async () => { if(!editingUser) return; try { await fetch('/api/master/manage-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'UPDATE', userId: editingUser.id, data: editingUser }) }); setEditingUser(null); loadTenants(); } catch { alert('Error'); } };
   
   const openEdit = (t: Tenant) => { setEditingTenant(t); setEditPrize(t.prize||''); setEditIg(t.instagram||''); setEditAddress(t.address||''); if(t.lat) setEditCoords([t.lat,t.lng]); };
-  const _searchAddress = async () => { if (!editAddress) return; try { const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(editAddress)}`); const data = await res.json(); if (data && data.length > 0) setEditCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]); else alert("No encontrado"); } catch { alert("Error"); } };
+  const searchAddress = async () => { if (!editAddress) return; try { const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(editAddress)}`); const data = await res.json(); if (data && data.length > 0) setEditCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]); else alert("No encontrado"); } catch { alert("Error"); } };
 
   const downloadReport = async (report: 'prelaunch' | 'tenant-users', onlySelectedTenant = false) => {
     try {

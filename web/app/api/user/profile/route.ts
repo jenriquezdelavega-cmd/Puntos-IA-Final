@@ -3,10 +3,6 @@ import { verifyPassword } from '@/app/lib/password';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { asTrimmedString, isStrongEnoughPassword, isValidPhone, parseJsonObject } from '@/app/lib/request-validation';
 
-type UserProfileBody = {
-  phone?: string;
-  password?: string;
-};
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);

@@ -50,9 +50,9 @@ export async function POST(request: Request) {
     await prisma.user.update({
       where: { id: userId },
       data: {
-        name: asTrimmedString(body.name) || null,
-        email: asTrimmedString(body.email) || null,
-        phone: normalizedPhone || null,
+        name: asTrimmedString(body.name) || undefined,
+        email: asTrimmedString(body.email) || undefined,
+        phone: normalizedPhone || undefined,
         gender: normalizeGender(body.gender),
         birthDate: parseBirthDate(body.birthDate),
       },

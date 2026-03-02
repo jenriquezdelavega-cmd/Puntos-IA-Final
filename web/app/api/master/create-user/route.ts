@@ -64,9 +64,9 @@ export async function POST(request: Request) {
     const newUser = await prisma.tenantUser.create({
       data: {
         tenantId,
-        name: name || null,
-        phone: phone || null,
-        email: email || null,
+        ...(name ? { name } : {}),
+        ...(phone ? { phone } : {}),
+        ...(email ? { email } : {}),
         password: hashPassword(password),
         role: asTrimmedString(role || 'STAFF'),
         username: fullUsername,

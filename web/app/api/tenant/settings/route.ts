@@ -23,23 +23,21 @@ export async function POST(request: Request) {
     if (!body) {
       return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'JSON inválido' });
     }
-    const {
-      tenantId,
-      tenantUserId,
-      tenantSessionToken,
-      prize,
-      requiredVisits,
-      rewardPeriod,
-      lat,
-      lng,
-      address,
-      instagram,
-      logoData,
-      walletBackgroundColor,
-      walletForegroundColor,
-      walletLabelColor,
-      walletStripImageData,
-    } = body;
+    const tenantId = asTrimmedString(body.tenantId);
+    const tenantUserId = asTrimmedString(body.tenantUserId);
+    const tenantSessionToken = asTrimmedString(body.tenantSessionToken);
+    const prize = asTrimmedString(body.prize);
+    const requiredVisits = body.requiredVisits;
+    const rewardPeriod = asTrimmedString(body.rewardPeriod);
+    const lat = body.lat;
+    const lng = body.lng;
+    const address = asTrimmedString(body.address);
+    const instagram = asTrimmedString(body.instagram);
+    const logoData = asTrimmedString(body.logoData);
+    const walletBackgroundColor = asTrimmedString(body.walletBackgroundColor);
+    const walletForegroundColor = asTrimmedString(body.walletForegroundColor);
+    const walletLabelColor = asTrimmedString(body.walletLabelColor);
+    const walletStripImageData = asTrimmedString(body.walletStripImageData);
 
     const access = await requireTenantRoleAccess({ tenantId, tenantUserId, tenantSessionToken, allowedRoles: ['ADMIN'] });
     if (!access.ok) {
@@ -61,14 +59,14 @@ export async function POST(request: Request) {
     const updated = await prisma.tenant.update({
       where: { id: authorizedTenantId },
       data: {
-        ...(prize !== undefined ? { prize } : {}),
-        ...(instagram !== undefined ? { instagram } : {}),
-        ...(address !== undefined ? { address } : {}),
+        ...(prize !== undefined && prize !== null ? { prize } : {}),
+        ...(instagram !== undefined && instagram !== null ? { instagram } : {}),
+        ...(address !== undefined && address !== null ? { address } : {}),
         ...(lat !== undefined && lat !== null && lat !== '' ? { lat: parseFloat(String(lat)) } : {}),
         ...(lng !== undefined && lng !== null && lng !== '' ? { lng: parseFloat(String(lng)) } : {}),
         ...(parsedVisits !== undefined ? { requiredVisits: parsedVisits } : {}),
-        ...(rewardPeriod !== undefined ? { rewardPeriod } : {}),
-        ...(logoData !== undefined ? { logoData } : {}),
+        ...(rewardPeriod ? { rewardPeriod } : {}),
+        ...(logoData !== undefined && logoData !== null ? { logoData } : {}),
       },
     });
 

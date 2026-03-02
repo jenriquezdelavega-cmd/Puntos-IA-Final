@@ -508,8 +508,7 @@ async function createPassPackage(params: {
         key: 'notification',
         label: '📢 Último aviso',
         value: params.lastPushMessage,
-        changeMessage: '%@',
-      } as Record<string, string>);
+      });
     }
 
     backFields.push(

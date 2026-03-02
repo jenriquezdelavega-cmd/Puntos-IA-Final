@@ -3,10 +3,6 @@ import { prisma } from '@/app/lib/prisma';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
 import { generateCustomerPass } from '@/app/lib/customer-pass';
 
-type Body = {
-  customerId?: string;
-  phone?: string;
-};
 
 export async function POST(req: Request) {
   const requestId = getRequestId(req);
