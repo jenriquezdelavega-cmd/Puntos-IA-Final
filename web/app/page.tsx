@@ -560,7 +560,7 @@ export default function Home() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-br from-[#ff7a59]/30 via-[#ff3f8e]/20 to-transparent rounded-full blur-[120px] opacity-60" />
 
       <nav className="relative z-20 mx-auto max-w-6xl px-6 py-6 flex items-center justify-between">
-        <div className="scale-[0.7] origin-left"><BrandLogo animate={false} compact /></div>
+        <div className="scale-100 sm:scale-110 origin-left"><BrandLogo animate={false} compact /></div>
         <div className="flex items-center gap-3">
           <Link href="/negocios" className="text-white/60 text-sm font-bold hover:text-white transition hidden sm:block">Para Negocios</Link>
           <Link href="/?clientes=1" className="bg-white/10 border border-white/20 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-white/20 transition">
