@@ -182,7 +182,7 @@ export function buildGoogleLoyaltyClassPayload() {
             twoItems: {
               startItem: {
                 firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['meta-visitas']" }],
+                  fields: [{ fieldPath: "object.textModulesData['cliente']" }],
                 },
               },
               endItem: {
@@ -196,7 +196,7 @@ export function buildGoogleLoyaltyClassPayload() {
             twoItems: {
               startItem: {
                 firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['premio']" }],
+                  fields: [{ fieldPath: "object.textModulesData['meta-visitas']" }],
                 },
               },
               endItem: {
@@ -207,47 +207,15 @@ export function buildGoogleLoyaltyClassPayload() {
             },
           },
           {
-            oneItem: {
-              item: {
-                firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['sellos']" }],
-                },
-              },
-            },
-          },
-          {
             twoItems: {
               startItem: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['premio']" }],
+                },
+              },
+              endItem: {
                 firstValue: {
                   fields: [{ fieldPath: "object.textModulesData['ultima-visita']" }],
-                },
-              },
-              endItem: {
-                firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['miembro-desde']" }],
-                },
-              },
-            },
-          },
-          {
-            oneItem: {
-              item: {
-                firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['historial']" }],
-                },
-              },
-            },
-          },
-          {
-            twoItems: {
-              startItem: {
-                firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['negocio']" }],
-                },
-              },
-              endItem: {
-                firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['cliente']" }],
                 },
               },
             },
@@ -265,7 +233,7 @@ export function buildGoogleLoyaltyClassPayload() {
             oneItem: {
               item: {
                 firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['ayuda']" }],
+                  fields: [{ fieldPath: "object.textModulesData['historial']" }],
                 },
               },
             },
