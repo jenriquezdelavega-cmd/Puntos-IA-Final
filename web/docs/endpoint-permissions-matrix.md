@@ -42,6 +42,8 @@ Esta matriz documenta el rol/credencial esperada por endpoint para cerrar el ent
 | `/api/user/profile` | POST | `PUBLIC` (login/lookup) |
 | `/api/user/login` | POST | `PUBLIC` (login) |
 | `/api/user/register` | POST | `PUBLIC` (registro) |
+| `/api/user/password/forgot` | POST | `PUBLIC` (recuperación por email) |
+| `/api/user/password/reset` | POST | `PUBLIC` (token de recuperación) |
 | `/api/user/history` | POST | `USER_SESSION` |
 | `/api/user/update` | POST | `USER_SESSION` |
 | `/api/redeem/request` | POST | `USER_SESSION` |
