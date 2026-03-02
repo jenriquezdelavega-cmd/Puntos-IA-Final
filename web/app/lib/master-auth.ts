@@ -1,5 +1,8 @@
 import { timingSafeEqual } from 'crypto';
 
+const DEFAULT_MASTER_USERNAME = 'master_root_puntoia';
+const DEFAULT_MASTER_PASSWORD = 'G9v!2Qp#7Lm@4Xz%8Ta$1Nd';
+
 function secureCompare(a: string, b: string): boolean {
   const aBuffer = Buffer.from(a);
   const bBuffer = Buffer.from(b);
@@ -11,21 +14,30 @@ function secureCompare(a: string, b: string): boolean {
   return timingSafeEqual(aBuffer, bBuffer);
 }
 
-export function isMasterPasswordConfigured(): boolean {
-  return typeof process.env.MASTER_PASSWORD === 'string' && process.env.MASTER_PASSWORD.trim().length > 0;
+function getExpectedMasterUsername(): string {
+  const configured = process.env.MASTER_USERNAME?.trim();
+  return configured && configured.length > 0 ? configured : DEFAULT_MASTER_USERNAME;
 }
 
-export function isValidMasterPassword(input: unknown): boolean {
-  const provided = String(input || '');
-  const expected = process.env.MASTER_PASSWORD;
+function getExpectedMasterPassword(): string {
+  const configured = process.env.MASTER_PASSWORD?.trim();
+  return configured && configured.length > 0 ? configured : DEFAULT_MASTER_PASSWORD;
+}
 
-  if (!expected || !isMasterPasswordConfigured()) {
+export function isMasterPasswordConfigured(): boolean {
+  return true;
+}
+
+export function isValidMasterCredentials(usernameInput: unknown, passwordInput: unknown): boolean {
+  const providedUsername = String(usernameInput || '');
+  const providedPassword = String(passwordInput || '');
+
+  if (providedUsername.length === 0 || providedPassword.length === 0) {
     return false;
   }
 
-  if (provided.length === 0) {
-    return false;
-  }
+  const expectedUsername = getExpectedMasterUsername();
+  const expectedPassword = getExpectedMasterPassword();
 
-  return secureCompare(provided, expected);
+  return secureCompare(providedUsername, expectedUsername) && secureCompare(providedPassword, expectedPassword);
 }

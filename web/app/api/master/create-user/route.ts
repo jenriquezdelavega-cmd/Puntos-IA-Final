@@ -1,5 +1,5 @@
 import { prisma } from '@/app/lib/prisma';
-import { isValidMasterPassword } from '@/app/lib/master-auth';
+import { isValidMasterCredentials } from '@/app/lib/master-auth';
 import { hashPassword } from '@/app/lib/password';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { asTrimmedString, optionalString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
@@ -18,6 +18,7 @@ export async function POST(request: Request) {
       });
     }
     const parsedBody = parseWithSchema(body, {
+      masterUsername: requiredString,
       masterPassword: requiredString,
       tenantId: requiredString,
       username: requiredString,
@@ -36,9 +37,9 @@ export async function POST(request: Request) {
       });
     }
 
-    const { masterPassword, tenantId, name, phone, email, username, password, role } = parsedBody.data;
+    const { masterUsername, masterPassword, tenantId, name, phone, email, username, password, role } = parsedBody.data;
 
-    if (!isValidMasterPassword(masterPassword)) {
+    if (!isValidMasterCredentials(masterUsername, masterPassword)) {
       return apiError({
         requestId,
         status: 401,

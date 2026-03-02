@@ -1,6 +1,6 @@
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
-import { isValidMasterPassword } from '@/app/lib/master-auth';
+import { isValidMasterCredentials } from '@/app/lib/master-auth';
 import { prisma } from '@/app/lib/prisma';
 
 
@@ -19,6 +19,7 @@ export async function POST(request: Request) {
     }
 
     const parsedBody = parseWithSchema(body, {
+      masterUsername: requiredString,
       masterPassword: requiredString,
     });
     if (!parsedBody.ok) {
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
       });
     }
 
-    if (!isValidMasterPassword(parsedBody.data.masterPassword)) {
+    if (!isValidMasterCredentials(parsedBody.data.masterUsername, parsedBody.data.masterPassword)) {
       return apiError({
         requestId,
         status: 401,

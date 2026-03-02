@@ -61,6 +61,7 @@ Luego probar manualmente el flujo crítico completo.
 Define estas variables en Replit y Vercel para evitar diferencias entre ambientes:
 
 - `DATABASE_URL`
+- `MASTER_USERNAME` (si no se define, usa fallback local de desarrollo)
 - `MASTER_PASSWORD` (si no se define, usa fallback local de desarrollo)
 
 ---

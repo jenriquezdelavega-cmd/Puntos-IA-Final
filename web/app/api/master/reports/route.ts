@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
-import { isValidMasterPassword } from '@/app/lib/master-auth';
+import { isValidMasterCredentials } from '@/app/lib/master-auth';
 import { listPrelaunchLeads } from '@/app/lib/prelaunch-leads';
 import { apiError, getRequestId } from '@/app/lib/api-response';
 import { optionalString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
@@ -36,6 +36,7 @@ export async function POST(req: Request) {
       });
     }
     const parsedBody = parseWithSchema(body, {
+      masterUsername: requiredString,
       masterPassword: requiredString,
       report: parseReportType,
       tenantId: optionalString,
@@ -49,9 +50,9 @@ export async function POST(req: Request) {
       });
     }
 
-    const { masterPassword, report, tenantId } = parsedBody.data;
+    const { masterUsername, masterPassword, report, tenantId } = parsedBody.data;
 
-    if (!isValidMasterPassword(masterPassword)) {
+    if (!isValidMasterCredentials(masterUsername, masterPassword)) {
       return apiError({
         requestId,
         status: 401,
