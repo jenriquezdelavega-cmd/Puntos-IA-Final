@@ -3,16 +3,16 @@ import Image from 'next/image';
 
 function PuntoIALogo() {
   return (
-    <div className="inline-flex flex-col items-start justify-center gap-1.5 select-none">
+    <div className="inline-flex flex-col items-start justify-center gap-0 select-none">
       <Image
         src="/logo.png"
         alt="Logo Punto IA"
-        width={320}
-        height={170}
+        width={640}
+        height={320}
         priority
-        className="h-20 w-52 sm:h-24 sm:w-64 object-contain"
+        className="h-32 w-80 sm:h-36 sm:w-96 object-contain"
       />
-      <p className="text-xs sm:text-sm font-black tracking-wide text-white/85">Premiamos tu lealtad, facil y YA.</p>
+      <p className="-mt-1 text-sm sm:text-base font-black tracking-wide text-white/85">Premiamos tu lealtad, facil y YA.</p>
     </div>
   );
 }

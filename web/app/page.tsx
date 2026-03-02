@@ -109,18 +109,18 @@ function BrandLogo({ animate = true, compact = false }: { animate?: boolean; com
       initial={canAnim ? { opacity: 0, y: 8 } : false}
       animate={canAnim ? { opacity: 1, y: 0 } : false}
       transition={canAnim ? { ...spring } : undefined}
-      className="mb-3 select-none"
+      className="mb-1 select-none"
     >
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-0.5">
         <Image
           src="/logo.png"
           alt="Logo Punto IA"
-          width={compact ? 180 : 340}
-          height={compact ? 110 : 190}
+          width={compact ? 320 : 680}
+          height={compact ? 180 : 360}
           priority
-          className={`${compact ? 'h-20 w-40 sm:h-24 sm:w-52' : 'h-32 w-56 sm:h-40 sm:w-72'} object-contain`}
+          className={`${compact ? 'h-28 w-56 sm:h-32 sm:w-64' : 'h-56 w-[24rem] sm:h-64 sm:w-[30rem]'} object-contain`}
         />
-        <p className={`${compact ? 'text-[10px] sm:text-xs' : 'text-sm sm:text-base'} font-black tracking-wide text-white/90 text-center`}>
+        <p className={`${compact ? 'text-xs sm:text-sm' : 'text-lg sm:text-xl'} -mt-1 font-black tracking-wide text-white/90 text-center`}>
           Premiamos tu lealtad, facil y YA.
         </p>
       </div>
@@ -718,25 +718,15 @@ export default function Home() {
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-white/5 blur-[100px]"
           />
 
-          <div className="w-full max-w-lg flex flex-col items-center pt-14 pb-12 relative">
+          <div className="w-full max-w-xl flex flex-col items-center pt-16 pb-12 relative">
             <BrandLogo />
 
-            <motion.h1
-              initial={canAnim ? { opacity: 0, y: 10 } : false}
-              animate={canAnim ? { opacity: 1, y: 0 } : false}
-              transition={canAnim ? { ...spring, delay: 0.1 } : undefined}
-              className="text-[2rem] md:text-4xl font-black text-center leading-[1.15] tracking-tight mt-5"
-            >
-              Tu pase de lealtad
-              <br />
-              <span className="text-white/85 italic">en un solo lugar</span>
-            </motion.h1>
 
             <motion.p
               initial={canAnim ? { opacity: 0, y: 8 } : false}
               animate={canAnim ? { opacity: 1, y: 0 } : false}
               transition={canAnim ? { ...spring, delay: 0.15 } : undefined}
-              className="text-white/60 text-[13px] font-medium text-center mt-3 mb-10 max-w-[280px] leading-relaxed"
+              className="text-white/70 text-sm font-medium text-center mt-2 mb-8 max-w-[340px] leading-relaxed"
             >
               Acumula puntos en tus negocios favoritos y gana premios reales.
             </motion.p>
