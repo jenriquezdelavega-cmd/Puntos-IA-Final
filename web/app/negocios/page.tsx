@@ -3,7 +3,7 @@ import Image from 'next/image';
 
 function PuntoIALogo() {
   return (
-    <div className="flex flex-col items-center gap-2 select-none">
+    <div className="flex flex-col items-center gap-1 select-none">
       <Image
         src="/logo.png"
         alt="Logo Punto IA"

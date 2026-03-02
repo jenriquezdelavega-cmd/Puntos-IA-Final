@@ -111,7 +111,7 @@ function BrandLogo({ animate = true, compact = false }: { animate?: boolean; com
       transition={canAnim ? { ...spring } : undefined}
       className="mb-3 select-none"
     >
-      <div className="flex flex-col items-center gap-3">
+      <div className="flex flex-col items-center gap-1">
         <Image
           src="/logo.png"
           alt="Logo Punto IA"
