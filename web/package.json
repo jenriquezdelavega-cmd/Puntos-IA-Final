@@ -11,7 +11,8 @@
     "type-check": "tsc --noEmit",
     "boost": "node prisma/boost.ts",
     "reset": "node prisma/reset.ts",
-    "test": "node --test scripts/tests/*.test.mjs"
+    "test": "node --test scripts/tests/*.test.mjs",
+    "prisma:generate": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",
