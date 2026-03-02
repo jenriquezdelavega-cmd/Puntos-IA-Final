@@ -3,14 +3,6 @@ import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { apiError, apiSuccess, type ApiErrorCode, getRequestId } from '@/app/lib/api-response';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
 
-type AccessBody = {
-  tenantId?: string;
-  tenantUserId?: string;
-  tenantSessionToken?: string;
-};
-
-
-
 function accessStatusToCode(status: number): ApiErrorCode {
   if (status === 400) return 'BAD_REQUEST';
   if (status === 401) return 'UNAUTHORIZED';

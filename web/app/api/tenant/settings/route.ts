@@ -56,6 +56,12 @@ export async function POST(request: Request) {
         ? undefined
         : Math.max(1, parseInt(String(requiredVisits), 10));
 
+    const allowedPeriods = ['OPEN', 'MONTHLY', 'QUARTERLY', 'SEMESTER', 'ANNUAL'] as const;
+    type RewardPeriodValue = (typeof allowedPeriods)[number];
+    const parsedRewardPeriod = (allowedPeriods as readonly string[]).includes(rewardPeriod)
+      ? (rewardPeriod as RewardPeriodValue)
+      : undefined;
+
     const updated = await prisma.tenant.update({
       where: { id: authorizedTenantId },
       data: {
@@ -65,7 +71,7 @@ export async function POST(request: Request) {
         ...(lat !== undefined && lat !== null && lat !== '' ? { lat: parseFloat(String(lat)) } : {}),
         ...(lng !== undefined && lng !== null && lng !== '' ? { lng: parseFloat(String(lng)) } : {}),
         ...(parsedVisits !== undefined ? { requiredVisits: parsedVisits } : {}),
-        ...(rewardPeriod ? { rewardPeriod } : {}),
+        ...(parsedRewardPeriod ? { rewardPeriod: parsedRewardPeriod } : {}),
         ...(logoData !== undefined && logoData !== null ? { logoData } : {}),
       },
     });

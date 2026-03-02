@@ -9,6 +9,38 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 type ViewState = 'WELCOME' | 'LOGIN' | 'REGISTER' | 'APP';
 
+
+type MembershipView = {
+  id?: string;
+  tenantId?: string;
+  name?: string;
+  logoData?: string;
+  tenant?: { logoData?: string };
+  requiredVisits?: number;
+  visits?: number;
+  points?: number;
+  rewardPeriod?: string;
+  [key: string]: unknown;
+};
+
+type UserView = {
+  id?: string;
+  name?: string;
+  email?: string;
+  gender?: string;
+  birthDate?: string;
+  phone?: string;
+  sessionToken?: string;
+  memberships?: MembershipView[];
+  [key: string]: unknown;
+};
+
+type HistoryItem = {
+  prize?: string;
+  tenant?: string;
+  date?: string;
+};
+
 type BusinessLeadForm = {
   businessName: string;
   contactName: string;
@@ -199,7 +231,7 @@ export default function Home() {
 
   const [activeTab, setActiveTab] = useState<'points' | 'aliados' | 'profile'>('points');
 
-  const [user, setUser] = useState<Record<string, unknown> | null>(null);
+  const [user, setUser] = useState<UserView | null>(null);
 
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -219,9 +251,8 @@ export default function Home() {
 
 
   const [showTutorial, setShowTutorial] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const [history, setHistory] = useState<Record<string, unknown>[]>([]);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
   const [leadForm, setLeadForm] = useState<BusinessLeadForm>({
@@ -547,10 +578,6 @@ export default function Home() {
       setPassword('');
       setMessage('');
     }
-  };
-
-  const toggleCard = (id: string) => {
-    setExpandedId(expandedId === id ? null : id);
   };
 
   return prelaunchMode && !showClientPortal ? (
@@ -982,7 +1009,7 @@ export default function Home() {
 
                   <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                     {history.length > 0 ? (
-                      history.map((h: Record<string, unknown>, i: number) => (
+                      history.map((h: HistoryItem, i: number) => (
                         <motion.div
                           key={i}
                           initial={canAnim ? { opacity: 0, y: 10 } : false}

@@ -10,15 +10,47 @@ const QRScanner = dynamic(() => import('@yudiel/react-qr-scanner').then((m) => m
   loading: () => <div className="h-[320px] rounded-2xl bg-gray-100 animate-pulse text-center pt-24 text-gray-400">Cargando cámara...</div>,
 });
 
+
+type TenantView = {
+  [key: string]: unknown;
+  id?: string;
+  slug?: string;
+  codePrefix?: string;
+  name?: string;
+  prize?: string;
+  instagram?: string;
+  requiredVisits?: number;
+  rewardPeriod?: string;
+  logoData?: string;
+  walletBackgroundColor?: string;
+  walletForegroundColor?: string;
+  walletLabelColor?: string;
+  walletStripImageData?: string;
+  lat?: number;
+  lng?: number;
+  address?: string;
+};
+
+type ReportPoint = { date?: string; count?: number };
+type ReportBucket = { label?: string; value?: number; color?: string };
+type ReportView = {
+  chartData?: ReportPoint[];
+  genderData?: ReportBucket[];
+  ageData?: ReportBucket[];
+  csvData?: unknown[];
+};
+
+type TeamMember = { id: string; name?: string; username?: string; role?: string };
+
 export default function AdminPage() {
-const [tenant, setTenant] = useState<Record<string, unknown> | null>(null);
+const [tenant, setTenant] = useState<TenantView | null>(null);
 const [tenantUserId, setTenantUserId] = useState<string>('');
 const [tenantSessionToken, setTenantSessionToken] = useState<string>('');
 const [username, setUsername] = useState('');
 const [password, setPassword] = useState('');
 
 const [code, setCode] = useState('');
-const [reportData, setReportData] = useState<Record<string, unknown> | null>(null);
+const [reportData, setReportData] = useState<ReportView | null>(null);
 const [baseUrl, setBaseUrl] = useState('');
 const [tab, setTab] = useState('qr');
 const [userRole, setUserRole] = useState('');
@@ -43,7 +75,7 @@ const [scannerOpen, setScannerOpen] = useState(false);
 const [scannerMsg, setScannerMsg] = useState('');
 const lastScanRef = useRef<string>('');
 
-const [team, setTeam] = useState<Record<string, unknown>[]>([]);
+const [team, setTeam] = useState<TeamMember[]>([]);
 const [newStaff, setNewStaff] = useState({ name: '', username: '', password: '', role: 'STAFF' });
 const [lastScannedCustomerId, setLastScannedCustomerId] = useState('');
 
@@ -57,11 +89,11 @@ const trendData = reportData?.chartData ?? [];
 const genderData = reportData?.genderData ?? [];
 const ageData = reportData?.ageData ?? [];
 const totalClients = reportData?.csvData?.length || 0;
-const totalCheckins = trendData.reduce((sum: number, item: Record<string, unknown>) => sum + Number(item.count || 0), 0);
-const peakDay = trendData.reduce((max: Record<string, unknown> | null, item: Record<string, unknown>) => {
+const totalCheckins = trendData.reduce((sum: number, item: ReportPoint) => sum + Number(item.count || 0), 0);
+const peakDay = trendData.reduce((max: ReportPoint | null, item: ReportPoint) => {
   return Number(item.count || 0) > Number(max?.count || 0) ? item : max;
 }, null);
-const trendMax = Math.max(...trendData.map((d: Record<string, unknown>) => Number(d.count || 0)), 1);
+const trendMax = Math.max(...trendData.map((d: ReportPoint) => Number(d.count || 0)), 1);
 const genderMax = Math.max(...genderData.map((d: Record<string, unknown>) => Number(d.value || 0)), 1);
 const ageMax = Math.max(...ageData.map((d: Record<string, unknown>) => Number(d.value || 0)), 1);
 
@@ -514,7 +546,7 @@ return (
     <h3 className="text-lg font-bold text-gray-800 mb-1">Distribución por género</h3>
     <p className="text-xs text-gray-500 font-medium mb-5">Clientes por segmento.</p>
     <div className="space-y-4">
-      {genderData.length > 0 ? genderData.map((item: Record<string, unknown>) => {
+      {genderData.length > 0 ? genderData.map((item: ReportBucket) => {
         const width = Math.max((Number(item.value || 0) / genderMax) * 100, item.value ? 8 : 0);
         return (
           <div key={item.label}>
@@ -535,7 +567,7 @@ return (
     <h3 className="text-lg font-bold text-gray-800 mb-1">Distribución por edades</h3>
     <p className="text-xs text-gray-500 font-medium mb-5">Rangos de edad de tus clientes.</p>
     <div className="space-y-3">
-      {ageData.length > 0 ? ageData.map((item: Record<string, unknown>, idx: number) => {
+      {ageData.length > 0 ? ageData.map((item: ReportBucket, idx: number) => {
         const width = Math.max((Number(item.value || 0) / ageMax) * 100, item.value ? 8 : 0);
         return (
           <div key={item.label} className="flex items-center gap-3">
@@ -590,7 +622,7 @@ return (
       </div>
     </div>
     <div className="divide-y divide-gray-50">
-      {team.length > 0 ? team.map((u: Record<string, unknown>) => (
+      {team.length > 0 ? team.map((u: TeamMember) => (
         <div key={u.id} className="px-6 py-4 flex items-center justify-between gap-3 hover:bg-gray-50/50 transition">
           <div className="flex items-center gap-3 min-w-0">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0 ${u.role === 'ADMIN' ? 'bg-gradient-to-br from-purple-500 to-pink-500' : 'bg-gradient-to-br from-sky-500 to-blue-600'}`}>
@@ -604,7 +636,7 @@ return (
               </div>
             </div>
           </div>
-          <button onClick={() => deleteStaff(u.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition shrink-0" title="Eliminar">
+          <button onClick={() => deleteStaff(String(u.id))} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition shrink-0" title="Eliminar">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
           </button>
         </div>
