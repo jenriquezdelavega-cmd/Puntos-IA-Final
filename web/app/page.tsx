@@ -940,6 +940,12 @@ export default function Home() {
                 <Shine />
                 {loading ? 'Procesando...' : view === 'REGISTER' ? '🚀 Crear Cuenta' : 'Entrar'}
               </motion.button>
+
+              {view === 'LOGIN' && (
+                <Link href="/recuperar" className="block text-center text-xs font-bold text-pink-500 hover:text-pink-700 mt-2">
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              )}
             </motion.div>
           </div>
         </motion.div>
