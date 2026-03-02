@@ -12,7 +12,7 @@ function PuntoIALogo() {
         priority
         className="h-40 w-64 sm:h-48 sm:w-80 object-contain"
       />
-      <p className="px-5 py-2 rounded-full border border-white/25 bg-white/10 text-white/95 text-[11px] sm:text-sm font-bold tracking-wide text-center shadow-[0_8px_24px_rgba(0,0,0,0.14)]">
+      <p className="-mt-6 sm:-mt-7 px-5 py-2 rounded-full border border-white/25 bg-white/10 text-white/95 text-[11px] sm:text-sm font-bold tracking-wide text-center shadow-[0_8px_24px_rgba(0,0,0,0.14)]">
         Premiamos tu lealtad, facil y YA.
       </p>
     </div>
