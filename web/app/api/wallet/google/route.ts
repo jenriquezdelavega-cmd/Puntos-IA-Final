@@ -2,6 +2,7 @@ import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { prisma } from '@/app/lib/prisma';
 import { asTrimmedString } from '@/app/lib/request-validation';
 import {
+  getGoogleWalletClassId,
   getGoogleWalletIssuerId,
   googleWalletConfigErrorResponse,
   parseGoogleServiceAccount,
@@ -65,7 +66,17 @@ export async function GET(req: Request) {
       });
     }
 
-    const classId = `${issuerId}.puntoia_loyalty`;
+    const classId = getGoogleWalletClassId();
+
+    if (!classId) {
+      return apiError({
+        requestId,
+        status: 500,
+        code: 'INTERNAL_ERROR',
+        message: googleWalletConfigErrorResponse().error,
+      });
+    }
+
     const objectId = `${issuerId}.${sanitizeIdPart(`${tenant.id}_${user.id}`)}`;
 
     const account = parseGoogleServiceAccount();
@@ -75,20 +86,6 @@ export async function GET(req: Request) {
       aud: 'google',
       typ: 'savetowallet',
       payload: {
-        loyaltyClasses: [
-          {
-            id: classId,
-            issuerName: 'Punto IA',
-            programName: tenant.name,
-            programLogo: {
-              sourceUri: {
-                uri: 'https://www.puntoia.mx/wallet-assets/logo.png',
-              },
-            },
-            hexBackgroundColor: '#f43f5e',
-            reviewStatus: 'UNDER_REVIEW',
-          },
-        ],
         loyaltyObjects: [
           {
             id: objectId,
