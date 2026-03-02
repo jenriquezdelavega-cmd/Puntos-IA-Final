@@ -107,25 +107,19 @@ export default function BusinessMap({
     return [25.6866, -100.3161]; // Monterrey fallback
   }, [focusCoords, valid]);
 
-  const [center, setCenter] = useState<[number, number]>(autoCenter);
-  const [fly, setFly] = useState(false);
-
-  // ✅ Radio local: al tocar un negocio, acercamos a 50km para que no se vea vacío
-  const [localRadiusKm, setLocalRadiusKm] = useState<number>(radiusKm);
-
   const [selected, setSelected] = useState<Tenant | null>(null);
 
-  useEffect(() => {
-    setCenter(autoCenter);
-    setFly(false);
-    setLocalRadiusKm(radiusKm);
-  }, [autoCenter, radiusKm]); // sync props → state (intentional)
+  const center = useMemo<[number, number]>(() => {
+    if (selected) return [selected.lat, selected.lng];
+    return autoCenter;
+  }, [selected, autoCenter]);
+
+  // ✅ Radio local: al tocar un negocio, acercamos a 50km para que no se vea vacío
+  const localRadiusKm = selected ? 50 : radiusKm;
+  const fly = Boolean(selected);
 
   const onPick = (t: Tenant) => {
     setSelected(t);
-    setCenter([t.lat, t.lng]);
-    setLocalRadiusKm(50);
-    setFly(true);
   };
 
   return (
@@ -143,7 +137,6 @@ export default function BusinessMap({
         <Circle center={center} radius={localRadiusKm * 1000} pathOptions={{ opacity: 0.25, fillOpacity: 0.08 }} />
 
         {valid.map((t) => {
-          const ig = instagramUrl(t.instagram);
           return (
             <Marker
               key={t.id || `${t.name}-${t.lat}-${t.lng}`}
