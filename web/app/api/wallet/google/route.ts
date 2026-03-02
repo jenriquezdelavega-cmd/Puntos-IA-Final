@@ -7,6 +7,7 @@ import {
   getGoogleWalletClassId,
   getGoogleWalletIssuerId,
   googleWalletConfigErrorResponse,
+  ensureGoogleLoyaltyClassSynced,
   parseGoogleServiceAccount,
   signSaveToWalletJwt,
 } from '@/app/lib/google-wallet';
@@ -79,6 +80,24 @@ function resolveGoogleWalletImageUrl(params: {
   imageUrl.searchParams.set('businessId', params.businessId);
   imageUrl.searchParams.set('kind', params.kind);
   return imageUrl.toString();
+}
+
+function resolveBusinessLogoUrl(params: {
+  logoValue: string | null | undefined;
+  origin: string;
+  businessId: string;
+}) {
+  const logoFromBusiness = resolveGoogleWalletImageUrl({
+    imageValue: params.logoValue,
+    origin: params.origin,
+    businessId: params.businessId,
+    kind: 'logo',
+  });
+
+  if (logoFromBusiness) return logoFromBusiness;
+
+  const fallback = new URL('/icon.svg', params.origin);
+  return fallback.toString();
 }
 
 function normalizeInstagramHandle(value: string | null | undefined) {
@@ -171,11 +190,10 @@ export async function GET(req: Request) {
     const currentVisits = membership?.currentVisits ?? 0;
     const requiredVisits = tenant.requiredVisits ?? 10;
     const remainingVisits = Math.max(0, requiredVisits - currentVisits);
-    const logoUri = resolveGoogleWalletImageUrl({
-      imageValue: tenant.logoData || walletStyle.stripImageData,
+    const logoUri = resolveBusinessLogoUrl({
+      logoValue: tenant.logoData,
       origin: qrBaseUrl,
       businessId: tenant.id,
-      kind: 'logo',
     });
     const stripUri = resolveGoogleWalletImageUrl({
       imageValue: walletStyle.stripImageData,
@@ -183,8 +201,6 @@ export async function GET(req: Request) {
       businessId: tenant.id,
       kind: 'strip',
     });
-    const foregroundHex = parseRgbToHex(walletStyle.foregroundColor, '#FFFFFF');
-    const labelHex = parseRgbToHex(walletStyle.labelColor, '#BFDFFE');
     const instagramHandle = normalizeInstagramHandle(tenant.instagram);
 
     const account = parseGoogleServiceAccount();
@@ -217,7 +233,7 @@ export async function GET(req: Request) {
             subheader: {
               defaultValue: {
                 language: 'es-MX',
-                value: user.name || 'Cliente',
+                value: tenant.name || 'Negocio afiliado',
               },
             },
             ...(logoUri
@@ -230,12 +246,12 @@ export async function GET(req: Request) {
                 },
               }
               : {}),
-            ...(stripUri
+            ...(logoUri
               ? {
                 wideLogo: {
-                  sourceUri: { uri: stripUri },
+                  sourceUri: { uri: logoUri },
                   contentDescription: {
-                    defaultValue: { language: 'es-MX', value: `Logo horizontal de ${tenant.name || 'Punto IA'}` },
+                    defaultValue: { language: 'es-MX', value: `Logo de ${tenant.name || 'Punto IA'}` },
                   },
                 },
               }
@@ -281,6 +297,16 @@ export async function GET(req: Request) {
             },
             textModulesData: [
               {
+                id: 'negocio',
+                header: 'Negocio',
+                body: tenant.name || 'Negocio afiliado',
+              },
+              {
+                id: 'cliente',
+                header: 'Cliente',
+                body: user.name || 'Cliente Punto IA',
+              },
+              {
                 id: 'meta-visitas',
                 header: 'Meta',
                 body: `${currentVisits}/${requiredVisits} visitas`,
@@ -314,11 +340,6 @@ export async function GET(req: Request) {
                 id: 'historial',
                 header: 'Historial',
                 body: `${membership?.totalVisits ?? currentVisits} visita${(membership?.totalVisits ?? currentVisits) === 1 ? '' : 's'} en total`,
-              },
-              {
-                id: 'colores',
-                header: 'Estilo del pase',
-                body: `Texto ${foregroundHex} · Etiquetas ${labelHex}`,
               },
               {
                 id: 'id-miembro',
@@ -356,6 +377,10 @@ export async function GET(req: Request) {
         ],
       },
     };
+
+    void ensureGoogleLoyaltyClassSynced().catch((classSyncError) => {
+      console.warn('[wallet/google] class sync skipped:', classSyncError instanceof Error ? classSyncError.message : classSyncError);
+    });
 
     const token = signSaveToWalletJwt(jwtPayload, account.private_key || '');
 

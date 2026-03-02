@@ -23,6 +23,11 @@ type ServiceAccount = {
 };
 
 const GOOGLE_TOKEN_URI = 'https://oauth2.googleapis.com/token';
+const WALLET_CLASS_URL = 'https://walletobjects.googleapis.com/walletobjects/v1/loyaltyClass';
+const DEFAULT_CLASS_SYNC_TTL_MS = 15 * 60 * 1000;
+
+let lastClassSyncAt = 0;
+let inFlightClassSync: Promise<void> | null = null;
 
 function firstEnv(names: readonly string[]) {
   for (const name of names) {
@@ -143,4 +148,140 @@ export function googleWalletConfigErrorResponse() {
     error:
       'Google Wallet no está configurado. Define GOOGLE_WALLET_ISSUER_ID, GOOGLE_WALLET_SA_B64 y (opcional) GOOGLE_WALLET_CLASS_ID en Vercel.',
   };
+}
+
+async function parseGoogleWalletApiResponse(response: Response) {
+  const responseText = await response.text();
+  if (!responseText) return null;
+
+  try {
+    return JSON.parse(responseText) as unknown;
+  } catch {
+    return { raw: responseText };
+  }
+}
+
+export function buildGoogleLoyaltyClassPayload() {
+  return {
+    id: getGoogleWalletClassId(),
+    issuerName: 'Punto IA',
+    programName: 'Punto IA',
+    countryCode: 'MX',
+    reviewStatus: 'UNDER_REVIEW',
+    textModulesData: [
+      {
+        id: 'uso',
+        header: 'Cómo usar tu pase',
+        body: 'Muestra el QR al pagar para registrar tu visita.',
+      },
+    ],
+    classTemplateInfo: {
+      cardTemplateOverride: {
+        cardRowTemplateInfos: [
+          {
+            twoItems: {
+              startItem: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['negocio']" }],
+                },
+              },
+              endItem: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['cliente']" }],
+                },
+              },
+            },
+          },
+          {
+            oneItem: {
+              item: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['meta-visitas']" }],
+                },
+              },
+            },
+          },
+          {
+            twoItems: {
+              startItem: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['faltan']" }],
+                },
+              },
+              endItem: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['premio']" }],
+                },
+              },
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
+export async function upsertGoogleLoyaltyClass() {
+  const accessToken = await getGoogleServiceAccountAccessToken(['https://www.googleapis.com/auth/wallet_object.issuer']);
+  const payload = buildGoogleLoyaltyClassPayload();
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const createResponse = await fetch(WALLET_CLASS_URL, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  if (createResponse.status === 200 || createResponse.status === 201) {
+    return {
+      operation: 'created' as const,
+      status: createResponse.status,
+      body: await parseGoogleWalletApiResponse(createResponse),
+      classId: payload.id,
+    };
+  }
+
+  if (createResponse.status !== 409) {
+    return {
+      operation: 'failed' as const,
+      status: createResponse.status,
+      body: await parseGoogleWalletApiResponse(createResponse),
+      classId: payload.id,
+    };
+  }
+
+  const updateResponse = await fetch(`${WALLET_CLASS_URL}/${encodeURIComponent(payload.id)}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  return {
+    operation: updateResponse.ok ? ('updated' as const) : ('failed' as const),
+    status: updateResponse.status,
+    body: await parseGoogleWalletApiResponse(updateResponse),
+    classId: payload.id,
+  };
+}
+
+export function ensureGoogleLoyaltyClassSynced(options?: { ttlMs?: number }) {
+  const ttlMs = Math.max(0, options?.ttlMs ?? DEFAULT_CLASS_SYNC_TTL_MS);
+  const now = Date.now();
+
+  if (inFlightClassSync) return inFlightClassSync;
+  if (now - lastClassSyncAt < ttlMs) return Promise.resolve();
+
+  inFlightClassSync = (async () => {
+    try {
+      await upsertGoogleLoyaltyClass();
+      lastClassSyncAt = Date.now();
+    } finally {
+      inFlightClassSync = null;
+    }
+  })();
+
+  return inFlightClassSync;
 }
