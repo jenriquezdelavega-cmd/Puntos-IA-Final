@@ -111,24 +111,19 @@ function BrandLogo({ animate = true, compact = false }: { animate?: boolean; com
       transition={canAnim ? { ...spring } : undefined}
       className="mb-3 select-none"
     >
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-1">
         <Image
           src="/logo.png"
           alt="Logo Punto IA"
-          width={compact ? 120 : 220}
-          height={compact ? 80 : 140}
+          width={compact ? 200 : 520}
+          height={compact ? 130 : 320}
           priority
-          className={`${compact ? 'h-12 w-20 sm:h-14 sm:w-24' : 'h-20 w-28 sm:h-24 sm:w-36'} object-contain`}
+          className={`${compact ? 'h-16 w-28 sm:h-20 sm:w-36' : 'h-48 w-80 sm:h-56 sm:w-[26rem]'} object-contain`}
         />
         {!compact && (
-          <Image
-            src="/slogan.png"
-            alt="Slogan de Punto IA"
-            width={280}
-            height={92}
-            priority
-            className="h-9 w-44 sm:h-10 sm:w-52 object-contain opacity-95"
-          />
+          <p className="-mt-6 sm:-mt-7 px-5 py-2 rounded-full border border-white/25 bg-white/10 text-white/95 text-[11px] sm:text-sm font-bold tracking-wide text-center shadow-[0_8px_24px_rgba(0,0,0,0.14)]">
+            Premiamos tu lealtad, facil y YA.
+          </p>
         )}
       </div>
     </motion.div>
@@ -565,7 +560,7 @@ export default function Home() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-br from-[#ff7a59]/30 via-[#ff3f8e]/20 to-transparent rounded-full blur-[120px] opacity-60" />
 
       <nav className="relative z-20 mx-auto max-w-6xl px-6 py-6 flex items-center justify-between">
-        <div className="scale-[0.7] origin-left"><BrandLogo animate={false} compact /></div>
+        <div className="scale-100 sm:scale-110 origin-left"><BrandLogo animate={false} compact /></div>
         <div className="flex items-center gap-3">
           <Link href="/negocios" className="text-white/60 text-sm font-bold hover:text-white transition hidden sm:block">Para Negocios</Link>
           <Link href="/?clientes=1" className="bg-white/10 border border-white/20 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-white/20 transition">
@@ -725,25 +720,14 @@ export default function Home() {
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-white/5 blur-[100px]"
           />
 
-          <div className="w-full max-w-sm flex flex-col items-center pt-20 pb-12 relative">
+          <div className="w-full max-w-sm flex flex-col items-center pt-16 pb-12 relative">
             <BrandLogo />
-
-            <motion.h1
-              initial={canAnim ? { opacity: 0, y: 10 } : false}
-              animate={canAnim ? { opacity: 1, y: 0 } : false}
-              transition={canAnim ? { ...spring, delay: 0.1 } : undefined}
-              className="text-[1.75rem] md:text-3xl font-black text-center leading-[1.2] tracking-tight mt-4"
-            >
-              Tu pase de lealtad
-              <br />
-              <span className="text-white/85 italic">en un solo lugar</span>
-            </motion.h1>
 
             <motion.p
               initial={canAnim ? { opacity: 0, y: 8 } : false}
               animate={canAnim ? { opacity: 1, y: 0 } : false}
               transition={canAnim ? { ...spring, delay: 0.15 } : undefined}
-              className="text-white/60 text-[13px] font-medium text-center mt-3 mb-10 max-w-[280px] leading-relaxed"
+              className="text-white/70 text-[13px] font-semibold text-center mt-4 mb-10 max-w-[300px] leading-relaxed"
             >
               Acumula puntos en tus negocios favoritos y gana premios reales.
             </motion.p>
