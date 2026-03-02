@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 export default function MasterPage() {
   const [auth, setAuth] = useState(false);
+  const [masterUser, setMasterUser] = useState('');
   const [masterPass, setMasterPass] = useState('');
   interface Tenant { id: string; name: string; slug: string; codePrefix?: string; isActive?: boolean; users: TenantUser[]; prize?: string; instagram?: string; address?: string; lat?: number; lng?: number }
   interface TenantUser { id: string; name: string; username: string; role: string; password?: string }
@@ -32,20 +33,20 @@ export default function MasterPage() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    const ok = await loadTenants(masterPass);
+    const ok = await loadTenants(masterUser, masterPass);
     if (ok) {
       setAuth(true);
     } else {
-      alert('Contraseña maestra incorrecta o sin permisos');
+      alert('Usuario o contraseña maestra incorrectos, o sin permisos');
     }
   };
 
-  const loadTenants = async (passwordOverride?: string) => {
+  const loadTenants = async (usernameOverride?: string, passwordOverride?: string) => {
     try {
       const res = await fetch('/api/master/list-tenants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ masterPassword: passwordOverride ?? masterPass }),
+        body: JSON.stringify({ masterUsername: usernameOverride ?? masterUser, masterPassword: passwordOverride ?? masterPass }),
       });
 
       if (!res.ok) {
@@ -63,7 +64,7 @@ export default function MasterPage() {
   const createTenant = async () => {
     setMsg('Creando...');
     try {
-      const res = await fetch('/api/master/create-tenant', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, name: tName, slug: tSlug }) });
+      const res = await fetch('/api/master/create-tenant', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterUsername: masterUser, masterPassword: masterPass, name: tName, slug: tSlug }) });
       if (res.ok) { 
           const data = await res.json();
           setMsg(`✅ Negocio Creado. PREFIJO: ${data.tenant.codePrefix}`); 
@@ -72,19 +73,19 @@ export default function MasterPage() {
     } catch { setMsg('Error'); }
   };
 
-  const deleteTenant = async (id: string, name: string) => { if(!confirm(`¿BORRAR ${name}?`)) return; try { await fetch('/api/master/manage-tenant', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'DELETE', tenantId: id }) }); loadTenants(); } catch { alert('Error'); } };
-  const updateTenant = async () => { if(!editingTenant) return; try { await fetch('/api/master/manage-tenant', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'UPDATE', tenantId: editingTenant.id, data: { ...editingTenant, prize: editPrize, instagram: editIg, address: editAddress, lat: editCoords[0], lng: editCoords[1] } }) }); setEditingTenant(null); loadTenants(); } catch { alert('Error'); } };
+  const deleteTenant = async (id: string, name: string) => { if(!confirm(`¿BORRAR ${name}?`)) return; try { await fetch('/api/master/manage-tenant', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterUsername: masterUser, masterPassword: masterPass, action: 'DELETE', tenantId: id }) }); loadTenants(); } catch { alert('Error'); } };
+  const updateTenant = async () => { if(!editingTenant) return; try { await fetch('/api/master/manage-tenant', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterUsername: masterUser, masterPassword: masterPass, action: 'UPDATE', tenantId: editingTenant.id, data: { ...editingTenant, prize: editPrize, instagram: editIg, address: editAddress, lat: editCoords[0], lng: editCoords[1] } }) }); setEditingTenant(null); loadTenants(); } catch { alert('Error'); } };
 
   const createUser = async () => {
     if(!selectedTenantId) return alert("Selecciona negocio");
     try {
-      const res = await fetch('/api/master/create-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, tenantId: selectedTenantId, name: uName, phone: uPhone, email: uEmail, username: uUser, password: uPass, role: uRole }) });
+      const res = await fetch('/api/master/create-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterUsername: masterUser, masterPassword: masterPass, tenantId: selectedTenantId, name: uName, phone: uPhone, email: uEmail, username: uUser, password: uPass, role: uRole }) });
       if (res.ok) { setMsg('✅ Usuario Agregado'); setUName(''); setUUser(''); setUPass(''); loadTenants(); } else { const d = await res.json(); setMsg('❌ ' + d.error); }
     } catch { setMsg('Error'); }
   };
 
-  const deleteUser = async (id: string) => { if(!confirm("¿Borrar?")) return; try { await fetch('/api/master/manage-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'DELETE', userId: id }) }); loadTenants(); } catch { alert('Error'); } };
-  const updateUser = async () => { if(!editingUser) return; try { await fetch('/api/master/manage-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterPassword: masterPass, action: 'UPDATE', userId: editingUser.id, data: editingUser }) }); setEditingUser(null); loadTenants(); } catch { alert('Error'); } };
+  const deleteUser = async (id: string) => { if(!confirm("¿Borrar?")) return; try { await fetch('/api/master/manage-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterUsername: masterUser, masterPassword: masterPass, action: 'DELETE', userId: id }) }); loadTenants(); } catch { alert('Error'); } };
+  const updateUser = async () => { if(!editingUser) return; try { await fetch('/api/master/manage-user', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masterUsername: masterUser, masterPassword: masterPass, action: 'UPDATE', userId: editingUser.id, data: editingUser }) }); setEditingUser(null); loadTenants(); } catch { alert('Error'); } };
   
   const openEdit = (t: Tenant) => { setEditingTenant(t); setEditPrize(t.prize||''); setEditIg(t.instagram||''); setEditAddress(t.address||''); if(t.lat) setEditCoords([t.lat,t.lng]); };
 
@@ -93,7 +94,7 @@ export default function MasterPage() {
       const res = await fetch('/api/master/reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ masterPassword: masterPass, report, tenantId: onlySelectedTenant ? (selectedTenantId || undefined) : undefined }),
+        body: JSON.stringify({ masterUsername: masterUser, masterPassword: masterPass, report, tenantId: onlySelectedTenant ? (selectedTenantId || undefined) : undefined }),
       });
 
       if (!res.ok) {
@@ -118,7 +119,7 @@ export default function MasterPage() {
     }
   };
 
-  if (!auth) return <div className="min-h-screen bg-black flex justify-center items-center p-4"><form onSubmit={handleAuth} className="bg-gray-900 p-8 rounded-xl border border-red-900 text-center"><h1 className="text-red-500 font-bold mb-4">👑 MASTER</h1><input type="password" className="p-3 rounded bg-gray-800 text-white w-full mb-4" value={masterPass} onChange={e=>setMasterPass(e.target.value)}/><button className="bg-red-600 w-full py-3 rounded font-bold text-white">Entrar</button></form></div>;
+  if (!auth) return <div className="min-h-screen bg-black flex justify-center items-center p-4"><form onSubmit={handleAuth} className="bg-gray-900 p-8 rounded-xl border border-red-900 text-center"><h1 className="text-red-500 font-bold mb-4">👑 MASTER</h1><input type="text" className="p-3 rounded bg-gray-800 text-white w-full mb-3" placeholder="Usuario master" value={masterUser} onChange={e=>setMasterUser(e.target.value)}/><input type="password" className="p-3 rounded bg-gray-800 text-white w-full mb-4" placeholder="Contraseña master" value={masterPass} onChange={e=>setMasterPass(e.target.value)}/><button className="bg-red-600 w-full py-3 rounded font-bold text-white">Entrar</button></form></div>;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8 overflow-y-auto">
