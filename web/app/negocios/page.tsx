@@ -1,19 +1,18 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 function PuntoIALogo() {
   return (
-    <div className="inline-flex items-end justify-center gap-3 select-none">
-      <span className="brand-punto-wrap">
-        <span className="brand-word brand-word-punto">punt</span>
-        <span className="brand-o-wrap">
-          <span className="brand-word brand-word-punto">o</span>
-          <span className="brand-orb">
-            <span className="brand-orb-glow" />
-            <span className="brand-orb-shine" />
-          </span>
-        </span>
-      </span>
-      <span className="brand-word brand-word-ia">IA</span>
+    <div className="inline-flex flex-col items-start justify-center gap-0 select-none">
+      <Image
+        src="/logo.png"
+        alt="Logo Punto IA"
+        width={640}
+        height={320}
+        priority
+        className="h-28 w-56 sm:h-32 sm:w-64 object-contain"
+      />
+      <p className="-mt-2 text-xs sm:text-sm font-black tracking-wide text-white/90">Premiamos tu lealtad, facil y YA.</p>
     </div>
   );
 }
@@ -103,7 +102,7 @@ export default function NegociosPage() {
   return (
     <main className="min-h-screen bg-[#080812] text-white">
       <nav className="mx-auto max-w-6xl px-6 py-6 flex items-center justify-between">
-        <Link href="/" className="scale-[0.6] origin-left"><PuntoIALogo /></Link>
+        <Link href="/" className="origin-left"><PuntoIALogo /></Link>
         <div className="flex items-center gap-3">
           <Link href="/" className="text-white/50 text-sm font-bold hover:text-white transition hidden sm:block">Inicio</Link>
           <Link href="/?clientes=1" className="bg-white/10 border border-white/20 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-white/20 transition">
@@ -121,7 +120,8 @@ export default function NegociosPage() {
             Para dueños de negocio
           </span>
 
-          <h1 className="mt-7 text-4xl md:text-6xl lg:text-7xl font-black leading-[1.08] tracking-tight max-w-5xl mx-auto">
+
+          <h1 className="mt-9 text-4xl md:text-6xl lg:text-7xl font-black leading-[1.08] tracking-tight max-w-5xl mx-auto">
             Que tus clientes regresen
             <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#a855f7]">
@@ -286,7 +286,7 @@ export default function NegociosPage() {
       <footer className="border-t border-white/10">
         <div className="mx-auto max-w-6xl px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="scale-[0.5] origin-left"><PuntoIALogo /></div>
+            <div className="scale-[0.9] origin-left"><PuntoIALogo /></div>
             <p className="text-white/30 text-xs font-semibold">Coalición de PyMEs · Hecho en México 🇲🇽</p>
           </div>
           <div className="flex items-center gap-4">
