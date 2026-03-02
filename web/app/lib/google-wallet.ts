@@ -182,49 +182,26 @@ export function buildGoogleLoyaltyClassPayload() {
             twoItems: {
               startItem: {
                 firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['negocio']" }],
-                },
-              },
-              endItem: {
-                firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['cliente']" }],
-                },
-              },
-            },
-          },
-          {
-            oneItem: {
-              item: {
-                firstValue: {
                   fields: [{ fieldPath: "object.textModulesData['meta-visitas']" }],
                 },
               },
-            },
-          },
-          {
-            twoItems: {
-              startItem: {
-                firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['faltan']" }],
-                },
-              },
               endItem: {
-                firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['premio']" }],
-                },
-              },
-            },
-          },
-          {
-            twoItems: {
-              startItem: {
                 firstValue: {
                   fields: [{ fieldPath: "object.textModulesData['periodo']" }],
                 },
               },
+            },
+          },
+          {
+            twoItems: {
+              startItem: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['premio']" }],
+                },
+              },
               endItem: {
                 firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['historial']" }],
+                  fields: [{ fieldPath: "object.textModulesData['faltan']" }],
                 },
               },
             },
@@ -256,7 +233,30 @@ export function buildGoogleLoyaltyClassPayload() {
             oneItem: {
               item: {
                 firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['ultimo-aviso']" }],
+                  fields: [{ fieldPath: "object.textModulesData['historial']" }],
+                },
+              },
+            },
+          },
+          {
+            twoItems: {
+              startItem: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['negocio']" }],
+                },
+              },
+              endItem: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['cliente']" }],
+                },
+              },
+            },
+          },
+          {
+            oneItem: {
+              item: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['id-miembro']" }],
                 },
               },
             },
