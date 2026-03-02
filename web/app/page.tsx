@@ -115,10 +115,10 @@ function BrandLogo({ animate = true, compact = false }: { animate?: boolean; com
         <Image
           src="/logo.png"
           alt="Logo Punto IA"
-          width={compact ? 200 : 420}
-          height={compact ? 130 : 260}
+          width={compact ? 200 : 520}
+          height={compact ? 130 : 320}
           priority
-          className={`${compact ? 'h-16 w-28 sm:h-20 sm:w-36' : 'h-40 w-64 sm:h-48 sm:w-80'} object-contain`}
+          className={`${compact ? 'h-16 w-28 sm:h-20 sm:w-36' : 'h-48 w-80 sm:h-56 sm:w-[26rem]'} object-contain`}
         />
         {!compact && (
           <p className="-mt-6 sm:-mt-7 px-5 py-2 rounded-full border border-white/25 bg-white/10 text-white/95 text-[11px] sm:text-sm font-bold tracking-wide text-center shadow-[0_8px_24px_rgba(0,0,0,0.14)]">
