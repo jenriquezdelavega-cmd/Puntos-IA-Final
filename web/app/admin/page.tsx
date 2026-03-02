@@ -301,7 +301,7 @@ const saveSettings = async () => {
 const validateRedeem = async () => { setMsg('Validando...'); try { const res = await fetch('/api/redeem/validate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken, code: redeemCode }) }); const data = await res.json(); if (res.ok) { setMsg(` ENTREGAR A: ${data.user}`); setRedeemCode(''); if(userRole==='ADMIN') loadReports(tenant.id, tenantUserId); } else setMsg(' ' + data.error); } catch { setMsg('Error'); } };
 const downloadCSV = () => { if (!reportData?.csvData) return; const headers = Object.keys(reportData.csvData[0]).join(','); const rows = reportData.csvData.map((obj: Record<string, unknown>) => Object.values(obj).join(',')).join('\n'); const encodedUri = encodeURI("data:text/csv;charset=utf-8," + headers + "\n" + rows); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `clientes_${tenant.slug}.csv`); document.body.appendChild(link); link.click(); };
 
-const onboardingQrValue = tenant?.id ? `${baseUrl || (typeof window !== 'undefined' ? window.location.origin : '')}/?clientes=1&business_id=${encodeURIComponent(String(tenant.id))}&flow=create-pass` : '';
+const onboardingQrValue = tenant?.id ? `${baseUrl || (typeof window !== 'undefined' ? window.location.origin : '')}/?clientes=1&business_id=${encodeURIComponent(String(tenant.id))}&flow=create-pass&auth=welcome` : '';
 
 const printOnboardingQr = () => {
   if (typeof window === 'undefined') return;
