@@ -26,8 +26,7 @@ const GOOGLE_TOKEN_URI = 'https://oauth2.googleapis.com/token';
 const WALLET_CLASS_URL = 'https://walletobjects.googleapis.com/walletobjects/v1/loyaltyClass';
 const DEFAULT_CLASS_SYNC_TTL_MS = 15 * 60 * 1000;
 
-let lastClassSyncAt = 0;
-let inFlightClassSync: Promise<void> | null = null;
+const classSyncState = new Map<string, { lastSyncAt: number; inFlight: Promise<void> | null }>();
 
 function firstEnv(names: readonly string[]) {
   for (const name of names) {
@@ -50,6 +49,33 @@ export function getGoogleWalletClassId() {
   }
 
   return issuerId ? `${issuerId}.LOYALTY` : '';
+}
+
+function sanitizeClassIdPart(value: string) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, '_')
+    .slice(0, 58);
+}
+
+export function getGoogleWalletClassIdForTenant(tenantId: string) {
+  const issuerId = getGoogleWalletIssuerId();
+  if (!issuerId) return '';
+
+  const normalizedTenantId = sanitizeClassIdPart(tenantId);
+  if (!normalizedTenantId) {
+    return getGoogleWalletClassId();
+  }
+
+  const baseClassId = firstEnv(CLASS_ID_CANDIDATES);
+
+  if (baseClassId) {
+    const rawBase = baseClassId.includes('.') ? baseClassId.split('.').slice(1).join('.') : baseClassId;
+    const normalizedBase = sanitizeClassIdPart(rawBase || 'loyalty');
+    return `${issuerId}.${normalizedBase}_${normalizedTenantId}`;
+  }
+
+  return `${issuerId}.tenant_${normalizedTenantId}`;
 }
 
 export function parseGoogleServiceAccount() {
@@ -161,11 +187,20 @@ async function parseGoogleWalletApiResponse(response: Response) {
   }
 }
 
-export function buildGoogleLoyaltyClassPayload() {
+export function buildGoogleLoyaltyClassPayload(params?: {
+  classId?: string;
+  issuerName?: string;
+  programName?: string;
+  logoUri?: string;
+}) {
+  const classId = params?.classId || getGoogleWalletClassId();
+  const issuerName = params?.issuerName || 'Punto IA';
+  const programName = params?.programName || issuerName;
+
   return {
-    id: getGoogleWalletClassId(),
-    issuerName: 'Punto IA',
-    programName: 'Punto IA',
+    id: classId,
+    issuerName,
+    programName,
     countryCode: 'MX',
     reviewStatus: 'UNDER_REVIEW',
     textModulesData: [
@@ -268,12 +303,32 @@ export function buildGoogleLoyaltyClassPayload() {
         ],
       },
     },
+    ...(params?.logoUri
+      ? {
+          programLogo: {
+            sourceUri: {
+              uri: params.logoUri,
+            },
+            contentDescription: {
+              defaultValue: {
+                language: 'es-MX',
+                value: `Logo de ${programName}`,
+              },
+            },
+          },
+        }
+      : {}),
   };
 }
 
-export async function upsertGoogleLoyaltyClass() {
+export async function upsertGoogleLoyaltyClass(params?: {
+  classId?: string;
+  issuerName?: string;
+  programName?: string;
+  logoUri?: string;
+}) {
   const accessToken = await getGoogleServiceAccountAccessToken(['https://www.googleapis.com/auth/wallet_object.issuer']);
-  const payload = buildGoogleLoyaltyClassPayload();
+  const payload = buildGoogleLoyaltyClassPayload(params);
   const headers = {
     Authorization: `Bearer ${accessToken}`,
     'Content-Type': 'application/json',
@@ -317,21 +372,33 @@ export async function upsertGoogleLoyaltyClass() {
   };
 }
 
-export function ensureGoogleLoyaltyClassSynced(options?: { ttlMs?: number }) {
+export function ensureGoogleLoyaltyClassSynced(options?: {
+  ttlMs?: number;
+  classId?: string;
+  issuerName?: string;
+  programName?: string;
+  logoUri?: string;
+}) {
+  const classId = options?.classId || getGoogleWalletClassId();
+  if (!classId) return Promise.resolve();
+
   const ttlMs = Math.max(0, options?.ttlMs ?? DEFAULT_CLASS_SYNC_TTL_MS);
   const now = Date.now();
+  const currentState = classSyncState.get(classId) || { lastSyncAt: 0, inFlight: null };
 
-  if (inFlightClassSync) return inFlightClassSync;
-  if (now - lastClassSyncAt < ttlMs) return Promise.resolve();
+  if (currentState.inFlight) return currentState.inFlight;
+  if (now - currentState.lastSyncAt < ttlMs) return Promise.resolve();
 
-  inFlightClassSync = (async () => {
+  const nextInFlight = (async () => {
     try {
-      await upsertGoogleLoyaltyClass();
-      lastClassSyncAt = Date.now();
+      await upsertGoogleLoyaltyClass(options);
+      classSyncState.set(classId, { lastSyncAt: Date.now(), inFlight: null });
     } finally {
-      inFlightClassSync = null;
+      const latestState = classSyncState.get(classId) || { lastSyncAt: 0, inFlight: null };
+      classSyncState.set(classId, { lastSyncAt: latestState.lastSyncAt, inFlight: null });
     }
   })();
 
-  return inFlightClassSync;
+  classSyncState.set(classId, { lastSyncAt: currentState.lastSyncAt, inFlight: nextInFlight });
+  return nextInFlight;
 }

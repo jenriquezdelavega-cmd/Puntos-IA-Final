@@ -4,7 +4,7 @@ import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant
 import { prisma } from '@/app/lib/prisma';
 import { asTrimmedString } from '@/app/lib/request-validation';
 import {
-  getGoogleWalletClassId,
+  getGoogleWalletClassIdForTenant,
   getGoogleWalletIssuerId,
   googleWalletConfigErrorResponse,
   ensureGoogleLoyaltyClassSynced,
@@ -174,7 +174,7 @@ export async function GET(req: Request) {
       });
     }
 
-    const classId = getGoogleWalletClassId();
+    const classId = getGoogleWalletClassIdForTenant(tenant.id);
 
     if (!classId) {
       return apiError({
@@ -426,9 +426,16 @@ export async function GET(req: Request) {
       },
     };
 
-    void ensureGoogleLoyaltyClassSynced().catch((classSyncError) => {
+    try {
+      await ensureGoogleLoyaltyClassSynced({
+        classId,
+        issuerName: tenant.name || 'Negocio afiliado',
+        programName: tenant.name || 'Negocio afiliado',
+        logoUri: logoUri || undefined,
+      });
+    } catch (classSyncError) {
       console.warn('[wallet/google] class sync skipped:', classSyncError instanceof Error ? classSyncError.message : classSyncError);
-    });
+    }
 
     const token = signSaveToWalletJwt(jwtPayload, account.private_key || '');
 

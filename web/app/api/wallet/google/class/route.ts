@@ -1,6 +1,7 @@
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import {
   getGoogleWalletClassId,
+  getGoogleWalletClassIdForTenant,
   getGoogleWalletIssuerId,
   googleWalletConfigErrorResponse,
   upsertGoogleLoyaltyClass,
@@ -22,7 +23,13 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await upsertGoogleLoyaltyClass();
+    const url = new URL(request.url);
+    const businessId = String(url.searchParams.get('businessId') || '').trim();
+    const classId = businessId ? getGoogleWalletClassIdForTenant(businessId) : getGoogleWalletClassId();
+
+    const result = await upsertGoogleLoyaltyClass({
+      classId,
+    });
 
     if (result.operation === 'created') {
       return apiSuccess({
@@ -53,7 +60,7 @@ export async function GET(request: Request) {
       message: 'Google Wallet API request failed',
       details: {
         status: result.status,
-        classId: result.classId || getGoogleWalletClassId(),
+        classId: result.classId || classId || getGoogleWalletClassId(),
         body: result.body,
       },
     });
