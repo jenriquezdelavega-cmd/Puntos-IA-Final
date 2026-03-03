@@ -25,6 +25,7 @@ type ServiceAccount = {
 const GOOGLE_TOKEN_URI = 'https://oauth2.googleapis.com/token';
 const WALLET_CLASS_URL = 'https://walletobjects.googleapis.com/walletobjects/v1/loyaltyClass';
 const DEFAULT_CLASS_SYNC_TTL_MS = 15 * 60 * 1000;
+const TENANT_CLASS_SCHEMA_VERSION = 'v3';
 
 const classSyncState = new Map<string, { lastSyncAt: number; inFlight: Promise<void> | null }>();
 
@@ -72,10 +73,10 @@ export function getGoogleWalletClassIdForTenant(tenantId: string) {
   if (baseClassId) {
     const rawBase = baseClassId.includes('.') ? baseClassId.split('.').slice(1).join('.') : baseClassId;
     const normalizedBase = sanitizeClassIdPart(rawBase || 'loyalty');
-    return `${issuerId}.${normalizedBase}_${normalizedTenantId}`;
+    return `${issuerId}.${normalizedBase}_${normalizedTenantId}_${TENANT_CLASS_SCHEMA_VERSION}`;
   }
 
-  return `${issuerId}.tenant_${normalizedTenantId}`;
+  return `${issuerId}.tenant_${normalizedTenantId}_${TENANT_CLASS_SCHEMA_VERSION}`;
 }
 
 export function parseGoogleServiceAccount() {
@@ -277,25 +278,7 @@ export function buildGoogleLoyaltyClassPayload(params?: {
             oneItem: {
               item: {
                 firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['sellos']" }],
-                },
-              },
-            },
-          },
-          {
-            oneItem: {
-              item: {
-                firstValue: {
                   fields: [{ fieldPath: "object.textModulesData['ayuda']" }],
-                },
-              },
-            },
-          },
-          {
-            oneItem: {
-              item: {
-                firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['ultimo-aviso']" }],
                 },
               },
             },
@@ -318,6 +301,22 @@ export function buildGoogleLoyaltyClassPayload(params?: {
           },
         }
       : {}),
+  };
+}
+
+function buildGoogleLoyaltyClassPatchPayload(params?: {
+  issuerName?: string;
+  programName?: string;
+  logoUri?: string;
+}) {
+  const fullPayload = buildGoogleLoyaltyClassPayload(params);
+
+  return {
+    issuerName: fullPayload.issuerName,
+    programName: fullPayload.programName,
+    textModulesData: fullPayload.textModulesData,
+    classTemplateInfo: fullPayload.classTemplateInfo,
+    ...(fullPayload.programLogo ? { programLogo: fullPayload.programLogo } : {}),
   };
 }
 
@@ -358,10 +357,12 @@ export async function upsertGoogleLoyaltyClass(params?: {
     };
   }
 
+  const updatePayload = buildGoogleLoyaltyClassPatchPayload(params);
+
   const updateResponse = await fetch(`${WALLET_CLASS_URL}/${encodeURIComponent(payload.id)}`, {
     method: 'PATCH',
     headers,
-    body: JSON.stringify(payload),
+    body: JSON.stringify(updatePayload),
   });
 
   return {
@@ -391,7 +392,12 @@ export function ensureGoogleLoyaltyClassSynced(options?: {
 
   const nextInFlight = (async () => {
     try {
-      await upsertGoogleLoyaltyClass(options);
+      const result = await upsertGoogleLoyaltyClass(options);
+
+      if (result.operation === 'failed') {
+        throw new Error(`Unable to sync Google Wallet class ${classId} (status ${result.status})`);
+      }
+
       classSyncState.set(classId, { lastSyncAt: Date.now(), inFlight: null });
     } finally {
       const latestState = classSyncState.get(classId) || { lastSyncAt: 0, inFlight: null };
