@@ -2,6 +2,7 @@ import { prisma } from '@/app/lib/prisma';
 import { isValidMasterCredentials } from '@/app/lib/master-auth';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import { getGoogleWalletClassIdForTenant, upsertGoogleLoyaltyClass } from '@/app/lib/google-wallet';
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
@@ -42,14 +43,34 @@ export async function POST(request: Request) {
       });
     }
 
-
     const prefix = name.substring(0, 3).toUpperCase() + Math.floor(Math.random() * 99).toString();
 
     const newTenant = await prisma.tenant.create({
       data: { name, slug, codePrefix: prefix },
     });
 
-    return apiSuccess({ requestId, data: { success: true, tenant: newTenant } });
+    const googleClassId = getGoogleWalletClassIdForTenant(newTenant.id);
+    let googleWalletClass: { operation: string; status: number; classId: string } | null = null;
+
+    if (googleClassId) {
+      try {
+        const result = await upsertGoogleLoyaltyClass({
+          classId: googleClassId,
+          issuerName: newTenant.name,
+          programName: newTenant.name,
+        });
+
+        googleWalletClass = {
+          operation: result.operation,
+          status: result.status,
+          classId: result.classId,
+        };
+      } catch (classError) {
+        console.warn('[master/create-tenant] No se pudo sincronizar clase de Google Wallet:', classError instanceof Error ? classError.message : classError);
+      }
+    }
+
+    return apiSuccess({ requestId, data: { success: true, tenant: newTenant, googleWalletClass } });
   } catch (error: unknown) {
     if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'P2002') {
       return apiError({
