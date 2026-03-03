@@ -105,12 +105,6 @@ function resolveBusinessLogoUrl(params: {
   return fallback.toString();
 }
 
-function normalizeInstagramHandle(value: string | null | undefined) {
-  const normalized = asTrimmedString(value);
-  if (!normalized) return '';
-  return normalized.replace(/^@+/, '');
-}
-
 export async function GET(req: Request) {
   const requestId = getRequestId(req);
 
@@ -140,7 +134,7 @@ export async function GET(req: Request) {
     }
 
     const [user, tenant, membership] = await Promise.all([
-      prisma.user.findUnique({ where: { id: customerId }, select: { id: true, name: true, createdAt: true } }),
+      prisma.user.findUnique({ where: { id: customerId }, select: { id: true, name: true } }),
       prisma.tenant.findUnique({
         where: { id: businessId },
         select: {
@@ -149,8 +143,6 @@ export async function GET(req: Request) {
           requiredVisits: true,
           rewardPeriod: true,
           prize: true,
-          address: true,
-          instagram: true,
           logoData: true,
         },
       }),
@@ -207,13 +199,6 @@ export async function GET(req: Request) {
       businessId: tenant.id,
       kind: 'strip',
     });
-    const instagramHandle = normalizeInstagramHandle(tenant.instagram);
-    const walletStyleRow = await prisma.tenantWalletStyle.findUnique({
-      where: { tenantId: tenant.id },
-      select: { lastPushMessage: true },
-    });
-    const lastPushMessage = asTrimmedString(walletStyleRow?.lastPushMessage);
-
     const account = parseGoogleServiceAccount();
 
     const jwtPayload = {
@@ -313,14 +298,14 @@ export async function GET(req: Request) {
                 body: user.name || 'Cliente Punto IA',
               },
               {
+                id: 'periodo',
+                header: 'Periodo',
+                body: formatPeriodLabel(tenant.rewardPeriod || membership?.periodType || 'OPEN'),
+              },
+              {
                 id: 'meta-visitas',
                 header: 'Meta',
                 body: `${currentVisits}/${requiredVisits} visitas`,
-              },
-              {
-                id: 'sellos',
-                header: '🎯 Sellos de visita',
-                body: buildStampBubbles(currentVisits, requiredVisits),
               },
               {
                 id: 'premio',
@@ -331,11 +316,6 @@ export async function GET(req: Request) {
                 id: 'faltan',
                 header: remainingVisits > 0 ? 'Faltan' : '¡Listo!',
                 body: remainingVisits > 0 ? `${remainingVisits} visita${remainingVisits === 1 ? '' : 's'}` : 'Canjea tu premio',
-              },
-              {
-                id: 'periodo',
-                header: 'Periodo',
-                body: formatPeriodLabel(tenant.rewardPeriod || membership?.periodType || 'OPEN'),
               },
               {
                 id: 'ultima-visita',
@@ -353,74 +333,16 @@ export async function GET(req: Request) {
                 body: `${totalVisits} visita${totalVisits === 1 ? '' : 's'} en total`,
               },
               {
-                id: 'miembro-desde',
-                header: 'Miembro desde',
-                body: formatDateEs(user.createdAt),
-              },
-              ...(tenant.address
-                ? [
-                  {
-                    id: 'ubicacion',
-                    header: '📍 Ubicación',
-                    body: tenant.address,
-                  },
-                ]
-                : []),
-              ...(instagramHandle
-                ? [
-                  {
-                    id: 'instagram',
-                    header: '📸 Instagram',
-                    body: `@${instagramHandle}`,
-                  },
-                ]
-                : []),
-              {
                 id: 'ayuda',
                 header: 'ℹ️ Ayuda',
                 body: 'Presenta este pase en el negocio y escanea el código QR del día para registrar tu visita.',
               },
               {
-                id: 'brand',
-                header: '✦ Punto IA',
-                body: 'Punto IA es una coalición de PyMEs unidas para premiar tu lealtad. Visita puntoia.mx',
+                id: 'sellos',
+                header: '🎯 Sellos de visita',
+                body: buildStampBubbles(currentVisits, requiredVisits),
               },
-              ...(lastPushMessage
-                ? [
-                  {
-                    id: 'ultimo-aviso',
-                    header: '📢 Último aviso',
-                    body: lastPushMessage,
-                  },
-                ]
-                : []),
             ],
-            ...(tenant.address || instagramHandle
-              ? {
-                linksModuleData: {
-                  uris: [
-                    ...(tenant.address
-                      ? [
-                        {
-                          id: 'ubicacion',
-                          description: '📍 Ubicación',
-                          uri: `https://maps.google.com/?q=${encodeURIComponent(tenant.address)}`,
-                        },
-                      ]
-                      : []),
-                    ...(instagramHandle
-                      ? [
-                        {
-                          id: 'instagram',
-                          description: '📸 Instagram',
-                          uri: `https://instagram.com/${instagramHandle}`,
-                        },
-                      ]
-                      : []),
-                  ],
-                },
-              }
-              : {}),
           },
         ],
       },
