@@ -7,6 +7,7 @@ import { listWalletPushTokens, pushWalletUpdateToDevice, deleteWalletRegistratio
 import { verifyUserSessionToken } from '@/app/lib/user-session-token';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import { syncGoogleLoyaltyObjectForCustomer } from '@/app/lib/google-wallet-object-sync';
 const TZ = 'America/Monterrey';
 
 function tzParts(d: Date) {
@@ -208,6 +209,23 @@ export async function POST(request: Request) {
       }
     } catch (walletError) {
       logApiError('/api/redeem/request#wallet-push', walletError);
+    }
+
+    try {
+      const googleSync = await syncGoogleLoyaltyObjectForCustomer({
+        tenantId: normalizedTenantId,
+        userId: normalizedUserId,
+        origin: new URL(request.url).origin,
+      });
+      if (!googleSync.ok) {
+        logApiEvent('/api/redeem/request#google-sync', 'sync_skipped', {
+          tenantId: normalizedTenantId,
+          userId: normalizedUserId,
+          reason: googleSync.reason,
+        });
+      }
+    } catch (googleError) {
+      logApiError('/api/redeem/request#google-sync', googleError);
     }
 
     return apiSuccess({
