@@ -2,7 +2,7 @@ import { prisma } from '@/app/lib/prisma';
 import { isValidMasterCredentials } from '@/app/lib/master-auth';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
-import { getGoogleWalletClassIdForTenant, upsertGoogleLoyaltyClass } from '@/app/lib/google-wallet';
+import { getGoogleWalletClassIdForTenant, GOOGLE_WALLET_PROGRAM_NAME_HIDDEN, upsertGoogleLoyaltyClass } from '@/app/lib/google-wallet';
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
         const result = await upsertGoogleLoyaltyClass({
           classId: googleClassId,
           issuerName: newTenant.name,
-          programName: newTenant.name,
+          programName: GOOGLE_WALLET_PROGRAM_NAME_HIDDEN,
         });
 
         googleWalletClass = {
