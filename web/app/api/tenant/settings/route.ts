@@ -6,6 +6,7 @@ import { pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '
 import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { apiError, apiSuccess, type ApiErrorCode, getRequestId } from '@/app/lib/api-response';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
+import { syncGoogleLoyaltyObjectsForTenant } from '@/app/lib/google-wallet-object-sync';
 
 function accessStatusToCode(status: number): ApiErrorCode {
   if (status === 400) return 'BAD_REQUEST';
@@ -114,6 +115,20 @@ export async function POST(request: Request) {
       }
     } catch (pushErr) {
       logApiError('/api/tenant/settings#wallet-push', pushErr);
+    }
+
+    try {
+      const googleSync = await syncGoogleLoyaltyObjectsForTenant({
+        tenantId: authorizedTenantId,
+        origin: new URL(request.url).origin,
+      });
+      logApiEvent('/api/tenant/settings#google-sync', 'sync_complete', {
+        tenantId: authorizedTenantId,
+        total: googleSync.total,
+        synced: googleSync.synced,
+      });
+    } catch (googleError) {
+      logApiError('/api/tenant/settings#google-sync', googleError);
     }
 
     return apiSuccess({

@@ -24,6 +24,7 @@ type ServiceAccount = {
 
 const GOOGLE_TOKEN_URI = 'https://oauth2.googleapis.com/token';
 const WALLET_CLASS_URL = 'https://walletobjects.googleapis.com/walletobjects/v1/loyaltyClass';
+const WALLET_OBJECT_URL = 'https://walletobjects.googleapis.com/walletobjects/v1/loyaltyObject';
 const DEFAULT_CLASS_SYNC_TTL_MS = 15 * 60 * 1000;
 const TENANT_CLASS_SCHEMA_VERSION = 'v3';
 
@@ -352,6 +353,57 @@ export async function upsertGoogleLoyaltyClass(params?: {
     status: updateResponse.status,
     body: await parseGoogleWalletApiResponse(updateResponse),
     classId: payload.id,
+  };
+}
+
+export async function upsertGoogleLoyaltyObject(payload: Record<string, unknown>) {
+  const objectId = String(payload.id || '').trim();
+
+  if (!objectId) {
+    throw new Error('Google loyalty object payload requires id');
+  }
+
+  const accessToken = await getGoogleServiceAccountAccessToken(['https://www.googleapis.com/auth/wallet_object.issuer']);
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const createResponse = await fetch(WALLET_OBJECT_URL, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  if (createResponse.status === 200 || createResponse.status === 201) {
+    return {
+      operation: 'created' as const,
+      status: createResponse.status,
+      body: await parseGoogleWalletApiResponse(createResponse),
+      objectId,
+    };
+  }
+
+  if (createResponse.status !== 409) {
+    return {
+      operation: 'failed' as const,
+      status: createResponse.status,
+      body: await parseGoogleWalletApiResponse(createResponse),
+      objectId,
+    };
+  }
+
+  const updateResponse = await fetch(`${WALLET_OBJECT_URL}/${encodeURIComponent(objectId)}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  return {
+    operation: updateResponse.ok ? ('updated' as const) : ('failed' as const),
+    status: updateResponse.status,
+    body: await parseGoogleWalletApiResponse(updateResponse),
+    objectId,
   };
 }
 

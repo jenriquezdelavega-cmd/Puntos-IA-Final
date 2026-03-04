@@ -6,6 +6,7 @@ import { listWalletPushTokens, pushWalletUpdateToDevice, deleteWalletRegistratio
 import { prisma } from '@/app/lib/prisma';
 import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import { syncGoogleLoyaltyObjectForCustomer } from '@/app/lib/google-wallet-object-sync';
 const TZ = 'America/Monterrey';
 
 function accessStatusToCode(status: number): ApiErrorCode {
@@ -228,6 +229,23 @@ export async function POST(request: Request) {
       }
     } catch (walletError) {
       logApiError('/api/check-in/scan#wallet-touch', walletError);
+    }
+
+    try {
+      const googleSync = await syncGoogleLoyaltyObjectForCustomer({
+        tenantId: validCode.tenantId,
+        userId,
+        origin: new URL(request.url).origin,
+      });
+      if (!googleSync.ok) {
+        logApiEvent('/api/check-in/scan#google-sync', 'sync_skipped', {
+          tenantId: validCode.tenantId,
+          userId,
+          reason: googleSync.reason,
+        });
+      }
+    } catch (googleError) {
+      logApiError('/api/check-in/scan#google-sync', googleError);
     }
 
     logApiEvent('/api/check-in/scan', 'visit_registered', { userId, tenantId: validCode.tenantId, visitDay });
