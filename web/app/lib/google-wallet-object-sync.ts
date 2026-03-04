@@ -10,7 +10,7 @@ import { prisma } from '@/app/lib/prisma';
 import { asTrimmedString } from '@/app/lib/request-validation';
 import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 
-const LOYALTY_OBJECT_SCHEMA_VERSION = 'v5';
+const LOYALTY_OBJECT_SCHEMA_VERSION = 'v6';
 
 function sanitizeIdPart(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9._]/g, '_').slice(0, 40);
@@ -180,17 +180,21 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
         value: tenant.name || 'Punto IA',
       },
     },
-    ...(stripUri
-      ? {
-          heroImage: {
-            sourceUri: { uri: stripUri },
-            contentDescription: {
-              defaultValue: { language: 'es-MX', value: `Imagen del pase de ${tenant.name || 'Punto IA'}` },
+    // Ensure legacy objects stop rendering the old native bottom hero block.
+    heroImage: null,
+    imageModulesData: stripUri
+      ? [
+          {
+            id: 'hero',
+            mainImage: {
+              sourceUri: { uri: stripUri },
+              contentDescription: {
+                defaultValue: { language: 'es-MX', value: `Imagen del pase de ${tenant.name || 'Punto IA'}` },
+              },
             },
           },
-        }
-      : {}),
-    imageModulesData: [],
+        ]
+      : [],
     ...(logoUri
       ? {
         logo: {
