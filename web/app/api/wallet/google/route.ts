@@ -39,11 +39,6 @@ function parseRgbToHex(input: string, fallback: string) {
   return `#${channels.map((channel) => channel.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
 }
 
-function formatDateEs(date: Date | null | undefined) {
-  if (!date) return 'Sin registro';
-  return new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
-}
-
 function buildStampBubbles(currentVisits: number, requiredVisits: number) {
   const safeRequired = Math.max(1, requiredVisits);
   return Array.from({ length: safeRequired }, (_, index) => (index < currentVisits ? '●' : '○')).join(' ');
@@ -153,7 +148,7 @@ export async function GET(req: Request) {
             userId: customerId,
           },
         },
-        select: { currentVisits: true, totalVisits: true, lastVisitAt: true, periodType: true },
+        select: { currentVisits: true, periodType: true },
       }),
     ]);
 
@@ -187,7 +182,6 @@ export async function GET(req: Request) {
     const currentVisits = membership?.currentVisits ?? 0;
     const requiredVisits = tenant.requiredVisits ?? 10;
     const remainingVisits = Math.max(0, requiredVisits - currentVisits);
-    const totalVisits = membership?.totalVisits ?? currentVisits;
     const logoUri = resolveBusinessLogoUrl({
       logoValue: tenant.logoData,
       origin: qrBaseUrl,
@@ -226,12 +220,6 @@ export async function GET(req: Request) {
                 value: `${currentVisits} / ${requiredVisits} visitas`,
               },
             },
-            subheader: {
-              defaultValue: {
-                language: 'es-MX',
-                value: tenant.name || 'Negocio afiliado',
-              },
-            },
             ...(logoUri
               ? {
                 logo: {
@@ -260,24 +248,6 @@ export async function GET(req: Request) {
                     defaultValue: { language: 'es-MX', value: `Imagen del pase de ${tenant.name || 'Punto IA'}` },
                   },
                 },
-              }
-              : {}),
-            ...(stripUri
-              ? {
-                imageModulesData: [
-                  {
-                    id: 'imagen-negocio',
-                    mainImage: {
-                      sourceUri: { uri: stripUri },
-                      contentDescription: {
-                        defaultValue: {
-                          language: 'es-MX',
-                          value: `Imagen promocional de ${tenant.name || 'Punto IA'}`,
-                        },
-                      },
-                    },
-                  },
-                ],
               }
               : {}),
             barcode: {
@@ -318,24 +288,9 @@ export async function GET(req: Request) {
                 body: remainingVisits > 0 ? `${remainingVisits} visita${remainingVisits === 1 ? '' : 's'}` : 'Canjea tu premio',
               },
               {
-                id: 'ultima-visita',
-                header: 'Última visita',
-                body: formatDateEs(membership?.lastVisitAt),
-              },
-              {
-                id: 'id-miembro',
-                header: 'ID de miembro',
-                body: user.id,
-              },
-              {
-                id: 'historial',
-                header: 'Historial',
-                body: `${totalVisits} visita${totalVisits === 1 ? '' : 's'} en total`,
-              },
-              {
-                id: 'ayuda',
-                header: 'ℹ️ Ayuda',
-                body: 'Presenta este pase en el negocio y escanea el código QR del día para registrar tu visita.',
+                id: 'coalicion',
+                header: 'Punto IA',
+                body: 'Coalición de PyMEs Hecho en México 🇲🇽',
               },
               {
                 id: 'sellos',

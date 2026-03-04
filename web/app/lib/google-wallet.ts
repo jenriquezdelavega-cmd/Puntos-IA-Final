@@ -251,7 +251,7 @@ export function buildGoogleLoyaltyClassPayload(params?: {
               },
               endItem: {
                 firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['ultima-visita']" }],
+                  fields: [{ fieldPath: "object.textModulesData['faltan']" }],
                 },
               },
             },
@@ -260,25 +260,7 @@ export function buildGoogleLoyaltyClassPayload(params?: {
             oneItem: {
               item: {
                 firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['id-miembro']" }],
-                },
-              },
-            },
-          },
-          {
-            oneItem: {
-              item: {
-                firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['historial']" }],
-                },
-              },
-            },
-          },
-          {
-            oneItem: {
-              item: {
-                firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['ayuda']" }],
+                  fields: [{ fieldPath: "object.textModulesData['coalicion']" }],
                 },
               },
             },
