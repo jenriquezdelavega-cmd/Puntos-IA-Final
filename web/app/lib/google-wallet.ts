@@ -27,6 +27,7 @@ const WALLET_CLASS_URL = 'https://walletobjects.googleapis.com/walletobjects/v1/
 const WALLET_OBJECT_URL = 'https://walletobjects.googleapis.com/walletobjects/v1/loyaltyObject';
 const DEFAULT_CLASS_SYNC_TTL_MS = 15 * 60 * 1000;
 const TENANT_CLASS_SCHEMA_VERSION = 'v5';
+export const GOOGLE_WALLET_PROGRAM_NAME_HIDDEN = '\u200B';
 
 const classSyncState = new Map<string, { lastSyncAt: number; inFlight: Promise<void> | null }>();
 
@@ -206,7 +207,7 @@ export function buildGoogleLoyaltyClassPayload(params?: {
 }) {
   const classId = params?.classId || getGoogleWalletClassId();
   const issuerName = params?.issuerName || 'Punto IA';
-  const programName = params?.programName || 'Programa de lealtad';
+  const programName = params?.programName || GOOGLE_WALLET_PROGRAM_NAME_HIDDEN;
 
   return {
     id: classId,
@@ -310,6 +311,7 @@ function buildGoogleLoyaltyClassPatchPayload(params?: {
   return {
     issuerName: fullPayload.issuerName,
     programName: fullPayload.programName,
+    reviewStatus: 'UNDER_REVIEW',
     textModulesData: fullPayload.textModulesData,
     classTemplateInfo: fullPayload.classTemplateInfo,
     ...(fullPayload.programLogo ? { programLogo: fullPayload.programLogo } : {}),
@@ -349,20 +351,6 @@ export async function upsertGoogleLoyaltyClass(params?: {
       operation: 'failed' as const,
       status: createResponse.status,
       body: await parseGoogleWalletApiResponse(createResponse),
-      classId: payload.id,
-    };
-  }
-
-  const existingResponse = await fetch(`${WALLET_CLASS_URL}/${encodeURIComponent(payload.id)}`, {
-    method: 'GET',
-    headers,
-  });
-
-  if (existingResponse.ok) {
-    return {
-      operation: 'exists' as const,
-      status: existingResponse.status,
-      body: await parseGoogleWalletApiResponse(existingResponse),
       classId: payload.id,
     };
   }

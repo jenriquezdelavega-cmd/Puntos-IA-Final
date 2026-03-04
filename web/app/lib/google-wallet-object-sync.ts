@@ -3,6 +3,7 @@ import {
   ensureGoogleLoyaltyClassSynced,
   getGoogleWalletClassIdForTenant,
   getGoogleWalletIssuerId,
+  GOOGLE_WALLET_PROGRAM_NAME_HIDDEN,
   upsertGoogleLoyaltyObject,
 } from '@/app/lib/google-wallet';
 import { prisma } from '@/app/lib/prisma';
@@ -254,7 +255,7 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
     ttlMs: 0,
     classId,
     issuerName: tenant.name || 'Negocio afiliado',
-    programName: tenant.name || 'Punto IA',
+    programName: GOOGLE_WALLET_PROGRAM_NAME_HIDDEN,
     logoUri: logoUri || undefined,
   });
 
