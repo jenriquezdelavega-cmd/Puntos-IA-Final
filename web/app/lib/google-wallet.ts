@@ -253,15 +253,10 @@ export function buildGoogleLoyaltyClassPayload(params?: {
             },
           },
           {
-            twoItems: {
-              startItem: {
+            oneItem: {
+              item: {
                 firstValue: {
                   fields: [{ fieldPath: "object.textModulesData['premio']" }],
-                },
-              },
-              endItem: {
-                firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['faltan']" }],
                 },
               },
             },
