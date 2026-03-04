@@ -5,6 +5,7 @@ import {
   getGoogleWalletClassId,
   getGoogleWalletClassIdForTenant,
   getGoogleWalletIssuerId,
+  GOOGLE_WALLET_PROGRAM_NAME_HIDDEN,
   googleWalletConfigErrorResponse,
   upsertGoogleLoyaltyClass,
 } from '@/app/lib/google-wallet';
@@ -83,7 +84,7 @@ export async function GET(request: Request) {
       const origin = publicBaseUrl || requestOrigin;
 
       issuerName = asTrimmedString(tenant.name) || 'Negocio afiliado';
-      programName = issuerName;
+      programName = GOOGLE_WALLET_PROGRAM_NAME_HIDDEN;
       logoUri = resolveBusinessLogoUrl({
         logoValue: tenant.logoData,
         origin,
@@ -109,7 +110,7 @@ export async function GET(request: Request) {
       });
     }
 
-    if (result.operation === 'updated' || result.operation === 'exists') {
+    if (result.operation === 'updated') {
       return apiSuccess({
         requestId,
         status: 200,
