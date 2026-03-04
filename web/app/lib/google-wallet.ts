@@ -229,7 +229,7 @@ export function buildGoogleLoyaltyClassPayload(params?: {
             oneItem: {
               item: {
                 firstValue: {
-                  fields: [{ fieldPath: 'object.heroImage' }],
+                  fields: [{ fieldPath: "object.imageModulesData['hero']" }],
                 },
               },
             },
