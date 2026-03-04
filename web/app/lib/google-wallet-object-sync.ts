@@ -10,7 +10,7 @@ import { prisma } from '@/app/lib/prisma';
 import { asTrimmedString } from '@/app/lib/request-validation';
 import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 
-const LOYALTY_OBJECT_SCHEMA_VERSION = 'v5';
+const LOYALTY_OBJECT_SCHEMA_VERSION = 'v6';
 
 function sanitizeIdPart(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9._]/g, '_').slice(0, 40);
@@ -168,12 +168,6 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
     accountName: user.name || 'Cliente Punto IA',
     accountId: user.id,
     hexBackgroundColor: parseRgbToHex(walletStyle.backgroundColor, '#1F2937'),
-    header: {
-      defaultValue: {
-        language: 'es-MX',
-        value: `${currentVisits} / ${requiredVisits} visitas`,
-      },
-    },
     cardTitle: {
       defaultValue: {
         language: 'es-MX',
@@ -193,6 +187,7 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
           },
         ]
       : [],
+    heroImage: null,
     ...(logoUri
       ? {
         logo: {

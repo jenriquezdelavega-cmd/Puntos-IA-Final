@@ -26,7 +26,7 @@ const GOOGLE_TOKEN_URI = 'https://oauth2.googleapis.com/token';
 const WALLET_CLASS_URL = 'https://walletobjects.googleapis.com/walletobjects/v1/loyaltyClass';
 const WALLET_OBJECT_URL = 'https://walletobjects.googleapis.com/walletobjects/v1/loyaltyObject';
 const DEFAULT_CLASS_SYNC_TTL_MS = 15 * 60 * 1000;
-const TENANT_CLASS_SCHEMA_VERSION = 'v5';
+const TENANT_CLASS_SCHEMA_VERSION = 'v6';
 export const GOOGLE_WALLET_PROGRAM_NAME_HIDDEN = '\u200B';
 
 const classSyncState = new Map<string, { lastSyncAt: number; inFlight: Promise<void> | null }>();
@@ -225,6 +225,15 @@ export function buildGoogleLoyaltyClassPayload(params?: {
     classTemplateInfo: {
       cardTemplateOverride: {
         cardRowTemplateInfos: [
+          {
+            oneItem: {
+              item: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.imageModulesData['hero']" }],
+                },
+              },
+            },
+          },
           {
             twoItems: {
               startItem: {
