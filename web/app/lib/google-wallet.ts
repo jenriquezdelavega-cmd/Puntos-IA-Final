@@ -225,15 +225,10 @@ export function buildGoogleLoyaltyClassPayload(params?: {
       cardTemplateOverride: {
         cardRowTemplateInfos: [
           {
-            twoItems: {
-              startItem: {
+            oneItem: {
+              item: {
                 firstValue: {
-                  fields: [{ fieldPath: "object.imageModulesData['logo_negocio']" }],
-                },
-              },
-              endItem: {
-                firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['negocio']" }],
+                  fields: [{ fieldPath: 'object.heroImage' }],
                 },
               },
             },
