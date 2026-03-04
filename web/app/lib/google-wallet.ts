@@ -311,6 +311,7 @@ function buildGoogleLoyaltyClassPatchPayload(params?: {
   return {
     issuerName: fullPayload.issuerName,
     programName: fullPayload.programName,
+    reviewStatus: 'UNDER_REVIEW',
     textModulesData: fullPayload.textModulesData,
     classTemplateInfo: fullPayload.classTemplateInfo,
     ...(fullPayload.programLogo ? { programLogo: fullPayload.programLogo } : {}),
