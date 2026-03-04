@@ -110,7 +110,7 @@ export async function GET(request: Request) {
       });
     }
 
-    if (result.operation === 'updated' || result.operation === 'exists') {
+    if (result.operation === 'updated') {
       return apiSuccess({
         requestId,
         status: 200,
