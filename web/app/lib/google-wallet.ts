@@ -1,4 +1,4 @@
-import { createSign } from 'node:crypto';
+import { createHash, createSign } from 'node:crypto';
 
 const ISSUER_ID_CANDIDATES = [
   'GOOGLE_WALLET_ISSUER_ID',
@@ -56,16 +56,25 @@ export function getGoogleWalletClassId() {
 function sanitizeClassIdPart(value: string) {
   return String(value || '')
     .toLowerCase()
-    .replace(/[^a-z0-9._-]/g, '_')
+    .replace(/[^a-z0-9._]/g, '_')
     .slice(0, 58);
+}
+
+function buildTenantClassSuffix(tenantId: string) {
+  const normalizedTenantId = sanitizeClassIdPart(tenantId);
+  if (!normalizedTenantId) return '';
+
+  const tenantHash = createHash('sha256').update(tenantId).digest('hex').slice(0, 12);
+  const tenantLabel = normalizedTenantId.slice(0, 24);
+  return `tenant_${tenantLabel}_${tenantHash}_${TENANT_CLASS_SCHEMA_VERSION}`;
 }
 
 export function getGoogleWalletClassIdForTenant(tenantId: string) {
   const issuerId = getGoogleWalletIssuerId();
   if (!issuerId) return '';
 
-  const normalizedTenantId = sanitizeClassIdPart(tenantId);
-  if (!normalizedTenantId) {
+  const tenantSuffix = buildTenantClassSuffix(tenantId);
+  if (!tenantSuffix) {
     return getGoogleWalletClassId();
   }
 
@@ -73,11 +82,11 @@ export function getGoogleWalletClassIdForTenant(tenantId: string) {
 
   if (baseClassId) {
     const rawBase = baseClassId.includes('.') ? baseClassId.split('.').slice(1).join('.') : baseClassId;
-    const normalizedBase = sanitizeClassIdPart(rawBase || 'loyalty');
-    return `${issuerId}.${normalizedBase}_${normalizedTenantId}_${TENANT_CLASS_SCHEMA_VERSION}`;
+    const normalizedBase = sanitizeClassIdPart(rawBase || 'loyalty').slice(0, 16);
+    return `${issuerId}.${normalizedBase}_${tenantSuffix}`;
   }
 
-  return `${issuerId}.tenant_${normalizedTenantId}_${TENANT_CLASS_SCHEMA_VERSION}`;
+  return `${issuerId}.${tenantSuffix}`;
 }
 
 export function parseGoogleServiceAccount() {
@@ -429,7 +438,8 @@ export function ensureGoogleLoyaltyClassSynced(options?: {
       const result = await upsertGoogleLoyaltyClass(options);
 
       if (result.operation === 'failed') {
-        throw new Error(`Unable to sync Google Wallet class ${classId} (status ${result.status})`);
+        const details = result.body ? `: ${JSON.stringify(result.body)}` : '';
+        throw new Error(`Unable to sync Google Wallet class ${classId} (status ${result.status})${details}`);
       }
 
       classSyncState.set(classId, { lastSyncAt: Date.now(), inFlight: null });

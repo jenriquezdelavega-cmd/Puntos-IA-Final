@@ -12,7 +12,7 @@ import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant
 const LOYALTY_OBJECT_SCHEMA_VERSION = 'v2';
 
 function sanitizeIdPart(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9._-]/g, '_').slice(0, 40);
+  return value.toLowerCase().replace(/[^a-z0-9._]/g, '_').slice(0, 40);
 }
 
 function parseRgbToHex(input: string, fallback: string) {
