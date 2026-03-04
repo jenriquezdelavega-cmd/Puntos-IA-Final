@@ -176,36 +176,28 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
     cardTitle: {
       defaultValue: {
         language: 'es-MX',
-        value: '',
+        value: 'Programa de lealtad',
       },
     },
-    imageModulesData: [],
+    imageModulesData: stripUri
+      ? [
+          {
+            id: 'imagen-negocio',
+            mainImage: {
+              sourceUri: { uri: stripUri },
+              contentDescription: {
+                defaultValue: { language: 'es-MX', value: `Imagen del pase de ${tenant.name || 'Punto IA'}` },
+              },
+            },
+          },
+        ]
+      : [],
     ...(logoUri
       ? {
         logo: {
           sourceUri: { uri: logoUri },
           contentDescription: {
             defaultValue: { language: 'es-MX', value: `Logo de ${tenant.name || 'Punto IA'}` },
-          },
-        },
-      }
-      : {}),
-    ...(logoUri
-      ? {
-        wideLogo: {
-          sourceUri: { uri: logoUri },
-          contentDescription: {
-            defaultValue: { language: 'es-MX', value: `Logo de ${tenant.name || 'Punto IA'}` },
-          },
-        },
-      }
-      : {}),
-    ...(stripUri
-      ? {
-        heroImage: {
-          sourceUri: { uri: stripUri },
-          contentDescription: {
-            defaultValue: { language: 'es-MX', value: `Imagen del pase de ${tenant.name || 'Punto IA'}` },
           },
         },
       }
