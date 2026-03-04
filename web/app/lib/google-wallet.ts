@@ -26,7 +26,7 @@ const GOOGLE_TOKEN_URI = 'https://oauth2.googleapis.com/token';
 const WALLET_CLASS_URL = 'https://walletobjects.googleapis.com/walletobjects/v1/loyaltyClass';
 const WALLET_OBJECT_URL = 'https://walletobjects.googleapis.com/walletobjects/v1/loyaltyObject';
 const DEFAULT_CLASS_SYNC_TTL_MS = 15 * 60 * 1000;
-const TENANT_CLASS_SCHEMA_VERSION = 'v3';
+const TENANT_CLASS_SCHEMA_VERSION = 'v5';
 
 const classSyncState = new Map<string, { lastSyncAt: number; inFlight: Promise<void> | null }>();
 
@@ -206,7 +206,7 @@ export function buildGoogleLoyaltyClassPayload(params?: {
 }) {
   const classId = params?.classId || getGoogleWalletClassId();
   const issuerName = params?.issuerName || 'Punto IA';
-  const programName = params?.programName || issuerName;
+  const programName = params?.programName || 'Programa de lealtad';
 
   return {
     id: classId,
@@ -224,6 +224,20 @@ export function buildGoogleLoyaltyClassPayload(params?: {
     classTemplateInfo: {
       cardTemplateOverride: {
         cardRowTemplateInfos: [
+          {
+            twoItems: {
+              startItem: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.imageModulesData['logo_negocio']" }],
+                },
+              },
+              endItem: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['negocio']" }],
+                },
+              },
+            },
+          },
           {
             twoItems: {
               startItem: {
@@ -340,6 +354,20 @@ export async function upsertGoogleLoyaltyClass(params?: {
       operation: 'failed' as const,
       status: createResponse.status,
       body: await parseGoogleWalletApiResponse(createResponse),
+      classId: payload.id,
+    };
+  }
+
+  const existingResponse = await fetch(`${WALLET_CLASS_URL}/${encodeURIComponent(payload.id)}`, {
+    method: 'GET',
+    headers,
+  });
+
+  if (existingResponse.ok) {
+    return {
+      operation: 'exists' as const,
+      status: existingResponse.status,
+      body: await parseGoogleWalletApiResponse(existingResponse),
       classId: payload.id,
     };
   }

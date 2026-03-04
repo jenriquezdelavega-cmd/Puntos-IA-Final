@@ -109,13 +109,13 @@ export async function GET(request: Request) {
       });
     }
 
-    if (result.operation === 'updated') {
+    if (result.operation === 'updated' || result.operation === 'exists') {
       return apiSuccess({
         requestId,
         status: 200,
         data: {
           class: result.body,
-          operation: 'updated',
+          operation: result.operation,
         },
       });
     }
