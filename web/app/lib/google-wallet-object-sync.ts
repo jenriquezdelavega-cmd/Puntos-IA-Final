@@ -180,17 +180,19 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
         value: tenant.name || 'Punto IA',
       },
     },
-    ...(stripUri
-      ? {
-          heroImage: {
-            sourceUri: { uri: stripUri },
-            contentDescription: {
-              defaultValue: { language: 'es-MX', value: `Imagen del pase de ${tenant.name || 'Punto IA'}` },
+    imageModulesData: stripUri
+      ? [
+          {
+            id: 'hero',
+            mainImage: {
+              sourceUri: { uri: stripUri },
+              contentDescription: {
+                defaultValue: { language: 'es-MX', value: `Imagen del pase de ${tenant.name || 'Punto IA'}` },
+              },
             },
           },
-        }
-      : {}),
-    imageModulesData: [],
+        ]
+      : [],
     ...(logoUri
       ? {
         logo: {
