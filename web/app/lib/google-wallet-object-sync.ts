@@ -9,7 +9,7 @@ import { prisma } from '@/app/lib/prisma';
 import { asTrimmedString } from '@/app/lib/request-validation';
 import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 
-const LOYALTY_OBJECT_SCHEMA_VERSION = 'v2';
+const LOYALTY_OBJECT_SCHEMA_VERSION = 'v4';
 
 function sanitizeIdPart(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9._]/g, '_').slice(0, 40);
@@ -160,6 +160,35 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
 
   const objectId = getGoogleLoyaltyObjectId(issuerId, tenant.id, user.id);
 
+  const imageModulesData = [
+    ...(logoUri
+      ? [
+          {
+            id: 'logo_negocio',
+            mainImage: {
+              sourceUri: { uri: logoUri },
+              contentDescription: {
+                defaultValue: { language: 'es-MX', value: `Logo de ${tenant.name || 'Punto IA'}` },
+              },
+            },
+          },
+        ]
+      : []),
+    ...(stripUri
+      ? [
+          {
+            id: 'imagen_negocio',
+            mainImage: {
+              sourceUri: { uri: stripUri },
+              contentDescription: {
+                defaultValue: { language: 'es-MX', value: `Imagen del pase de ${tenant.name || 'Punto IA'}` },
+              },
+            },
+          },
+        ]
+      : []),
+  ];
+
   const loyaltyObject = {
     id: objectId,
     classId,
@@ -179,19 +208,17 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
         value: 'Programa de lealtad',
       },
     },
-    imageModulesData: stripUri
-      ? [
-          {
-            id: 'imagen-negocio',
-            mainImage: {
-              sourceUri: { uri: stripUri },
-              contentDescription: {
-                defaultValue: { language: 'es-MX', value: `Imagen del pase de ${tenant.name || 'Punto IA'}` },
-              },
+    ...(stripUri
+      ? {
+          heroImage: {
+            sourceUri: { uri: stripUri },
+            contentDescription: {
+              defaultValue: { language: 'es-MX', value: `Imagen del pase de ${tenant.name || 'Punto IA'}` },
             },
           },
-        ]
-      : [],
+        }
+      : {}),
+    imageModulesData,
     ...(logoUri
       ? {
         logo: {
@@ -214,6 +241,11 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
       },
     },
     textModulesData: [
+      {
+        id: 'negocio',
+        header: 'Negocio',
+        body: tenant.name || 'Negocio afiliado',
+      },
       {
         id: 'cliente',
         header: 'Cliente',
@@ -255,7 +287,7 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
   await ensureGoogleLoyaltyClassSynced({
     classId,
     issuerName: tenant.name || 'Negocio afiliado',
-    programName: tenant.name || 'Negocio afiliado',
+    programName: 'Programa de lealtad',
     logoUri: logoUri || undefined,
   });
 
