@@ -168,12 +168,6 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
     accountName: user.name || 'Cliente Punto IA',
     accountId: user.id,
     hexBackgroundColor: parseRgbToHex(walletStyle.backgroundColor, '#1F2937'),
-    header: {
-      defaultValue: {
-        language: 'es-MX',
-        value: `${currentVisits} / ${requiredVisits} visitas`,
-      },
-    },
     cardTitle: {
       defaultValue: {
         language: 'es-MX',
