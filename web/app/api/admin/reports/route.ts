@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     const visits = await prisma.visit.findMany({
       where: { membership: { tenantId: access.tenantId } },
       orderBy: { visitedAt: 'asc' },
+      include: { membership: { select: { userId: true } } },
     });
 
     const visitsByDate: Record<string, number> = {};
@@ -61,6 +62,18 @@ export async function POST(request: Request) {
     });
 
     const chartData = Object.keys(visitsByDate).map((date) => ({ date, count: visitsByDate[date] }));
+
+    const totalRevenue = visits.reduce((sum, visit) => sum + Number(visit.purchaseAmount || 0), 0);
+    const visitsWithPurchase = visits.filter((visit) => Number(visit.purchaseAmount || 0) > 0).length;
+    const avgTicket = visitsWithPurchase > 0 ? totalRevenue / visitsWithPurchase : 0;
+
+    const revenueByUser = new Map<string, number>();
+    visits.forEach((visit) => {
+      const uid = String(visit.membership.userId || '');
+      const current = revenueByUser.get(uid) || 0;
+      revenueByUser.set(uid, current + Number(visit.purchaseAmount || 0));
+    });
+    const clvAverage = revenueByUser.size > 0 ? totalRevenue / revenueByUser.size : 0;
 
     const memberships = await prisma.membership.findMany({
       where: { tenantId: access.tenantId },
@@ -107,9 +120,10 @@ export async function POST(request: Request) {
       Genero: membership.user.gender || '',
       Visitas: membership.totalVisits,
       Ultima: membership.lastVisitAt ? membership.lastVisitAt.toISOString().split('T')[0] : '-',
+      GastoTotal: (revenueByUser.get(membership.userId) || 0).toFixed(2),
     }));
 
-    return apiSuccess({ requestId, data: { chartData, genderData, ageData, csvData } });
+    return apiSuccess({ requestId, data: { chartData, genderData, ageData, csvData, totalRevenue, avgTicket, clvAverage } });
   } catch (error: unknown) {
     return apiError({
       requestId,

@@ -41,9 +41,14 @@ type ReportView = {
   genderData?: ReportBucket[];
   ageData?: ReportBucket[];
   csvData?: unknown[];
+  totalRevenue?: number;
+  avgTicket?: number;
+  clvAverage?: number;
 };
 
 type TeamMember = { id: string; name?: string; username?: string; role?: string };
+type AdminTab = 'dashboard' | 'team' | 'qr' | 'redeem' | 'push' | 'settings';
+type NavItem = { key: AdminTab; icon: string; label: string; adminOnly?: boolean };
 
 export default function AdminPage() {
 const [tenant, setTenant] = useState<TenantView | null>(null);
@@ -55,7 +60,7 @@ const [password, setPassword] = useState('');
 const [, setCode] = useState('');
 const [reportData, setReportData] = useState<ReportView | null>(null);
 const [baseUrl, setBaseUrl] = useState('');
-const [tab, setTab] = useState('qr');
+const [tab, setTab] = useState<AdminTab>('qr');
 const [userRole, setUserRole] = useState('');
 
 const [prizeName, setPrizeName] = useState('');
@@ -77,6 +82,7 @@ const [coords, setCoords] = useState<[number, number]>([19.4326, -99.1332]);
 
 const [redeemCode, setRedeemCode] = useState('');
 const [msg, setMsg] = useState('');
+const [uiNotice, setUiNotice] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 const [scannerOpen, setScannerOpen] = useState(false);
 const [scannerMsg, setScannerMsg] = useState('');
 const lastScanRef = useRef<string>('');
@@ -84,18 +90,27 @@ const lastScanRef = useRef<string>('');
 const [team, setTeam] = useState<TeamMember[]>([]);
 const [newStaff, setNewStaff] = useState({ name: '', username: '', password: '', role: 'STAFF' });
 const [lastScannedCustomerId, setLastScannedCustomerId] = useState('');
+const [visitPurchaseAmount, setVisitPurchaseAmount] = useState('');
 
 const [pushMessage, setPushMessage] = useState('');
 const [pushLoading, setPushLoading] = useState(false);
 const [pushResult, setPushResult] = useState('');
 const [pushRemaining, setPushRemaining] = useState<number | null>(null);
 const [pushHistory, setPushHistory] = useState<Array<{ message: string; devices: number; sentAt: string }>>([]);
+const [isLoggingIn, setIsLoggingIn] = useState(false);
+const [isCreatingStaff, setIsCreatingStaff] = useState(false);
+const [isSavingSettings, setIsSavingSettings] = useState(false);
+const [isValidatingRedeem, setIsValidatingRedeem] = useState(false);
+const [isRefreshingReports, setIsRefreshingReports] = useState(false);
 
 const trendData = reportData?.chartData ?? [];
 const genderData = reportData?.genderData ?? [];
 const ageData = reportData?.ageData ?? [];
 const totalClients = reportData?.csvData?.length || 0;
 const totalCheckins = trendData.reduce((sum: number, item: ReportPoint) => sum + Number(item.count || 0), 0);
+const totalRevenue = Number(reportData?.totalRevenue || 0);
+const avgTicket = Number(reportData?.avgTicket || 0);
+const clvAverage = Number(reportData?.clvAverage || 0);
 const peakDay = trendData.reduce((max: ReportPoint | null, item: ReportPoint) => {
   return Number(item.count || 0) > Number(max?.count || 0) ? item : max;
 }, null);
@@ -103,47 +118,97 @@ const trendMax = Math.max(...trendData.map((d: ReportPoint) => Number(d.count ||
 const genderMax = Math.max(...genderData.map((d: Record<string, unknown>) => Number(d.value || 0)), 1);
 const ageMax = Math.max(...ageData.map((d: Record<string, unknown>) => Number(d.value || 0)), 1);
 
-const handleLogin = async (e: React.FormEvent) => {
-e.preventDefault();
-try {
-const res = await fetch('/api/tenant/login', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ username, password }) });
-const data = await res.json();
-if(res.ok) {
-setTenant(data.tenant);
-setUserRole(data.user.role);
-setTenantUserId(data.user.id || '');
-setTenantSessionToken(String(data.tenantSessionToken || ''));
-setPrizeName(data.tenant.prize || '');
-setInstagram(data.tenant.instagram || '');
-setCoalitionOptIn(Boolean(data.tenant.coalitionOptIn));
-setCoalitionDiscountPercent(String(data.tenant.coalitionDiscountPercent ?? 10));
-setCoalitionProduct(String(data.tenant.coalitionProduct ?? ''));
-setRequiredVisits(String(data.tenant.requiredVisits ?? 10));
-setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
-setLogoData(String(data.tenant.logoData ?? ''));
-setWalletBackgroundColor(String(data.tenant.walletBackgroundColor ?? '#1f2937'));
-setWalletForegroundColor(String(data.tenant.walletForegroundColor ?? '#ffffff'));
-setWalletLabelColor(String(data.tenant.walletLabelColor ?? '#bfdbfe'));
-setWalletStripImageData(data.tenant.walletStripImageData || '');
+const navItems: NavItem[] = [
+  { key: 'dashboard', icon: '📊', label: 'Dashboard', adminOnly: true },
+  { key: 'team', icon: '👥', label: 'Equipo', adminOnly: true },
+  { key: 'qr', icon: '📷', label: 'QR' },
+  { key: 'redeem', icon: '🎁', label: 'Canje' },
+  { key: 'push', icon: '📢', label: 'Push', adminOnly: true },
+  { key: 'settings', icon: '⚙️', label: 'Config', adminOnly: true },
+];
 
-if (data.tenant.lat && data.tenant.lng) {
-setCoords([data.tenant.lat, data.tenant.lng]);
-if (data.tenant.address) setAddressSearch(data.tenant.address);
-}
-if (typeof window !== 'undefined') setBaseUrl(window.location.origin);
+const visibleNavItems = navItems.filter((item) => !item.adminOnly || userRole === 'ADMIN');
+const activeNavItem = visibleNavItems.find((item) => item.key === tab);
 
-if (data.user.role === 'ADMIN') { 
-setTab('qr'); 
-loadReports(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || '')); 
-loadTeam(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
-loadPushStatus(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
-} else setTab('qr');
-
-} else alert(data.error);
-} catch { alert('Error'); }
+const notify = (type: 'success' | 'error' | 'info', text: string) => {
+  setUiNotice({ type, text });
 };
 
-const loadReports = async (tid: string, currentTenantUserId = tenantUserId, currentTenantSessionToken = tenantSessionToken) => { try { const res = await fetch('/api/admin/reports', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tid, tenantUserId: currentTenantUserId, tenantSessionToken: currentTenantSessionToken }) }); setReportData(await res.json()); } catch {} };
+const sanitizeCurrencyInput = (value: string) => {
+  const clean = value.replace(/[^0-9.]/g, '');
+  const [intPart = '', ...decParts] = clean.split('.');
+  const decimals = decParts.join('').slice(0, 2);
+  if (clean.includes('.')) {
+    return `${intPart}.${decimals}`;
+  }
+  return intPart;
+};
+
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoggingIn(true);
+  try {
+    const res = await fetch('/api/tenant/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setTenant(data.tenant);
+      setUserRole(data.user.role);
+      setTenantUserId(data.user.id || '');
+      setTenantSessionToken(String(data.tenantSessionToken || ''));
+      setPrizeName(data.tenant.prize || '');
+      setInstagram(data.tenant.instagram || '');
+      setCoalitionOptIn(Boolean(data.tenant.coalitionOptIn));
+      setCoalitionDiscountPercent(String(data.tenant.coalitionDiscountPercent ?? 10));
+      setCoalitionProduct(String(data.tenant.coalitionProduct ?? ''));
+      setRequiredVisits(String(data.tenant.requiredVisits ?? 10));
+      setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
+      setLogoData(String(data.tenant.logoData ?? ''));
+      setWalletBackgroundColor(String(data.tenant.walletBackgroundColor ?? '#1f2937'));
+      setWalletForegroundColor(String(data.tenant.walletForegroundColor ?? '#ffffff'));
+      setWalletLabelColor(String(data.tenant.walletLabelColor ?? '#bfdbfe'));
+      setWalletStripImageData(data.tenant.walletStripImageData || '');
+
+      if (data.tenant.lat && data.tenant.lng) {
+        setCoords([data.tenant.lat, data.tenant.lng]);
+        if (data.tenant.address) setAddressSearch(data.tenant.address);
+      }
+      if (typeof window !== 'undefined') setBaseUrl(window.location.origin);
+
+      setTab('qr');
+      if (data.user.role === 'ADMIN') {
+        loadReports(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
+        loadTeam(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
+        loadPushStatus(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
+      }
+    } else {
+      notify('error', String(data.error || 'No se pudo iniciar sesión'));
+    }
+  } catch {
+    notify('error', 'Ocurrió un error de conexión.');
+  } finally {
+    setIsLoggingIn(false);
+  }
+};
+
+const loadReports = async (tid: string, currentTenantUserId = tenantUserId, currentTenantSessionToken = tenantSessionToken) => {
+  setIsRefreshingReports(true);
+  try {
+    const res = await fetch('/api/admin/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenantId: tid, tenantUserId: currentTenantUserId, tenantSessionToken: currentTenantSessionToken }),
+    });
+    setReportData(await res.json());
+  } catch {
+    // noop
+  } finally {
+    setIsRefreshingReports(false);
+  }
+};
 
 const loadPushStatus = async (tid: string, currentTenantUserId = tenantUserId, currentTenantSessionToken = tenantSessionToken) => {
   try {
@@ -184,18 +249,20 @@ try { const res = await fetch(`/api/tenant/users?tenantId=${tid}&tenantUserId=${
 };
 
 const createStaff = async () => {
-if(!newStaff.name || !newStaff.username || !newStaff.password) return alert("Faltan datos");
+if(!newStaff.name || !newStaff.username || !newStaff.password) return notify('error', 'Faltan datos para crear empleado.');
+setIsCreatingStaff(true);
 try {
 const res = await fetch('/api/tenant/users', { 
 method: 'POST', headers: {'Content-Type': 'application/json'}, 
 body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken, ...newStaff }) 
 });
 if(res.ok) { 
-alert("Empleado creado "); 
+notify('success', 'Empleado creado correctamente.');
 setNewStaff({ name: '', username: '', password: '', role: 'STAFF' }); 
 loadTeam(tenant.id, tenantUserId); 
-} else { const d = await res.json(); alert(d.error); }
-} catch { alert("Error"); }
+} else { const d = await res.json(); notify('error', String(d.error || 'No se pudo crear el empleado')); }
+} catch { notify('error', 'Ocurrió un error de conexión.'); }
+setIsCreatingStaff(false);
 };
 
 const deleteStaff = async (id: string) => {
@@ -209,8 +276,8 @@ setIsSearching(true);
 try {
 const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressSearch)}`);
 const data = await res.json();
-if (data && data.length > 0) { setCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]); } else alert("No encontrado");
-} catch { alert("Error"); }
+if (data && data.length > 0) { setCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]); notify('success', 'Ubicación encontrada y aplicada al mapa.'); } else notify('info', 'No se encontró la dirección.');
+} catch { notify('error', 'No se pudo buscar la dirección.'); }
 setIsSearching(false);
 };
   const toPngStripDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
@@ -242,7 +309,6 @@ setIsSearching(false);
       ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
 
       const pngDataUrl = canvas.toDataURL('image/png');
-      resolve(pngDataUrl);
       const approxBytes = Math.ceil((pngDataUrl.length - 'data:image/png;base64,'.length) * 0.75);
       if (approxBytes > 400 * 1024) {
         reject(new Error('Imagen muy pesada después de convertirla a PNG (máx 400KB).'));
@@ -257,6 +323,7 @@ setIsSearching(false);
   });
 
 const saveSettings = async () => {
+  setIsSavingSettings(true);
   try {
     const res = await fetch('/api/tenant/settings', {
       method: 'POST',
@@ -285,7 +352,7 @@ const saveSettings = async () => {
 
     const data = await res.json();
     if (!res.ok) {
-      alert(data.error || 'Error guardando');
+      notify('error', String(data.error || 'Error guardando'));
       return;
     }
 
@@ -298,7 +365,6 @@ const saveSettings = async () => {
       setCoalitionOptIn(Boolean(data.tenant.coalitionOptIn));
       setCoalitionDiscountPercent(String(data.tenant.coalitionDiscountPercent ?? 10));
       setCoalitionProduct(String(data.tenant.coalitionProduct ?? ''));
-setCoalitionProduct(String(data.tenant.coalitionProduct ?? ''));
       setRequiredVisits(String(data.tenant.requiredVisits ?? 10));
       setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
       setWalletBackgroundColor(String(data.tenant.walletBackgroundColor ?? walletBackgroundColor));
@@ -308,13 +374,37 @@ setCoalitionProduct(String(data.tenant.coalitionProduct ?? ''));
 
     }
 
-    alert('✅ Guardado');
+    notify('success', 'Configuración guardada correctamente.');
   } catch {
-    alert('Error');
+    notify('error', 'Ocurrió un error de conexión.');
+  } finally {
+    setIsSavingSettings(false);
   }
 };
 
-const validateRedeem = async () => { setMsg('Validando...'); try { const res = await fetch('/api/redeem/validate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken, code: redeemCode }) }); const data = await res.json(); if (res.ok) { setMsg(` ENTREGAR A: ${data.user}`); setRedeemCode(''); if(userRole==='ADMIN') loadReports(tenant.id, tenantUserId); } else setMsg(' ' + data.error); } catch { setMsg('Error'); } };
+const validateRedeem = async () => {
+  setMsg('Validando...');
+  setIsValidatingRedeem(true);
+  try {
+    const res = await fetch('/api/redeem/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken, code: redeemCode }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setMsg(` ENTREGAR A: ${data.user}`);
+      setRedeemCode('');
+      if (userRole === 'ADMIN') loadReports(tenant.id, tenantUserId);
+    } else {
+      setMsg(` ${data.error}`);
+    }
+  } catch {
+    setMsg('Error');
+  } finally {
+    setIsValidatingRedeem(false);
+  }
+};
 const downloadCSV = () => { if (!reportData?.csvData) return; const headers = Object.keys(reportData.csvData[0]).join(','); const rows = reportData.csvData.map((obj: Record<string, unknown>) => Object.values(obj).join(',')).join('\n'); const encodedUri = encodeURI("data:text/csv;charset=utf-8," + headers + "\n" + rows); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `clientes_${tenant.slug}.csv`); document.body.appendChild(link); link.click(); };
 
 const onboardingQrValue = tenant?.id ? `${baseUrl || (typeof window !== 'undefined' ? window.location.origin : '')}/?clientes=1&business_id=${encodeURIComponent(String(tenant.id))}&flow=create-pass&auth=welcome` : '';
@@ -373,15 +463,18 @@ const handleAdminScan = async (rawValue: string) => {
     const res = await fetch('/api/check-in/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: customerId, code: todayCode, tenantUserId, tenantSessionToken }),
+      body: JSON.stringify({ userId: customerId, code: todayCode, tenantUserId, tenantSessionToken, purchaseAmount: visitPurchaseAmount }),
     });
 
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error || 'No se pudo registrar visita');
 
-    setScannerMsg(`✅ ${data.message || 'Visita registrada'} (${data.visits}/${data.requiredVisits})`);
-    setMsg(`✅ ${data.message || 'Visita registrada'} (${data.visits}/${data.requiredVisits})`);
+    const amount = Number(data.purchaseAmount || 0);
+    const amountBadge = amount > 0 ? ` · Compra: $${amount.toFixed(2)}` : '';
+    setScannerMsg(`✅ ${data.message || 'Visita registrada'} (${data.visits}/${data.requiredVisits})${amountBadge}`);
+    setMsg(`✅ ${data.message || 'Visita registrada'} (${data.visits}/${data.requiredVisits})${amountBadge}`);
     setLastScannedCustomerId(customerId);
+    setVisitPurchaseAmount('');
   } catch (error: unknown) {
     const text = error instanceof Error ? error.message : 'Error al escanear';
     setScannerMsg(`❌ ${text}`);
@@ -393,7 +486,7 @@ const handleAdminScan = async (rawValue: string) => {
   }
 };
 
-if (!tenant) return <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4"><div className="bg-gray-800 p-8 rounded-2xl w-full max-w-sm shadow-2xl border border-gray-700"><div className="text-center mb-8"><h1 className="text-3xl font-black text-white tracking-tighter">punto<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500">IA</span></h1><p className="text-gray-400 text-sm mt-2">Acceso de Personal</p></div><form onSubmit={handleLogin} className="space-y-4"><input className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Usuario (Ej: PIZZA.juan)" value={username} onChange={e=>setUsername(e.target.value)} /><input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Contraseña" value={password} onChange={e=>setPassword(e.target.value)} /><button className="w-full bg-gradient-to-r from-orange-500 to-pink-600 font-bold py-4 rounded-xl text-white shadow-lg">Iniciar Sesión</button></form></div></div>;
+if (!tenant) return <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4"><div className="bg-gray-800 p-8 rounded-2xl w-full max-w-sm shadow-2xl border border-gray-700"><div className="text-center mb-8"><h1 className="text-3xl font-black text-white tracking-tighter">punto<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500">IA</span></h1><p className="text-gray-400 text-sm mt-2">Acceso de Personal</p></div><form onSubmit={handleLogin} className="space-y-4"><input className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Usuario (Ej: PIZZA.juan)" value={username} onChange={e=>setUsername(e.target.value)} disabled={isLoggingIn} /><input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Contraseña" value={password} onChange={e=>setPassword(e.target.value)} disabled={isLoggingIn} /><button disabled={isLoggingIn} className="w-full bg-gradient-to-r from-orange-500 to-pink-600 font-bold py-4 rounded-xl text-white shadow-lg disabled:opacity-60">{isLoggingIn ? 'Ingresando...' : 'Iniciar Sesión'}</button></form></div></div>;
 
 
 return (
@@ -402,68 +495,37 @@ return (
 <h1 className="text-2xl font-black tracking-tighter mb-4 hidden md:block">punto<span className="text-pink-500">IA</span></h1>
 <div className="hidden md:block mb-6"><span className={`px-3 py-1 rounded-full text-xs font-black tracking-wider shadow-sm ring-1 ring-white/10 ${userRole==='ADMIN'?'bg-gradient-to-r from-purple-600 to-pink-600':'bg-gradient-to-r from-sky-600 to-blue-700'}`}>{userRole}</span></div>
 <nav className="flex md:flex-col gap-2 w-full justify-around md:justify-start">
-  {userRole === 'ADMIN' && (
+  {visibleNavItems.map((item) => (
     <button
-      onClick={()=>setTab('dashboard')}
-      className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab==='dashboard'?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
+      key={item.key}
+      onClick={() => setTab(item.key)}
+      className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab===item.key?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
+      aria-current={tab === item.key ? 'page' : undefined}
     >
-      <span className="text-xl leading-none">📊</span>
-      <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">Dashboard</span>
+      <span className="text-xl leading-none">{item.icon}</span>
+      <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">{item.label}</span>
     </button>
-  )}
-
-  {userRole === 'ADMIN' && (
-    <button
-      onClick={()=>setTab('team')}
-      className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab==='team'?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
-    >
-      <span className="text-xl leading-none">👥</span>
-      <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">Equipo</span>
-    </button>
-  )}
-
-  <button
-    onClick={()=>setTab('qr')}
-    className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab==='qr'?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
-  >
-    <span className="text-xl leading-none">📷</span>
-    <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">QR</span>
-  </button>
-
-
-  <button
-    onClick={()=>setTab('redeem')}
-    className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab==='redeem'?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
-  >
-    <span className="text-xl leading-none">🎁</span>
-    <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">Canje</span>
-  </button>
-
-  {userRole === 'ADMIN' && (
-    <button
-      onClick={()=>setTab('push')}
-      className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab==='push'?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
-    >
-      <span className="text-xl leading-none">📢</span>
-      <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">Push</span>
-    </button>
-  )}
-
-  {userRole === 'ADMIN' && (
-    <button
-      onClick={()=>setTab('settings')}
-      className={`flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab==='settings'?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
-    >
-      <span className="text-xl leading-none">⚙️</span>
-      <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">Config</span>
-    </button>
-  )}
+  ))}
 </nav>
 <div className="hidden md:block mt-auto pt-6 border-t border-gray-800"><p className="font-bold text-sm truncate">{tenant.name}</p><button onClick={() => setTenant(null)} className="text-xs text-red-400 mt-4 hover:text-red-300 border border-red-900 p-2 rounded w-full">Cerrar Sesión</button></div>
 </div>
 <button onClick={() => setTenant(null)} className="md:hidden fixed top-4 right-4 z-50 bg-red-600 text-white w-8 h-8 rounded-full font-bold flex items-center justify-center shadow-lg">✕</button>
 
 <div className="flex-1 p-6 md:p-8 overflow-y-auto pb-32 md:pb-0">
+<div className="mb-5 rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50 to-white p-4 text-indigo-900">
+  <p className="text-[11px] font-black uppercase tracking-wider text-indigo-500">Mejora UX · Fase 5</p>
+  <p className="text-sm font-semibold">Incorporé captura de monto por visita en escaneo y métricas de valor (venta total, ticket promedio y CLV) para enriquecer la reportería del negocio.</p>
+  <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1 text-xs font-black text-indigo-700">
+    <span>{activeNavItem?.icon || '📌'}</span>
+    <span>Módulo activo: {activeNavItem?.label || 'Panel'}</span>
+  </div>
+</div>
+{uiNotice ? (
+  <div className={`mb-5 rounded-2xl border p-3 text-sm font-semibold flex items-center justify-between gap-3 ${uiNotice.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : uiNotice.type === 'error' ? 'border-red-200 bg-red-50 text-red-800' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
+    <span>{uiNotice.text}</span>
+    <button onClick={() => setUiNotice(null)} className="text-xs font-black opacity-70 hover:opacity-100">Cerrar</button>
+  </div>
+) : null}
 {tab === 'dashboard' && userRole === 'ADMIN' && (
 <div className="space-y-6 animate-fadeIn">
 <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 md:p-8 rounded-3xl text-white relative overflow-hidden">
@@ -476,7 +538,9 @@ return (
       <p className="text-gray-400 text-sm font-medium mt-1">{new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
     </div>
     <div className="flex gap-2">
-      <button className="bg-white/10 border border-white/20 px-4 py-2.5 rounded-xl text-white font-bold text-sm hover:bg-white/20 transition" onClick={() => { loadReports(tenant.id, tenantUserId); loadTeam(tenant.id, tenantUserId); }}>🔄 Actualizar</button>
+      <button disabled={isRefreshingReports} className="bg-white/10 border border-white/20 px-4 py-2.5 rounded-xl text-white font-bold text-sm hover:bg-white/20 transition disabled:opacity-60" onClick={() => { loadReports(tenant.id, tenantUserId); loadTeam(tenant.id, tenantUserId); }}>
+        {isRefreshingReports ? 'Actualizando...' : '🔄 Actualizar'}
+      </button>
       <button className="bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-2.5 rounded-xl shadow-lg text-white font-bold text-sm" onClick={downloadCSV}>📥 Exportar CSV</button>
     </div>
   </div>
@@ -509,11 +573,11 @@ return (
   </div>
   <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
     <div className="flex items-center gap-2 mb-2">
-      <span className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-lg">⭐</span>
-      <p className="text-gray-400 text-[10px] font-black uppercase tracking-wider">Promedio</p>
+      <span className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-lg">💵</span>
+      <p className="text-gray-400 text-[10px] font-black uppercase tracking-wider">Venta total</p>
     </div>
-    <p className="text-3xl font-black text-gray-900">{trendData.length > 0 ? (totalCheckins / trendData.length).toFixed(1) : '—'}</p>
-    <p className="text-[11px] text-gray-400 font-semibold mt-1">visitas/día</p>
+    <p className="text-3xl font-black text-gray-900">${totalRevenue.toFixed(0)}</p>
+    <p className="text-[11px] text-gray-400 font-semibold mt-1">ticket prom: ${avgTicket.toFixed(2)} · CLV: ${clvAverage.toFixed(2)}</p>
   </div>
 </div>
 
@@ -618,18 +682,18 @@ return (
     </div>
     <div className="p-6 space-y-3">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <input className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-300 focus:bg-white transition text-sm font-semibold" placeholder="Nombre (ej: Pedro)" value={newStaff.name} onChange={e=>setNewStaff({...newStaff, name: e.target.value})} />
+        <input className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-300 focus:bg-white transition text-sm font-semibold" placeholder="Nombre (ej: Pedro)" value={newStaff.name} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, name: e.target.value})} />
         <div className="flex items-center bg-gray-50 rounded-xl px-3.5 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-300 focus-within:bg-white transition">
           <span className="text-gray-400 font-mono text-xs font-bold mr-1 select-none shrink-0">{tenant.codePrefix || '???'}.</span>
-          <input className="bg-transparent w-full py-3.5 outline-none font-semibold text-gray-900 placeholder:text-gray-400 text-sm" placeholder="usuario" value={newStaff.username} onChange={e=>setNewStaff({...newStaff, username: e.target.value})} />
+          <input className="bg-transparent w-full py-3.5 outline-none font-semibold text-gray-900 placeholder:text-gray-400 text-sm" placeholder="usuario" value={newStaff.username} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, username: e.target.value})} />
         </div>
-        <input type="password" className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-300 focus:bg-white transition text-sm font-semibold" placeholder="Contraseña" value={newStaff.password} onChange={e=>setNewStaff({...newStaff, password: e.target.value})} />
-        <select className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 focus:ring-2 focus:ring-purple-300 text-sm font-semibold" value={newStaff.role} onChange={e=>setNewStaff({...newStaff, role: e.target.value})}>
+        <input type="password" className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-300 focus:bg-white transition text-sm font-semibold" placeholder="Contraseña" value={newStaff.password} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, password: e.target.value})} />
+        <select className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 focus:ring-2 focus:ring-purple-300 text-sm font-semibold" value={newStaff.role} onChange={e=>setNewStaff({...newStaff, role: e.target.value})} disabled={isCreatingStaff}>
           <option value="STAFF">👤 Operativo (QR + Canje)</option>
           <option value="ADMIN">👑 Administrador (Total)</option>
         </select>
       </div>
-      <button onClick={createStaff} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black py-3.5 rounded-xl shadow-md text-sm hover:shadow-lg transition-all">Agregar Empleado</button>
+      <button onClick={createStaff} disabled={isCreatingStaff} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black py-3.5 rounded-xl shadow-md text-sm hover:shadow-lg transition-all disabled:opacity-60">{isCreatingStaff ? 'Creando...' : 'Agregar Empleado'}</button>
     </div>
   </div>
 
@@ -748,7 +812,17 @@ return (
         }}
       />
     </div>
-    <p className="mt-3 text-xs font-semibold text-gray-600">Escanea el QR del pase en Apple Wallet para registrar una visita.</p>
+    <div className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-center">
+      <input
+        inputMode="decimal"
+        value={visitPurchaseAmount}
+        onChange={(e) => setVisitPurchaseAmount(sanitizeCurrencyInput(e.target.value))}
+        placeholder="Monto de compra (opcional)"
+        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700"
+      />
+      <span className="text-[11px] font-bold text-gray-500">Se guarda con esta visita (ej: 129.90)</span>
+    </div>
+    <p className="mt-2 text-xs font-semibold text-gray-600">Escanea el QR del pase en Apple Wallet para registrar una visita.</p>
     {scannerMsg ? <p className="mt-2 text-sm font-black text-emerald-700">{scannerMsg}</p> : null}
   </div>
 </div>
@@ -780,10 +854,10 @@ return (
       </div>
       <button
         onClick={validateRedeem}
-        disabled={!redeemCode || redeemCode.length < 4}
+        disabled={isValidatingRedeem || !redeemCode || redeemCode.length < 4}
         className="w-full bg-gradient-to-r from-orange-500 to-pink-600 text-white font-black py-4 rounded-2xl shadow-md disabled:opacity-40 disabled:shadow-none transition-all text-sm"
       >
-        Validar y Entregar Premio
+        {isValidatingRedeem ? 'Validando...' : 'Validar y Entregar Premio'}
       </button>
       {msg && (
         <div className={`mt-4 p-4 rounded-2xl text-center font-bold text-sm border ${msg.includes('ENTREGAR') ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : msg.includes('❌') || msg.includes('Error') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
@@ -931,7 +1005,7 @@ return (
           const file = e.target.files?.[0];
           if (!file) return;
           if (file.size > 200 * 1024) {
-            alert('Imagen inválida o muy pesada. Usa PNG (máx ~400KB) para wallet.');
+            notify('error', 'Imagen inválida o muy pesada. Usa PNG (máx ~400KB) para wallet.')
 
             return;
           }
@@ -985,14 +1059,14 @@ return (
         const file = e.target.files?.[0];
         if (!file) return;
         if (file.size > 2 * 1024 * 1024) {
-          alert('Imagen muy pesada. Usa una imagen menor a 2MB para convertirla a strip.');
+          notify('error', 'Imagen muy pesada. Usa una imagen menor a 2MB para convertirla a strip.')
           return;
         }
         try {
           const pngDataUrl = await toPngStripDataUrl(file);
           setWalletStripImageData(pngDataUrl);
         } catch (error) {
-          alert(error instanceof Error ? error.message : 'No se pudo procesar la imagen para Wallet.');
+          notify('error', error instanceof Error ? error.message : 'No se pudo procesar la imagen para Wallet.')
         }
       }}
     />
@@ -1085,8 +1159,8 @@ return (
   </div>
 </div>
 
-<button onClick={saveSettings} className="w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white py-4 rounded-2xl font-black shadow-md hover:shadow-lg transition-all text-sm">
-  💾 Guardar Todos los Cambios
+<button onClick={saveSettings} disabled={isSavingSettings} className="w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white py-4 rounded-2xl font-black shadow-md hover:shadow-lg transition-all text-sm disabled:opacity-60">
+  {isSavingSettings ? 'Guardando cambios...' : '💾 Guardar Todos los Cambios'}
 </button>
 </div>
 )}
