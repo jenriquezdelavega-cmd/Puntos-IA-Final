@@ -49,10 +49,20 @@ interface Challenge {
   } | null;
 }
 
-const initialChallengeForm = {
+type ChallengeForm = {
+  title: string;
+  description: string;
+  challengeType: Challenge['challengeType'];
+  targetValue: number;
+  timeWindow: number;
+  active: boolean;
+  rewardCampaignId: string;
+};
+
+const initialChallengeForm: ChallengeForm = {
   title: '',
   description: '',
-  challengeType: 'VISIT_COUNT' as const,
+  challengeType: 'VISIT_COUNT',
   targetValue: 5,
   timeWindow: 30,
   active: true,
@@ -83,7 +93,7 @@ export default function MasterPage() {
   const [networkChallenges, setNetworkChallenges] = useState<Challenge[]>([]);
   const [rewardOptions, setRewardOptions] = useState<RewardOption[]>([]);
   const [businessOptions, setBusinessOptions] = useState<BusinessOption[]>([]);
-  const [challengeForm, setChallengeForm] = useState(initialChallengeForm);
+  const [challengeForm, setChallengeForm] = useState<ChallengeForm>(initialChallengeForm);
   const [editingChallengeId, setEditingChallengeId] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isSavingChallenge, setIsSavingChallenge] = useState(false);
