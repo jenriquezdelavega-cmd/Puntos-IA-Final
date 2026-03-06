@@ -789,7 +789,7 @@ export default function Home() {
         <div className="scale-100 sm:scale-110 origin-left"><BrandLogo animate={false} compact /></div>
         <div className="flex items-center gap-3">
           <Link href="/negocios" className="text-white/60 text-sm font-bold hover:text-white transition hidden sm:block">Para Negocios</Link>
-          <Link href="/?clientes=1" className="bg-white/10 border border-white/20 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-white/20 transition">
+          <Link href="/clientes" className="bg-white/10 border border-white/20 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-white/20 transition">
             Soy Cliente
           </Link>
         </div>
@@ -799,7 +799,7 @@ export default function Home() {
         <div className="flex flex-col items-center text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-[#ff3f8e]/40 bg-[#ff3f8e]/15 px-4 py-1.5 text-[11px] font-black tracking-[0.2em] uppercase text-pink-200 mb-6">
             <span className="w-2 h-2 rounded-full bg-[#ff3f8e] animate-pulse" />
-            Pre-lanzamiento · Cupo limitado
+            Plataforma activa · Nuevos aliados cada semana
           </span>
 
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-black leading-[1.08] max-w-4xl tracking-tight">
@@ -809,16 +809,16 @@ export default function Home() {
           </h1>
 
           <p className="mt-6 max-w-2xl text-white/70 text-base md:text-lg font-medium leading-relaxed">
-            Punto IA es la primera coalición de lealtad para PyMEs en México.
-            Un solo pase digital para que tus clientes acumulen puntos en cafeterías, taquerías, estéticas y más negocios aliados.
+            Punto IA es una plataforma activa de lealtad para PyMEs en México.
+            Activa pases Apple Wallet y Google Wallet, retos de gamification, push notifications y analítica para crecer visitas repetidas.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3 justify-center">
             <a href="#registro" className="bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#a855f7] text-white font-black px-8 py-4 rounded-2xl shadow-[0_8px_32px_rgba(255,63,142,0.4)] hover:shadow-[0_12px_40px_rgba(255,63,142,0.5)] transition-all text-lg">
-              Registra tu negocio
+              Activar negocio
             </a>
             <Link href="/negocios" className="border border-white/25 bg-white/5 text-white font-bold px-6 py-4 rounded-2xl hover:bg-white/10 transition">
-              Conoce más →
+              Ver solución negocio →
             </Link>
           </div>
         </div>
@@ -827,9 +827,9 @@ export default function Home() {
       <section className="relative z-10 mx-auto max-w-5xl px-6 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { icon: '📱', title: 'Un pase, muchos negocios', desc: 'Tus clientes acumulan puntos en toda la red de aliados con un solo pase en Apple Wallet.' },
-            { icon: '🔄', title: 'Visitas que se convierten en lealtad', desc: 'Cada check-in suma. Al completar las visitas, tu cliente gana su premio automáticamente.' },
-            { icon: '📊', title: 'Datos reales de tu negocio', desc: 'Dashboard con tendencias de visita, perfil de clientes y reportes exportables.' },
+            { icon: '📱', title: 'Apple + Google Wallet', desc: 'Tus clientes guardan su pase desde iPhone o Android y lo usan en segundos.' },
+            { icon: '🎯', title: 'Retos gamificados', desc: 'Lanza dinámicas por visitas y metas para mantener la motivación activa.' },
+            { icon: '🔔', title: 'Push notifications', desc: 'Reactiva clientes con campañas, recordatorios y promociones segmentadas.' },
           ].map((item) => (
             <div key={item.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
               <span className="text-3xl">{item.icon}</span>
@@ -877,7 +877,7 @@ export default function Home() {
               <span className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e] flex items-center justify-center text-lg">🚀</span>
               <div>
                 <h2 className="text-xl font-black">Sé aliado fundador</h2>
-                <p className="text-xs text-white/60 font-semibold">Cupo limitado · Pre-lanzamiento sin costo</p>
+                <p className="text-xs text-white/60 font-semibold">Implementación guiada · Activación rápida</p>
               </div>
             </div>
 
@@ -891,7 +891,7 @@ export default function Home() {
               <input type="email" className="w-full rounded-xl border border-white/15 bg-white/95 text-gray-900 p-3 text-sm font-semibold placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400 outline-none" placeholder="Email" value={leadForm.email} onChange={(e) => handleLeadField('email', e.target.value)} />
 
               <button onClick={submitLead} disabled={leadLoading} className="w-full bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#a855f7] text-white font-black py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-60 text-sm">
-                {leadLoading ? 'Enviando...' : 'Quiero ser aliado fundador →'}
+                {leadLoading ? 'Enviando...' : 'Quiero implementar Punto IA →'}
               </button>
 
               {leadStatus && <p className="text-sm font-semibold text-center text-white/90">{leadStatus}</p>}
@@ -912,7 +912,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-4">
             <Link href="/negocios" className="text-white/40 text-xs font-bold hover:text-white/70 transition">Para Negocios</Link>
-            <Link href="/?clientes=1" className="text-white/40 text-xs font-bold hover:text-white/70 transition">Soy Cliente</Link>
+            <Link href="/clientes" className="text-white/40 text-xs font-bold hover:text-white/70 transition">Soy Cliente</Link>
             <Link href="/aliados" className="text-white/40 text-xs font-bold hover:text-white/70 transition">Aliados</Link>
           </div>
         </div>
@@ -955,7 +955,7 @@ export default function Home() {
               transition={canAnim ? { ...spring, delay: 0.15 } : undefined}
               className="text-white/70 text-[13px] font-semibold text-center mt-4 mb-10 max-w-[300px] leading-relaxed"
             >
-              Acumula puntos en tus negocios favoritos y gana premios reales.
+              Acumula puntos, completa retos y recibe premios reales en tus negocios favoritos.
             </motion.p>
 
             <motion.div
@@ -984,9 +984,9 @@ export default function Home() {
 
             <div className="w-full space-y-3 mb-12">
               {[
-                { num: '1', title: 'Crea tu pase', desc: 'Regístrate y obtén tu pase digital en Apple Wallet' },
-                { num: '2', title: 'Suma visitas', desc: 'Muestra tu pase cada vez que visites un negocio aliado' },
-                { num: '3', title: 'Gana premios', desc: 'Al completar tus visitas, canjea tu recompensa' },
+                { num: '1', title: 'Activa tu pase', desc: 'Regístrate y guarda tu pase en Apple Wallet o Google Wallet.' },
+                { num: '2', title: 'Suma y supera retos', desc: 'Escanea en cada visita, acumula progreso y desbloquea beneficios extra.' },
+                { num: '3', title: 'Recibe notificaciones útiles', desc: 'Entérate de campañas y premios con push notifications personalizadas.' },
               ].map((step, i) => (
                 <motion.div
                   key={step.num}
@@ -1014,7 +1014,7 @@ export default function Home() {
             >
               <div className="flex items-center gap-3 text-white/40 text-[11px] font-semibold">
                 <span className="h-px w-6 bg-white/15" />
-                Disponible en Apple Wallet
+                Disponible en Apple Wallet y Google Wallet
                 <span className="h-px w-6 bg-white/15" />
               </div>
 
