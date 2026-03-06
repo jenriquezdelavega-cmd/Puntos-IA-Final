@@ -29,6 +29,9 @@ type TenantView = {
   lat?: number;
   lng?: number;
   address?: string;
+  coalitionOptIn?: boolean;
+  coalitionDiscountPercent?: number;
+  coalitionProduct?: string;
 };
 
 type ReportPoint = { date?: string; count?: number };
@@ -65,6 +68,9 @@ const [walletLabelColor, setWalletLabelColor] = useState('#bfdbfe');
 const [walletStripImageData, setWalletStripImageData] = useState<string | null>('');
 
 const [instagram, setInstagram] = useState('');
+const [coalitionOptIn, setCoalitionOptIn] = useState(false);
+const [coalitionDiscountPercent, setCoalitionDiscountPercent] = useState('10');
+const [coalitionProduct, setCoalitionProduct] = useState('');
 const [addressSearch, setAddressSearch] = useState('');
 const [isSearching, setIsSearching] = useState(false);
 const [coords, setCoords] = useState<[number, number]>([19.4326, -99.1332]);
@@ -109,6 +115,9 @@ setTenantUserId(data.user.id || '');
 setTenantSessionToken(String(data.tenantSessionToken || ''));
 setPrizeName(data.tenant.prize || '');
 setInstagram(data.tenant.instagram || '');
+setCoalitionOptIn(Boolean(data.tenant.coalitionOptIn));
+setCoalitionDiscountPercent(String(data.tenant.coalitionDiscountPercent ?? 10));
+setCoalitionProduct(String(data.tenant.coalitionProduct ?? ''));
 setRequiredVisits(String(data.tenant.requiredVisits ?? 10));
 setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
 setLogoData(String(data.tenant.logoData ?? ''));
@@ -264,6 +273,9 @@ const saveSettings = async () => {
         lng: coords[1],
         address: addressSearch,
         instagram: instagram,
+        coalitionOptIn,
+        coalitionDiscountPercent,
+        coalitionProduct,
         walletBackgroundColor: walletBackgroundColor || undefined,
         walletForegroundColor: walletForegroundColor || undefined,
         walletLabelColor: walletLabelColor || undefined,
@@ -283,6 +295,10 @@ const saveSettings = async () => {
       setLogoData(String(data.tenant.logoData ?? ''));
       setPrizeName(data.tenant.prize || '');
       setInstagram(data.tenant.instagram || '');
+      setCoalitionOptIn(Boolean(data.tenant.coalitionOptIn));
+      setCoalitionDiscountPercent(String(data.tenant.coalitionDiscountPercent ?? 10));
+      setCoalitionProduct(String(data.tenant.coalitionProduct ?? ''));
+setCoalitionProduct(String(data.tenant.coalitionProduct ?? ''));
       setRequiredVisits(String(data.tenant.requiredVisits ?? 10));
       setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
       setWalletBackgroundColor(String(data.tenant.walletBackgroundColor ?? walletBackgroundColor));
@@ -1022,6 +1038,35 @@ return (
     <div>
       <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">📸 Instagram</label>
       <input className="w-full p-3.5 bg-pink-50 rounded-xl mt-1 font-semibold text-pink-600 border border-pink-100 focus:bg-white focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm" value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="@tu_negocio" />
+    </div>
+    <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 space-y-3">
+      <p className="text-xs font-black text-indigo-700">🤝 Promo de Coalición (captación de nuevos clientes)</p>
+      <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+        <input type="checkbox" checked={coalitionOptIn} onChange={e => setCoalitionOptIn(e.target.checked)} />
+        Quiero participar en retos de coalición
+      </label>
+      <div>
+        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Descuento mínimo ofrecido (%)</label>
+        <input
+          type="number"
+          min="10"
+          disabled={!coalitionOptIn}
+          className="w-full p-3.5 bg-white rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-indigo-300 outline-none transition-all text-sm disabled:opacity-60"
+          value={coalitionDiscountPercent}
+          onChange={e => setCoalitionDiscountPercent(e.target.value)}
+        />
+        <p className="text-[11px] text-gray-500 font-semibold mt-1.5 ml-1">Para activar esta promo debes ofrecer al menos 10% de descuento.</p>
+      </div>
+      <div>
+        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Producto participante</label>
+        <input
+          disabled={!coalitionOptIn}
+          className="w-full p-3.5 bg-white rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-indigo-300 outline-none transition-all text-sm disabled:opacity-60"
+          value={coalitionProduct}
+          onChange={e => setCoalitionProduct(e.target.value)}
+          placeholder="Ej: Corte clásico, Combo ejecutivo, Latte 12oz"
+        />
+      </div>
     </div>
   </div>
 </div>

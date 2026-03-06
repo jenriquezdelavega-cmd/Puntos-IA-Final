@@ -39,6 +39,9 @@ export async function POST(request: Request) {
     const walletForegroundColor = asTrimmedString(body.walletForegroundColor);
     const walletLabelColor = asTrimmedString(body.walletLabelColor);
     const walletStripImageData = asTrimmedString(body.walletStripImageData);
+    const coalitionOptIn = typeof body.coalitionOptIn === 'boolean' ? body.coalitionOptIn : undefined;
+    const coalitionDiscountPercentRaw = body.coalitionDiscountPercent;
+    const coalitionProduct = asTrimmedString(body.coalitionProduct);
 
     const access = await requireTenantRoleAccess({ tenantId, tenantUserId, tenantSessionToken, allowedRoles: ['ADMIN'] });
     if (!access.ok) {
@@ -63,6 +66,39 @@ export async function POST(request: Request) {
       ? (rewardPeriod as RewardPeriodValue)
       : undefined;
 
+    const parsedCoalitionDiscount =
+      coalitionDiscountPercentRaw === undefined || coalitionDiscountPercentRaw === null || coalitionDiscountPercentRaw === ''
+        ? undefined
+        : Math.max(0, parseInt(String(coalitionDiscountPercentRaw), 10));
+
+    let effectiveCoalitionDiscount = parsedCoalitionDiscount;
+    if (effectiveCoalitionDiscount === undefined && coalitionOptIn === true) {
+      const currentTenant = await prisma.tenant.findUnique({
+        where: { id: authorizedTenantId },
+        select: { coalitionDiscountPercent: true },
+      });
+      effectiveCoalitionDiscount = currentTenant?.coalitionDiscountPercent;
+    }
+
+    if (coalitionOptIn === true && (effectiveCoalitionDiscount ?? 0) < 10) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Para activar la promo de coalición debes ofrecer mínimo 10% de descuento',
+      });
+    }
+
+
+    if (coalitionOptIn === true && !coalitionProduct) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Para activar la promo de coalición debes indicar el producto participante',
+      });
+    }
+
     const updated = await prisma.tenant.update({
       where: { id: authorizedTenantId },
       data: {
@@ -74,6 +110,9 @@ export async function POST(request: Request) {
         ...(parsedVisits !== undefined ? { requiredVisits: parsedVisits } : {}),
         ...(parsedRewardPeriod ? { rewardPeriod: parsedRewardPeriod } : {}),
         ...(logoData !== undefined && logoData !== null ? { logoData } : {}),
+        ...(coalitionOptIn !== undefined ? { coalitionOptIn } : {}),
+        ...(parsedCoalitionDiscount !== undefined ? { coalitionDiscountPercent: parsedCoalitionDiscount } : {}),
+        ...(coalitionProduct !== undefined && coalitionProduct !== null ? { coalitionProduct } : {}),
       },
     });
 

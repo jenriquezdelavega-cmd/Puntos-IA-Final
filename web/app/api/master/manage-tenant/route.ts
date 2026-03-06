@@ -62,6 +62,31 @@ export async function POST(request: Request) {
     }
 
     if (action === 'UPDATE') {
+
+      const nextCoalitionOptIn = typeof data.coalitionOptIn === 'boolean' ? data.coalitionOptIn : undefined;
+      const nextCoalitionDiscount =
+        data.coalitionDiscountPercent === undefined || data.coalitionDiscountPercent === null || data.coalitionDiscountPercent === ''
+          ? undefined
+          : Math.max(0, parseInt(String(data.coalitionDiscountPercent), 10));
+      const nextCoalitionProduct = optionalString(data.coalitionProduct) || undefined;
+
+      if (nextCoalitionOptIn === true && (nextCoalitionDiscount ?? 0) < 10) {
+        return apiError({
+          requestId,
+          status: 400,
+          code: 'BAD_REQUEST',
+          message: 'Para adherir a coalición el descuento mínimo es 10%',
+        });
+      }
+      if (nextCoalitionOptIn === true && !nextCoalitionProduct) {
+        return apiError({
+          requestId,
+          status: 400,
+          code: 'BAD_REQUEST',
+          message: 'Para adherir a coalición debes capturar el producto participante',
+        });
+      }
+
       const updated = await prisma.tenant.update({
         where: { id: tenantId },
         data: {
@@ -70,6 +95,9 @@ export async function POST(request: Request) {
           prize: optionalString(data.prize) || undefined,
           instagram: optionalString(data.instagram) || undefined,
           isActive: typeof data.isActive === 'boolean' ? data.isActive : undefined,
+          coalitionOptIn: nextCoalitionOptIn,
+          coalitionDiscountPercent: nextCoalitionDiscount,
+          coalitionProduct: nextCoalitionProduct,
         },
       });
       return apiSuccess({ requestId, data: { success: true, tenant: updated } });

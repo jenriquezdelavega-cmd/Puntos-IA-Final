@@ -7,6 +7,7 @@ import { prisma } from '@/app/lib/prisma';
 import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 import { syncGoogleLoyaltyObjectForCustomer } from '@/app/lib/google-wallet-object-sync';
+import { evaluateChallengesForVisit } from '@/app/lib/challenges';
 const TZ = 'America/Monterrey';
 
 function accessStatusToCode(status: number): ApiErrorCode {
@@ -182,6 +183,13 @@ export async function POST(request: Request) {
         },
       }),
     ]);
+
+
+    try {
+      await evaluateChallengesForVisit({ userId });
+    } catch (challengeError) {
+      logApiError('/api/check-in/scan#challenges', challengeError);
+    }
 
     try {
       const serialNumber = walletSerialNumber(userId, validCode.tenantId);

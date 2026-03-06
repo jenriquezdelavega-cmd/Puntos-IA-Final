@@ -5,9 +5,10 @@ export default function MasterPage() {
   const [auth, setAuth] = useState(false);
   const [masterUser, setMasterUser] = useState('');
   const [masterPass, setMasterPass] = useState('');
-  interface Tenant { id: string; name: string; slug: string; codePrefix?: string; isActive?: boolean; users: TenantUser[]; prize?: string; instagram?: string; address?: string; lat?: number; lng?: number }
+  interface Tenant { id: string; name: string; slug: string; codePrefix?: string; isActive?: boolean; users: TenantUser[]; prize?: string; instagram?: string; address?: string; lat?: number; lng?: number; coalitionOptIn?: boolean; coalitionDiscountPercent?: number; coalitionProduct?: string }
   interface TenantUser { id: string; name: string; username: string; role: string; password?: string }
   const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [coalitionOnly, setCoalitionOnly] = useState(true);
   
   const [tName, setTName] = useState('');
   const [tSlug, setTSlug] = useState('');
@@ -41,12 +42,12 @@ export default function MasterPage() {
     }
   };
 
-  const loadTenants = async (usernameOverride?: string, passwordOverride?: string) => {
+  const loadTenants = async (usernameOverride?: string, passwordOverride?: string, coalitionOnlyOverride?: boolean) => {
     try {
       const res = await fetch('/api/master/list-tenants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ masterUsername: usernameOverride ?? masterUser, masterPassword: passwordOverride ?? masterPass }),
+        body: JSON.stringify({ masterUsername: usernameOverride ?? masterUser, masterPassword: passwordOverride ?? masterPass, coalitionOnly: coalitionOnlyOverride ?? coalitionOnly }),
       });
 
       if (!res.ok) {
@@ -159,6 +160,19 @@ export default function MasterPage() {
         <p className="text-xs text-gray-400 mt-3">Tip: selecciona un negocio en el directorio para exportar solo sus clientes.</p>
       </div>
 
+      <div className="mb-4 bg-gray-800 border border-gray-700 rounded-xl p-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold text-white">Filtro de coalición</p>
+          <p className="text-xs text-gray-400">Muestra solo negocios que activaron promo con descuento mínimo 10%.</p>
+        </div>
+        <button
+          onClick={() => { const next = !coalitionOnly; setCoalitionOnly(next); void loadTenants(undefined, undefined, next); }}
+          className={`px-4 py-2 rounded-lg text-xs font-black ${coalitionOnly ? 'bg-emerald-600 text-white' : 'bg-gray-700 text-gray-200'}`}
+        >
+          {coalitionOnly ? 'Solo coalición ✅' : 'Ver todos'}
+        </button>
+      </div>
+
       <h2 className="text-2xl font-bold mb-4">🏢 Directorio</h2>
       <div className="space-y-6">
         {tenants.map(t => (
@@ -166,7 +180,7 @@ export default function MasterPage() {
              <div className="flex justify-between items-start mb-4">
                 <div onClick={() => { setSelectedTenantId(t.id); setSelectedTenantPrefix(t.codePrefix || '???'); }} className="cursor-pointer flex-1">
                     <h3 className="font-bold text-2xl text-white flex items-center gap-2">{t.name} <span className="text-xs font-mono bg-yellow-900 text-yellow-200 px-2 rounded border border-yellow-700">CODE: {t.codePrefix}</span></h3>
-                    <p className="text-sm text-gray-400 mt-1">/{t.slug} {t.isActive===false && '⛔ SUSPENDIDO'}</p>
+                    <p className="text-sm text-gray-400 mt-1">/{t.slug} {t.isActive===false && '⛔ SUSPENDIDO'} {t.coalitionOptIn ? `• 🤝 Coalición ${t.coalitionDiscountPercent || 0}% en ${t.coalitionProduct || 'producto'}` : ''}</p>
                 </div>
                 <div className="flex gap-2"><button onClick={() => openEdit(t)} className="bg-yellow-600 text-black px-3 py-1 rounded font-bold text-sm hover:bg-yellow-500">✏️ Editar</button><button onClick={() => deleteTenant(t.id, t.name)} className="bg-red-600 text-white px-3 py-1 rounded font-bold text-sm hover:bg-red-500">🗑️</button></div>
              </div>
@@ -177,7 +191,7 @@ export default function MasterPage() {
           </div>
         ))}
       </div>
-      {editingTenant && (<div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4"><div className="bg-gray-800 p-6 rounded-xl w-full max-w-md border border-gray-600"><h2 className="text-xl font-bold mb-4">Editar Negocio</h2><div className="space-y-3"><input className="w-full p-3 bg-gray-700 rounded" value={editingTenant.name} onChange={e=>setEditingTenant({...editingTenant, name: e.target.value})} /><input className="w-full p-3 bg-gray-700 rounded" value={editingTenant.slug} onChange={e=>setEditingTenant({...editingTenant, slug: e.target.value})} /><div className="flex items-center gap-3 bg-gray-700 p-3 rounded"><label className="text-sm font-bold">Estado:</label><button onClick={() => setEditingTenant({...editingTenant, isActive: !editingTenant.isActive})} className={`px-4 py-1 rounded font-bold text-xs ${editingTenant.isActive !== false ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>{editingTenant.isActive !== false ? 'ACTIVO ✅' : 'SUSPENDIDO ⛔'}</button></div><div className="bg-black p-3 rounded border border-yellow-700 text-yellow-500 font-mono text-center text-xl tracking-widest">{editingTenant.codePrefix}</div><p className="text-xs text-gray-500 text-center">El prefijo no se puede cambiar.</p></div><div className="flex justify-end gap-2 mt-4"><button onClick={() => setEditingTenant(null)} className="px-4 py-2 text-gray-400">Cancelar</button><button onClick={updateTenant} className="bg-green-600 px-4 py-2 rounded font-bold">Guardar</button></div></div></div>)}
+      {editingTenant && (<div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4"><div className="bg-gray-800 p-6 rounded-xl w-full max-w-md border border-gray-600"><h2 className="text-xl font-bold mb-4">Editar Negocio</h2><div className="space-y-3"><input className="w-full p-3 bg-gray-700 rounded" value={editingTenant.name} onChange={e=>setEditingTenant({...editingTenant, name: e.target.value})} /><input className="w-full p-3 bg-gray-700 rounded" value={editingTenant.slug} onChange={e=>setEditingTenant({...editingTenant, slug: e.target.value})} /><div className="flex items-center gap-3 bg-gray-700 p-3 rounded"><label className="text-sm font-bold">Estado:</label><button onClick={() => setEditingTenant({...editingTenant, isActive: !editingTenant.isActive})} className={`px-4 py-1 rounded font-bold text-xs ${editingTenant.isActive !== false ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>{editingTenant.isActive !== false ? 'ACTIVO ✅' : 'SUSPENDIDO ⛔'}</button></div><div className="bg-gray-700 p-3 rounded"><label className="text-xs font-bold text-gray-300">Coalición</label><div className="mt-2 flex items-center gap-2"><input type="checkbox" checked={Boolean(editingTenant.coalitionOptIn)} onChange={e=>setEditingTenant({...editingTenant, coalitionOptIn: e.target.checked})} /><span className="text-xs">Activar promo de coalición</span></div><input type="number" min="10" className="w-full mt-2 p-2 bg-gray-800 rounded text-sm" value={String(editingTenant.coalitionDiscountPercent ?? 10)} onChange={e=>setEditingTenant({...editingTenant, coalitionDiscountPercent: Number(e.target.value)})} /><input className="w-full mt-2 p-2 bg-gray-800 rounded text-sm" placeholder="Producto participante" value={String(editingTenant.coalitionProduct ?? '')} onChange={e=>setEditingTenant({...editingTenant, coalitionProduct: e.target.value})} /></div><div className="bg-black p-3 rounded border border-yellow-700 text-yellow-500 font-mono text-center text-xl tracking-widest">{editingTenant.codePrefix}</div><p className="text-xs text-gray-500 text-center">El prefijo no se puede cambiar.</p></div><div className="flex justify-end gap-2 mt-4"><button onClick={() => setEditingTenant(null)} className="px-4 py-2 text-gray-400">Cancelar</button><button onClick={updateTenant} className="bg-green-600 px-4 py-2 rounded font-bold">Guardar</button></div></div></div>)}
       {editingUser && (<div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4"><div className="bg-gray-800 p-6 rounded-xl w-full max-w-md border border-gray-600"><h2 className="text-xl font-bold mb-4">Editar Empleado</h2><div className="space-y-3"><input className="w-full p-3 bg-gray-700 rounded" value={editingUser.name} onChange={e=>setEditingUser({...editingUser, name: e.target.value})} /><input className="w-full p-3 bg-gray-700 rounded font-mono text-yellow-300" value={editingUser.username} onChange={e=>setEditingUser({...editingUser, username: e.target.value})} /><input className="w-full p-3 bg-gray-700 rounded" value={editingUser.password} onChange={e=>setEditingUser({...editingUser, password: e.target.value})} /><select className="w-full p-3 bg-gray-700 rounded" value={editingUser.role} onChange={e=>setEditingUser({...editingUser, role: e.target.value})}><option value="ADMIN">ADMIN</option><option value="STAFF">STAFF</option></select></div><div className="flex justify-end gap-2 mt-4"><button onClick={() => setEditingUser(null)} className="px-4 py-2 text-gray-400">Cancelar</button><button onClick={updateUser} className="bg-green-600 px-4 py-2 rounded font-bold">Guardar</button></div></div></div>)}
     </div>
   );

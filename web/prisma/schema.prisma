@@ -26,6 +26,9 @@ model Tenant {
   instagram String?
   logoData  String?
   isActive  Boolean @default(true)
+  coalitionOptIn Boolean @default(false) @map("coalition_opt_in")
+  coalitionDiscountPercent Int @default(0) @map("coalition_discount_percent")
+  coalitionProduct String @default("") @map("coalition_product")
 
   createdAt DateTime @default(now())
 
@@ -35,6 +38,7 @@ model Tenant {
   redemptions Redemption[]
   walletStyle TenantWalletStyle?
   pushLogs    TenantPushLog[]
+  coalitionRewards CoalitionReward[]
 }
 
 model TenantUser {
@@ -62,6 +66,8 @@ model User {
   memberships Membership[]
   redemptions Redemption[]
   passwordResetTokens PasswordResetToken[]
+  challengeProgress CustomerChallengeProgress[]
+  coalitionRewardUnlocks CustomerCoalitionReward[]
 }
 
 model PasswordResetToken {
@@ -138,6 +144,82 @@ model Redemption {
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id])
+  coalitionRewardUnlockId String? @unique @map("coalition_reward_unlock_id")
+  coalitionRewardUnlock   CustomerCoalitionReward? @relation(fields: [coalitionRewardUnlockId], references: [id], onDelete: SetNull)
+}
+
+
+model Challenge {
+  id               String        @id @default(uuid())
+  title            String
+  description      String
+  challengeType    ChallengeType @map("challenge_type")
+  targetValue      Int           @map("target_value")
+  timeWindow       Int           @map("time_window")
+  rewardCampaignId String?       @map("reward_campaign_id")
+  rewardCampaign   CoalitionReward? @relation(fields: [rewardCampaignId], references: [id], onDelete: SetNull)
+  active           Boolean       @default(true)
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  customerProgress CustomerChallengeProgress[]
+
+  @@index([active])
+  @@map("challenges")
+}
+
+model CustomerChallengeProgress {
+  customerId    String                  @map("customer_id")
+  challengeId   String                  @map("challenge_id")
+  progressValue Int                     @default(0) @map("progress_value")
+  status        ChallengeProgressStatus @default(IN_PROGRESS)
+  completedAt   DateTime?               @map("completed_at")
+  updatedAt     DateTime                @updatedAt @map("updated_at")
+  createdAt     DateTime                @default(now()) @map("created_at")
+
+  customer  User      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@id([customerId, challengeId])
+  @@index([status])
+  @@map("customer_challenge_progress")
+}
+
+model CoalitionReward {
+  id              String    @id @default(uuid())
+  businessId      String    @map("business_id")
+  title           String
+  rewardType      String    @map("reward_type")
+  rewardValue     String    @map("reward_value")
+  redemptionLimit Int       @default(1) @map("redemption_limit")
+  expiresAt       DateTime? @map("expires_at")
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  business   Tenant                   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  challenges Challenge[]
+  unlockedBy CustomerCoalitionReward[]
+
+  @@index([businessId])
+  @@map("coalition_rewards")
+}
+
+model CustomerCoalitionReward {
+  id         String    @id @default(uuid())
+  customerId String    @map("customer_id")
+  rewardId   String    @map("reward_id")
+  unlockedAt DateTime  @default(now()) @map("unlocked_at")
+  requestedAt DateTime? @map("requested_at")
+  redeemedAt DateTime? @map("redeemed_at")
+
+  customer User            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  reward   CoalitionReward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+  redemption Redemption?
+
+  @@unique([customerId, rewardId])
+  @@index([customerId])
+  @@map("customer_coalition_rewards")
 }
 
 model AppleWalletRegistration {
@@ -186,4 +268,14 @@ enum RewardPeriod {
   QUARTERLY
   SEMESTER
   ANNUAL
+}
+
+enum ChallengeType {
+  VISIT_COUNT
+  DISTINCT_BUSINESSES
+}
+
+enum ChallengeProgressStatus {
+  IN_PROGRESS
+  COMPLETED
 }
