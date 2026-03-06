@@ -51,6 +51,13 @@ function periodKey(period: RewardPeriod, now = new Date()) {
   return `${y}-Y`;
 }
 
+function parsePurchaseAmount(value: unknown) {
+  if (value == null || value === '') return 0;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.min(1000000, Math.max(0, Math.round(parsed * 100) / 100));
+}
+
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
 
@@ -76,6 +83,7 @@ export async function POST(request: Request) {
     }
 
     const { userId, code, tenantUserId, tenantSessionToken } = parsedBody.data;
+    const purchaseAmount = parsePurchaseAmount(body.purchaseAmount);
 
     const dayUTC = dayKeyInBusinessTz();
 
@@ -172,6 +180,7 @@ export async function POST(request: Request) {
           dailyCodeId: validCode.id,
           tenantId: validCode.tenantId,
           visitDay,
+          purchaseAmount,
         },
       }),
       prisma.membership.update({
@@ -266,6 +275,7 @@ export async function POST(request: Request) {
         requiredVisits: validCode.tenant.requiredVisits ?? 10,
         rewardPeriod: validCode.tenant.rewardPeriod,
         message: `¡Visita registrada en ${validCode.tenant.name}!`,
+        purchaseAmount,
       },
     });
 

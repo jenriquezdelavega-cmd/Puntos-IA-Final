@@ -119,8 +119,9 @@ model DailyCode {
 }
 
 model Visit {
-  id        String   @id @default(uuid())
-  visitedAt DateTime @default(now())
+  id             String   @id @default(uuid())
+  visitedAt      DateTime @default(now())
+  purchaseAmount Float    @default(0) @map("purchase_amount")
 
   // para evitar múltiples scans en el mismo día por negocio
   visitDay String // YYYY-MM-DD
