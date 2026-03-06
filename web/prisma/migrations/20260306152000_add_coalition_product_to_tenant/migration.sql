@@ -1,0 +1,2 @@
+ALTER TABLE "Tenant"
+  ADD COLUMN IF NOT EXISTS "coalition_product" TEXT NOT NULL DEFAULT '';

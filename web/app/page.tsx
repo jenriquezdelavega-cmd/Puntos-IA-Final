@@ -41,6 +41,40 @@ type HistoryItem = {
   date?: string;
 };
 
+type ChallengeView = {
+  id: string;
+  title: string;
+  description: string;
+  targetValue: number;
+  timeWindow: number;
+  progressValue: number;
+  status: string;
+  reward?: {
+    title?: string;
+    rewardValue?: string;
+    businessName?: string;
+  } | null;
+};
+
+type CoalitionRewardView = {
+  id: string;
+  unlockedAt?: string;
+  requestedAt?: string | null;
+  redeemedAt?: string | null;
+  reward?: {
+    title?: string;
+    rewardValue?: string;
+    business?: { name?: string };
+    expiresAt?: string | null;
+  };
+  status?: 'UNLOCKED' | 'REQUESTED' | 'REDEEMED' | string;
+  redemption?: {
+    code?: string;
+    isUsed?: boolean;
+    createdAt?: string;
+  } | null;
+};
+
 type PendingPassIntent = {
   businessId: string;
   businessName?: string;
@@ -234,7 +268,7 @@ export default function Home() {
   // ✅ ESTE ERA EL QUE TE FALTABA (y por eso truena el build)
   const [view, setView] = useState<ViewState>('WELCOME');
 
-  const [activeTab, setActiveTab] = useState<'points' | 'aliados' | 'profile'>('points');
+  const [activeTab, setActiveTab] = useState<'points' | 'challenges' | 'aliados' | 'profile'>('points');
 
   const [user, setUser] = useState<UserView | null>(null);
 
@@ -259,6 +293,8 @@ export default function Home() {
 
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [challenges, setChallenges] = useState<ChallengeView[]>([]);
+  const [coalitionRewards, setCoalitionRewards] = useState<CoalitionRewardView[]>([]);
 
   const [leadForm, setLeadForm] = useState<BusinessLeadForm>({
     businessName: '',
@@ -335,6 +371,13 @@ export default function Home() {
   const isValidPhone = (p: string) => /^\d{10}$/.test(p);
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
+  const formatShortDate = (value?: string | null) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+  };
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const p = new URLSearchParams(window.location.search);
@@ -390,6 +433,41 @@ export default function Home() {
     }
   };
 
+
+  const loadChallenges = async (userId: string) => {
+    try {
+      const sessionToken = typeof window !== 'undefined' ? localStorage.getItem('punto_user_session_token') || '' : '';
+      const [challengesRes, rewardsRes] = await Promise.all([
+        fetch('/api/user/challenges', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, sessionToken }),
+        }),
+        fetch('/api/user/coalition-rewards', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, sessionToken }),
+        }),
+      ]);
+
+      const challengesData = await challengesRes.json();
+      const rewardsData = await rewardsRes.json();
+
+      if (Array.isArray(challengesData?.challenges)) setChallenges(challengesData.challenges);
+      if (Array.isArray(rewardsData?.rewards)) setCoalitionRewards(rewardsData.rewards);
+    } catch {
+      setChallenges([]);
+      setCoalitionRewards([]);
+    }
+  };
+
+
+
+  useEffect(() => {
+    if (view === 'APP' && user?.id) {
+      void loadChallenges(String(user.id));
+    }
+  }, [view, user?.id]);
   const handleLogin = async () => {
     setMessage('');
     if (!phone) return setMessage('❌ Teléfono requerido');
@@ -415,6 +493,7 @@ export default function Home() {
 
         setActiveTab('points');
         setView('APP');
+        void loadChallenges(String(data.id || ''));
 
         if (autoOpenPassAfterAuth) {
           const pendingIntent = consumePendingPassIntent();
@@ -498,6 +577,32 @@ export default function Home() {
       const data = await res.json();
       if (res.ok) setPrizeCode({ code: data.code, tenant: tenantName });
       else alert(data.error);
+    } catch {
+      alert('Error');
+    }
+  };
+
+  const getCoalitionPrizeCode = async (customerRewardId: string, tenantName: string) => {
+    if (!user?.id) return;
+    if (!confirm(`¿Solicitar código para canjear en ${tenantName}?`)) return;
+
+    try {
+      const res = await fetch('/api/redeem/coalition/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          customerRewardId,
+          sessionToken: typeof window !== 'undefined' ? localStorage.getItem('punto_user_session_token') || '' : '',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPrizeCode({ code: data.code, tenant: data.tenantName || tenantName });
+        void loadChallenges(String(user.id));
+      } else {
+        alert(data.error || 'No se pudo generar código');
+      }
     } catch {
       alert('Error');
     }
@@ -1427,6 +1532,105 @@ export default function Home() {
               </div>
             )}
 
+
+            {/* TAB: RETOS LOCALES */}
+            {activeTab === 'challenges' && (
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-lg font-black text-gray-900 tracking-tight">Retos locales</h2>
+                  <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Completa retos para desbloquear beneficios de la red.</p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-white border border-gray-100 rounded-xl p-3 text-center">
+                    <p className="text-[10px] text-gray-400 font-bold">Retos completos</p>
+                    <p className="text-lg font-black text-gray-900">{challenges.filter((c) => c.status === 'COMPLETED').length}</p>
+                  </div>
+                  <div className="bg-white border border-gray-100 rounded-xl p-3 text-center">
+                    <p className="text-[10px] text-gray-400 font-bold">Códigos pendientes</p>
+                    <p className="text-lg font-black text-gray-900">{coalitionRewards.filter((r) => r.status === 'REQUESTED').length}</p>
+                  </div>
+                  <div className="bg-white border border-gray-100 rounded-xl p-3 text-center">
+                    <p className="text-[10px] text-gray-400 font-bold">Canjes en caja</p>
+                    <p className="text-lg font-black text-emerald-600">{coalitionRewards.filter((r) => r.status === 'REDEEMED').length}</p>
+                  </div>
+                </div>
+
+                {challenges.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-gray-100 p-5 text-center text-gray-400 font-semibold">No hay retos activos por ahora.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {challenges.map((challenge) => {
+                      const progress = Math.min(challenge.progressValue, challenge.targetValue);
+                      const pct = Math.min(Math.round((progress / Math.max(challenge.targetValue, 1)) * 100), 100);
+                      const done = String(challenge.status) === 'COMPLETED';
+
+                      return (
+                        <div key={challenge.id} className="bg-white rounded-2xl border border-gray-100 p-4 shadow-[0_1px_4px_rgba(0,0,0,0.03)]">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-black text-gray-900">{challenge.title}</p>
+                              <p className="text-xs text-gray-500 font-medium mt-1">{challenge.description}</p>
+                            </div>
+                            <span className={`text-[10px] font-black px-2 py-1 rounded-full ${done ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                              {done ? 'Completado' : 'En progreso'}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 h-2 rounded-full bg-gray-100 overflow-hidden">
+                            <div className="h-full bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e]" style={{ width: `${pct}%` }} />
+                          </div>
+                          <p className="text-[11px] text-gray-500 font-semibold mt-1">{progress}/{challenge.targetValue} en {challenge.timeWindow} día(s)</p>
+
+                          {challenge.reward && (
+                            <p className="text-[11px] font-semibold text-gray-700 mt-2">🎁 {challenge.reward.rewardValue} en {challenge.reward.businessName}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="text-sm font-black text-gray-900 mb-2">Beneficios desbloqueados</h3>
+                  {coalitionRewards.length === 0 ? (
+                    <div className="bg-white rounded-2xl border border-gray-100 p-4 text-gray-400 text-sm font-semibold">Aún no has desbloqueado beneficios.</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {coalitionRewards.map((item) => {
+                        const tenantName = String(item.reward?.business?.name || 'Negocio aliado');
+                        const alreadyRequested = item.status === 'REQUESTED';
+                        const isRedeemed = item.status === 'REDEEMED';
+
+                        return (
+                          <div key={item.id} className="bg-white rounded-xl border border-gray-100 p-3">
+                            <p className="text-sm font-bold text-gray-900">{item.reward?.title}</p>
+                            <p className="text-xs text-gray-500">{item.reward?.rewardValue} • {tenantName}</p>
+                            <button
+                              disabled={alreadyRequested || isRedeemed}
+                              onClick={() => getCoalitionPrizeCode(item.id, tenantName)}
+                              className="mt-2 w-full bg-gray-900 text-white text-[11px] font-black py-2 rounded-lg disabled:opacity-60"
+                            >
+                              {isRedeemed ? 'Beneficio ya canjeado' : alreadyRequested ? 'Código ya solicitado' : 'Solicitar código de canje'}
+                            </button>
+                            {item.redemption?.code && (
+                              <p className="text-[10px] text-gray-500 mt-1">Código actual: <span className="font-black text-gray-700">{item.redemption.code}</span></p>
+                            )}
+                            {item.requestedAt && !item.redeemedAt && (
+                              <p className="text-[10px] text-amber-600 mt-1 font-semibold">Código solicitado el {formatShortDate(item.requestedAt)}</p>
+                            )}
+                            {item.redeemedAt && (
+                              <p className="text-[10px] text-emerald-600 mt-1 font-semibold">Canjeado en caja el {formatShortDate(item.redeemedAt)}</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* TAB: ALIADOS */}
             {activeTab === 'aliados' && (() => {
               const q = aliadosSearch.trim().toLowerCase();
@@ -1655,15 +1859,16 @@ export default function Home() {
           <div className="fixed bottom-5 left-5 right-5 bg-white/90 backdrop-blur-2xl border border-gray-200/50 p-1.5 rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.08)] flex items-center z-40">
             {[
               { key: 'points', label: 'Puntos', isOrb: true },
+              { key: 'challenges', label: 'Retos', icon: '🏅' },
               { key: 'aliados', label: 'Aliados', icon: '🤝' },
               { key: 'profile', label: 'Perfil', icon: '👤' },
             ].map((t) => {
-              const active = activeTab === (t.key as 'points' | 'aliados' | 'profile');
+              const active = activeTab === (t.key as 'points' | 'challenges' | 'aliados' | 'profile');
               return (
                 <motion.button
                   key={t.key}
                   whileTap={canAnim ? { scale: 0.96 } : undefined}
-                  onClick={() => setActiveTab(t.key as 'points' | 'aliados' | 'profile')}
+                  onClick={() => setActiveTab(t.key as 'points' | 'challenges' | 'aliados' | 'profile')}
                   className={`flex-1 flex flex-col items-center py-3 rounded-xl transition-all duration-200 ${
                     active ? 'bg-gradient-to-br from-gray-900 to-gray-800 text-white shadow-md' : 'text-gray-400'
                   }`}

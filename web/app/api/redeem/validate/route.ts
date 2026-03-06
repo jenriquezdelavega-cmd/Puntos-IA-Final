@@ -74,10 +74,20 @@ export async function POST(request: Request) {
       });
     }
 
-    await prisma.redemption.update({
-      where: { id: redemption.id },
-      data: { isUsed: true },
-    });
+    await prisma.$transaction([
+      prisma.redemption.update({
+        where: { id: redemption.id },
+        data: { isUsed: true },
+      }),
+      ...(redemption.coalitionRewardUnlockId
+        ? [
+            prisma.customerCoalitionReward.update({
+              where: { id: redemption.coalitionRewardUnlockId },
+              data: { redeemedAt: new Date() },
+            }),
+          ]
+        : []),
+    ]);
 
     logApiEvent('/api/redeem/validate', 'redemption_validated', {
       tenantId: access.tenantId,

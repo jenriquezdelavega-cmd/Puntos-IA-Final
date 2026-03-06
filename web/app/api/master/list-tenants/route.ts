@@ -1,7 +1,16 @@
 import { prisma } from '@/app/lib/prisma';
 import { isValidMasterCredentials } from '@/app/lib/master-auth';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
-import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+
+function parseOptionalBoolean(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') return value;
+  const raw = asTrimmedString(value).toLowerCase();
+  if (!raw) return undefined;
+  if (['1', 'true', 'yes', 'si', 'sí'].includes(raw)) return true;
+  if (['0', 'false', 'no'].includes(raw)) return false;
+  return undefined;
+}
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
@@ -20,6 +29,7 @@ export async function POST(request: Request) {
     const parsedBody = parseWithSchema(body, {
       masterUsername: requiredString,
       masterPassword: requiredString,
+      coalitionOnly: parseOptionalBoolean,
     });
     if (!parsedBody.ok) {
       return apiError({
@@ -39,12 +49,21 @@ export async function POST(request: Request) {
       });
     }
 
+    const coalitionOnly = parsedBody.data.coalitionOnly === true;
+
     const tenants = await prisma.tenant.findMany({
+      where: coalitionOnly
+        ? {
+            coalitionOptIn: true,
+            coalitionDiscountPercent: { gte: 10 },
+            coalitionProduct: { not: '' },
+          }
+        : undefined,
       include: { users: true },
       orderBy: { createdAt: 'desc' },
     });
 
-    return apiSuccess({ requestId, data: { tenants } });
+    return apiSuccess({ requestId, data: { tenants, coalitionOnly } });
   } catch {
     return apiError({
       requestId,
