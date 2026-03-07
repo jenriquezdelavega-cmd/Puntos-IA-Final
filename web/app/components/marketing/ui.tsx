@@ -49,9 +49,9 @@ export function buttonStyles(variant: 'primary' | 'secondary' | 'tertiary' = 'pr
 export function BrandSpotlight({ caption }: { caption: string }) {
   return (
     <div className="rounded-[1.7rem] border border-[#ead8fb] bg-[linear-gradient(145deg,#ffffff_0%,#fff8f2_45%,#f7efff_100%)] p-5 shadow-[0_20px_48px_rgba(75,44,132,0.12)]">
-      <div className="relative overflow-hidden rounded-2xl border border-[#efdffc] bg-white px-6 py-6">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[#ff8e68]/30 blur-2xl" />
-        <div className="pointer-events-none absolute -bottom-12 -left-10 h-36 w-36 rounded-full bg-[#8b5cf6]/24 blur-3xl" />
+      <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-[linear-gradient(120deg,#26164a_0%,#1c1138_55%,#2f1b59_100%)] px-6 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[#ff8e68]/36 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-12 -left-10 h-36 w-36 rounded-full bg-[#8b5cf6]/34 blur-3xl" />
         <Image src="/logo.png" alt="Punto IA" width={240} height={88} className="relative h-14 w-auto object-contain" />
       </div>
       <p className="mt-4 text-sm font-semibold text-[#3e2b67]">{caption}</p>
@@ -64,7 +64,7 @@ export function MarketingHeader({ badge = 'Lealtad digital para negocios y clien
     <header className="sticky top-0 z-40 border-b border-[#efdefe] bg-white/90 text-[#29184f] backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4">
         <Link href="/" className="flex items-center gap-3">
-          <span className="rounded-2xl border border-[#ead9fb] bg-white px-3 py-2 shadow-[0_8px_22px_rgba(91,52,157,0.12)]">
+          <span className="rounded-2xl border border-[#3b2668] bg-[linear-gradient(120deg,#2a184f_0%,#1e133b_55%,#3a2368_100%)] px-3 py-2 shadow-[0_10px_24px_rgba(53,30,95,0.32)]">
             <Image src="/logo.png" alt="Punto IA" width={200} height={76} className="h-8 w-auto object-contain sm:h-9" priority />
           </span>
           <span className="hidden rounded-full border border-[#ecdffb] bg-[#fff6fb] px-3 py-1 text-[10px] font-black uppercase tracking-[0.15em] text-[#6b4c9b] lg:inline-flex">
@@ -213,7 +213,7 @@ export function MarketingFooter() {
     <footer className="relative border-t border-[#ead8fb] bg-[#fff9f3] text-[#281a4a]">
       <div className="mx-auto grid w-full max-w-7xl gap-10 px-6 py-12 md:grid-cols-[1.3fr,1fr,1fr]">
         <div>
-          <div className="inline-flex rounded-2xl border border-[#e8d8f6] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(69,37,124,0.06)]">
+          <div className="inline-flex rounded-2xl border border-[#3b2668] bg-[linear-gradient(120deg,#2a184f_0%,#1e133b_55%,#3a2368_100%)] px-4 py-3 shadow-[0_10px_24px_rgba(53,30,95,0.28)]">
             <Image src="/logo.png" alt="Punto IA" width={200} height={80} className="h-9 w-auto object-contain" />
           </div>
           <p className="mt-4 max-w-md text-sm leading-relaxed text-[#4a3577]">
