@@ -81,8 +81,8 @@ export default function IngresarPage() {
       localStorage.setItem('punto_user', JSON.stringify(body));
       const preferredBusiness = body.memberships?.[0]?.tenantId;
       const destination = preferredBusiness
-        ? `/pass?customer_id=${encodeURIComponent(body.id)}&business_id=${encodeURIComponent(preferredBusiness)}`
-        : `/pass?customer_id=${encodeURIComponent(body.id)}`;
+        ? `/clientes/app?business_id=${encodeURIComponent(preferredBusiness)}`
+        : '/clientes/app';
       window.location.assign(destination);
       return true;
     } catch {
