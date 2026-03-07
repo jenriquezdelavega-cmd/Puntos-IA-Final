@@ -16,63 +16,63 @@ const routes = [
   {
     href: '/negocios',
     title: 'Soy negocio',
-    summary: 'Quiero aumentar visitas repetidas, activar recompensas y tener métricas claras de desempeño.',
-    cta: 'Ver solución para mi negocio',
+    summary: 'Quiero atraer más clientes recurrentes, automatizar recompensas y tomar decisiones con métricas claras.',
+    cta: 'Conocer solución para negocios',
   },
   {
     href: '/clientes',
     title: 'Soy cliente',
-    summary: 'Quiero activar mi pase, entrar a mi cuenta y revisar cómo funcionan mis recompensas.',
-    cta: 'Activar mi pase',
+    summary: 'Quiero activar mi pase en segundos, consultar mis puntos y canjear recompensas sin complicaciones.',
+    cta: 'Entrar como cliente',
   },
 ];
 
 export default function HomePage() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#fffaf8] text-[#231644]">
+    <main className="relative min-h-screen overflow-hidden bg-[#f6f1ff] text-[#1d1238]">
       <MarketingBackground />
       <MarketingHeader primaryCta={{ href: '/ingresar', label: 'Entrar' }} />
 
       <section className="relative mx-auto grid w-full max-w-7xl gap-8 px-6 pb-14 pt-10 lg:grid-cols-[1.1fr,0.9fr] lg:items-center">
         <Reveal>
           <div>
-            <p className="inline-flex rounded-full border border-[#e7daf7] bg-white px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-[#7c67a5]">
-              Lealtad simple para PyMEs y sus clientes
+            <p className="inline-flex rounded-full border border-[#d4c1f5] bg-[#fdfbff] px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-[#61488f]">
+              Lealtad inteligente para negocios que crecen
             </p>
             <h1 className="mt-6 text-4xl font-black leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
-              Punto IA te ayuda a
+              Convierte cada visita en
               <span className="block bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#8b5cf6] bg-clip-text text-transparent">
-                activar recurrencia sin fricción.
+                relaciones que regresan.
               </span>
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-relaxed text-[#5f4e84] sm:text-lg">
-              En segundos entiendes qué hacemos y eliges tu camino: solución para negocios o experiencia para clientes.
+            <p className="mt-6 max-w-xl text-base leading-relaxed text-[#433061] sm:text-lg">
+              Diseñamos una experiencia clara para ambos lados: tu negocio incrementa recurrencia y tus clientes vuelven con más frecuencia.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/negocios" className={buttonStyles('primary')}>Ver solución para mi negocio</Link>
-              <Link href="/activar-pase" className={buttonStyles('secondary')}>Activar mi pase</Link>
-              <Link href="/ingresar" className={buttonStyles('tertiary')}>Entrar</Link>
+              <Link href="/negocios" className={buttonStyles('primary')}>Quiero hacerlo en mi negocio</Link>
+              <Link href="/activar-pase" className={buttonStyles('secondary')}>Soy cliente: activar pase</Link>
+              <Link href="/ingresar" className={buttonStyles('tertiary')}>Ya tengo cuenta</Link>
             </div>
           </div>
         </Reveal>
 
         <Reveal delay={0.08}>
-          <div className="rounded-[2rem] border border-[#ebdef8] bg-white p-6 shadow-[0_20px_50px_rgba(87,46,145,0.08)] md:p-8">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#8a74b3]">Qué resuelve Punto IA</p>
+          <div className="rounded-[2rem] border border-[#d8c6f7] bg-[#fbf9ff] p-6 shadow-[0_24px_60px_rgba(45,23,84,0.16)] md:p-8">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#71539f]">Por qué funciona</p>
             <div className="mt-5 grid gap-3">
-              <p className="rounded-2xl border border-[#f0e6fb] bg-[#fff9fd] p-4 text-sm text-[#4c3a72]"><strong className="text-[#231644]">Negocios:</strong> más frecuencia de visita y mejor retención con campañas medibles.</p>
-              <p className="rounded-2xl border border-[#f0e6fb] bg-[#fff9fd] p-4 text-sm text-[#4c3a72]"><strong className="text-[#231644]">Clientes:</strong> un pase digital para acumular y canjear recompensas sin descargar apps.</p>
-              <p className="rounded-2xl border border-[#f0e6fb] bg-[#fff9fd] p-4 text-sm text-[#4c3a72]"><strong className="text-[#231644]">Resultado:</strong> experiencia clara para ambos lados, con menos dudas y más acción.</p>
+              <p className="rounded-2xl border border-[#dfcff8] bg-white p-4 text-sm text-[#392657]"><strong className="text-[#1d1238]">Para negocio:</strong> activas campañas enfocadas en recurrencia y observas resultados en tiempo real.</p>
+              <p className="rounded-2xl border border-[#dfcff8] bg-white p-4 text-sm text-[#392657]"><strong className="text-[#1d1238]">Para cliente:</strong> acumula visitas o puntos desde su wallet, sin descargas ni fricción.</p>
+              <p className="rounded-2xl border border-[#dfcff8] bg-white p-4 text-sm text-[#392657]"><strong className="text-[#1d1238]">Resultado:</strong> más recompra, mejor experiencia y una operación simple para tu equipo.</p>
             </div>
           </div>
         </Reveal>
       </section>
 
       <Reveal>
-        <TrustStrip items={['Home como hub simple: negocio o cliente', 'Navegación principal reducida a 4 rutas', 'CTAs directos y consistentes en todo el sitio']} />
+        <TrustStrip items={['Ruta clara para negocio y cliente', 'Mensajes directos que explican valor en segundos', 'Acciones principales visibles en cada sección']} />
       </Reveal>
 
-      <Section eyebrow="Rutas claras" title="Elige tu camino en un clic" description="Cada ruta responde una intención concreta y muestra una acción principal obvia.">
+      <Section eyebrow="Experiencia guiada" title="Elige tu ruta y avanza en segundos" description="Cada pantalla tiene un objetivo claro para que tomes acción sin dudas.">
         <StaggerGrid className="grid gap-4 md:grid-cols-2">
           {routes.map((route) => (
             <StaggerItem key={route.href}>
@@ -92,22 +92,22 @@ export default function HomePage() {
         <SectionBand>
           <div className="grid gap-4 lg:grid-cols-3">
             <div className="rounded-2xl border border-[#ebdef8] bg-white p-5">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#8b75b4]">1. Diagnóstico</p>
-              <p className="mt-3 text-lg font-black">Entendemos objetivos de negocio</p>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#8b75b4]">1. Estrategia</p>
+              <p className="mt-3 text-lg font-black">Definimos metas comerciales y propuesta de valor</p>
             </div>
             <div className="rounded-2xl border border-[#ebdef8] bg-white p-5">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#8b75b4]">2. Activación</p>
-              <p className="mt-3 text-lg font-black">Configuramos wallet, reglas y recompensas</p>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#8b75b4]">2. Implementación</p>
+              <p className="mt-3 text-lg font-black">Lanzamos wallet, reglas y recompensas listas para operar</p>
             </div>
             <div className="rounded-2xl border border-[#ebdef8] bg-white p-5">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-[#8b75b4]">3. Optimización</p>
-              <p className="mt-3 text-lg font-black">Mejoramos con datos reales de visitas y canjes</p>
+              <p className="mt-3 text-lg font-black">Optimizamos con datos reales de visitas y canjes</p>
             </div>
           </div>
         </SectionBand>
       </Reveal>
 
-      <Section eyebrow="Resultados" title="Impacto observado en pilotos PyME" description="Referencias reales para dimensionar beneficios de forma clara.">
+      <Section eyebrow="Resultados" title="Indicadores iniciales en negocios PyME" description="Ejemplos de desempeño para estimar el potencial en tu operación.">
         <SocialProof
           cases={[
             { name: 'Café Luna (Monterrey)', result: '+19% recurrencia', context: 'Con visitas dobles en horarios de baja demanda durante 8 semanas.' },
@@ -120,8 +120,8 @@ export default function HomePage() {
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-16 pt-2">
         <Reveal>
           <CtaPanel
-            title="Empieza por la ruta correcta"
-            description="Si eres negocio, agenda una demo. Si eres cliente, activa tu pase y entra a tu cuenta en segundos."
+            title="Da el siguiente paso con claridad"
+            description="Si lideras un negocio, agenda una demo. Si eres cliente, activa tu pase y empieza a acumular recompensas hoy."
             primary={{ href: '/negocios#demo', label: 'Solicitar demo' }}
             secondary={{ href: '/activar-pase', label: 'Activar mi pase' }}
           />

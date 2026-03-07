@@ -17,23 +17,23 @@ import { Reveal, StaggerGrid, StaggerItem } from '../components/marketing/effect
 const features = [
   {
     icon: '💳',
-    title: 'Activas wallet desde el día uno',
-    description: 'Tus clientes guardan su pase digital y empiezan a acumular visitas o puntos sin descargar apps.',
+    title: 'Tu wallet está activa desde el día uno',
+    description: 'Tus clientes guardan su pase en wallet y comienzan a acumular visitas o puntos sin descargar apps.',
   },
   {
     icon: '🧩',
-    title: 'Operación simple para caja y piso',
-    description: 'El equipo puede registrar visitas y canjes en segundos, sin procesos complejos.',
+    title: 'Operación ágil para caja y equipo',
+    description: 'Tu equipo registra visitas y canjes en segundos, con un flujo claro y fácil de adoptar.',
   },
   {
     icon: '🎯',
-    title: 'Campañas enfocadas a recurrencia',
-    description: 'Diseñas incentivos por comportamiento para aumentar retorno y recompra.',
+    title: 'Campañas diseñadas para recurrencia',
+    description: 'Configuras incentivos por comportamiento para elevar retorno, recompra y frecuencia.',
   },
   {
     icon: '📊',
     title: 'Métricas para decidir mejor',
-    description: 'Visualizas activación, visitas y canjes por sucursal o campaña para mejorar resultados.',
+    description: 'Visualizas activación, visitas y canjes por sucursal o campaña para optimizar resultados.',
   },
 ];
 
@@ -41,28 +41,28 @@ const implementation = [
   {
     step: 'Paso 1',
     title: 'Diagnóstico comercial',
-    description: 'Alineamos objetivos de frecuencia, ticket y tipo de recompensa para tu negocio.',
+    description: 'Alineamos objetivos de frecuencia, ticket promedio y tipo de recompensa según tu operación.',
   },
   {
     step: 'Paso 2',
     title: 'Configuración y lanzamiento',
-    description: 'Implementamos reglas, mensajes y flujos de operación para iniciar en 3 a 7 días hábiles.',
+    description: 'Configuramos reglas, mensajes y operación para lanzar con rapidez, normalmente en 3 a 7 días hábiles.',
   },
   {
     step: 'Paso 3',
     title: 'Seguimiento y optimización',
-    description: 'Revisamos resultados y ajustamos campañas para sostener crecimiento mensual.',
+    description: 'Analizamos desempeño y ajustamos campañas para sostener crecimiento mes a mes.',
   },
 ];
 
 const faqs = [
   {
     question: '¿Qué problema resuelve Punto IA para mi negocio?',
-    answer: 'Te ayuda a aumentar visitas repetidas, mejorar retención y medir impacto comercial con datos de activación y canje.',
+    answer: 'Te ayuda a aumentar visitas repetidas, elevar retención y medir impacto comercial con datos de activación y canje.',
   },
   {
     question: '¿Cuánto tarda implementarse?',
-    answer: 'El onboarding normal toma entre 3 y 7 días hábiles, según validación de reglas y contenido.',
+    answer: 'El onboarding suele completarse en 3 a 7 días hábiles, según reglas, contenido y validaciones.',
   },
   {
     question: '¿Puedo usarlo con varias sucursales?',
@@ -70,44 +70,44 @@ const faqs = [
   },
   {
     question: '¿Cómo empiezo?',
-    answer: 'Solicita una demo o agenda un diagnóstico. Te compartimos un plan de activación por etapas.',
+    answer: 'Solicita una demo o agenda un diagnóstico; te entregamos un plan de activación por etapas.',
   },
 ];
 
 export default function NegociosPage() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#fffaf8] text-[#231644]">
+    <main className="relative min-h-screen overflow-hidden bg-[#f6f1ff] text-[#1d1238]">
       <MarketingBackground />
       <MarketingHeader badge="Ruta B2B para negocios" primaryCta={{ href: '#demo', label: 'Solicitar demo' }} />
 
       <section className="relative mx-auto grid w-full max-w-7xl gap-10 px-6 pb-14 pt-10 lg:grid-cols-[1.08fr,0.92fr] lg:items-center">
         <Reveal>
           <div>
-            <p className="inline-flex rounded-full border border-[#e8dcf7] bg-white px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-[#7d68a5]">
-              Conversión comercial clara
+            <p className="inline-flex rounded-full border border-[#d4c1f5] bg-[#fdfbff] px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-[#61488f]">
+              Lealtad que impulsa ventas recurrentes
             </p>
             <h1 className="mt-6 text-4xl font-black leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
-              Más visitas repetidas,
+              Más clientes que regresan,
               <span className="block bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#8b5cf6] bg-clip-text text-transparent">
-                menos complejidad operativa.
+                menos fricción operativa.
               </span>
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-relaxed text-[#5f4e84] sm:text-lg">
-              Punto IA centraliza wallet, recompensas y seguimiento para que tu equipo opere simple y tú tomes decisiones con datos.
+            <p className="mt-6 max-w-xl text-base leading-relaxed text-[#433061] sm:text-lg">
+              Punto IA unifica wallet, recompensas y analítica para que tu equipo opere con agilidad y tú decidas con datos.
             </p>
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
-              <StatCard value="3-7 días" label="Tiempo típico de implementación" />
-              <StatCard value="1 panel" label="Control de campañas y canjes" />
+              <StatCard value="3-7 días" label="Implementación típica" />
+              <StatCard value="1 panel" label="Control centralizado de campañas" />
               <StatCard value="+20%" label="Mejora referencial en recurrencia" />
             </div>
           </div>
         </Reveal>
 
         <Reveal delay={0.08}>
-          <aside id="demo" className="rounded-[2rem] border border-[#ebdef8] bg-white p-6 shadow-[0_20px_44px_rgba(95,56,148,0.12)] md:p-7">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#8a74b3]">Empieza aquí</p>
-            <h2 className="mt-3 text-2xl font-black md:text-3xl">Solicita demo o agenda diagnóstico</h2>
-            <p className="mt-3 text-sm leading-relaxed text-[#5f4e84]">Formulario corto para contactarte rápido y preparar una conversación útil.</p>
+          <aside id="demo" className="rounded-[2rem] border border-[#d8c6f7] bg-[#fbf9ff] p-6 shadow-[0_24px_60px_rgba(45,23,84,0.16)] md:p-7">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#71539f]">Empieza aquí</p>
+            <h2 className="mt-3 text-2xl font-black md:text-3xl">Conversemos sobre tu crecimiento</h2>
+            <p className="mt-3 text-sm leading-relaxed text-[#433061]">Déjanos tus datos y te contactamos para preparar una propuesta clara para tu negocio.</p>
             <form className="mt-6 grid gap-3" action="mailto:ventas@puntoia.mx" method="post" encType="text/plain">
               <label className="text-sm font-semibold text-[#4e3b74]" htmlFor="negocio">Nombre del negocio</label>
               <input id="negocio" name="Negocio" className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-4 py-3 text-sm text-[#231644] focus:border-[#7c3aed] focus:outline-none" required />
@@ -133,7 +133,26 @@ export default function NegociosPage() {
         </Reveal>
       </section>
 
-      <Reveal><TrustStrip items={['Qué resuelve: recurrencia y retención', 'Cómo funciona: wallet + reglas + campañas', 'Cómo se empieza: demo corta y plan de activación']} /></Reveal>
+      <Reveal><TrustStrip items={['Impulsa recurrencia y retención', 'Opera con wallet + reglas + campañas', 'Inicia con demo guiada y plan de activación']} /></Reveal>
+
+
+      <Section
+        eyebrow="Producto en acción"
+        title="Conoce la experiencia de Punto IA para negocios"
+        description="En pocos minutos podrás ver cómo trabaja tu equipo, cómo interactúan tus clientes y dónde se genera el valor comercial."
+      >
+        <div className="overflow-hidden rounded-[2rem] border border-[#d8c6f7] bg-[#fbf9ff] p-3 shadow-[0_24px_60px_rgba(45,23,84,0.16)]">
+          <div className="aspect-video overflow-hidden rounded-2xl bg-[#1a122f]">
+            <iframe
+              src="https://player.vimeo.com/video/1165202097?badge=0&autopause=0&player_id=0&app_id=58479"
+              title="Demo Punto IA Negocios"
+              className="h-full w-full"
+              allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      </Section>
 
       <Reveal>
         <SectionBand>
@@ -149,7 +168,7 @@ export default function NegociosPage() {
         </SectionBand>
       </Reveal>
 
-      <Section eyebrow="Qué obtienes" title="Plataforma lista para crecer sin fricción" description="Una estructura de lealtad medible, escalable y fácil de operar.">
+      <Section eyebrow="Qué obtienes" title="Una plataforma lista para escalar" description="Lealtad medible, operación simple y decisiones respaldadas por datos.">
         <StaggerGrid className="grid gap-4 md:grid-cols-2">
           {features.map((feature) => (
             <StaggerItem key={feature.title}><FeatureCard icon={feature.icon} title={feature.title} description={feature.description} /></StaggerItem>
@@ -157,7 +176,7 @@ export default function NegociosPage() {
         </StaggerGrid>
       </Section>
 
-      <Section eyebrow="Casos de referencia" title="Resultados iniciales en negocios similares" description="Señales de impacto para tomar una decisión informada.">
+      <Section eyebrow="Casos de referencia" title="Resultados en negocios con perfiles similares" description="Indicadores reales para evaluar el impacto potencial en tu negocio.">
         <SocialProof
           cases={[
             { name: 'Cafetería local', result: '+18% visitas repetidas', context: 'Con meta mensual de visitas y recompensa desbloqueable.' },
@@ -167,15 +186,15 @@ export default function NegociosPage() {
         />
       </Section>
 
-      <Section eyebrow="Preguntas clave" title="Lo esencial para decidir rápido" description="Respuestas directas para avanzar con claridad.">
+      <Section eyebrow="Preguntas clave" title="Resuelve tus dudas antes de empezar" description="Respuestas concretas para tomar una decisión informada.">
         <FaqBlock items={faqs} />
       </Section>
 
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-16 pt-2">
         <Reveal>
           <CtaPanel
-            title="Listo para empezar"
-            description="Solicita demo, agenda diagnóstico o habla con ventas para definir tu plan de activación."
+            title="Activa tu estrategia de lealtad"
+            description="Solicita una demo, agenda un diagnóstico o habla con ventas para definir tu plan de lanzamiento."
             primary={{ href: '#demo', label: 'Solicitar demo' }}
             secondary={{ href: 'mailto:ventas@puntoia.mx?subject=Agendar%20diagn%C3%B3stico%20Punto%20IA', label: 'Agendar diagnóstico' }}
           />
