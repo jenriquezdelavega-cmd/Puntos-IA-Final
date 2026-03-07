@@ -2,9 +2,9 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Award, Building2, Medal, ScanLine, Target, Trophy, UserRound } from 'lucide-react';
+import { AlertCircle, Award, Building2, Medal, RefreshCw, ScanLine, Target, Trophy, UserRound } from 'lucide-react';
 import {
   MarketingBackground,
   MarketingFooter,
@@ -51,6 +51,7 @@ type TenantMapItem = {
   address?: string;
   prize?: string;
   instagram?: string | null;
+  logoData?: string | null;
 };
 
 type HistoryItem = {
@@ -143,6 +144,28 @@ function rewardStatusStyles(status: CoalitionReward['status']) {
   return 'border-[#c8f3d8] bg-[#ecfff2] text-[#11643a]';
 }
 
+function businessInitial(name?: string) {
+  const clean = String(name || '').trim();
+  return clean ? clean.charAt(0).toUpperCase() : 'N';
+}
+
+function BusinessLogo({ name, logoData, size = 'md' }: { name?: string; logoData?: string; size?: 'sm' | 'md' }) {
+  const dimensions = size === 'sm' ? 'h-10 w-10 rounded-xl' : 'h-14 w-14 rounded-2xl';
+  const inner = size === 'sm' ? 'rounded-[0.6rem]' : 'rounded-xl';
+
+  return (
+    <span className={`inline-flex shrink-0 items-center justify-center border border-[#3b2668] bg-[linear-gradient(120deg,#2a184f_0%,#1e133b_55%,#3a2368_100%)] p-1 ${dimensions}`}>
+      {logoData ? (
+        <span className={`h-full w-full bg-contain bg-center bg-no-repeat ${inner}`} style={{ backgroundImage: `url(${logoData})` }} />
+      ) : (
+        <span className={`flex h-full w-full items-center justify-center bg-white/10 text-sm font-black text-white ${inner}`}>
+          {businessInitial(name)}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export default function ClientesAppPage() {
   const [user, setUser] = useState<StoredUser | null>(null);
   const [tab, setTab] = useState<ClientTab>('puntos');
@@ -164,6 +187,14 @@ export default function ClientesAppPage() {
   const [loadingRewards, setLoadingRewards] = useState(false);
   const [loadingChallenges, setLoadingChallenges] = useState(false);
   const [loadingTenants, setLoadingTenants] = useState(false);
+  const [syncingData, setSyncingData] = useState(false);
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
+  const [dataWarnings, setDataWarnings] = useState<{
+    history?: string;
+    rewards?: string;
+    challenges?: string;
+    tenants?: string;
+  }>({});
 
   const [redeemCode, setRedeemCode] = useState<{ code: string; business: string } | null>(null);
 
@@ -172,6 +203,15 @@ export default function ClientesAppPage() {
     () => activeMemberships.reduce((sum, membership) => sum + Number(membership.points || 0), 0),
     [activeMemberships],
   );
+  const tenantLogoById = useMemo(() => {
+    const map: Record<string, string> = {};
+    tenants.forEach((tenant) => {
+      if (tenant.id && tenant.logoData) {
+        map[tenant.id] = tenant.logoData;
+      }
+    });
+    return map;
+  }, [tenants]);
   const redeemReadyCount = useMemo(
     () =>
       activeMemberships.filter((membership) => {
@@ -185,13 +225,17 @@ export default function ClientesAppPage() {
     () => challenges.filter((challenge) => challenge.status === 'COMPLETED').length,
     [challenges],
   );
+  const warningMessages = useMemo(
+    () => Object.values(dataWarnings).filter((message): message is string => Boolean(message)),
+    [dataWarnings],
+  );
 
-  const handleSessionExpired = () => {
+  const handleSessionExpired = useCallback(() => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('punto_user');
       window.location.assign('/ingresar?tipo=cliente&modo=login');
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -219,8 +263,15 @@ export default function ClientesAppPage() {
     }
   }, []);
 
-  useEffect(() => {
+  const loadClientData = useCallback(async () => {
     if (!user?.id || !user?.sessionToken) return;
+
+    setSyncingData(true);
+    setDataWarnings({});
+    const authPayload = {
+      userId: user.id,
+      sessionToken: user.sessionToken,
+    };
 
     const loadHistory = async () => {
       setLoadingHistory(true);
@@ -228,17 +279,21 @@ export default function ClientesAppPage() {
         const response = await fetch('/api/user/history', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.id,
-            sessionToken: user.sessionToken,
-          }),
+          body: JSON.stringify(authPayload),
         });
-        const body = (await response.json()) as { history?: HistoryItem[]; message?: string; error?: string; code?: string };
+        const body = (await response.json()) as { history?: HistoryItem[]; message?: string; error?: string; code?: string; warning?: string };
         if (!response.ok) {
-          if (isUnauthorizedResponse(response, body)) handleSessionExpired();
+          if (isUnauthorizedResponse(response, body)) {
+            handleSessionExpired();
+            return;
+          }
+          setDataWarnings((prev) => ({ ...prev, history: body?.message || body?.error || 'No se pudo cargar historial' }));
           return;
         }
         setHistory(body.history || []);
+        if (body.warning) {
+          setDataWarnings((prev) => ({ ...prev, history: body.warning }));
+        }
       } finally {
         setLoadingHistory(false);
       }
@@ -250,17 +305,21 @@ export default function ClientesAppPage() {
         const response = await fetch('/api/user/coalition-rewards', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.id,
-            sessionToken: user.sessionToken,
-          }),
+          body: JSON.stringify(authPayload),
         });
-        const body = (await response.json()) as { rewards?: CoalitionReward[]; message?: string; error?: string; code?: string };
+        const body = (await response.json()) as { rewards?: CoalitionReward[]; message?: string; error?: string; code?: string; warning?: string };
         if (!response.ok) {
-          if (isUnauthorizedResponse(response, body)) handleSessionExpired();
+          if (isUnauthorizedResponse(response, body)) {
+            handleSessionExpired();
+            return;
+          }
+          setDataWarnings((prev) => ({ ...prev, rewards: body?.message || body?.error || 'No se pudieron cargar beneficios' }));
           return;
         }
         setRewards(body.rewards || []);
+        if (body.warning) {
+          setDataWarnings((prev) => ({ ...prev, rewards: body.warning }));
+        }
       } finally {
         setLoadingRewards(false);
       }
@@ -272,17 +331,21 @@ export default function ClientesAppPage() {
         const response = await fetch('/api/user/challenges', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.id,
-            sessionToken: user.sessionToken,
-          }),
+          body: JSON.stringify(authPayload),
         });
-        const body = (await response.json()) as { challenges?: ChallengeItem[]; message?: string; error?: string; code?: string };
+        const body = (await response.json()) as { challenges?: ChallengeItem[]; message?: string; error?: string; code?: string; warning?: string };
         if (!response.ok) {
-          if (isUnauthorizedResponse(response, body)) handleSessionExpired();
+          if (isUnauthorizedResponse(response, body)) {
+            handleSessionExpired();
+            return;
+          }
+          setDataWarnings((prev) => ({ ...prev, challenges: body?.message || body?.error || 'No se pudieron cargar retos' }));
           return;
         }
         setChallenges(body.challenges || []);
+        if (body.warning) {
+          setDataWarnings((prev) => ({ ...prev, challenges: body.warning }));
+        }
       } finally {
         setLoadingChallenges(false);
       }
@@ -292,18 +355,28 @@ export default function ClientesAppPage() {
       setLoadingTenants(true);
       try {
         const response = await fetch('/api/map/tenants');
-        const body = (await response.json()) as { tenants?: TenantMapItem[] };
+        const body = (await response.json()) as { tenants?: TenantMapItem[]; message?: string; error?: string };
+        if (!response.ok) {
+          setDataWarnings((prev) => ({ ...prev, tenants: body?.message || body?.error || 'No se pudo cargar el mapa de negocios' }));
+          return;
+        }
         setTenants(body.tenants || []);
       } finally {
         setLoadingTenants(false);
       }
     };
 
-    void loadHistory();
-    void loadRewards();
-    void loadChallenges();
-    void loadTenants();
-  }, [user?.id, user?.sessionToken]);
+    try {
+      await Promise.all([loadHistory(), loadRewards(), loadChallenges(), loadTenants()]);
+      setLastSyncAt(new Date());
+    } finally {
+      setSyncingData(false);
+    }
+  }, [handleSessionExpired, user?.id, user?.sessionToken]);
+
+  useEffect(() => {
+    void loadClientData();
+  }, [loadClientData]);
 
   const handleRedeem = async (membership: Membership) => {
     if (!user?.id || !user?.sessionToken) return;
@@ -395,6 +468,13 @@ export default function ClientesAppPage() {
     }
   };
 
+  const openBusinessPass = (tenant: { id?: string }) => {
+    if (typeof window === 'undefined') return;
+    if (!user?.id) return;
+    if (!tenant.id) return;
+    window.location.assign(`/pass?customer_id=${encodeURIComponent(user.id)}&business_id=${encodeURIComponent(tenant.id)}`);
+  };
+
   const logout = () => {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('punto_user');
@@ -430,11 +510,37 @@ export default function ClientesAppPage() {
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-[#7f61ad]">Resumen de cuenta</p>
               <h3 className="mt-2 text-2xl font-black text-[#241646]">Tu progreso en Punto IA</h3>
+              {lastSyncAt ? (
+                <p className="mt-1 text-xs font-semibold text-[#6f58a0]">
+                  Última actualización: {lastSyncAt.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              ) : null}
             </div>
-            <Link href={`/pass?customer_id=${encodeURIComponent(user.id)}`} className={buttonStyles('secondary')}>
-              <span className="inline-flex items-center gap-2"><ScanLine className="h-4 w-4" /> Abrir mi pase</span>
-            </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => void loadClientData()} disabled={syncingData} className={buttonStyles('tertiary')}>
+                <span className="inline-flex items-center gap-2">
+                  <RefreshCw className={`h-4 w-4 ${syncingData ? 'animate-spin' : ''}`} />
+                  {syncingData ? 'Actualizando' : 'Actualizar'}
+                </span>
+              </button>
+              <Link href={`/pass?customer_id=${encodeURIComponent(user.id)}`} className={buttonStyles('secondary')}>
+                <span className="inline-flex items-center gap-2"><ScanLine className="h-4 w-4" /> Abrir mi pase</span>
+              </Link>
+            </div>
           </div>
+          {warningMessages.length > 0 ? (
+            <div className="mt-4 rounded-2xl border border-[#f7dccb] bg-[#fff7f3] p-3">
+              <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#a34f27]">
+                <AlertCircle className="h-4 w-4" />
+                Avisos de sincronización
+              </p>
+              <ul className="mt-2 space-y-1 text-xs font-semibold text-[#7d4c34]">
+                {warningMessages.map((message, index) => (
+                  <li key={`${message}-${index}`}>• {message}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl border border-[#ead8fb] bg-white p-3">
               <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#7f61ad]">Puntos totales</p>
@@ -495,9 +601,15 @@ export default function ClientesAppPage() {
                 return (
                   <article key={membership.tenantId} className="rounded-3xl border border-[#e9daf9] bg-white p-6 shadow-[0_12px_28px_rgba(53,30,95,0.08)]">
                     <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="text-2xl font-black text-[#231644]">{membership.name || 'Negocio aliado'}</h3>
-                        <p className="mt-1 text-sm text-[#5c4a82]">{membership.prize || 'Premio disponible'}</p>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <BusinessLogo
+                          name={membership.name}
+                          logoData={membership.logoData || tenantLogoById[membership.tenantId] || undefined}
+                        />
+                        <div className="min-w-0">
+                          <h3 className="truncate text-2xl font-black text-[#231644]">{membership.name || 'Negocio aliado'}</h3>
+                          <p className="mt-1 truncate text-sm text-[#5c4a82]">{membership.prize || 'Premio disponible'}</p>
+                        </div>
                       </div>
                       <div className="rounded-2xl border border-[#eddffb] bg-[#fcf8ff] px-3 py-2 text-right text-sm font-semibold text-[#4e3a78]">
                         <p className="text-base font-black text-[#2a184f]">{currentPoints} pts</p>
@@ -694,11 +806,18 @@ export default function ClientesAppPage() {
                     return (
                       <li key={membership.tenantId} className="rounded-2xl border border-[#efe1fd] bg-[#fffdfd] p-3">
                         <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <p className="font-black text-[#2a184f]">{membership.name || 'Negocio aliado'}</p>
-                            <p className="text-xs font-semibold text-[#6e57a0]">
-                              {currentVisits}/{requiredVisits} visitas · {membership.points || 0} pts
-                            </p>
+                          <div className="flex min-w-0 items-center gap-3">
+                            <BusinessLogo
+                              name={membership.name}
+                              logoData={membership.logoData || tenantLogoById[membership.tenantId] || undefined}
+                              size="sm"
+                            />
+                            <div className="min-w-0">
+                              <p className="truncate font-black text-[#2a184f]">{membership.name || 'Negocio aliado'}</p>
+                              <p className="text-xs font-semibold text-[#6e57a0]">
+                                {currentVisits}/{requiredVisits} visitas · {membership.points || 0} pts
+                              </p>
+                            </div>
                           </div>
                           <Link
                             href={`/pass?customer_id=${encodeURIComponent(user.id)}&business_id=${encodeURIComponent(membership.tenantId)}`}
@@ -720,7 +839,7 @@ export default function ClientesAppPage() {
                 {loadingTenants ? (
                   <div className="h-full w-full animate-pulse bg-[#f7f0ff]" />
                 ) : (
-                  <BusinessMap tenants={tenants} focusCoords={null} radiusKm={50} />
+                  <BusinessMap tenants={tenants} focusCoords={null} radiusKm={50} onCreatePass={openBusinessPass} />
                 )}
               </div>
             </article>

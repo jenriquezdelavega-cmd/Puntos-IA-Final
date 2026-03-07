@@ -13,6 +13,7 @@ type Tenant = {
   address?: string;
   prize?: string;
   instagram?: string | null;
+  logoData?: string | null;
 };
 
 function instagramUrl(raw?: string | null) {
@@ -42,6 +43,11 @@ function zoomForRadiusKm(radiusKm: number) {
   if (radiusKm <= 200) return 9;
   if (radiusKm <= 500) return 7;
   return 6;
+}
+
+function businessInitial(name?: string) {
+  const clean = String(name || '').trim();
+  return clean ? clean.charAt(0).toUpperCase() : 'N';
 }
 
 function MapController({
@@ -145,7 +151,21 @@ export default function BusinessMap({
             >
               <Popup>
                 <div className="min-w-[200px]">
-                  <div className="font-black text-gray-900 text-sm">{t.name}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 shrink-0 rounded-lg border border-[#3b2668] bg-[linear-gradient(120deg,#2a184f_0%,#1e133b_55%,#3a2368_100%)] p-0.5">
+                      {t.logoData ? (
+                        <div
+                          className="h-full w-full rounded-md bg-center bg-contain bg-no-repeat"
+                          style={{ backgroundImage: `url(${t.logoData})` }}
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center rounded-md bg-white/10 text-xs font-black text-white">
+                          {businessInitial(t.name)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="font-black text-gray-900 text-sm">{t.name}</div>
+                  </div>
                   {(t.address || '').trim() && (
                     <div className="text-[11px] text-gray-500 mt-0.5">{t.address}</div>
                   )}
@@ -163,8 +183,17 @@ export default function BusinessMap({
         <div className="pointer-events-none absolute bottom-3 left-3 right-3">
           <div className="pointer-events-auto bg-white/95 backdrop-blur-xl border border-gray-100 rounded-2xl p-3.5 shadow-[0_4px_24px_rgba(0,0,0,0.1)]">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-900 to-gray-700 flex items-center justify-center text-white font-black text-sm shrink-0">
-                {selected.name?.charAt(0)}
+              <div className="h-11 w-11 shrink-0 rounded-xl border border-[#3b2668] bg-[linear-gradient(120deg,#2a184f_0%,#1e133b_55%,#3a2368_100%)] p-1">
+                {selected.logoData ? (
+                  <div
+                    className="h-full w-full rounded-lg bg-center bg-contain bg-no-repeat"
+                    style={{ backgroundImage: `url(${selected.logoData})` }}
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center rounded-lg bg-white/10 text-sm font-black text-white">
+                    {businessInitial(selected.name)}
+                  </div>
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[13px] font-black text-gray-900 truncate">{selected.name}</div>

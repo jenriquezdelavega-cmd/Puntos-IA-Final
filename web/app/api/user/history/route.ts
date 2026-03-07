@@ -2,6 +2,7 @@ import { prisma } from '@/app/lib/prisma';
 import { verifyUserSessionToken } from '@/app/lib/user-session-token';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
+import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
 
 
 export async function POST(request: Request) {
@@ -56,6 +57,16 @@ export async function POST(request: Request) {
 
     return apiSuccess({ requestId, data: { history } });
   } catch (error: unknown) {
+    if (isMissingTableOrColumnError(error)) {
+      return apiSuccess({
+        requestId,
+        data: {
+          history: [],
+          warning: 'Historial no disponible temporalmente',
+        },
+      });
+    }
+
     if (error && typeof error === 'object' && 'message' in error) {
       const message = String((error as { message?: string }).message || '');
       if (message.startsWith('sessionToken')) {

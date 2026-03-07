@@ -82,7 +82,17 @@ export async function POST(req: Request) {
       },
       include: {
         memberships: {
-          include: { tenant: true },
+          include: {
+            tenant: {
+              select: {
+                isActive: true,
+                name: true,
+                prize: true,
+                instagram: true,
+                requiredVisits: true,
+              },
+            },
+          },
         },
       },
     });
@@ -152,8 +162,8 @@ export async function POST(req: Request) {
           prize: membership.tenant?.prize ?? 'Premio Sorpresa',
           instagram: membership.tenant?.instagram ?? '',
           requiredVisits: membership.tenant?.requiredVisits ?? 10,
-          rewardPeriod: membership.tenant?.rewardPeriod ?? 'OPEN',
-          logoData: membership.tenant?.logoData ?? '',
+          rewardPeriod: 'OPEN',
+          logoData: '',
           visits,
           points,
         };
