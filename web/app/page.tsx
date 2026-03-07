@@ -781,139 +781,152 @@ export default function Home() {
   };
 
   return prelaunchMode && !showClientPortal ? (
-    <main className="min-h-screen bg-[#080812] text-white relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-[#ff7a59]/20 via-transparent to-[#f90086]/10" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-br from-[#ff7a59]/30 via-[#ff3f8e]/20 to-transparent rounded-full blur-[120px] opacity-60" />
+    <main className="relative min-h-screen overflow-hidden bg-[#05050a] text-white">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(167,139,250,0.16),transparent_35%),radial-gradient(circle_at_80%_20%,rgba(255,122,89,0.16),transparent_34%),linear-gradient(180deg,#05050a_0%,#090915_45%,#05050a_100%)]" />
 
-      <nav className="relative z-20 mx-auto max-w-6xl px-6 py-6 flex items-center justify-between">
-        <div className="scale-100 sm:scale-110 origin-left"><BrandLogo animate={false} compact /></div>
-        <div className="flex items-center gap-3">
-          <Link href="/negocios" className="text-white/60 text-sm font-bold hover:text-white transition hidden sm:block">Para Negocios</Link>
-          <Link href="/clientes" className="bg-white/10 border border-white/20 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-white/20 transition">
-            Soy Cliente
-          </Link>
+      <nav className="relative z-20 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-7">
+        <div className="origin-left scale-105"><BrandLogo animate={false} compact /></div>
+        <div className="flex items-center gap-2">
+          <Link href="/negocios" className="hidden rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-bold text-white/80 transition hover:bg-white/10 sm:block">Para negocios</Link>
+          <Link href="/clientes" className="rounded-xl bg-white px-4 py-2 text-sm font-black text-[#111322] transition hover:bg-white/90">Soy cliente</Link>
         </div>
       </nav>
 
-      <section className="relative z-10 mx-auto max-w-6xl px-6 pt-8 md:pt-16 pb-12">
-        <div className="flex flex-col items-center text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-[#ff3f8e]/40 bg-[#ff3f8e]/15 px-4 py-1.5 text-[11px] font-black tracking-[0.2em] uppercase text-pink-200 mb-6">
-            <span className="w-2 h-2 rounded-full bg-[#ff3f8e] animate-pulse" />
-            Plataforma activa · Nuevos aliados cada semana
+      <section className="relative z-10 mx-auto grid w-full max-w-6xl gap-8 px-6 pb-10 pt-6 lg:grid-cols-[1.1fr,0.9fr] lg:items-start lg:pt-14">
+        <div>
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-white/80">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            Plataforma activa para PyMEs en México
           </span>
 
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black leading-[1.08] max-w-4xl tracking-tight">
-            Tus clientes regresan.
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#a855f7]">Tu negocio crece.</span>
+          <h1 className="mt-6 max-w-3xl text-4xl font-black leading-[1.02] tracking-tight text-white sm:text-5xl lg:text-7xl">
+            Convierte visitas aisladas
+            <span className="block bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#8b5cf6] bg-clip-text text-transparent">
+              en clientes frecuentes.
+            </span>
           </h1>
 
-          <p className="mt-6 max-w-2xl text-white/70 text-base md:text-lg font-medium leading-relaxed">
-            Punto IA es una plataforma activa de lealtad para PyMEs en México.
-            Activa pases Apple Wallet y Google Wallet, retos de gamification, push notifications y analítica para crecer visitas repetidas.
+          <p className="mt-6 max-w-xl text-base font-medium leading-relaxed text-white/70 sm:text-lg">
+            Punto IA unifica lealtad, wallet móvil y campañas automáticas en una sola plataforma. Tú operas simple y tus clientes regresan con más frecuencia.
           </p>
 
-          <div className="mt-8 flex flex-wrap gap-3 justify-center">
-            <a href="#registro" className="bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#a855f7] text-white font-black px-8 py-4 rounded-2xl shadow-[0_8px_32px_rgba(255,63,142,0.4)] hover:shadow-[0_12px_40px_rgba(255,63,142,0.5)] transition-all text-lg">
-              Activar negocio
+          <div className="mt-8 flex flex-wrap gap-3">
+            <a href="#registro" className="rounded-2xl bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#8b5cf6] px-7 py-3.5 text-sm font-black text-white shadow-[0_15px_45px_rgba(249,0,134,0.38)] transition hover:translate-y-[-1px] sm:text-base">
+              Solicitar demo y activación
             </a>
-            <Link href="/negocios" className="border border-white/25 bg-white/5 text-white font-bold px-6 py-4 rounded-2xl hover:bg-white/10 transition">
-              Ver solución negocio →
+            <Link href="/negocios" className="rounded-2xl border border-white/20 bg-white/5 px-6 py-3.5 text-sm font-bold text-white/90 transition hover:bg-white/10 sm:text-base">
+              Ver solución completa
             </Link>
           </div>
+
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            {[
+              { value: '24 hrs', label: 'respuesta comercial inicial' },
+              { value: '2-4 sem', label: 'para ver mejora de recurrencia' },
+              { value: 'Todo en 1', label: 'wallet, retos, campañas y analítica' },
+            ].map((item) => (
+              <div key={item.value} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <p className="text-xl font-black text-white">{item.value}</p>
+                <p className="mt-1 text-xs font-semibold leading-relaxed text-white/55">{item.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div id="registro" className="scroll-mt-24 rounded-[28px] border border-white/15 bg-[linear-gradient(180deg,rgba(255,255,255,0.12)_0%,rgba(255,255,255,0.04)_100%)] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur-xl sm:p-7">
+          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-white/60">Empieza ahora</p>
+          <h2 className="mt-3 text-2xl font-black leading-tight">Agenda tu onboarding de Punto IA</h2>
+          <p className="mt-2 text-sm font-medium leading-relaxed text-white/65">Te ayudamos a diseñar tu programa y activarlo sin fricción operativa.</p>
+
+          <div className="mt-5 space-y-2.5">
+            <input className="w-full rounded-xl border border-white/15 bg-white/95 p-3 text-sm font-semibold text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-pink-400" placeholder="Nombre del negocio" value={leadForm.businessName} onChange={(e) => handleLeadField('businessName', e.target.value)} />
+            <input className="w-full rounded-xl border border-white/15 bg-white/95 p-3 text-sm font-semibold text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-pink-400" placeholder="Tu nombre" value={leadForm.contactName} onChange={(e) => handleLeadField('contactName', e.target.value)} />
+            <div className="grid grid-cols-2 gap-2.5">
+              <input className="w-full rounded-xl border border-white/15 bg-white/95 p-3 text-sm font-semibold text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-pink-400" placeholder="Teléfono" value={leadForm.phone} onChange={(e) => handleLeadField('phone', e.target.value)} />
+              <input className="w-full rounded-xl border border-white/15 bg-white/95 p-3 text-sm font-semibold text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-pink-400" placeholder="Ciudad" value={leadForm.city} onChange={(e) => handleLeadField('city', e.target.value)} />
+            </div>
+            <input type="email" className="w-full rounded-xl border border-white/15 bg-white/95 p-3 text-sm font-semibold text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-pink-400" placeholder="Email" value={leadForm.email} onChange={(e) => handleLeadField('email', e.target.value)} />
+
+            <button onClick={submitLead} disabled={leadLoading} className="w-full rounded-xl bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#8b5cf6] py-3.5 text-sm font-black text-white shadow-lg transition hover:shadow-xl disabled:opacity-60">
+              {leadLoading ? 'Enviando...' : 'Quiero implementar Punto IA'}
+            </button>
+
+            {leadStatus && <p className="text-center text-sm font-semibold text-white/90">{leadStatus}</p>}
+          </div>
+
+          <p className="mt-3 text-center text-[11px] font-medium text-white/45">Sin compromiso · Respuesta en menos de 24 horas</p>
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-5xl px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <section className="relative z-10 mx-auto w-full max-w-6xl px-6 py-8">
+        <div className="grid gap-3 md:grid-cols-3">
           {[
-            { icon: '📱', title: 'Apple + Google Wallet', desc: 'Tus clientes guardan su pase desde iPhone o Android y lo usan en segundos.' },
-            { icon: '🎯', title: 'Retos gamificados', desc: 'Lanza dinámicas por visitas y metas para mantener la motivación activa.' },
-            { icon: '🔔', title: 'Push notifications', desc: 'Reactiva clientes con campañas, recordatorios y promociones segmentadas.' },
-          ].map((item) => (
-            <div key={item.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
-              <span className="text-3xl">{item.icon}</span>
-              <h3 className="mt-3 text-lg font-black">{item.title}</h3>
-              <p className="mt-2 text-white/60 text-sm font-medium leading-relaxed">{item.desc}</p>
-            </div>
+            {
+              title: 'Wallet listo para operar',
+              desc: 'Tus clientes guardan su pase digital desde iPhone o Android y registran visitas en segundos.',
+            },
+            {
+              title: 'Retención automatizada',
+              desc: 'Configura retos, beneficios y notificaciones para mantener el hábito de compra activo.',
+            },
+            {
+              title: 'Decisiones con datos',
+              desc: 'Mide visitas, canjes y recurrencia para ajustar campañas con claridad de negocio.',
+            },
+          ].map((item, idx) => (
+            <article key={item.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-sm">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-white/40">0{idx + 1}</p>
+              <h3 className="mt-3 text-lg font-black text-white">{item.title}</h3>
+              <p className="mt-2 text-sm font-medium leading-relaxed text-white/65">{item.desc}</p>
+            </article>
           ))}
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-6xl px-6 py-10">
-        <div className="grid gap-6 lg:grid-cols-[1.15fr,1fr]">
+      <section className="relative z-10 mx-auto w-full max-w-6xl px-6 py-8">
+        <div className="grid gap-6 rounded-[30px] border border-white/10 bg-white/[0.03] p-5 md:grid-cols-[1.05fr,0.95fr] md:p-7">
           <div>
-            <p className="text-[11px] font-black tracking-[0.2em] uppercase text-white/40 mb-3">Conoce Punto IA</p>
-            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 shadow-2xl">
-              <div className="aspect-video rounded-2xl bg-black/40 overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
-                <iframe
-                  className="h-full w-full"
-                  src="https://player.vimeo.com/video/1165202097?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479"
-                  title="Presentación Punto IA"
-                  allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  loading="lazy"
-                  allowFullScreen
-                />
-              </div>
-            </div>
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-white/45">Cómo se ve en la práctica</p>
+            <h2 className="mt-2 text-2xl font-black leading-tight text-white md:text-3xl">Una experiencia simple para cliente y poderosa para tu equipo.</h2>
+            <p className="mt-3 text-sm font-medium leading-relaxed text-white/65">Diseñamos una experiencia móvil limpia para que el cliente entienda el valor en segundos y vuelva con más intención de compra.</p>
 
-            <div className="mt-6 grid grid-cols-3 gap-3">
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {[
-                { num: '5x–7x', label: 'más rentable retener que adquirir nuevos' },
-                { num: '+40%', label: 'más recurrencia con programa de lealtad' },
-                { num: '4 sem', label: 'para crear un hábito de visita' },
-              ].map((s) => (
-                <div key={s.num} className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-center">
-                  <p className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e]">{s.num}</p>
-                  <p className="text-[10px] text-white/50 font-semibold mt-1 leading-tight">{s.label}</p>
+                'Alta de clientes con pase digital en wallet',
+                'Retos por visitas y consumo con recompensas claras',
+                'Push notifications para campañas oportunas',
+                'Panel operativo para seguimiento comercial',
+              ].map((bullet) => (
+                <div key={bullet} className="rounded-xl border border-white/10 bg-white/[0.02] px-3.5 py-3 text-sm font-semibold text-white/75">
+                  {bullet}
                 </div>
               ))}
             </div>
           </div>
 
-          <div id="registro" className="rounded-3xl border border-white/15 bg-gradient-to-b from-white/[0.08] to-white/[0.03] backdrop-blur-md p-6 shadow-2xl scroll-mt-24">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e] flex items-center justify-center text-lg">🚀</span>
-              <div>
-                <h2 className="text-xl font-black">Sé aliado fundador</h2>
-                <p className="text-xs text-white/60 font-semibold">Implementación guiada · Activación rápida</p>
-              </div>
+          <div className="rounded-2xl border border-white/10 bg-black/30 p-3 shadow-2xl">
+            <div className="aspect-video overflow-hidden rounded-xl bg-black/50">
+              <iframe
+                className="h-full w-full"
+                src="https://player.vimeo.com/video/1165202097?badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479"
+                title="Presentación Punto IA"
+                allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                loading="lazy"
+                allowFullScreen
+              />
             </div>
-
-            <div className="space-y-2.5">
-              <input className="w-full rounded-xl border border-white/15 bg-white/95 text-gray-900 p-3 text-sm font-semibold placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400 outline-none" placeholder="Nombre del negocio" value={leadForm.businessName} onChange={(e) => handleLeadField('businessName', e.target.value)} />
-              <input className="w-full rounded-xl border border-white/15 bg-white/95 text-gray-900 p-3 text-sm font-semibold placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400 outline-none" placeholder="Tu nombre" value={leadForm.contactName} onChange={(e) => handleLeadField('contactName', e.target.value)} />
-              <div className="grid grid-cols-2 gap-2.5">
-                <input className="w-full rounded-xl border border-white/15 bg-white/95 text-gray-900 p-3 text-sm font-semibold placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400 outline-none" placeholder="Teléfono" value={leadForm.phone} onChange={(e) => handleLeadField('phone', e.target.value)} />
-                <input className="w-full rounded-xl border border-white/15 bg-white/95 text-gray-900 p-3 text-sm font-semibold placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400 outline-none" placeholder="Ciudad" value={leadForm.city} onChange={(e) => handleLeadField('city', e.target.value)} />
-              </div>
-              <input type="email" className="w-full rounded-xl border border-white/15 bg-white/95 text-gray-900 p-3 text-sm font-semibold placeholder:text-gray-400 focus:ring-2 focus:ring-pink-400 outline-none" placeholder="Email" value={leadForm.email} onChange={(e) => handleLeadField('email', e.target.value)} />
-
-              <button onClick={submitLead} disabled={leadLoading} className="w-full bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#a855f7] text-white font-black py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-60 text-sm">
-                {leadLoading ? 'Enviando...' : 'Quiero implementar Punto IA →'}
-              </button>
-
-              {leadStatus && <p className="text-sm font-semibold text-center text-white/90">{leadStatus}</p>}
-            </div>
-
-            <p className="text-[10px] text-white/40 font-medium text-center mt-3">
-              Sin compromiso · Te contactamos en menos de 24 hrs
-            </p>
           </div>
         </div>
       </section>
 
-      <footer className="relative z-10 border-t border-white/10 mt-8">
-        <div className="mx-auto max-w-6xl px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="scale-[0.55] origin-left"><BrandLogo animate={false} compact /></div>
-            <p className="text-white/40 text-xs font-semibold">Coalición de PyMEs · Hecho en México 🇲🇽</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/negocios" className="text-white/40 text-xs font-bold hover:text-white/70 transition">Para Negocios</Link>
-            <Link href="/clientes" className="text-white/40 text-xs font-bold hover:text-white/70 transition">Soy Cliente</Link>
-            <Link href="/aliados" className="text-white/40 text-xs font-bold hover:text-white/70 transition">Aliados</Link>
+      <footer className="relative z-10 mt-10 border-t border-white/10">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-4 px-6 py-8 sm:flex-row sm:items-center">
+          <p className="text-xs font-semibold text-white/45">Punto IA · Tecnología de lealtad para PyMEs en México 🇲🇽</p>
+          <div className="flex items-center gap-4 text-xs font-bold text-white/55">
+            <Link href="/negocios" className="transition hover:text-white">Negocios</Link>
+            <Link href="/clientes" className="transition hover:text-white">Clientes</Link>
+            <Link href="/aliados" className="transition hover:text-white">Aliados</Link>
           </div>
         </div>
       </footer>
@@ -927,105 +940,80 @@ export default function Home() {
           animate={canAnim ? screenFx.animate : false}
           exit={canAnim ? screenFx.exit : false}
           transition={canAnim ? { ...spring } : undefined}
-          className={`min-h-screen ${glow} flex flex-col items-center p-6 text-white relative overflow-hidden`}
+          className="relative min-h-screen overflow-hidden bg-[#060711] px-5 pb-10 pt-8 text-white sm:px-6"
         >
           <motion.div
             aria-hidden
-            className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-white/12 blur-[80px]"
-            animate={canAnim ? { x: [0, 30, 0], y: [0, 20, 0] } : undefined}
-            transition={canAnim ? { duration: 8, repeat: Infinity } : undefined}
-          />
-          <motion.div
-            aria-hidden
-            className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-white/8 blur-[80px]"
-            animate={canAnim ? { x: [0, -25, 0], y: [0, -18, 0] } : undefined}
-            transition={canAnim ? { duration: 9, repeat: Infinity } : undefined}
-          />
-          <motion.div
-            aria-hidden
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-white/5 blur-[100px]"
+            className="absolute -top-36 left-1/2 h-80 w-[34rem] -translate-x-1/2 rounded-full bg-[#ff3f8e]/20 blur-[110px]"
+            animate={canAnim ? { opacity: [0.45, 0.65, 0.45] } : undefined}
+            transition={canAnim ? { duration: 7, repeat: Infinity } : undefined}
           />
 
-          <div className="w-full max-w-sm flex flex-col items-center pt-16 pb-12 relative">
-            <BrandLogo />
-
-            <motion.p
-              initial={canAnim ? { opacity: 0, y: 8 } : false}
-              animate={canAnim ? { opacity: 1, y: 0 } : false}
-              transition={canAnim ? { ...spring, delay: 0.15 } : undefined}
-              className="text-white/70 text-[13px] font-semibold text-center mt-4 mb-10 max-w-[300px] leading-relaxed"
-            >
-              Acumula puntos, completa retos y recibe premios reales en tus negocios favoritos.
-            </motion.p>
+          <section className="relative z-10 mx-auto w-full max-w-md">
+            <div className="flex flex-col items-center pt-8 text-center">
+              <BrandLogo compact />
+              <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white/75">
+                Experiencia cliente
+              </span>
+              <h1 className="mt-5 text-3xl font-black leading-tight tracking-tight text-white">Tu pase de lealtad en segundos.</h1>
+              <p className="mt-3 max-w-sm text-sm font-medium leading-relaxed text-white/65">
+                Guarda tu pase digital, acumula visitas y canjea recompensas reales sin apps complicadas.
+              </p>
+            </div>
 
             <motion.div
               initial={canAnim ? { opacity: 0, y: 10 } : false}
               animate={canAnim ? { opacity: 1, y: 0 } : false}
-              transition={canAnim ? { ...spring, delay: 0.2 } : undefined}
-              className="w-full space-y-3 mb-12"
+              transition={canAnim ? { ...spring, delay: 0.15 } : undefined}
+              className="mt-7 space-y-3"
             >
               <motion.button
-                whileTap={canAnim ? { scale: 0.97 } : undefined}
-                onClick={() => { setMessage(''); setView('LOGIN'); }}
-                className="relative w-full bg-white text-pink-600 py-4 rounded-2xl font-black text-base shadow-[0_6px_24px_rgba(0,0,0,0.15)] hover:bg-gray-50 transition-all overflow-hidden"
+                whileTap={canAnim ? { scale: 0.98 } : undefined}
+                onClick={() => { setMessage(''); setView('REGISTER'); }}
+                className="relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#8b5cf6] py-4 text-base font-black text-white shadow-[0_14px_32px_rgba(249,0,134,0.35)]"
               >
                 <Shine />
-                Iniciar Sesión
+                Crear cuenta y empezar
               </motion.button>
 
               <motion.button
-                whileTap={canAnim ? { scale: 0.97 } : undefined}
-                onClick={() => { setMessage(''); setView('REGISTER'); }}
-                className="w-full bg-white/10 border border-white/30 text-white py-4 rounded-2xl font-bold text-base hover:bg-white/15 transition-all"
+                whileTap={canAnim ? { scale: 0.98 } : undefined}
+                onClick={() => { setMessage(''); setView('LOGIN'); }}
+                className="w-full rounded-2xl border border-white/20 bg-white/5 py-4 text-base font-bold text-white transition hover:bg-white/10"
               >
-                Crear Cuenta Gratis
+                Ya tengo cuenta
               </motion.button>
             </motion.div>
 
-            <div className="w-full space-y-3 mb-12">
+            <div className="mt-7 grid gap-2.5">
               {[
-                { num: '1', title: 'Activa tu pase', desc: 'Regístrate y guarda tu pase en Apple Wallet o Google Wallet.' },
-                { num: '2', title: 'Suma y supera retos', desc: 'Escanea en cada visita, acumula progreso y desbloquea beneficios extra.' },
-                { num: '3', title: 'Recibe notificaciones útiles', desc: 'Entérate de campañas y premios con push notifications personalizadas.' },
+                { num: '01', title: 'Activa tu pase wallet', desc: 'Compatible con Apple Wallet y Google Wallet.' },
+                { num: '02', title: 'Acumula automáticamente', desc: 'Cada visita suma progreso en tu programa.' },
+                { num: '03', title: 'Canjea beneficios', desc: 'Solicita recompensas y usa tu código en tienda.' },
               ].map((step, i) => (
                 <motion.div
                   key={step.num}
-                  initial={canAnim ? { opacity: 0, x: -12 } : false}
-                  animate={canAnim ? { opacity: 1, x: 0 } : false}
-                  transition={canAnim ? { ...spring, delay: 0.35 + i * 0.1 } : undefined}
-                  className="flex items-center gap-4 bg-white/8 border border-white/15 rounded-2xl px-4 py-3.5 backdrop-blur-sm"
+                  initial={canAnim ? { opacity: 0, y: 8 } : false}
+                  animate={canAnim ? { opacity: 1, y: 0 } : false}
+                  transition={canAnim ? { ...spring, delay: 0.25 + i * 0.08 } : undefined}
+                  className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-3.5"
                 >
-                  <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#ff7a59] to-[#ff3f8e] flex items-center justify-center text-white text-sm font-black shrink-0 shadow-sm">
-                    {step.num}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-white text-[13px] font-black leading-tight">{step.title}</p>
-                    <p className="text-white/45 text-[11px] font-medium mt-0.5 leading-snug">{step.desc}</p>
+                  <span className="mt-0.5 rounded-lg bg-white/10 px-2 py-1 text-[10px] font-black tracking-[0.15em] text-white/70">{step.num}</span>
+                  <div>
+                    <p className="text-sm font-black text-white">{step.title}</p>
+                    <p className="mt-0.5 text-xs font-medium leading-relaxed text-white/60">{step.desc}</p>
                   </div>
                 </motion.div>
               ))}
             </div>
 
-            <motion.div
-              initial={canAnim ? { opacity: 0 } : false}
-              animate={canAnim ? { opacity: 1 } : false}
-              transition={canAnim ? { delay: 0.7 } : undefined}
-              className="flex flex-col items-center gap-5"
-            >
-              <div className="flex items-center gap-3 text-white/40 text-[11px] font-semibold">
-                <span className="h-px w-6 bg-white/15" />
-                Disponible en Apple Wallet y Google Wallet
-                <span className="h-px w-6 bg-white/15" />
-              </div>
-
-              <Link
-                href="/aliados"
-                className="text-white/50 text-[12px] font-bold hover:text-white/80 transition"
-              >
-                ¿Tienes negocio? <span className="underline underline-offset-2">Únete a Punto IA</span>
+            <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.03] p-4 text-center">
+              <p className="text-[11px] font-semibold text-white/65">Sin costo para clientes · Fácil de usar · En segundos</p>
+              <Link href="/aliados" className="mt-2 inline-block text-xs font-bold text-white/80 underline decoration-white/30 underline-offset-4 transition hover:text-white">
+                ¿Tienes negocio? Conoce Punto IA para PyMEs
               </Link>
-            </motion.div>
-          </div>
+            </div>
+          </section>
         </motion.div>
       )}
 
