@@ -2,6 +2,7 @@ import { prisma } from '@/app/lib/prisma';
 import { verifyPassword } from '@/app/lib/password';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { asTrimmedString, isStrongEnoughPassword, isValidPhone, parseJsonObject } from '@/app/lib/request-validation';
+import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
 
 
 export async function POST(request: Request) {
@@ -47,10 +48,19 @@ export async function POST(request: Request) {
       include: {
         memberships: {
           include: {
-            tenant: true,
+            tenant: {
+              select: {
+                name: true,
+              },
+            },
             visits: {
               take: 5,
               orderBy: { visitedAt: 'desc' },
+              select: {
+                id: true,
+                visitedAt: true,
+                tenantId: true,
+              },
             },
           },
         },
@@ -88,7 +98,23 @@ export async function POST(request: Request) {
     };
 
     return apiSuccess({ requestId, data: { success: true, data: profileData } });
-  } catch {
+  } catch (error: unknown) {
+    if (isMissingTableOrColumnError(error)) {
+      return apiSuccess({
+        requestId,
+        data: {
+          success: true,
+          data: {
+            name: '',
+            phone: '',
+            joinedAt: null,
+            memberships: [],
+          },
+          warning: 'Perfil parcial por sincronización de esquema',
+        },
+      });
+    }
+
     return apiError({
       requestId,
       status: 500,
