@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import {
+  BrandSpotlight,
   CtaPanel,
   FeatureCard,
   MarketingBackground,
@@ -7,114 +8,104 @@ import {
   MarketingHeader,
   Section,
   SectionBand,
-  StatCard,
   TrustStrip,
   buttonStyles,
 } from '../components/marketing/ui';
 import { Reveal, StaggerGrid, StaggerItem } from '../components/marketing/effects';
 
+const actions = [
+  {
+    title: 'Iniciar sesión',
+    description: 'Si ya tienes cuenta, entra con tu número para ver puntos y recompensas.',
+    href: '/ingresar?tipo=cliente',
+    cta: 'Entrar a mi cuenta',
+  },
+  {
+    title: 'Crear cuenta',
+    description: 'Si es tu primera vez, crea tu cuenta en minutos y guarda tu progreso.',
+    href: '/ingresar?tipo=cliente&modo=registro',
+    cta: 'Crear mi cuenta',
+  },
+  {
+    title: 'Activar pase',
+    description: 'Escanea el QR del negocio y activa tu pase para acumular desde hoy.',
+    href: '/activar-pase',
+    cta: 'Activar mi pase',
+  },
+];
+
 const flow = [
   {
     step: '1',
-    title: 'Activar mi pase',
-    description: 'Escaneas el QR del negocio y guardas tu pase en Apple Wallet o Google Wallet.',
+    title: 'Elige una acción',
+    description: 'Inicia sesión, crea cuenta o activa pase según tu situación.',
   },
   {
     step: '2',
-    title: 'Entrar a mi cuenta',
-    description: 'Inicias sesión con tu teléfono para revisar negocios, visitas, puntos y recompensas.',
+    title: 'Guarda tu pase',
+    description: 'Usa Apple Wallet o Google Wallet para tenerlo siempre a la mano.',
   },
   {
     step: '3',
-    title: 'Canjear recompensas',
-    description: 'Presentas tu pase en caja y validas tu premio en segundos.',
+    title: 'Acumula y canjea',
+    description: 'Muestra tu pase en caja para sumar visitas o canjear recompensas.',
   },
 ];
 
 const benefits = [
-  {
-    icon: '⚡',
-    title: 'Activación rápida',
-    description: 'Todo ocurre en minutos, sin instalar una app nueva.',
-  },
-  {
-    icon: '🎁',
-    title: 'Premios claros',
-    description: 'Ves cuánto te falta y qué recompensa puedes canjear.',
-  },
-  {
-    icon: '🔒',
-    title: 'Cuenta segura',
-    description: 'Tu historial queda guardado y lo recuperas al entrar con tu número.',
-  },
-  {
-    icon: '📍',
-    title: 'Beneficios locales',
-    description: 'Acumulas en tus negocios favoritos con una experiencia simple.',
-  },
+  { icon: '⚡', title: 'Sin app extra', description: 'Todo funciona desde tu celular y wallet.' },
+  { icon: '🎁', title: 'Premios claros', description: 'Sabes qué te falta y cuándo puedes canjear.' },
+  { icon: '🔒', title: 'Cuenta protegida', description: 'Tu historial queda guardado para volver cuando quieras.' },
+  { icon: '📍', title: 'Negocios locales', description: 'Aprovecha beneficios en lugares que sí frecuentas.' },
 ];
 
 export default function ClientesPage() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#fffaf8] text-[#231644]">
+    <main className="relative min-h-screen overflow-hidden bg-[#fffdfb] text-[#231644]">
       <MarketingBackground />
-      <MarketingHeader badge="Ruta para clientes" primaryCta={{ href: '/ingresar?tipo=cliente', label: 'Entrar a mi cuenta' }} />
+      <MarketingHeader badge="Ruta para clientes" primaryCta={{ href: '/activar-pase', label: 'Activar pase' }} />
 
-      <section className="relative mx-auto grid w-full max-w-7xl gap-10 px-6 pb-14 pt-10 lg:grid-cols-[1fr,1fr] lg:items-center">
+      <section className="relative mx-auto grid w-full max-w-7xl gap-6 px-6 pb-10 pt-10 md:pb-12 lg:grid-cols-[1.1fr,0.9fr] lg:items-center">
         <Reveal>
           <div>
             <p className="inline-flex rounded-full border border-[#e9def8] bg-white px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-[#7d69a5]">
-              Experiencia útil para cliente final
+              Ruta de clientes simplificada
             </p>
             <h1 className="mt-6 text-4xl font-black leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
-              Activa tu pase,
+              Todo claro desde el inicio:
               <span className="block bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#8b5cf6] bg-clip-text text-transparent">
-                entra a tu cuenta y gana recompensas.
+                entrar, crear cuenta o activar pase.
               </span>
             </h1>
-            <p className="mt-6 max-w-xl text-base leading-relaxed text-[#5f4e84] sm:text-lg">
-              Esta ruta responde solo lo importante: activar pase, entrar a tu cuenta y entender cómo funciona.
+            <p className="mt-6 max-w-3xl text-base leading-relaxed text-[#3f2d63] sm:text-lg">
+              Esta página elimina dudas. Solo te mostramos las tres acciones que importan para empezar y usar tus recompensas sin fricción.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/activar-pase" className={buttonStyles('primary')}>Activar mi pase</Link>
-              <Link href="/ingresar?tipo=cliente" className={buttonStyles('secondary')}>Entrar a mi cuenta</Link>
-              <Link href="#como-funciona" className={buttonStyles('tertiary')}>Ver cómo funciona</Link>
-            </div>
           </div>
         </Reveal>
-
         <Reveal delay={0.08}>
-          <div className="rounded-[2rem] border border-[#ebdef8] bg-white p-6 shadow-[0_18px_44px_rgba(95,56,148,0.12)] sm:p-7">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#8a74b3]">Tu cuenta en un vistazo</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <StatCard value="1 min" label="Para activar pase" />
-              <StatCard value="1 login" label="Para ver tu progreso" />
-              <StatCard value="Wallet" label="Para canjear en caja" />
-            </div>
-          </div>
+          <BrandSpotlight caption="Tu pase, tus recompensas y la marca en una experiencia visual más memorable y clara." />
         </Reveal>
       </section>
 
-      <Reveal><TrustStrip items={['CTA principal: Activar mi pase', 'CTA secundario: Entrar a mi cuenta', 'Flujo explicado sin contenido ambiguo']} /></Reveal>
+      <SectionBand>
+        <StaggerGrid className="grid gap-4 md:grid-cols-3">
+          {actions.map((action) => (
+            <StaggerItem key={action.title}>
+              <article className="rounded-3xl border border-[#ebdef8] bg-white p-6">
+                <h2 className="text-2xl font-black text-[#231644]">{action.title}</h2>
+                <p className="mt-3 text-sm leading-relaxed text-[#3f2d63]">{action.description}</p>
+                <Link href={action.href} className={`mt-6 ${buttonStyles('secondary')}`}>
+                  {action.cta}
+                </Link>
+              </article>
+            </StaggerItem>
+          ))}
+        </StaggerGrid>
+      </SectionBand>
 
-      <Reveal>
-        <SectionBand>
-          <div className="grid gap-5 lg:grid-cols-[1fr,1fr] lg:items-center">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#8a74b3]">Antes de empezar</p>
-              <h3 className="mt-3 text-2xl font-black md:text-3xl">¿No sabes por dónde entrar?</h3>
-              <p className="mt-4 text-sm leading-relaxed text-[#5f4e84]">Si ya tienes pase o cuenta, entra directo. Si no, activa tu pase primero desde el QR de tu negocio favorito.</p>
-            </div>
-            <div className="grid gap-3 text-sm text-[#5f4e84]">
-              <p className="rounded-xl border border-[#eadff8] bg-white p-4">• Si ya tienes cuenta: toca <strong>Entrar a mi cuenta</strong>.</p>
-              <p className="rounded-xl border border-[#eadff8] bg-white p-4">• Si aún no tienes pase: toca <strong>Activar mi pase</strong>.</p>
-              <p className="rounded-xl border border-[#eadff8] bg-white p-4">• Si quieres entender el flujo: baja a <strong>Cómo funciona</strong>.</p>
-            </div>
-          </div>
-        </SectionBand>
-      </Reveal>
+      <Reveal><TrustStrip items={['Acción 1: Iniciar sesión', 'Acción 2: Crear cuenta', 'Acción 3: Activar pase']} /></Reveal>
 
-      <Section id="como-funciona" eyebrow="Cómo funciona" title="Tres pasos, cero confusión" description="Tu objetivo se resuelve rápido: activar, entrar y canjear.">
+      <Section eyebrow="Cómo funciona" title="Tres pasos para usar tus recompensas" description="No necesitas aprender nada complejo.">
         <StaggerGrid className="grid gap-4 md:grid-cols-3">
           {flow.map((item) => (
             <StaggerItem key={item.step}>
@@ -128,7 +119,7 @@ export default function ClientesPage() {
         </StaggerGrid>
       </Section>
 
-      <Section eyebrow="Beneficios" title="Diseñado para usarse de verdad" description="Menos pasos y mejor claridad para que sí regreses y canjees.">
+      <Section eyebrow="Beneficios" title="Experiencia rápida y sin carga mental" description="Diseñado para que regreses más fácil a tus negocios favoritos.">
         <StaggerGrid className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {benefits.map((benefit) => (
             <StaggerItem key={benefit.title}><FeatureCard icon={benefit.icon} title={benefit.title} description={benefit.description} /></StaggerItem>
@@ -139,10 +130,10 @@ export default function ClientesPage() {
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-16 pt-2">
         <Reveal>
           <CtaPanel
-            title="¿Listo para empezar?"
-            description="Activa tu pase ahora o entra a tu cuenta si ya estás registrado."
-            primary={{ href: '/activar-pase', label: 'Activar mi pase' }}
-            secondary={{ href: '/ingresar?tipo=cliente', label: 'Entrar a mi cuenta' }}
+            title="¿Qué necesitas hacer ahora?"
+            description="Elige una acción y sigue. Si ya tienes cuenta, entra. Si no, crea tu cuenta o activa pase."
+            primary={{ href: '/ingresar?tipo=cliente', label: 'Iniciar sesión' }}
+            secondary={{ href: '/activar-pase', label: 'Activar pase' }}
           />
         </Reveal>
       </section>
