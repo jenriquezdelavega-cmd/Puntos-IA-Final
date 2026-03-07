@@ -36,48 +36,48 @@ function ActionLink({ href, className, children }: { href: string; className: st
 
 export function buttonStyles(variant: 'primary' | 'secondary' | 'tertiary' = 'primary') {
   if (variant === 'secondary') {
-    return 'inline-flex items-center justify-center rounded-xl border border-[#cdb5ed] bg-white px-5 py-3 text-sm font-black text-[#261747] transition hover:border-[#b48ee6] hover:bg-[#fff8ff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed]';
+    return 'inline-flex items-center justify-center rounded-xl border border-[#d8c0f3] bg-white px-5 py-3 text-sm font-semibold text-[#2a184f] transition hover:border-[#be9ce9] hover:bg-[#fef9ff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed]';
   }
 
   if (variant === 'tertiary') {
-    return 'inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-bold text-[#3e2a65] transition hover:bg-[#f4edff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed]';
+    return 'inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-[#4a3375] transition hover:bg-[#f6efff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7c3aed]';
   }
 
-  return 'inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#ff7c4a] via-[#ff3e84] to-[#7c3aed] px-5 py-3 text-sm font-black text-white shadow-[0_12px_26px_rgba(236,84,136,0.34)] transition hover:-translate-y-0.5 hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff7a59]';
+  return 'inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#ff8557] via-[#ff4a93] to-[#8754f4] px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_rgba(236,84,136,0.3)] transition hover:-translate-y-0.5 hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff7a59]';
 }
 
 export function BrandSpotlight({ caption }: { caption: string }) {
   return (
-    <div className="rounded-[1.7rem] border border-[#e3cff9] bg-[linear-gradient(145deg,#ffffff_0%,#fff8f3_38%,#f9f1ff_100%)] p-5 shadow-[0_20px_48px_rgba(75,44,132,0.14)]">
-      <div className="relative overflow-hidden rounded-2xl border border-white/90 bg-[#1f153a] px-6 py-5">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[#ff7c4a]/35 blur-2xl" />
-        <div className="pointer-events-none absolute -bottom-12 -left-10 h-36 w-36 rounded-full bg-[#8b5cf6]/35 blur-3xl" />
+    <div className="rounded-[1.7rem] border border-[#ead8fb] bg-[linear-gradient(145deg,#ffffff_0%,#fff8f2_45%,#f7efff_100%)] p-5 shadow-[0_20px_48px_rgba(75,44,132,0.12)]">
+      <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-[linear-gradient(120deg,#26164a_0%,#1c1138_55%,#2f1b59_100%)] px-6 py-6">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[#ff8e68]/36 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-12 -left-10 h-36 w-36 rounded-full bg-[#8b5cf6]/34 blur-3xl" />
         <Image src="/logo.png" alt="Punto IA" width={240} height={88} className="relative h-14 w-auto object-contain" />
       </div>
-      <p className="mt-4 text-sm font-bold text-[#342258]">{caption}</p>
+      <p className="mt-4 text-sm font-semibold text-[#3e2b67]">{caption}</p>
     </div>
   );
 }
 
 export function MarketingHeader({ badge = 'Lealtad digital para negocios y clientes', primaryCta }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-40 border-b border-[#3a2a63] bg-[#1f153a]/95 text-white backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-[#efdefe] bg-white/90 text-[#29184f] backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4">
         <Link href="/" className="flex items-center gap-3">
-          <span className="rounded-2xl border border-white/20 bg-white px-3 py-2 shadow-[0_8px_22px_rgba(91,52,157,0.24)]">
+          <span className="rounded-2xl border border-[#3b2668] bg-[linear-gradient(120deg,#2a184f_0%,#1e133b_55%,#3a2368_100%)] px-3 py-2 shadow-[0_10px_24px_rgba(53,30,95,0.32)]">
             <Image src="/logo.png" alt="Punto IA" width={200} height={76} className="h-8 w-auto object-contain sm:h-9" priority />
           </span>
-          <span className="hidden rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.15em] text-white/90 lg:inline-flex">
+          <span className="hidden rounded-full border border-[#ecdffb] bg-[#fff6fb] px-3 py-1 text-[10px] font-black uppercase tracking-[0.15em] text-[#6b4c9b] lg:inline-flex">
             {badge}
           </span>
         </Link>
 
-        <nav className="order-3 flex w-full items-center gap-1 overflow-x-auto rounded-full border border-white/20 bg-white/10 p-1 md:order-2 md:w-auto md:overflow-visible" aria-label="Navegación principal">
+        <nav className="order-3 flex w-full items-center gap-1 overflow-x-auto rounded-full border border-[#ecdffb] bg-white p-1 md:order-2 md:w-auto md:overflow-visible" aria-label="Navegación principal">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap text-white/90 transition hover:bg-white/20 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d9c5ff]"
+              className="rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap text-[#5a3f8c] transition hover:bg-[#f6eeff] hover:text-[#2d1a55] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d9c5ff]"
             >
               {item.label}
             </Link>
@@ -93,9 +93,9 @@ export function MarketingHeader({ badge = 'Lealtad digital para negocios y clien
 export function MarketingBackground() {
   return (
     <>
-      <div className="pointer-events-none absolute inset-0 bg-[#fffdfb]" />
-      <div className="marketing-gradient pointer-events-none absolute inset-0 opacity-95" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.75)_0%,rgba(255,250,246,0.86)_30%,#fffdfb_100%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[#fffdf9]" />
+      <div className="marketing-gradient pointer-events-none absolute inset-0 opacity-90" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.78)_0%,rgba(255,249,242,0.84)_34%,#fffdf9_100%)]" />
     </>
   );
 }
@@ -103,9 +103,9 @@ export function MarketingBackground() {
 export function TrustStrip({ items }: { items: string[] }) {
   return (
     <div className="relative mx-auto w-full max-w-7xl px-6">
-      <div className="grid gap-3 rounded-2xl border border-[#e7d7f6] bg-white p-4 text-center sm:grid-cols-3">
+      <div className="grid gap-3 rounded-2xl border border-[#ead8fb] bg-white/95 p-4 text-center shadow-[0_8px_20px_rgba(83,45,149,0.06)] sm:grid-cols-3">
         {items.map((item) => (
-          <p key={item} className="text-xs font-bold tracking-wide text-[#3f2c67] sm:text-sm">
+          <p key={item} className="text-xs font-semibold tracking-wide text-[#4a3577] sm:text-sm">
             {item}
           </p>
         ))}
@@ -142,7 +142,7 @@ export function Section({ id, eyebrow, title, description, children }: SectionPr
       <div className="max-w-3xl">
         {eyebrow ? <p className="text-xs font-black uppercase tracking-[0.2em] text-[#7a5aa8]">{eyebrow}</p> : null}
         <h2 className="mt-3 text-3xl font-black leading-tight tracking-tight text-[#20133f] md:text-5xl">{title}</h2>
-        {description ? <p className="mt-4 text-base leading-relaxed text-[#3f2d63] md:text-lg">{description}</p> : null}
+        {description ? <p className="mt-4 text-base leading-relaxed text-[#4a3577] md:text-lg">{description}</p> : null}
       </div>
       <div className="mt-8">{children}</div>
     </section>
@@ -152,7 +152,7 @@ export function Section({ id, eyebrow, title, description, children }: SectionPr
 export function SectionBand({ children }: { children: ReactNode }) {
   return (
     <section className="relative mx-auto w-full max-w-7xl px-6 py-8 md:py-10">
-      <div className="rounded-[2rem] border border-[#e6d5f7] bg-[#fffefc] p-6 shadow-[0_14px_32px_rgba(69,37,124,0.08)] md:p-8">{children}</div>
+      <div className="rounded-[2rem] border border-[#ead8fb] bg-[#fffefd] p-6 shadow-[0_14px_32px_rgba(69,37,124,0.07)] md:p-8">{children}</div>
     </section>
   );
 }
@@ -161,7 +161,7 @@ export function StatCard({ value, label }: { value: string; label: string }) {
   return (
     <article className="rounded-2xl border border-[#e8d8f6] bg-white p-5 transition hover:border-[#d3b9ef]">
       <p className="text-2xl font-black text-[#211440] md:text-3xl">{value}</p>
-      <p className="mt-2 text-sm font-bold leading-snug text-[#3f2d63]">{label}</p>
+      <p className="mt-2 text-sm font-semibold leading-snug text-[#4a3577]">{label}</p>
     </article>
   );
 }
@@ -171,16 +171,16 @@ export function FeatureCard({ title, description, icon }: { title: string; descr
     <article className="group rounded-3xl border border-[#e8d9f6] bg-white p-6 transition duration-300 hover:-translate-y-0.5 hover:border-[#cfb1ec]">
       <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f7f0ff] text-xl">{icon}</span>
       <h3 className="mt-5 text-xl font-black text-[#20133f]">{title}</h3>
-      <p className="mt-3 text-sm leading-relaxed text-[#47336d]">{description}</p>
+      <p className="mt-3 text-sm leading-relaxed text-[#4a3577]">{description}</p>
     </article>
   );
 }
 
 export function CtaPanel({ title, description, primary, secondary }: { title: string; description: string; primary: NavItem; secondary?: NavItem }) {
   return (
-    <div className="rounded-[2rem] border border-[#e4d2f6] bg-[linear-gradient(130deg,#fff6ee_0%,#fff8fd_42%,#f6f0ff_100%)] p-7 shadow-[0_18px_40px_rgba(124,58,237,0.1)] md:p-10">
+    <div className="rounded-[2rem] border border-[#ead8fb] bg-[linear-gradient(130deg,#fff7ef_0%,#fff8fd_45%,#f6f0ff_100%)] p-7 shadow-[0_18px_40px_rgba(124,58,237,0.09)] md:p-10">
       <h3 className="text-3xl font-black leading-tight text-[#211440] md:text-4xl">{title}</h3>
-      <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#3e2d64]">{description}</p>
+      <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#4a3577]">{description}</p>
       <div className="mt-7 flex flex-wrap gap-3">
         <ActionLink href={primary.href} className={buttonStyles('primary')}>
           {primary.label}
@@ -210,19 +210,19 @@ export function FaqBlock({ items }: { items: Array<{ question: string; answer: s
 
 export function MarketingFooter() {
   return (
-    <footer className="relative border-t border-[#e4d3f6] bg-[#fff8f2] text-[#281a4a]">
+    <footer className="relative border-t border-[#ead8fb] bg-[#fff9f3] text-[#281a4a]">
       <div className="mx-auto grid w-full max-w-7xl gap-10 px-6 py-12 md:grid-cols-[1.3fr,1fr,1fr]">
         <div>
-          <div className="inline-flex rounded-2xl border border-[#e8d8f6] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(69,37,124,0.08)]">
+          <div className="inline-flex rounded-2xl border border-[#3b2668] bg-[linear-gradient(120deg,#2a184f_0%,#1e133b_55%,#3a2368_100%)] px-4 py-3 shadow-[0_10px_24px_rgba(53,30,95,0.28)]">
             <Image src="/logo.png" alt="Punto IA" width={200} height={80} className="h-9 w-auto object-contain" />
           </div>
-          <p className="mt-4 max-w-md text-sm leading-relaxed text-[#3f2d63]">
+          <p className="mt-4 max-w-md text-sm leading-relaxed text-[#4a3577]">
             Plataforma de lealtad para PyMEs en México. Menos fricción para tu equipo y más recompra de tus clientes.
           </p>
         </div>
         <div>
           <p className="text-xs font-black uppercase tracking-[0.2em] text-[#715396]">Navegación</p>
-          <ul className="mt-4 space-y-2 text-sm text-[#3f2d63]">
+          <ul className="mt-4 space-y-2 text-sm text-[#4a3577]">
             {navItems.map((item) => (
               <li key={item.href}>
                 <Link href={item.href} className="transition hover:text-[#20133f]">
@@ -237,7 +237,7 @@ export function MarketingFooter() {
         </div>
         <div>
           <p className="text-xs font-black uppercase tracking-[0.2em] text-[#715396]">Contacto</p>
-          <ul className="mt-4 space-y-2 text-sm text-[#3f2d63]">
+          <ul className="mt-4 space-y-2 text-sm text-[#4a3577]">
             <li><a href="mailto:ventas@puntoia.mx" className="transition hover:text-[#20133f]">ventas@puntoia.mx</a></li>
             <li><Link href="/terminos-privacidad" className="transition hover:text-[#20133f]">Términos y privacidad</Link></li>
             <li>Implementación típica: 3 a 7 días hábiles.</li>
