@@ -207,7 +207,7 @@ export default function PassPage() {
   const goToPoints = () => {
     if (typeof window === 'undefined') return;
     if (pass?.customer_id) {
-      window.location.assign(`/pass?customer_id=${encodeURIComponent(pass.customer_id)}`);
+      window.location.assign('/clientes/app');
       return;
     }
     window.location.assign('/ingresar?tipo=cliente&modo=login');
