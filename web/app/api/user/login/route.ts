@@ -3,7 +3,14 @@ import { hashPassword, isHashedPassword, verifyPassword } from '@/app/lib/passwo
 import { generateUserSessionToken } from '@/app/lib/user-session-token';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
-import { isValidPhone, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import {
+  buildPhoneLookupCandidates,
+  isValidPhone,
+  normalizePhone,
+  parseJsonObject,
+  parseWithSchema,
+  requiredString,
+} from '@/app/lib/request-validation';
 
 
 export async function POST(req: Request) {
@@ -26,8 +33,8 @@ export async function POST(req: Request) {
       });
     }
 
-    const normalizedPhone = parsedBody.data.phone;
-    if (!isValidPhone(normalizedPhone)) {
+    const phoneInput = parsedBody.data.phone;
+    if (!isValidPhone(phoneInput)) {
       return apiError({
         requestId,
         status: 400,
@@ -35,6 +42,9 @@ export async function POST(req: Request) {
         message: 'Formato de teléfono inválido',
       });
     }
+
+    const normalizedPhone = normalizePhone(phoneInput);
+    const phoneCandidates = buildPhoneLookupCandidates(phoneInput);
 
     const rateLimit = checkRateLimit({
       key: buildRateLimitKey('user-login', req, normalizedPhone),
@@ -51,8 +61,25 @@ export async function POST(req: Request) {
       });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { phone: normalizedPhone },
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          {
+            phone: {
+              in: phoneCandidates,
+            },
+          },
+          ...(normalizedPhone
+            ? [
+                {
+                  phone: {
+                    endsWith: normalizedPhone,
+                  },
+                },
+              ]
+            : []),
+        ],
+      },
       include: {
         memberships: {
           include: { tenant: true },
@@ -67,6 +94,20 @@ export async function POST(req: Request) {
         code: 'UNAUTHORIZED',
         message: 'Usuario no existe',
       });
+    }
+
+    if (normalizedPhone && user.phone !== normalizedPhone) {
+      // Best effort: keep canonical phone format moving forward.
+      const existingCanonical = await prisma.user.findUnique({
+        where: { phone: normalizedPhone },
+        select: { id: true },
+      });
+      if (!existingCanonical || existingCanonical.id === user.id) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { phone: normalizedPhone },
+        });
+      }
     }
 
     if (typeof user.password === 'string' && user.password.length > 0) {

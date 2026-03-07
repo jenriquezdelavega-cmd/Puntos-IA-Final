@@ -202,7 +202,7 @@ export default function IngresarPage() {
                   value={phone}
                   onChange={(event) => setPhone(event.target.value)}
                   className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-4 py-3 text-sm focus:border-[#7c3aed] focus:outline-none"
-                  placeholder="Ejemplo: +5215512345678"
+                  placeholder="Ejemplo: 5512345678 (también acepta +52)"
                   required
                 />
                 <label className="text-sm font-semibold text-[#4e3b74]" htmlFor="password">Contraseña</label>
@@ -237,7 +237,7 @@ export default function IngresarPage() {
                   value={registerPhone}
                   onChange={(event) => setRegisterPhone(event.target.value)}
                   className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-4 py-3 text-sm focus:border-[#7c3aed] focus:outline-none"
-                  placeholder="Ejemplo: +5215512345678"
+                  placeholder="Ejemplo: 5512345678 (también acepta +52)"
                   required
                 />
                 <label className="text-sm font-semibold text-[#4e3b74]" htmlFor="register-email">Email (opcional)</label>

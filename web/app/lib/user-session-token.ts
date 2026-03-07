@@ -24,6 +24,15 @@ function getSessionSecret(): string {
   const shared = String(process.env.QR_TOKEN_SECRET || '').trim();
   if (shared) return shared;
 
+  const fromDatabaseUrl = String(process.env.DATABASE_URL || '').trim();
+  if (fromDatabaseUrl) {
+    // Local/dev fallback: keep tokens working when explicit secrets are missing.
+    return crypto.createHash('sha256').update(fromDatabaseUrl).digest('hex');
+  }
+
+  const fromMasterPassword = String(process.env.MASTER_PASSWORD || '').trim();
+  if (fromMasterPassword) return fromMasterPassword;
+
   throw new Error('USER_SESSION_SECRET o QR_TOKEN_SECRET requerido');
 }
 

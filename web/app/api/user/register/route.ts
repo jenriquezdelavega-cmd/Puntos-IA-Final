@@ -1,7 +1,18 @@
 import { prisma } from '@/app/lib/prisma';
 import { hashPassword } from '@/app/lib/password';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
-import { asTrimmedString, isStrongEnoughPassword, isValidPhone, normalizeGender, parseBirthDate, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import {
+  asTrimmedString,
+  buildPhoneLookupCandidates,
+  isStrongEnoughPassword,
+  isValidPhone,
+  normalizeGender,
+  normalizePhone,
+  parseBirthDate,
+  parseJsonObject,
+  parseWithSchema,
+  requiredString,
+} from '@/app/lib/request-validation';
 
 
 export async function POST(request: Request) {
@@ -38,6 +49,38 @@ export async function POST(request: Request) {
       });
     }
 
+    const normalizedPhone = normalizePhone(phone);
+    const phoneCandidates = buildPhoneLookupCandidates(phone);
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          {
+            phone: {
+              in: phoneCandidates,
+            },
+          },
+          ...(normalizedPhone
+            ? [
+                {
+                  phone: {
+                    endsWith: normalizedPhone,
+                  },
+                },
+              ]
+            : []),
+        ],
+      },
+      select: { id: true },
+    });
+    if (existingUser) {
+      return apiError({
+        requestId,
+        status: 409,
+        code: 'CONFLICT',
+        message: 'Teléfono ya registrado',
+      });
+    }
+
     if (!isStrongEnoughPassword(password)) {
       return apiError({
         requestId,
@@ -53,7 +96,7 @@ export async function POST(request: Request) {
     const newUser = await prisma.user.create({
       data: {
         name,
-        phone,
+        phone: normalizedPhone || phone,
         email: email || null,
         password: hashPassword(password),
         gender: cleanGender,

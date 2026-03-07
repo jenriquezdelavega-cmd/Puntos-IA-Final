@@ -6,6 +6,49 @@ export function isValidPhone(value: string) {
   return /^\+?[0-9\s()-]{8,20}$/.test(value);
 }
 
+export function normalizePhone(value: string) {
+  const raw = asTrimmedString(value);
+  if (!raw) return '';
+
+  const compact = raw.replace(/[\s()-]/g, '');
+  if (!compact) return '';
+
+  const withoutPlus = compact.startsWith('+') ? compact.slice(1) : compact;
+  if (!/^[0-9]+$/.test(withoutPlus)) {
+    return compact;
+  }
+
+  if (withoutPlus.length === 13 && withoutPlus.startsWith('521')) {
+    return withoutPlus.slice(3);
+  }
+
+  if (withoutPlus.length === 12 && withoutPlus.startsWith('52')) {
+    return withoutPlus.slice(2);
+  }
+
+  return withoutPlus;
+}
+
+export function buildPhoneLookupCandidates(value: string) {
+  const raw = asTrimmedString(value);
+  const compact = raw.replace(/[\s()-]/g, '');
+  const normalized = normalizePhone(value);
+  const candidates = new Set<string>();
+
+  if (raw) candidates.add(raw);
+  if (compact) candidates.add(compact);
+  if (normalized) candidates.add(normalized);
+
+  if (/^[0-9]+$/.test(normalized) && normalized.length === 10) {
+    candidates.add(`52${normalized}`);
+    candidates.add(`521${normalized}`);
+    candidates.add(`+52${normalized}`);
+    candidates.add(`+521${normalized}`);
+  }
+
+  return Array.from(candidates);
+}
+
 export function isStrongEnoughPassword(value: string) {
   return value.length >= 6;
 }
