@@ -18,6 +18,12 @@ type UserLoginResponse = {
   sessionToken?: string;
 };
 
+type ApiErrorResponse = {
+  ok?: false;
+  message?: string;
+  error?: string;
+};
+
 type CustomerMode = 'login' | 'registro';
 
 export default function IngresarPage() {
@@ -63,18 +69,20 @@ export default function IngresarPage() {
         body: JSON.stringify({ phone: payload.phone.trim(), password: payload.password?.trim() || undefined }),
       });
 
-      const body = (await response.json()) as { ok?: boolean; data?: UserLoginResponse; error?: { message?: string } };
+      const body = (await response.json()) as (UserLoginResponse & { ok?: true; message?: string; error?: string }) | ApiErrorResponse;
 
-      if (!response.ok || !body?.data) {
+      if (!response.ok || !body || !('id' in body)) {
         if (showError) {
-          setLoginMessage(body?.error?.message || 'No se pudo iniciar sesión. Verifica tus datos.');
+          setLoginMessage(body?.message || body?.error || 'No se pudo iniciar sesión. Verifica tus datos.');
         }
         return false;
       }
 
-      localStorage.setItem('punto_user', JSON.stringify(body.data));
-      const preferredBusiness = body.data.memberships?.[0]?.tenantId;
-      const destination = preferredBusiness ? `/pass?business_id=${encodeURIComponent(preferredBusiness)}` : '/activar-pase?from=acceso';
+      localStorage.setItem('punto_user', JSON.stringify(body));
+      const preferredBusiness = body.memberships?.[0]?.tenantId;
+      const destination = preferredBusiness
+        ? `/pass?customer_id=${encodeURIComponent(body.id)}&business_id=${encodeURIComponent(preferredBusiness)}`
+        : `/pass?customer_id=${encodeURIComponent(body.id)}`;
       window.location.assign(destination);
       return true;
     } catch {
@@ -113,9 +121,9 @@ export default function IngresarPage() {
         }),
       });
 
-      const body = (await response.json()) as { ok?: boolean; error?: { message?: string } };
+      const body = (await response.json()) as ApiErrorResponse;
       if (!response.ok) {
-        setRegisterMessage(body?.error?.message || 'No se pudo crear la cuenta. Revisa tus datos.');
+        setRegisterMessage(body?.message || body?.error || 'No se pudo crear la cuenta. Revisa tus datos.');
         return;
       }
 

@@ -30,11 +30,11 @@ function extractPassQuery() {
 }
 
 
-function passCacheKey(customerId: string, businessId: string) {
-  return `${PASS_CACHE_PREFIX}${customerId}:${businessId}`;
+function passCacheKey(customerId: string, businessId?: string) {
+  return `${PASS_CACHE_PREFIX}${customerId}:${businessId || '__none__'}`;
 }
 
-function readPassCache(customerId: string, businessId: string): PassResponse | null {
+function readPassCache(customerId: string, businessId?: string): PassResponse | null {
   if (typeof window === 'undefined') return null;
 
   try {
@@ -49,7 +49,7 @@ function readPassCache(customerId: string, businessId: string): PassResponse | n
   }
 }
 
-function writePassCache(customerId: string, businessId: string, data: PassResponse) {
+function writePassCache(customerId: string, businessId: string | undefined, data: PassResponse) {
   if (typeof window === 'undefined') return;
 
   try {
@@ -65,13 +65,13 @@ export default function PassPage() {
   const [pass, setPass] = useState<PassResponse | null>(null);
   const [sourceBusinessName, setSourceBusinessName] = useState('');
 
-  const loadPass = async (customerId: string, businessId: string, silent = false) => {
+  const loadPass = async (customerId: string, businessId?: string, silent = false) => {
     const cleanCustomerId = String(customerId || '').trim();
     const cleanBusinessId = String(businessId || '').trim();
 
-    if (!cleanCustomerId || !cleanBusinessId) {
+    if (!cleanCustomerId) {
       setPass(null);
-      setError('No se pudo identificar tu sesión o negocio. Vuelve a entrar desde la tarjeta del negocio en la app.');
+      setError('No se pudo identificar tu sesión. Inicia sesión nuevamente.');
       return;
     }
 
@@ -79,7 +79,8 @@ export default function PassPage() {
     setError('');
 
     try {
-      const res = await fetch(`/api/pass/${encodeURIComponent(cleanCustomerId)}?businessId=${encodeURIComponent(cleanBusinessId)}`);
+      const query = cleanBusinessId ? `?businessId=${encodeURIComponent(cleanBusinessId)}` : '';
+      const res = await fetch(`/api/pass/${encodeURIComponent(cleanCustomerId)}${query}`);
       const data = (await res.json()) as PassResponse | { error?: string };
       if (!res.ok) {
         setPass(null);
@@ -88,7 +89,7 @@ export default function PassPage() {
       }
       const passData = data as PassResponse;
       setPass(passData);
-      writePassCache(cleanCustomerId, cleanBusinessId, passData);
+      writePassCache(cleanCustomerId, cleanBusinessId || undefined, passData);
     } catch {
       setPass(null);
       setError('No se pudo cargar el pase');
@@ -101,13 +102,14 @@ export default function PassPage() {
     const query = extractPassQuery();
     setSourceBusinessName(query.from);
 
-    if (query.customerId && query.businessId) {
-      const cached = readPassCache(query.customerId, query.businessId);
+    if (query.customerId) {
+      const cacheKeyBusiness = query.businessId || undefined;
+      const cached = readPassCache(query.customerId, cacheKeyBusiness);
       if (cached) {
         setPass(cached);
-        void loadPass(query.customerId, query.businessId, true);
+        void loadPass(query.customerId, cacheKeyBusiness, true);
       } else {
-        void loadPass(query.customerId, query.businessId);
+        void loadPass(query.customerId, cacheKeyBusiness);
       }
       return;
     }
@@ -120,11 +122,11 @@ export default function PassPage() {
 
     try {
       const parsed = JSON.parse(storedUser) as { id?: string };
-      if (!parsed?.id || !query.businessId) {
-        setError('Abre tu pase desde la tarjeta de un negocio para aplicar branding y contador correctos.');
+      if (!parsed?.id) {
+        setError('No se pudo leer tu sesión. Inicia sesión de nuevo.');
         return;
       }
-      void loadPass(parsed.id, query.businessId);
+      void loadPass(parsed.id, query.businessId || undefined);
     } catch {
       setError('No se pudo leer tu sesión. Inicia sesión de nuevo.');
     }
@@ -204,7 +206,11 @@ export default function PassPage() {
   };
   const goToPoints = () => {
     if (typeof window === 'undefined') return;
-    window.location.assign('/?clientes=1');
+    if (pass?.customer_id) {
+      window.location.assign(`/pass?customer_id=${encodeURIComponent(pass.customer_id)}`);
+      return;
+    }
+    window.location.assign('/ingresar?tipo=cliente&modo=login');
   };
 
 
@@ -267,7 +273,7 @@ export default function PassPage() {
                 onClick={goToPoints}
                 className="w-full rounded-xl border border-indigo-200 bg-indigo-50 py-2.5 text-sm font-black text-indigo-700 hover:bg-indigo-100"
               >
-                ⬅️ Regresar a mi sección de puntos
+                ⬅️ Ir a mi área de cliente
               </button>
             </div>
           </div>
