@@ -4,6 +4,7 @@ import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant
 import { generateTenantSessionToken } from '@/app/lib/tenant-session-token';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
@@ -30,7 +31,28 @@ export async function POST(request: Request) {
 
     const user = await prisma.tenantUser.findUnique({
       where: { username },
-      include: { tenant: true },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        password: true,
+        tenant: {
+          select: {
+            id: true,
+            isActive: true,
+            name: true,
+            slug: true,
+            prize: true,
+            instagram: true,
+            lat: true,
+            lng: true,
+            address: true,
+            requiredVisits: true,
+            rewardPeriod: true,
+            logoData: true,
+          },
+        },
+      },
     });
 
     if (!user || !verifyPassword(password, user.password)) {
@@ -58,14 +80,20 @@ export async function POST(request: Request) {
       });
     }
 
-    const walletStyle = (await getTenantWalletStyle(user.tenant.id)) || defaultTenantWalletStyle(user.tenant.id);
-    const tenantSessionToken = generateTenantSessionToken({ tenantUserId: user.id, tenantId: user.tenant.id, role: user.role });
+    const normalizedRole = String(user.role || '').toUpperCase();
+    let walletStyle = defaultTenantWalletStyle(user.tenant.id);
+    try {
+      walletStyle = (await getTenantWalletStyle(user.tenant.id)) || walletStyle;
+    } catch (error: unknown) {
+      if (!isMissingTableOrColumnError(error)) throw error;
+    }
+    const tenantSessionToken = generateTenantSessionToken({ tenantUserId: user.id, tenantId: user.tenant.id, role: normalizedRole });
 
     return apiSuccess({
       requestId,
       data: {
         success: true,
-        user: { id: user.id, name: user.name, role: user.role },
+        user: { id: user.id, name: user.name, role: normalizedRole },
         tenantSessionToken,
         tenant: {
           id: user.tenant.id,
@@ -79,13 +107,13 @@ export async function POST(request: Request) {
           requiredVisits: user.tenant.requiredVisits,
           rewardPeriod: user.tenant.rewardPeriod,
           logoData: user.tenant.logoData,
-          coalitionOptIn: user.tenant.coalitionOptIn,
-          coalitionDiscountPercent: user.tenant.coalitionDiscountPercent,
-          coalitionProduct: user.tenant.coalitionProduct,
           walletBackgroundColor: walletStyle.backgroundColor,
           walletForegroundColor: walletStyle.foregroundColor,
           walletLabelColor: walletStyle.labelColor,
           walletStripImageData: walletStyle.stripImageData,
+          coalitionOptIn: null,
+          coalitionDiscountPercent: null,
+          coalitionProduct: '',
         },
       },
     });

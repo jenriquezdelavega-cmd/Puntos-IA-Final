@@ -28,7 +28,13 @@ function base64UrlDecode(value: string) {
 }
 
 function getPassSecret() {
-  return process.env.PASS_TOKEN_SECRET || process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET || 'dev-pass-secret-change-me';
+  return (
+    process.env.QR_TOKEN_SECRET
+    || process.env.PASS_TOKEN_SECRET
+    || process.env.NEXTAUTH_SECRET
+    || process.env.JWT_SECRET
+    || 'dev-pass-secret-change-me'
+  );
 }
 
 function signPart(part: string) {
@@ -50,7 +56,6 @@ export function generateCustomerPass(customerId: string): CustomerPassData {
   const encodedPayload = base64UrlEncode(JSON.stringify(payload));
   const signature = signPart(encodedPayload);
   const token = `${encodedPayload}.${signature}`;
-
   return {
     customerId: cleanCustomerId,
     token,

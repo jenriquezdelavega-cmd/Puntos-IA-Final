@@ -6,6 +6,16 @@ export type CustomerQrPayload = {
   v: 1;
 };
 
+function getCustomerQrSecret() {
+  return (
+    process.env.QR_TOKEN_SECRET
+    || process.env.PASS_TOKEN_SECRET
+    || process.env.NEXTAUTH_SECRET
+    || process.env.JWT_SECRET
+    || 'dev-pass-secret-change-me'
+  );
+}
+
 function b64url(value: string) {
   return Buffer.from(value, 'utf8').toString('base64url');
 }
@@ -21,8 +31,7 @@ export function generateCustomerToken(customerId: string) {
   };
 
   const encodedPayload = b64url(JSON.stringify(payload));
-  const secret = process.env.QR_TOKEN_SECRET;
-  if (!secret) throw new Error('QR_TOKEN_SECRET no configurado');
+  const secret = getCustomerQrSecret();
 
   const signature = createHmac('sha256', secret).update(encodedPayload).digest('base64url');
   return `${encodedPayload}.${signature}`;
@@ -35,8 +44,7 @@ export function verifyCustomerToken(token: string): CustomerQrPayload {
   const [encodedPayload, signature] = raw.split('.');
   if (!encodedPayload || !signature) throw new Error('token inválido');
 
-  const secret = process.env.QR_TOKEN_SECRET;
-  if (!secret) throw new Error('QR_TOKEN_SECRET no configurado');
+  const secret = getCustomerQrSecret();
 
   const expectedSignature = createHmac('sha256', secret).update(encodedPayload).digest('base64url');
   const provided = Buffer.from(signature);
