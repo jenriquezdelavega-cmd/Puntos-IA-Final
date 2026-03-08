@@ -4,6 +4,7 @@ import { prisma } from '@/app/lib/prisma';
 import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import { sendRedemptionValidatedEmail } from '@/app/lib/email';
 
 function accessStatusToCode(status: number): ApiErrorCode {
   if (status === 400) return 'BAD_REQUEST';
@@ -61,7 +62,22 @@ export async function POST(request: Request) {
 
     const redemption = await prisma.redemption.findFirst({
       where: { tenantId: access.tenantId, code, isUsed: false },
-      include: { user: true },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            email: true,
+          },
+        },
+        tenant: {
+          select: {
+            name: true,
+            prize: true,
+          },
+        },
+      },
     });
 
     if (!redemption) {
@@ -94,6 +110,22 @@ export async function POST(request: Request) {
       code,
       redemptionId: redemption.id,
     });
+
+    if (redemption.user.email) {
+      const emailResult = await sendRedemptionValidatedEmail({
+        to: redemption.user.email,
+        name: redemption.user.name,
+        businessName: redemption.tenant.name,
+        rewardName: redemption.tenant.prize,
+      });
+      if (!emailResult.ok) {
+        logApiEvent('/api/redeem/validate', 'redeem_confirmation_email_failed', {
+          tenantId: access.tenantId,
+          redemptionId: redemption.id,
+          reason: emailResult.error || 'unknown',
+        });
+      }
+    }
 
     return apiSuccess({
       requestId,

@@ -1,31 +1,385 @@
-export async function sendPasswordResetEmail(params: { to: string; resetUrl: string }): Promise<void> {
-  const apiKey = String(process.env.RESEND_API_KEY || '').trim();
-  const from = String(process.env.EMAIL_FROM || '').trim();
+import nodemailer from 'nodemailer';
+import { logApiError, logApiEvent } from '@/app/lib/api-log';
 
-  if (!apiKey || !from) {
-    console.info('[password-reset] Email provider no configurado. Link de recuperación:', params.resetUrl);
-    return;
+type MailPayload = {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+};
+
+export type EmailSendResult = {
+  ok: boolean;
+  skipped: boolean;
+  messageId?: string;
+  error?: string;
+};
+
+type SmtpConfig = {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  from: string;
+  replyTo?: string;
+};
+
+let cachedTransporter: nodemailer.Transporter | null = null;
+let verifyPromise: Promise<void> | null = null;
+
+function parseBoolean(value: string | undefined, fallback = false) {
+  if (!value) return fallback;
+  const normalized = value.trim().toLowerCase();
+  return normalized === 'true' || normalized === '1' || normalized === 'yes';
+}
+
+function maskEmail(email: string) {
+  const [name = '', domain = ''] = email.split('@');
+  if (!domain) return '***';
+  const visible = name.length <= 2 ? `${name[0] || '*'}*` : `${name.slice(0, 2)}***`;
+  return `${visible}@${domain}`;
+}
+
+function getSmtpConfig(): { config?: SmtpConfig; missing?: string[] } {
+  const host = String(process.env.SMTP_HOST || '').trim();
+  const rawPort = String(process.env.SMTP_PORT || '').trim();
+  const secure = parseBoolean(process.env.SMTP_SECURE, true);
+  const user = String(process.env.SMTP_USER || '').trim();
+  const pass = String(process.env.SMTP_PASS || '');
+  const from = String(process.env.EMAIL_FROM || '').trim();
+  const replyTo = String(process.env.EMAIL_REPLY_TO || '').trim();
+
+  const missing = [
+    !host ? 'SMTP_HOST' : '',
+    !rawPort ? 'SMTP_PORT' : '',
+    !user ? 'SMTP_USER' : '',
+    !pass ? 'SMTP_PASS' : '',
+    !from ? 'EMAIL_FROM' : '',
+  ].filter(Boolean);
+
+  if (missing.length > 0) {
+    return { missing };
   }
 
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
+  const parsedPort = Number(rawPort);
+  const port = Number.isFinite(parsedPort) ? parsedPort : secure ? 465 : 587;
+
+  return {
+    config: {
+      host,
+      port,
+      secure,
+      user,
+      pass,
       from,
-      to: [params.to],
-      subject: 'Recupera tu contraseña de Punto IA',
-      html: `<p>Recibimos una solicitud para recuperar tu contraseña.</p>
-<p>Haz clic aquí para continuar (expira en 30 minutos):</p>
-<p><a href="${params.resetUrl}">${params.resetUrl}</a></p>
-<p>Si tú no hiciste esta solicitud, ignora este mensaje.</p>`,
-    }),
+      replyTo: replyTo || undefined,
+    },
+  };
+}
+
+function getTransporter(config: SmtpConfig) {
+  if (!cachedTransporter) {
+    cachedTransporter = nodemailer.createTransport({
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 15_000,
+      auth: {
+        user: config.user,
+        pass: config.pass,
+      },
+    });
+  }
+
+  if (!verifyPromise) {
+    verifyPromise = cachedTransporter.verify().then(() => {
+      logApiEvent('/lib/email', 'smtp_verified', {
+        host: config.host,
+        port: config.port,
+        secure: config.secure,
+      });
+    }).catch((error: unknown) => {
+      verifyPromise = null;
+      throw error;
+    });
+  }
+
+  return { transporter: cachedTransporter, ready: verifyPromise };
+}
+
+export function isEmailConfigured() {
+  const { config } = getSmtpConfig();
+  return Boolean(config);
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getPublicBaseUrl() {
+  return String(process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '').trim().replace(/\/$/, '');
+}
+
+function renderBrandedEmailTemplate(input: {
+  preheader: string;
+  title: string;
+  greeting: string;
+  paragraphs: string[];
+  ctaLabel?: string;
+  ctaUrl?: string;
+  helperText?: string;
+}) {
+  const brandUrl = getPublicBaseUrl();
+  const logoUrl = brandUrl ? `${brandUrl}/logo.png` : '';
+  const title = escapeHtml(input.title);
+  const greeting = escapeHtml(input.greeting);
+  const preheader = escapeHtml(input.preheader);
+  const paragraphs = input.paragraphs.map((line) => `<p style="margin:0 0 14px;color:#4c3a74;line-height:1.6;font-size:15px;">${escapeHtml(line)}</p>`).join('');
+  const helperText = input.helperText ? `<p style="margin:16px 0 0;color:#7a68a3;line-height:1.5;font-size:13px;">${escapeHtml(input.helperText)}</p>` : '';
+  const cta = input.ctaLabel && input.ctaUrl
+    ? `<a href="${escapeHtml(input.ctaUrl)}" style="display:inline-block;background:linear-gradient(90deg,#ff8560 0%,#ff5e91 52%,#8a60f6 100%);color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:12px;font-weight:700;font-size:14px;">${escapeHtml(input.ctaLabel)}</a>`
+    : '';
+
+  return `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${title}</title>
+  </head>
+  <body style="margin:0;background:#fffaf4;font-family:Inter,Arial,Helvetica,sans-serif;color:#26184b;">
+    <div style="display:none;visibility:hidden;opacity:0;height:0;overflow:hidden;">${preheader}</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fffaf4;padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;background:#ffffff;border:1px solid #eadcf8;border-radius:18px;overflow:hidden;">
+            <tr>
+              <td style="padding:20px 24px;background:linear-gradient(135deg,#fff8ef 0%,#fff8ff 48%,#f4ecff 100%);border-bottom:1px solid #eadcf8;">
+                ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Punto IA" style="height:34px;width:auto;display:block;" />` : '<p style="margin:0;font-size:22px;font-weight:800;color:#2b1b51;">Punto IA</p>'}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:26px 24px 22px;">
+                <h1 style="margin:0 0 14px;font-size:28px;line-height:1.2;color:#26184b;">${title}</h1>
+                <p style="margin:0 0 16px;color:#3f2f66;line-height:1.6;font-size:15px;">${greeting}</p>
+                ${paragraphs}
+                ${cta ? `<div style="margin:20px 0 10px;">${cta}</div>` : ''}
+                ${helperText}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 24px;border-top:1px solid #f0e6fd;background:#fffcf8;">
+                <p style="margin:0;color:#7a68a3;font-size:12px;line-height:1.5;">Punto IA · Lealtad digital para PyMEs en México</p>
+                <p style="margin:6px 0 0;color:#7a68a3;font-size:12px;line-height:1.5;">¿Necesitas ayuda? Escríbenos a <a href="mailto:contacto@puntoia.mx" style="color:#6e4ab0;">contacto@puntoia.mx</a></p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+export async function sendTransactionalEmail(payload: MailPayload): Promise<EmailSendResult> {
+  const { config, missing } = getSmtpConfig();
+
+  if (!config) {
+    logApiEvent('/lib/email', 'smtp_not_configured', {
+      missing,
+      to: maskEmail(payload.to),
+      subject: payload.subject,
+    });
+    return { ok: true, skipped: true };
+  }
+
+  try {
+    const { transporter, ready } = getTransporter(config);
+    await ready;
+
+    const info = await transporter.sendMail({
+      from: config.from,
+      replyTo: config.replyTo,
+      to: payload.to,
+      subject: payload.subject,
+      text: payload.text,
+      html: payload.html,
+    });
+
+    logApiEvent('/lib/email', 'email_sent', {
+      to: maskEmail(payload.to),
+      subject: payload.subject,
+      messageId: info.messageId,
+    });
+
+    return { ok: true, skipped: false, messageId: info.messageId };
+  } catch (error: unknown) {
+    logApiError('/lib/email', error, {
+      to: maskEmail(payload.to),
+      subject: payload.subject,
+    });
+    return {
+      ok: false,
+      skipped: false,
+      error: error instanceof Error ? error.message : 'SMTP_ERROR',
+    };
+  }
+}
+
+export async function sendPasswordResetEmail(params: { to: string; resetUrl: string; name?: string | null }) {
+  const displayName = params.name?.trim() || 'cliente';
+  const subject = 'Recupera tu contraseña de Punto IA';
+  const text = [
+    `Hola ${displayName},`,
+    '',
+    'Recibimos una solicitud para recuperar tu contraseña.',
+    'Haz clic en el siguiente enlace (expira en 30 minutos):',
+    params.resetUrl,
+    '',
+    'Si no hiciste esta solicitud, puedes ignorar este mensaje.',
+  ].join('\n');
+
+  const html = renderBrandedEmailTemplate({
+    preheader: 'Solicitud para recuperar contraseña',
+    title: 'Recupera tu contraseña',
+    greeting: `Hola ${displayName},`,
+    paragraphs: [
+      'Recibimos una solicitud para recuperar tu contraseña.',
+      'Por seguridad, este enlace expira en 30 minutos.',
+    ],
+    ctaLabel: 'Restablecer contraseña',
+    ctaUrl: params.resetUrl,
+    helperText: 'Si tú no hiciste esta solicitud, puedes ignorar este mensaje.',
   });
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`No se pudo enviar email (${response.status}): ${text}`);
-  }
+  return sendTransactionalEmail({ to: params.to, subject, text, html });
+}
+
+export async function sendPasswordResetSuccessEmail(params: { to: string; name?: string | null }) {
+  const displayName = params.name?.trim() || 'cliente';
+  const subject = 'Tu contraseña de Punto IA fue actualizada';
+  const text = [
+    `Hola ${displayName},`,
+    '',
+    'Tu contraseña fue actualizada correctamente.',
+    'Ya puedes iniciar sesión con tu nueva contraseña.',
+    '',
+    'Si no reconoces este cambio, contáctanos de inmediato en contacto@puntoia.mx.',
+  ].join('\n');
+
+  const html = renderBrandedEmailTemplate({
+    preheader: 'Confirmación de cambio de contraseña',
+    title: 'Contraseña actualizada',
+    greeting: `Hola ${displayName},`,
+    paragraphs: [
+      'Tu contraseña fue actualizada correctamente.',
+      'Ya puedes iniciar sesión con tu nueva contraseña.',
+    ],
+    ctaLabel: 'Iniciar sesión',
+    ctaUrl: `${getPublicBaseUrl() || 'https://puntoia.mx'}/ingresar?tipo=cliente&modo=login`,
+    helperText: 'Si no reconoces este cambio, contáctanos de inmediato en contacto@puntoia.mx.',
+  });
+
+  return sendTransactionalEmail({ to: params.to, subject, text, html });
+}
+
+export async function sendWelcomeEmail(params: { to: string; name?: string | null }) {
+  const displayName = params.name?.trim() || 'cliente';
+  const subject = 'Tu cuenta de Punto IA ya está lista';
+  const text = [
+    `Hola ${displayName},`,
+    '',
+    'Tu cuenta fue creada correctamente.',
+    'Ya puedes iniciar sesión y empezar a acumular recompensas con Punto IA.',
+    '',
+    'Si estás en tienda, también puedes activar tu pase para comenzar de inmediato.',
+  ].join('\n');
+
+  const html = renderBrandedEmailTemplate({
+    preheader: 'Tu cuenta en Punto IA está lista',
+    title: 'Bienvenido a Punto IA',
+    greeting: `Hola ${displayName},`,
+    paragraphs: [
+      'Tu cuenta fue creada correctamente.',
+      'Ya puedes iniciar sesión y empezar a acumular recompensas con Punto IA.',
+      'Si estás en tienda, también puedes activar tu pase para comenzar de inmediato.',
+    ],
+    ctaLabel: 'Entrar a mi cuenta',
+    ctaUrl: `${getPublicBaseUrl() || 'https://puntoia.mx'}/ingresar?tipo=cliente&modo=login`,
+  });
+
+  return sendTransactionalEmail({ to: params.to, subject, text, html });
+}
+
+export async function sendRedemptionRequestedEmail(params: {
+  to: string;
+  name?: string | null;
+  businessName: string;
+  code: string;
+}) {
+  const displayName = params.name?.trim() || 'cliente';
+  const subject = 'Tu código de canje está listo';
+  const text = [
+    `Hola ${displayName},`,
+    '',
+    `Tu código de canje para ${params.businessName} es: ${params.code}`,
+    'Muéstralo en caja para validar tu premio.',
+  ].join('\n');
+
+  const html = renderBrandedEmailTemplate({
+    preheader: 'Tu código de canje está listo',
+    title: 'Código de canje generado',
+    greeting: `Hola ${displayName},`,
+    paragraphs: [
+      `Tu código de canje para ${params.businessName} es: ${params.code}`,
+      'Muéstralo en caja para validar tu premio.',
+    ],
+    ctaLabel: 'Ver mi cuenta',
+    ctaUrl: `${getPublicBaseUrl() || 'https://puntoia.mx'}/clientes/app`,
+    helperText: 'Comparte el código solo en caja al momento del canje.',
+  });
+
+  return sendTransactionalEmail({ to: params.to, subject, text, html });
+}
+
+export async function sendRedemptionValidatedEmail(params: {
+  to: string;
+  name?: string | null;
+  businessName: string;
+  rewardName?: string | null;
+}) {
+  const displayName = params.name?.trim() || 'cliente';
+  const rewardText = params.rewardName?.trim() ? `Premio aplicado: ${params.rewardName}.` : 'Tu premio fue aplicado correctamente.';
+  const subject = 'Canje confirmado en Punto IA';
+  const text = [
+    `Hola ${displayName},`,
+    '',
+    `Tu canje en ${params.businessName} fue validado.`,
+    rewardText,
+    '',
+    'Gracias por seguir acumulando con Punto IA.',
+  ].join('\n');
+
+  const html = renderBrandedEmailTemplate({
+    preheader: 'Confirmación de canje validado',
+    title: 'Canje confirmado',
+    greeting: `Hola ${displayName},`,
+    paragraphs: [
+      `Tu canje en ${params.businessName} fue validado.`,
+      rewardText,
+      'Gracias por seguir acumulando con Punto IA.',
+    ],
+    ctaLabel: 'Revisar mi progreso',
+    ctaUrl: `${getPublicBaseUrl() || 'https://puntoia.mx'}/clientes/app`,
+  });
+
+  return sendTransactionalEmail({ to: params.to, subject, text, html });
 }

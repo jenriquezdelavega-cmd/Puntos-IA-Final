@@ -3,6 +3,8 @@ import { hashPassword } from '@/app/lib/password';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { parseJsonObject, parseWithSchema, requiredString, isStrongEnoughPassword } from '@/app/lib/request-validation';
 import { hashPasswordResetToken } from '@/app/lib/password-reset';
+import { sendPasswordResetSuccessEmail } from '@/app/lib/email';
+import { logApiEvent } from '@/app/lib/api-log';
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
@@ -56,6 +58,19 @@ export async function POST(request: Request) {
         },
       }),
     ]);
+
+    if (resetToken.user.email) {
+      const emailResult = await sendPasswordResetSuccessEmail({
+        to: resetToken.user.email,
+        name: resetToken.user.name,
+      });
+      if (!emailResult.ok) {
+        logApiEvent('/api/user/password/reset', 'password_reset_confirmation_failed', {
+          userId: resetToken.userId,
+          reason: emailResult.error || 'unknown',
+        });
+      }
+    }
 
     return apiSuccess({ requestId, data: { message: 'Contraseña actualizada correctamente.' } });
   } catch (error: unknown) {

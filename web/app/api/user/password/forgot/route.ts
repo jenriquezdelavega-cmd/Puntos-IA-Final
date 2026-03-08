@@ -4,6 +4,7 @@ import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 import { generatePasswordResetToken, getPasswordResetExpiryDate, hashPasswordResetToken } from '@/app/lib/password-reset';
 import { sendPasswordResetEmail } from '@/app/lib/email';
+import { logApiEvent } from '@/app/lib/api-log';
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -63,7 +64,13 @@ export async function POST(request: Request) {
       const baseUrl = String(process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '').trim();
       if (baseUrl) {
         const resetUrl = `${baseUrl.replace(/\/$/, '')}/recuperar?token=${encodeURIComponent(rawToken)}`;
-        await sendPasswordResetEmail({ to: email, resetUrl });
+        const emailResult = await sendPasswordResetEmail({ to: email, resetUrl, name: user.name });
+        if (!emailResult.ok) {
+          logApiEvent('/api/user/password/forgot', 'password_reset_email_failed', {
+            userId: user.id,
+            reason: emailResult.error || 'unknown',
+          });
+        }
       } else {
         console.info('[password-reset] PUBLIC_BASE_URL no configurado. No se envió email.');
       }
