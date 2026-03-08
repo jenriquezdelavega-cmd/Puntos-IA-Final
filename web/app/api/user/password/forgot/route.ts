@@ -46,6 +46,7 @@ export async function POST(request: Request) {
     }
 
     const user = await prisma.user.findFirst({ where: { email } });
+    let emailDelivery: 'sent' | 'not_configured' | 'failed' | 'accepted' = 'accepted';
 
     if (user) {
       await prisma.passwordResetToken.deleteMany({ where: { userId: user.id, usedAt: null } });
@@ -61,18 +62,24 @@ export async function POST(request: Request) {
         },
       });
 
-      const baseUrl = String(process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '').trim();
-      if (baseUrl) {
-        const resetUrl = `${baseUrl.replace(/\/$/, '')}/recuperar?token=${encodeURIComponent(rawToken)}`;
-        const emailResult = await sendPasswordResetEmail({ to: email, resetUrl, name: user.name });
-        if (!emailResult.ok) {
-          logApiEvent('/api/user/password/forgot', 'password_reset_email_failed', {
-            userId: user.id,
-            reason: emailResult.error || 'unknown',
-          });
-        }
+      const configuredBaseUrl = String(process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '').trim();
+      const fallbackBaseUrl = new URL(request.url).origin;
+      const baseUrl = (configuredBaseUrl || fallbackBaseUrl).replace(/\/$/, '');
+      const resetUrl = `${baseUrl}/recuperar?token=${encodeURIComponent(rawToken)}`;
+      const emailResult = await sendPasswordResetEmail({ to: email, resetUrl, name: user.name });
+      if (!emailResult.ok) {
+        emailDelivery = 'failed';
+        logApiEvent('/api/user/password/forgot', 'password_reset_email_failed', {
+          userId: user.id,
+          reason: emailResult.error || 'unknown',
+        });
+      } else if (emailResult.skipped) {
+        emailDelivery = 'not_configured';
+        logApiEvent('/api/user/password/forgot', 'password_reset_email_skipped', {
+          userId: user.id,
+        });
       } else {
-        console.info('[password-reset] PUBLIC_BASE_URL no configurado. No se envió email.');
+        emailDelivery = 'sent';
       }
     }
 
@@ -80,6 +87,7 @@ export async function POST(request: Request) {
       requestId,
       data: {
         message: 'Si el correo existe en Punto IA, te enviamos instrucciones para recuperar tu contraseña.',
+        emailDelivery,
       },
     });
   } catch (error: unknown) {
