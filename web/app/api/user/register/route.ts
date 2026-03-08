@@ -13,6 +13,8 @@ import {
   parseWithSchema,
   requiredString,
 } from '@/app/lib/request-validation';
+import { sendWelcomeEmail } from '@/app/lib/email';
+import { logApiEvent } from '@/app/lib/api-log';
 
 
 export async function POST(request: Request) {
@@ -103,6 +105,16 @@ export async function POST(request: Request) {
         birthDate: finalDate,
       },
     });
+
+    if (newUser.email) {
+      const emailResult = await sendWelcomeEmail({ to: newUser.email, name: newUser.name });
+      if (!emailResult.ok) {
+        logApiEvent('/api/user/register', 'welcome_email_failed', {
+          userId: newUser.id,
+          reason: emailResult.error || 'unknown',
+        });
+      }
+    }
 
     return apiSuccess({ requestId, data: { id: newUser.id, name: newUser.name } });
   } catch (error: unknown) {

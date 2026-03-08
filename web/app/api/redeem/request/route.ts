@@ -8,6 +8,7 @@ import { verifyUserSessionToken } from '@/app/lib/user-session-token';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 import { syncGoogleLoyaltyObjectForCustomer } from '@/app/lib/google-wallet-object-sync';
+import { sendRedemptionRequestedEmail } from '@/app/lib/email';
 const TZ = 'America/Monterrey';
 
 function tzParts(d: Date) {
@@ -94,7 +95,16 @@ export async function POST(request: Request) {
       });
     }
 
-    const tenant = await prisma.tenant.findUnique({ where: { id: normalizedTenantId } });
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: normalizedTenantId },
+      select: {
+        id: true,
+        name: true,
+        prize: true,
+        requiredVisits: true,
+        rewardPeriod: true,
+      },
+    });
     if (!tenant) {
       logApiEvent('/api/redeem/request', 'tenant_not_found', { tenantId: normalizedTenantId });
       return apiError({
@@ -179,6 +189,29 @@ export async function POST(request: Request) {
       tenantId: normalizedTenantId,
       code,
     });
+
+    try {
+      const customer = await prisma.user.findUnique({
+        where: { id: normalizedUserId },
+        select: { email: true, name: true },
+      });
+      if (customer?.email) {
+        const emailResult = await sendRedemptionRequestedEmail({
+          to: customer.email,
+          name: customer.name,
+          businessName: tenant.name,
+          code,
+        });
+        if (!emailResult.ok) {
+          logApiEvent('/api/redeem/request', 'redeem_request_email_failed', {
+            userId: normalizedUserId,
+            reason: emailResult.error || 'unknown',
+          });
+        }
+      }
+    } catch (emailError: unknown) {
+      logApiError('/api/redeem/request#email', emailError);
+    }
 
     try {
       const serialNumber = walletSerialNumber(normalizedUserId, normalizedTenantId);
