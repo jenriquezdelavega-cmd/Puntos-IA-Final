@@ -2,6 +2,7 @@ import { prisma } from '@/app/lib/prisma';
 import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { apiError, apiSuccess, type ApiErrorCode, getRequestId } from '@/app/lib/api-response';
 import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
 
 function accessStatusToCode(status: number): ApiErrorCode {
   if (status === 400) return 'BAD_REQUEST';
@@ -11,19 +12,24 @@ function accessStatusToCode(status: number): ApiErrorCode {
   return 'INTERNAL_ERROR';
 }
 
+type VisitRow = {
+  id: string;
+  visitedAt: Date;
+  visitDay: string;
+  userId: string;
+  purchaseAmount: number;
+  purchaseTracked: boolean;
+};
+
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
 
   try {
     const body = await parseJsonObject(request);
     if (!body) {
-      return apiError({
-        requestId,
-        status: 400,
-        code: 'BAD_REQUEST',
-        message: 'JSON inválido',
-      });
+      return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'JSON inválido' });
     }
+
     const parsedBody = parseWithSchema(body, {
       tenantId: requiredString,
       tenantUserId: requiredString,
@@ -49,81 +55,240 @@ export async function POST(request: Request) {
       });
     }
 
-    const visits = await prisma.visit.findMany({
-      where: { membership: { tenantId: access.tenantId } },
-      orderBy: { visitedAt: 'asc' },
-      include: { membership: { select: { userId: true } } },
-    });
+    const now = new Date();
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+    const weekStart = new Date(startOfToday);
+    weekStart.setDate(weekStart.getDate() - 6);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const chartStart = new Date(startOfToday);
+    chartStart.setDate(chartStart.getDate() - 29);
 
-    const visitsByDate: Record<string, number> = {};
-    visits.forEach((visit) => {
-      const date = visit.visitedAt.toISOString().split('T')[0];
-      visitsByDate[date] = (visitsByDate[date] || 0) + 1;
-    });
-
-    const chartData = Object.keys(visitsByDate).map((date) => ({ date, count: visitsByDate[date] }));
-
-    const totalRevenue = visits.reduce((sum, visit) => sum + Number(visit.purchaseAmount || 0), 0);
-    const visitsWithPurchase = visits.filter((visit) => Number(visit.purchaseAmount || 0) > 0).length;
-    const avgTicket = visitsWithPurchase > 0 ? totalRevenue / visitsWithPurchase : 0;
-
-    const revenueByUser = new Map<string, number>();
-    visits.forEach((visit) => {
-      const uid = String(visit.membership.userId || '');
-      const current = revenueByUser.get(uid) || 0;
-      revenueByUser.set(uid, current + Number(visit.purchaseAmount || 0));
-    });
-    const clvAverage = revenueByUser.size > 0 ? totalRevenue / revenueByUser.size : 0;
+    const visits: VisitRow[] = await (async () => {
+      try {
+        const rows = await prisma.visit.findMany({
+          where: { membership: { tenantId: access.tenantId } },
+          orderBy: { visitedAt: 'asc' },
+          select: {
+            id: true,
+            visitedAt: true,
+            visitDay: true,
+            purchaseAmount: true,
+            membership: { select: { userId: true } },
+          },
+        });
+        return rows.map((visit) => ({
+          id: visit.id,
+          visitedAt: visit.visitedAt,
+          visitDay: visit.visitDay,
+          userId: String(visit.membership.userId || ''),
+          purchaseAmount: Number(visit.purchaseAmount || 0),
+          purchaseTracked: true,
+        }));
+      } catch (error: unknown) {
+        if (!isMissingTableOrColumnError(error)) throw error;
+        const rows = await prisma.visit.findMany({
+          where: { membership: { tenantId: access.tenantId } },
+          orderBy: { visitedAt: 'asc' },
+          select: {
+            id: true,
+            visitedAt: true,
+            visitDay: true,
+            membership: { select: { userId: true } },
+          },
+        });
+        return rows.map((visit) => ({
+          id: visit.id,
+          visitedAt: visit.visitedAt,
+          visitDay: visit.visitDay,
+          userId: String(visit.membership.userId || ''),
+          purchaseAmount: 0,
+          purchaseTracked: false,
+        }));
+      }
+    })();
 
     const memberships = await prisma.membership.findMany({
       where: { tenantId: access.tenantId },
-      include: { user: true },
+      include: {
+        user: {
+          select: {
+            name: true,
+            phone: true,
+            email: true,
+            gender: true,
+            birthDate: true,
+            createdAt: true,
+          },
+        },
+      },
+      orderBy: { lastVisitAt: 'desc' },
     });
 
-    let male = 0;
-    let female = 0;
-    let other = 0;
+    const sumRevenue = (rows: Array<{ purchaseAmount: number }>) => rows.reduce((sum, row) => sum + Number(row.purchaseAmount || 0), 0);
+    const avgTicket = (rows: Array<{ purchaseAmount: number }>) => {
+      const withAmount = rows.filter((row) => Number(row.purchaseAmount || 0) > 0).length;
+      return withAmount > 0 ? sumRevenue(rows) / withAmount : 0;
+    };
 
-    const ages = { '<18': 0, '18-25': 0, '26-35': 0, '36-45': 0, '46-65': 0, '>65': 0 };
+    const revenueByUser = new Map<string, number>();
+    const visitsByDate = new Map<string, { count: number; revenue: number }>();
+    visits.forEach((visit) => {
+      const dateKey = visit.visitedAt.toISOString().split('T')[0];
+      const bucket = visitsByDate.get(dateKey) || { count: 0, revenue: 0 };
+      bucket.count += 1;
+      bucket.revenue += Number(visit.purchaseAmount || 0);
+      visitsByDate.set(dateKey, bucket);
+      revenueByUser.set(visit.userId, (revenueByUser.get(visit.userId) || 0) + Number(visit.purchaseAmount || 0));
+    });
 
+    const chartData = Array.from(visitsByDate.entries())
+      .filter(([date]) => new Date(`${date}T00:00:00`) >= chartStart)
+      .map(([date, value]) => ({ date, label: date.slice(5), count: value.count, revenue: value.revenue }));
+
+    const genderCounters: Record<string, number> = { Hombres: 0, Mujeres: 0, Otros: 0 };
+    const ageCounters: Record<string, number> = { '<18': 0, '18-25': 0, '26-35': 0, '36-45': 0, '46-65': 0, '>65': 0 };
     memberships.forEach((membership) => {
-      const gender = (membership.user.gender || '').toLowerCase();
-      if (gender === 'hombre' || gender === 'm') male++;
-      else if (gender === 'mujer' || gender === 'f') female++;
-      else other++;
+      const gender = String(membership.user.gender || '').toLowerCase();
+      if (gender === 'hombre' || gender === 'm') genderCounters.Hombres += 1;
+      else if (gender === 'mujer' || gender === 'f') genderCounters.Mujeres += 1;
+      else genderCounters.Otros += 1;
 
       if (membership.user.birthDate) {
-        const birth = new Date(membership.user.birthDate);
-        const age = new Date().getFullYear() - birth.getFullYear();
-
-        if (age < 18) ages['<18']++;
-        else if (age <= 25) ages['18-25']++;
-        else if (age <= 35) ages['26-35']++;
-        else if (age <= 45) ages['36-45']++;
-        else if (age <= 65) ages['46-65']++;
-        else ages['>65']++;
+        const age = now.getFullYear() - new Date(membership.user.birthDate).getFullYear();
+        if (age < 18) ageCounters['<18'] += 1;
+        else if (age <= 25) ageCounters['18-25'] += 1;
+        else if (age <= 35) ageCounters['26-35'] += 1;
+        else if (age <= 45) ageCounters['36-45'] += 1;
+        else if (age <= 65) ageCounters['46-65'] += 1;
+        else ageCounters['>65'] += 1;
       }
     });
 
-    const genderData = [
-      { label: 'Hombres', value: male, color: '#3b82f6' },
-      { label: 'Mujeres', value: female, color: '#ec4899' },
-      { label: 'Otros', value: other, color: '#9ca3af' },
-    ];
+    const weekVisits = visits.filter((visit) => visit.visitedAt >= weekStart);
+    const monthVisits = visits.filter((visit) => visit.visitedAt >= monthStart);
+    const weekClients = new Set(weekVisits.map((visit) => visit.userId));
+    const monthClients = new Set(monthVisits.map((visit) => visit.userId));
+    const hadPreviousVisit = (userId: string, before: Date) => visits.some((visit) => visit.userId === userId && visit.visitedAt < before);
 
-    const ageData = Object.keys(ages).map((key) => ({ label: key, value: ages[key as keyof typeof ages] }));
+    const weekSeriesMap = new Map<string, { count: number; revenue: number }>();
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(weekStart.getDate() + i);
+      weekSeriesMap.set(d.toISOString().split('T')[0], { count: 0, revenue: 0 });
+    }
+    weekVisits.forEach((visit) => {
+      const key = visit.visitedAt.toISOString().split('T')[0];
+      const bucket = weekSeriesMap.get(key);
+      if (!bucket) return;
+      bucket.count += 1;
+      bucket.revenue += Number(visit.purchaseAmount || 0);
+    });
+    const weekSeries = Array.from(weekSeriesMap.entries()).map(([date, value]) => ({
+      date,
+      label: new Date(`${date}T00:00:00`).toLocaleDateString('es-MX', { weekday: 'short' }),
+      count: value.count,
+      revenue: value.revenue,
+    }));
 
-    const csvData = memberships.map((membership) => ({
+    const monthSeriesMap = new Map<string, { count: number; revenue: number }>();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    for (let day = 1; day <= daysInMonth; day++) {
+      const d = new Date(now.getFullYear(), now.getMonth(), day);
+      monthSeriesMap.set(d.toISOString().split('T')[0], { count: 0, revenue: 0 });
+    }
+    monthVisits.forEach((visit) => {
+      const key = visit.visitedAt.toISOString().split('T')[0];
+      const bucket = monthSeriesMap.get(key);
+      if (!bucket) return;
+      bucket.count += 1;
+      bucket.revenue += Number(visit.purchaseAmount || 0);
+    });
+    const monthSeries = Array.from(monthSeriesMap.entries()).map(([date, value]) => ({
+      date,
+      label: new Date(`${date}T00:00:00`).toLocaleDateString('es-MX', { day: '2-digit' }),
+      count: value.count,
+      revenue: value.revenue,
+    }));
+
+    const clientsCsvData = memberships.map((membership) => ({
       Nombre: membership.user.name || 'Anónimo',
-      Telefono: membership.user.phone,
+      Telefono: membership.user.phone || '',
       Email: membership.user.email || '',
       Genero: membership.user.gender || '',
       Visitas: membership.totalVisits,
-      Ultima: membership.lastVisitAt ? membership.lastVisitAt.toISOString().split('T')[0] : '-',
-      GastoTotal: (revenueByUser.get(membership.userId) || 0).toFixed(2),
+      UltimaVisita: membership.lastVisitAt ? membership.lastVisitAt.toISOString().split('T')[0] : '-',
+      GastoTotal: Number(revenueByUser.get(String(membership.userId)) || 0).toFixed(2),
     }));
 
-    return apiSuccess({ requestId, data: { chartData, genderData, ageData, csvData, totalRevenue, avgTicket, clvAverage } });
+    const visitsCsvData = visits.map((visit) => ({
+      Fecha: visit.visitedAt.toISOString(),
+      Dia: visit.visitDay || visit.visitedAt.toISOString().split('T')[0],
+      ClienteId: visit.userId,
+      MontoCompra: Number(visit.purchaseAmount || 0).toFixed(2),
+    }));
+
+    const customerProfiles = memberships.map((membership) => {
+      const userId = String(membership.userId || '');
+      const monthCustomerVisits = monthVisits.filter((visit) => visit.userId === userId);
+      const monthRevenue = sumRevenue(monthCustomerVisits);
+      const age = membership.user.birthDate ? now.getFullYear() - new Date(membership.user.birthDate).getFullYear() : null;
+      return {
+        userId,
+        name: membership.user.name || 'Anónimo',
+        phone: membership.user.phone || '',
+        email: membership.user.email || '',
+        gender: membership.user.gender || '',
+        age,
+        visits: Number(membership.totalVisits || 0),
+        monthVisits: monthCustomerVisits.length,
+        monthRevenue,
+        totalRevenue: Number(revenueByUser.get(userId) || 0),
+        lastVisit: membership.lastVisitAt ? membership.lastVisitAt.toISOString() : null,
+      };
+    }).sort((a, b) => (b.monthVisits - a.monthVisits) || (b.monthRevenue - a.monthRevenue));
+
+    const totalRevenue = sumRevenue(visits);
+    const overallAvgTicket = avgTicket(visits);
+    const clvAverage = revenueByUser.size > 0 ? totalRevenue / revenueByUser.size : 0;
+
+    return apiSuccess({
+      requestId,
+      data: {
+        chartData,
+        genderData: [
+          { label: 'Hombres', value: genderCounters.Hombres, color: '#3b82f6' },
+          { label: 'Mujeres', value: genderCounters.Mujeres, color: '#ec4899' },
+          { label: 'Otros', value: genderCounters.Otros, color: '#9ca3af' },
+        ],
+        ageData: Object.entries(ageCounters).map(([label, value]) => ({ label, value })),
+        clientsCsvData,
+        visitsCsvData,
+        customerProfiles,
+        totalRevenue,
+        avgTicket: overallAvgTicket,
+        clvAverage,
+        weekSummary: {
+          totalVisits: weekVisits.length,
+          totalRevenue: sumRevenue(weekVisits),
+          avgTicket: avgTicket(weekVisits),
+          uniqueClients: weekClients.size,
+          newClients: memberships.filter((membership) => membership.user.createdAt >= weekStart).length,
+          returningClients: Array.from(weekClients).filter((userId) => hadPreviousVisit(userId, weekStart)).length,
+          series: weekSeries,
+        },
+        monthSummary: {
+          totalVisits: monthVisits.length,
+          totalRevenue: sumRevenue(monthVisits),
+          avgTicket: avgTicket(monthVisits),
+          uniqueClients: monthClients.size,
+          newClients: memberships.filter((membership) => membership.user.createdAt >= monthStart).length,
+          returningClients: Array.from(monthClients).filter((userId) => hadPreviousVisit(userId, monthStart)).length,
+          series: monthSeries,
+        },
+        purchaseDataTracked: visits.some((visit) => visit.purchaseTracked),
+      },
+    });
   } catch (error: unknown) {
     return apiError({
       requestId,
