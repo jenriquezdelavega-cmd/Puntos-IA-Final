@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react';
 import QRCode from 'react-qr-code';
 import dynamic from 'next/dynamic';
+import AdvancedDashboard, { type AdvancedReportView } from '../components/admin/AdvancedDashboard';
 
 const AdminMap = dynamic(() => import('../components/AdminMap'), { ssr: false, loading: () => <div className="h-full bg-gray-100 animate-pulse text-center pt-10 text-gray-400">Cargando...</div> });
 
@@ -34,18 +35,6 @@ type TenantView = {
   coalitionProduct?: string;
 };
 
-type ReportPoint = { date?: string; count?: number };
-type ReportBucket = { label?: string; value?: number; color?: string };
-type ReportView = {
-  chartData?: ReportPoint[];
-  genderData?: ReportBucket[];
-  ageData?: ReportBucket[];
-  csvData?: unknown[];
-  totalRevenue?: number;
-  avgTicket?: number;
-  clvAverage?: number;
-};
-
 type TeamMember = { id: string; name?: string; username?: string; role?: string };
 type AdminTab = 'dashboard' | 'team' | 'qr' | 'redeem' | 'push' | 'settings';
 type NavItem = { key: AdminTab; icon: string; label: string; adminOnly?: boolean };
@@ -58,7 +47,7 @@ const [username, setUsername] = useState('');
 const [password, setPassword] = useState('');
 
 const [, setCode] = useState('');
-const [reportData, setReportData] = useState<ReportView | null>(null);
+const [reportData, setReportData] = useState<AdvancedReportView | null>(null);
 const [baseUrl, setBaseUrl] = useState('');
 const [tab, setTab] = useState<AdminTab>('qr');
 const [userRole, setUserRole] = useState('');
@@ -103,21 +92,6 @@ const [isSavingSettings, setIsSavingSettings] = useState(false);
 const [isValidatingRedeem, setIsValidatingRedeem] = useState(false);
 const [isRefreshingReports, setIsRefreshingReports] = useState(false);
 
-const trendData = reportData?.chartData ?? [];
-const genderData = reportData?.genderData ?? [];
-const ageData = reportData?.ageData ?? [];
-const totalClients = reportData?.csvData?.length || 0;
-const totalCheckins = trendData.reduce((sum: number, item: ReportPoint) => sum + Number(item.count || 0), 0);
-const totalRevenue = Number(reportData?.totalRevenue || 0);
-const avgTicket = Number(reportData?.avgTicket || 0);
-const clvAverage = Number(reportData?.clvAverage || 0);
-const peakDay = trendData.reduce((max: ReportPoint | null, item: ReportPoint) => {
-  return Number(item.count || 0) > Number(max?.count || 0) ? item : max;
-}, null);
-const trendMax = Math.max(...trendData.map((d: ReportPoint) => Number(d.count || 0)), 1);
-const genderMax = Math.max(...genderData.map((d: Record<string, unknown>) => Number(d.value || 0)), 1);
-const ageMax = Math.max(...ageData.map((d: Record<string, unknown>) => Number(d.value || 0)), 1);
-
 const navItems: NavItem[] = [
   { key: 'dashboard', icon: '📊', label: 'Dashboard', adminOnly: true },
   { key: 'team', icon: '👥', label: 'Equipo', adminOnly: true },
@@ -128,7 +102,6 @@ const navItems: NavItem[] = [
 ];
 
 const visibleNavItems = navItems.filter((item) => !item.adminOnly || userRole === 'ADMIN');
-const activeNavItem = visibleNavItems.find((item) => item.key === tab);
 
 const notify = (type: 'success' | 'error' | 'info', text: string) => {
   setUiNotice({ type, text });
@@ -178,7 +151,7 @@ const handleLogin = async (e: React.FormEvent) => {
       }
       if (typeof window !== 'undefined') setBaseUrl(window.location.origin);
 
-      setTab('qr');
+      setTab(data.user.role === 'ADMIN' ? 'dashboard' : 'qr');
       if (data.user.role === 'ADMIN') {
         loadReports(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
         loadTeam(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
@@ -202,9 +175,14 @@ const loadReports = async (tid: string, currentTenantUserId = tenantUserId, curr
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tenantId: tid, tenantUserId: currentTenantUserId, tenantSessionToken: currentTenantSessionToken }),
     });
-    setReportData(await res.json());
+    const data = await res.json();
+    if (!res.ok) {
+      notify('error', String(data?.error || data?.message || 'No se pudo cargar la reportería.'));
+      return;
+    }
+    setReportData(data);
   } catch {
-    // noop
+    notify('error', 'No se pudo conectar para obtener reportería.');
   } finally {
     setIsRefreshingReports(false);
   }
@@ -405,7 +383,72 @@ const validateRedeem = async () => {
     setIsValidatingRedeem(false);
   }
 };
-const downloadCSV = () => { if (!reportData?.csvData) return; const headers = Object.keys(reportData.csvData[0]).join(','); const rows = reportData.csvData.map((obj: Record<string, unknown>) => Object.values(obj).join(',')).join('\n'); const encodedUri = encodeURI("data:text/csv;charset=utf-8," + headers + "\n" + rows); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `clientes_${tenant.slug}.csv`); document.body.appendChild(link); link.click(); };
+const escapeCsv = (value: unknown) => {
+  const text = String(value ?? '');
+  if (/[",\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+};
+
+const downloadCsvRows = (rows: Record<string, unknown>[], filename: string) => {
+  if (!rows.length) {
+    notify('info', 'No hay datos para exportar.');
+    return;
+  }
+  const headers = Object.keys(rows[0]);
+  const lines = [headers.join(',')].concat(rows.map((row) => headers.map((key) => escapeCsv(row[key])).join(',')));
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};
+
+const downloadJsonFile = (payload: unknown, filename: string) => {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};
+
+const downloadClientsCsv = () => {
+  const rows = reportData?.clientsCsvData || [];
+  downloadCsvRows(rows, `clientes_${tenant.slug}.csv`);
+};
+
+const downloadVisitsCsv = () => {
+  const rows = reportData?.visitsCsvData || [];
+  downloadCsvRows(rows, `visitas_${tenant.slug}.csv`);
+};
+
+const downloadDatabaseJson = async () => {
+  if (!tenant?.id) return;
+  try {
+    const res = await fetch('/api/admin/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      notify('error', String(data?.error || 'No se pudo descargar la base.'));
+      return;
+    }
+    downloadJsonFile(data, `base_${tenant.slug}_${new Date().toISOString().slice(0, 10)}.json`);
+  } catch {
+    notify('error', 'No se pudo conectar para descargar la base.');
+  }
+};
 
 const onboardingQrValue = tenant?.id ? `${baseUrl || (typeof window !== 'undefined' ? window.location.origin : '')}/?clientes=1&business_id=${encodeURIComponent(String(tenant.id))}&flow=create-pass&auth=welcome` : '';
 
@@ -512,14 +555,6 @@ return (
 <button onClick={() => setTenant(null)} className="md:hidden fixed top-4 right-4 z-50 bg-red-600 text-white w-8 h-8 rounded-full font-bold flex items-center justify-center shadow-lg">✕</button>
 
 <div className="flex-1 p-6 md:p-8 overflow-y-auto pb-32 md:pb-0">
-<div className="mb-5 rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50 to-white p-4 text-indigo-900">
-  <p className="text-[11px] font-black uppercase tracking-wider text-indigo-500">Mejora UX · Fase 5</p>
-  <p className="text-sm font-semibold">Incorporé captura de monto por visita en escaneo y métricas de valor (venta total, ticket promedio y CLV) para enriquecer la reportería del negocio.</p>
-  <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1 text-xs font-black text-indigo-700">
-    <span>{activeNavItem?.icon || '📌'}</span>
-    <span>Módulo activo: {activeNavItem?.label || 'Panel'}</span>
-  </div>
-</div>
 {uiNotice ? (
   <div className={`mb-5 rounded-2xl border p-3 text-sm font-semibold flex items-center justify-between gap-3 ${uiNotice.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : uiNotice.type === 'error' ? 'border-red-200 bg-red-50 text-red-800' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
     <span>{uiNotice.text}</span>
@@ -527,145 +562,21 @@ return (
   </div>
 ) : null}
 {tab === 'dashboard' && userRole === 'ADMIN' && (
-<div className="space-y-6 animate-fadeIn">
-<div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 md:p-8 rounded-3xl text-white relative overflow-hidden">
-  <div className="absolute -top-20 -right-20 w-48 h-48 bg-pink-500/10 rounded-full blur-3xl" />
-  <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-orange-500/10 rounded-full blur-3xl" />
-  <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-    <div>
-      <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Panel de administración</p>
-      <h2 className="text-2xl md:text-3xl font-black mt-1">¡Hola, {tenant.name}!</h2>
-      <p className="text-gray-400 text-sm font-medium mt-1">{new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
-    </div>
-    <div className="flex gap-2">
-      <button disabled={isRefreshingReports} className="bg-white/10 border border-white/20 px-4 py-2.5 rounded-xl text-white font-bold text-sm hover:bg-white/20 transition disabled:opacity-60" onClick={() => { loadReports(tenant.id, tenantUserId); loadTeam(tenant.id, tenantUserId); }}>
-        {isRefreshingReports ? 'Actualizando...' : '🔄 Actualizar'}
-      </button>
-      <button className="bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-2.5 rounded-xl shadow-lg text-white font-bold text-sm" onClick={downloadCSV}>📥 Exportar CSV</button>
-    </div>
-  </div>
-</div>
-
-<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-  <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-    <div className="flex items-center gap-2 mb-2">
-      <span className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-lg">👥</span>
-      <p className="text-gray-400 text-[10px] font-black uppercase tracking-wider">Clientes</p>
-    </div>
-    <p className="text-3xl font-black text-gray-900">{totalClients}</p>
-    <p className="text-[11px] text-gray-400 font-semibold mt-1">registrados</p>
-  </div>
-  <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-    <div className="flex items-center gap-2 mb-2">
-      <span className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-lg">✅</span>
-      <p className="text-gray-400 text-[10px] font-black uppercase tracking-wider">Check-ins</p>
-    </div>
-    <p className="text-3xl font-black text-gray-900">{totalCheckins}</p>
-    <p className="text-[11px] text-gray-400 font-semibold mt-1">acumulados</p>
-  </div>
-  <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-    <div className="flex items-center gap-2 mb-2">
-      <span className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-lg">🔥</span>
-      <p className="text-gray-400 text-[10px] font-black uppercase tracking-wider">Día top</p>
-    </div>
-    <p className="text-xl font-black text-gray-900">{peakDay ? peakDay.count : '—'}</p>
-    <p className="text-[11px] text-gray-400 font-semibold mt-1 truncate">{peakDay ? String(peakDay.date).slice(5) : 'sin datos'}</p>
-  </div>
-  <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-    <div className="flex items-center gap-2 mb-2">
-      <span className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-lg">💵</span>
-      <p className="text-gray-400 text-[10px] font-black uppercase tracking-wider">Venta total</p>
-    </div>
-    <p className="text-3xl font-black text-gray-900">${totalRevenue.toFixed(0)}</p>
-    <p className="text-[11px] text-gray-400 font-semibold mt-1">ticket prom: ${avgTicket.toFixed(2)} · CLV: ${clvAverage.toFixed(2)}</p>
-  </div>
-</div>
-
-<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-  <button onClick={() => setTab('qr')} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left hover:shadow-md hover:border-gray-200 transition-all group">
-    <div className="flex items-center gap-3">
-      <span className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📷</span>
-      <div>
-        <p className="text-sm font-black text-gray-800">Generar QR del día</p>
-        <p className="text-[11px] text-gray-400 font-semibold">Abre el código para tus clientes</p>
-      </div>
-    </div>
-  </button>
-  <button onClick={() => setTab('redeem')} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left hover:shadow-md hover:border-gray-200 transition-all group">
-    <div className="flex items-center gap-3">
-      <span className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">🎁</span>
-      <div>
-        <p className="text-sm font-black text-gray-800">Validar canje</p>
-        <p className="text-[11px] text-gray-400 font-semibold">Entrega un premio a tu cliente</p>
-      </div>
-    </div>
-  </button>
-  <button onClick={() => setTab('settings')} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left hover:shadow-md hover:border-gray-200 transition-all group">
-    <div className="flex items-center gap-3">
-      <span className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">⚙️</span>
-      <div>
-        <p className="text-sm font-black text-gray-800">Configuración</p>
-        <p className="text-[11px] text-gray-400 font-semibold">Premio, wallet, ubicación</p>
-      </div>
-    </div>
-  </button>
-</div>
-
-<div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-  <h3 className="text-lg font-bold text-gray-800 mb-1">Tendencia de check-ins</h3>
-  <p className="text-xs text-gray-500 font-medium mb-5">Actividad diaria de tus clientes.</p>
-  <div className="h-44 flex items-end justify-between gap-2">
-    {trendData.length > 0 ? trendData.map((d: Record<string, unknown>, i: number)=>(
-      <div key={i} className="flex-1 flex flex-col items-center gap-2 min-w-0">
-        <div className="w-full bg-gradient-to-t from-orange-500 to-pink-500 rounded-t-lg" style={{height:`${Math.max((Number(d.count || 0) / trendMax) * 170, 8)}px`}}></div>
-        <span className="text-[10px] font-bold text-gray-400 truncate w-full text-center">{String(d.date).slice(5)}</span>
-      </div>
-    )) : <p className="text-sm text-gray-400">Aún no hay check-ins para mostrar.</p>}
-  </div>
-</div>
-
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-  <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-    <h3 className="text-lg font-bold text-gray-800 mb-1">Distribución por género</h3>
-    <p className="text-xs text-gray-500 font-medium mb-5">Clientes por segmento.</p>
-    <div className="space-y-4">
-      {genderData.length > 0 ? genderData.map((item: ReportBucket) => {
-        const width = Math.max((Number(item.value || 0) / genderMax) * 100, item.value ? 8 : 0);
-        return (
-          <div key={item.label}>
-            <div className="flex justify-between text-xs font-bold text-gray-600 mb-1">
-              <span>{item.label}</span>
-              <span>{item.value}</span>
-            </div>
-            <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
-              <div className="h-full rounded-full" style={{ width: `${width}%`, backgroundColor: item.color || '#fb7185' }}></div>
-            </div>
-          </div>
-        );
-      }) : <p className="text-sm text-gray-400">Sin datos de género.</p>}
-    </div>
-  </div>
-
-  <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-    <h3 className="text-lg font-bold text-gray-800 mb-1">Distribución por edades</h3>
-    <p className="text-xs text-gray-500 font-medium mb-5">Rangos de edad de tus clientes.</p>
-    <div className="space-y-3">
-      {ageData.length > 0 ? ageData.map((item: ReportBucket, idx: number) => {
-        const width = Math.max((Number(item.value || 0) / ageMax) * 100, item.value ? 8 : 0);
-        return (
-          <div key={item.label} className="flex items-center gap-3">
-            <span className="w-14 text-[11px] font-bold text-gray-500">{item.label}</span>
-            <div className="flex-1 h-2.5 rounded-full bg-gray-100 overflow-hidden">
-              <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500" style={{ width: `${width}%`, opacity: 0.6 + (idx % 4) * 0.1 }}></div>
-            </div>
-            <span className="w-6 text-right text-xs font-bold text-gray-700">{item.value}</span>
-          </div>
-        );
-      }) : <p className="text-sm text-gray-400">Sin datos de edades.</p>}
-    </div>
-  </div>
-</div>
-</div>
+<AdvancedDashboard
+  tenantName={String(tenant.name || 'Negocio')}
+  reportData={reportData}
+  isRefreshing={isRefreshingReports}
+  onRefresh={() => {
+    loadReports(tenant.id, tenantUserId, tenantSessionToken);
+    loadTeam(tenant.id, tenantUserId, tenantSessionToken);
+  }}
+  onExportClientsCsv={downloadClientsCsv}
+  onExportVisitsCsv={downloadVisitsCsv}
+  onExportDatabaseJson={downloadDatabaseJson}
+  onGoQr={() => setTab('qr')}
+  onGoRedeem={() => setTab('redeem')}
+  onGoSettings={() => setTab('settings')}
+/>
 )}
 
 {tab === 'team' && userRole === 'ADMIN' && (
