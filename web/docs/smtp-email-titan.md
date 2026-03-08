@@ -14,6 +14,7 @@ Configura estas variables en `web/.env` (o en el provider de despliegue):
 - `EMAIL_FROM`
 - `EMAIL_REPLY_TO`
 - `PUBLIC_BASE_URL` (requerida para links de recuperación de contraseña)
+- `NEXT_PUBLIC_APP_URL` (fallback para links en correos)
 
 Ejemplo:
 
@@ -25,6 +26,12 @@ Ejemplo:
 - `EMAIL_FROM="Punto IA <contacto@puntoia.mx>"`
 - `EMAIL_REPLY_TO="contacto@puntoia.mx"`
 - `PUBLIC_BASE_URL=http://localhost:3000`
+
+### Nota para Vercel
+
+- En Vercel define los valores como texto plano en *Project Settings → Environment Variables*.
+- No necesitas comillas en Vercel para `SMTP_PASS` aunque tenga símbolos especiales.
+- Asegura `PUBLIC_BASE_URL=https://puntoia.mx` en producción para que los links del correo apunten al dominio correcto.
 
 ## Flujos conectados
 
@@ -53,6 +60,7 @@ Ejemplo:
 - Se registran eventos y errores en `logApiEvent` / `logApiError`.
 - Si SMTP no está configurado, el sistema **no rompe el flujo principal** y marca envío como `skipped`.
 - Si falla SMTP, el endpoint principal continúa y queda logueado el error de email.
+- El transporte SMTP usa timeouts de conexión para evitar requests colgados.
 
 ## Pruebas locales recomendadas
 

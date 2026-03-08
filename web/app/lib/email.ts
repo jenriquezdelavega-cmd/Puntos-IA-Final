@@ -84,6 +84,9 @@ function getTransporter(config: SmtpConfig) {
       host: config.host,
       port: config.port,
       secure: config.secure,
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 15_000,
       auth: {
         user: config.user,
         pass: config.pass,
@@ -110,6 +113,80 @@ function getTransporter(config: SmtpConfig) {
 export function isEmailConfigured() {
   const { config } = getSmtpConfig();
   return Boolean(config);
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getPublicBaseUrl() {
+  return String(process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '').trim().replace(/\/$/, '');
+}
+
+function renderBrandedEmailTemplate(input: {
+  preheader: string;
+  title: string;
+  greeting: string;
+  paragraphs: string[];
+  ctaLabel?: string;
+  ctaUrl?: string;
+  helperText?: string;
+}) {
+  const brandUrl = getPublicBaseUrl();
+  const logoUrl = brandUrl ? `${brandUrl}/logo.png` : '';
+  const title = escapeHtml(input.title);
+  const greeting = escapeHtml(input.greeting);
+  const preheader = escapeHtml(input.preheader);
+  const paragraphs = input.paragraphs.map((line) => `<p style="margin:0 0 14px;color:#4c3a74;line-height:1.6;font-size:15px;">${escapeHtml(line)}</p>`).join('');
+  const helperText = input.helperText ? `<p style="margin:16px 0 0;color:#7a68a3;line-height:1.5;font-size:13px;">${escapeHtml(input.helperText)}</p>` : '';
+  const cta = input.ctaLabel && input.ctaUrl
+    ? `<a href="${escapeHtml(input.ctaUrl)}" style="display:inline-block;background:linear-gradient(90deg,#ff8560 0%,#ff5e91 52%,#8a60f6 100%);color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:12px;font-weight:700;font-size:14px;">${escapeHtml(input.ctaLabel)}</a>`
+    : '';
+
+  return `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${title}</title>
+  </head>
+  <body style="margin:0;background:#fffaf4;font-family:Inter,Arial,Helvetica,sans-serif;color:#26184b;">
+    <div style="display:none;visibility:hidden;opacity:0;height:0;overflow:hidden;">${preheader}</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fffaf4;padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;background:#ffffff;border:1px solid #eadcf8;border-radius:18px;overflow:hidden;">
+            <tr>
+              <td style="padding:20px 24px;background:linear-gradient(135deg,#fff8ef 0%,#fff8ff 48%,#f4ecff 100%);border-bottom:1px solid #eadcf8;">
+                ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Punto IA" style="height:34px;width:auto;display:block;" />` : '<p style="margin:0;font-size:22px;font-weight:800;color:#2b1b51;">Punto IA</p>'}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:26px 24px 22px;">
+                <h1 style="margin:0 0 14px;font-size:28px;line-height:1.2;color:#26184b;">${title}</h1>
+                <p style="margin:0 0 16px;color:#3f2f66;line-height:1.6;font-size:15px;">${greeting}</p>
+                ${paragraphs}
+                ${cta ? `<div style="margin:20px 0 10px;">${cta}</div>` : ''}
+                ${helperText}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 24px;border-top:1px solid #f0e6fd;background:#fffcf8;">
+                <p style="margin:0;color:#7a68a3;font-size:12px;line-height:1.5;">Punto IA · Lealtad digital para PyMEs en México</p>
+                <p style="margin:6px 0 0;color:#7a68a3;font-size:12px;line-height:1.5;">¿Necesitas ayuda? Escríbenos a <a href="mailto:contacto@puntoia.mx" style="color:#6e4ab0;">contacto@puntoia.mx</a></p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
 }
 
 export async function sendTransactionalEmail(payload: MailPayload): Promise<EmailSendResult> {
@@ -170,11 +247,18 @@ export async function sendPasswordResetEmail(params: { to: string; resetUrl: str
     'Si no hiciste esta solicitud, puedes ignorar este mensaje.',
   ].join('\n');
 
-  const html = `<p>Hola <strong>${displayName}</strong>,</p>
-<p>Recibimos una solicitud para recuperar tu contraseña.</p>
-<p>Haz clic en este enlace (expira en 30 minutos):</p>
-<p><a href="${params.resetUrl}">${params.resetUrl}</a></p>
-<p>Si no hiciste esta solicitud, puedes ignorar este mensaje.</p>`;
+  const html = renderBrandedEmailTemplate({
+    preheader: 'Solicitud para recuperar contraseña',
+    title: 'Recupera tu contraseña',
+    greeting: `Hola ${displayName},`,
+    paragraphs: [
+      'Recibimos una solicitud para recuperar tu contraseña.',
+      'Por seguridad, este enlace expira en 30 minutos.',
+    ],
+    ctaLabel: 'Restablecer contraseña',
+    ctaUrl: params.resetUrl,
+    helperText: 'Si tú no hiciste esta solicitud, puedes ignorar este mensaje.',
+  });
 
   return sendTransactionalEmail({ to: params.to, subject, text, html });
 }
@@ -191,10 +275,18 @@ export async function sendPasswordResetSuccessEmail(params: { to: string; name?:
     'Si no reconoces este cambio, contáctanos de inmediato en contacto@puntoia.mx.',
   ].join('\n');
 
-  const html = `<p>Hola <strong>${displayName}</strong>,</p>
-<p>Tu contraseña fue actualizada correctamente.</p>
-<p>Ya puedes iniciar sesión con tu nueva contraseña.</p>
-<p>Si no reconoces este cambio, contáctanos de inmediato en <a href="mailto:contacto@puntoia.mx">contacto@puntoia.mx</a>.</p>`;
+  const html = renderBrandedEmailTemplate({
+    preheader: 'Confirmación de cambio de contraseña',
+    title: 'Contraseña actualizada',
+    greeting: `Hola ${displayName},`,
+    paragraphs: [
+      'Tu contraseña fue actualizada correctamente.',
+      'Ya puedes iniciar sesión con tu nueva contraseña.',
+    ],
+    ctaLabel: 'Iniciar sesión',
+    ctaUrl: `${getPublicBaseUrl() || 'https://puntoia.mx'}/ingresar?tipo=cliente&modo=login`,
+    helperText: 'Si no reconoces este cambio, contáctanos de inmediato en contacto@puntoia.mx.',
+  });
 
   return sendTransactionalEmail({ to: params.to, subject, text, html });
 }
@@ -211,10 +303,18 @@ export async function sendWelcomeEmail(params: { to: string; name?: string | nul
     'Si estás en tienda, también puedes activar tu pase para comenzar de inmediato.',
   ].join('\n');
 
-  const html = `<p>Hola <strong>${displayName}</strong>,</p>
-<p>Tu cuenta fue creada correctamente.</p>
-<p>Ya puedes iniciar sesión y empezar a acumular recompensas con Punto IA.</p>
-<p>Si estás en tienda, también puedes activar tu pase para comenzar de inmediato.</p>`;
+  const html = renderBrandedEmailTemplate({
+    preheader: 'Tu cuenta en Punto IA está lista',
+    title: 'Bienvenido a Punto IA',
+    greeting: `Hola ${displayName},`,
+    paragraphs: [
+      'Tu cuenta fue creada correctamente.',
+      'Ya puedes iniciar sesión y empezar a acumular recompensas con Punto IA.',
+      'Si estás en tienda, también puedes activar tu pase para comenzar de inmediato.',
+    ],
+    ctaLabel: 'Entrar a mi cuenta',
+    ctaUrl: `${getPublicBaseUrl() || 'https://puntoia.mx'}/ingresar?tipo=cliente&modo=login`,
+  });
 
   return sendTransactionalEmail({ to: params.to, subject, text, html });
 }
@@ -234,10 +334,18 @@ export async function sendRedemptionRequestedEmail(params: {
     'Muéstralo en caja para validar tu premio.',
   ].join('\n');
 
-  const html = `<p>Hola <strong>${displayName}</strong>,</p>
-<p>Tu código de canje para <strong>${params.businessName}</strong> es:</p>
-<p style="font-size:20px;font-weight:700;letter-spacing:2px;">${params.code}</p>
-<p>Muéstralo en caja para validar tu premio.</p>`;
+  const html = renderBrandedEmailTemplate({
+    preheader: 'Tu código de canje está listo',
+    title: 'Código de canje generado',
+    greeting: `Hola ${displayName},`,
+    paragraphs: [
+      `Tu código de canje para ${params.businessName} es: ${params.code}`,
+      'Muéstralo en caja para validar tu premio.',
+    ],
+    ctaLabel: 'Ver mi cuenta',
+    ctaUrl: `${getPublicBaseUrl() || 'https://puntoia.mx'}/clientes/app`,
+    helperText: 'Comparte el código solo en caja al momento del canje.',
+  });
 
   return sendTransactionalEmail({ to: params.to, subject, text, html });
 }
@@ -260,10 +368,18 @@ export async function sendRedemptionValidatedEmail(params: {
     'Gracias por seguir acumulando con Punto IA.',
   ].join('\n');
 
-  const html = `<p>Hola <strong>${displayName}</strong>,</p>
-<p>Tu canje en <strong>${params.businessName}</strong> fue validado.</p>
-<p>${rewardText}</p>
-<p>Gracias por seguir acumulando con Punto IA.</p>`;
+  const html = renderBrandedEmailTemplate({
+    preheader: 'Confirmación de canje validado',
+    title: 'Canje confirmado',
+    greeting: `Hola ${displayName},`,
+    paragraphs: [
+      `Tu canje en ${params.businessName} fue validado.`,
+      rewardText,
+      'Gracias por seguir acumulando con Punto IA.',
+    ],
+    ctaLabel: 'Revisar mi progreso',
+    ctaUrl: `${getPublicBaseUrl() || 'https://puntoia.mx'}/clientes/app`,
+  });
 
   return sendTransactionalEmail({ to: params.to, subject, text, html });
 }
