@@ -18,7 +18,9 @@ export async function requireTenantRoleAccess(params: {
   const tenantId = normalize(params.tenantId);
   const tenantUserId = normalize(params.tenantUserId);
   const tenantSessionToken = normalize(params.tenantSessionToken);
-  const allowedRoles = params.allowedRoles && params.allowedRoles.length > 0 ? params.allowedRoles : ['ADMIN'];
+  const allowedRoles = (params.allowedRoles && params.allowedRoles.length > 0 ? params.allowedRoles : ['ADMIN'])
+    .map((role) => normalize(role).toUpperCase())
+    .filter(Boolean);
 
   if (!tenantId) {
     return { ok: false, userId: null, tenantId: null, role: null, status: 400, error: 'tenantId requerido' };
@@ -52,9 +54,10 @@ export async function requireTenantRoleAccess(params: {
     return { ok: false, userId: null, tenantId: null, role: null, status: 403, error: 'Negocio suspendido' };
   }
 
-  if (!allowedRoles.includes(user.role)) {
+  const normalizedUserRole = normalize(user.role).toUpperCase();
+  if (!allowedRoles.includes(normalizedUserRole)) {
     return { ok: false, userId: null, tenantId: null, role: null, status: 403, error: 'Permisos insuficientes' };
   }
 
-  return { ok: true, userId: user.id, tenantId: user.tenantId, role: user.role, status: 200, error: null };
+  return { ok: true, userId: user.id, tenantId: user.tenantId, role: normalizedUserRole, status: 200, error: null };
 }

@@ -8,6 +8,7 @@ import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 import { syncGoogleLoyaltyObjectForCustomer } from '@/app/lib/google-wallet-object-sync';
 import { evaluateChallengesForVisit } from '@/app/lib/challenges';
+import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
 const TZ = 'America/Monterrey';
 
 function accessStatusToCode(status: number): ApiErrorCode {
@@ -89,7 +90,17 @@ export async function POST(request: Request) {
 
     const validCode = await prisma.dailyCode.findFirst({
       where: { code, isActive: true, day: dayUTC },
-      include: { tenant: true },
+      include: {
+        tenant: {
+          select: {
+            id: true,
+            isActive: true,
+            name: true,
+            requiredVisits: true,
+            rewardPeriod: true,
+          },
+        },
+      },
     });
 
     if (!validCode) {
@@ -138,6 +149,7 @@ export async function POST(request: Request) {
     const visitDay = dayUTC;
     const alreadyToday = await prisma.visit.findFirst({
       where: { membershipId: membership.id, tenantId: validCode.tenantId, visitDay },
+      select: { id: true },
     });
     if (alreadyToday) {
       logApiEvent('/api/check-in/scan', 'duplicate_visit', { userId, tenantId: validCode.tenantId, visitDay });
@@ -173,25 +185,50 @@ export async function POST(request: Request) {
       });
     }
 
-    const [, updatedMembership] = await prisma.$transaction([
-      prisma.visit.create({
-        data: {
-          membershipId: membership.id,
-          dailyCodeId: validCode.id,
-          tenantId: validCode.tenantId,
-          visitDay,
-          purchaseAmount,
-        },
-      }),
-      prisma.membership.update({
-        where: { id: membership.id },
-        data: {
-          currentVisits: { increment: 1 },
-          totalVisits: { increment: 1 },
-          lastVisitAt: new Date(),
-        },
-      }),
-    ]);
+    let updatedMembership;
+    try {
+      [, updatedMembership] = await prisma.$transaction([
+        prisma.visit.create({
+          data: {
+            membershipId: membership.id,
+            dailyCodeId: validCode.id,
+            tenantId: validCode.tenantId,
+            visitDay,
+            purchaseAmount,
+          },
+          select: { id: true },
+        }),
+        prisma.membership.update({
+          where: { id: membership.id },
+          data: {
+            currentVisits: { increment: 1 },
+            totalVisits: { increment: 1 },
+            lastVisitAt: new Date(),
+          },
+        }),
+      ]);
+    } catch (error: unknown) {
+      if (!isMissingTableOrColumnError(error)) throw error;
+      [, updatedMembership] = await prisma.$transaction([
+        prisma.visit.create({
+          data: {
+            membershipId: membership.id,
+            dailyCodeId: validCode.id,
+            tenantId: validCode.tenantId,
+            visitDay,
+          },
+          select: { id: true },
+        }),
+        prisma.membership.update({
+          where: { id: membership.id },
+          data: {
+            currentVisits: { increment: 1 },
+            totalVisits: { increment: 1 },
+            lastVisitAt: new Date(),
+          },
+        }),
+      ]);
+    }
 
 
     try {
