@@ -22,7 +22,17 @@ function RecuperarContent() {
         body: JSON.stringify({ email }),
       });
       const data = await res.json();
-      setMessage(res.ok ? data.message : `⚠️ ${data.error}`);
+      if (res.ok) {
+        if (data?.emailDelivery === 'not_configured') {
+          setMessage('⚠️ Servicio de correo no configurado en este entorno. Contacta soporte.');
+        } else if (data?.emailDelivery === 'failed') {
+          setMessage('⚠️ No pudimos enviar el correo. Intenta de nuevo en unos minutos.');
+        } else {
+          setMessage(data.message);
+        }
+      } else {
+        setMessage(`⚠️ ${data.error}`);
+      }
     } catch {
       setMessage('🔥 Error de conexión');
     }
@@ -39,7 +49,17 @@ function RecuperarContent() {
         body: JSON.stringify({ token, password }),
       });
       const data = await res.json();
-      setMessage(res.ok ? `✅ ${data.message}` : `⚠️ ${data.error}`);
+      if (res.ok) {
+        if (data?.emailDelivery === 'not_configured') {
+          setMessage(`✅ ${data.message} (sin correo de confirmación por configuración SMTP).`);
+        } else if (data?.emailDelivery === 'failed') {
+          setMessage(`✅ ${data.message} (falló el correo de confirmación).`);
+        } else {
+          setMessage(`✅ ${data.message}`);
+        }
+      } else {
+        setMessage(`⚠️ ${data.error}`);
+      }
     } catch {
       setMessage('🔥 Error de conexión');
     }

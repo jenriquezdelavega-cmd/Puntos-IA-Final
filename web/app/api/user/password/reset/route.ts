@@ -59,20 +59,29 @@ export async function POST(request: Request) {
       }),
     ]);
 
+    let emailDelivery: 'sent' | 'not_configured' | 'failed' | 'skipped_no_email' = 'skipped_no_email';
     if (resetToken.user.email) {
       const emailResult = await sendPasswordResetSuccessEmail({
         to: resetToken.user.email,
         name: resetToken.user.name,
       });
       if (!emailResult.ok) {
+        emailDelivery = 'failed';
         logApiEvent('/api/user/password/reset', 'password_reset_confirmation_failed', {
           userId: resetToken.userId,
           reason: emailResult.error || 'unknown',
         });
+      } else if (emailResult.skipped) {
+        emailDelivery = 'not_configured';
+        logApiEvent('/api/user/password/reset', 'password_reset_confirmation_skipped', {
+          userId: resetToken.userId,
+        });
+      } else {
+        emailDelivery = 'sent';
       }
     }
 
-    return apiSuccess({ requestId, data: { message: 'Contraseña actualizada correctamente.' } });
+    return apiSuccess({ requestId, data: { message: 'Contraseña actualizada correctamente.', emailDelivery } });
   } catch (error: unknown) {
     const message = typeof error === 'object' && error !== null && 'message' in error ? String((error as { message?: string }).message || 'Error') : 'Error';
     return apiError({ requestId, status: 500, code: 'INTERNAL_ERROR', message });

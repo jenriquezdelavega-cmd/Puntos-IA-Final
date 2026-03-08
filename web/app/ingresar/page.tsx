@@ -22,6 +22,7 @@ type ApiErrorResponse = {
   ok?: false;
   message?: string;
   error?: string;
+  emailStatus?: 'sent' | 'not_configured' | 'failed';
 };
 
 type CustomerMode = 'login' | 'registro';
@@ -117,7 +118,7 @@ export default function IngresarPage() {
           name: registerName.trim(),
           phone: registerPhone.trim(),
           password: registerPassword,
-          email: registerEmail.trim() || undefined,
+          email: registerEmail.trim(),
         }),
       });
 
@@ -137,7 +138,13 @@ export default function IngresarPage() {
         setPassword(registerPassword);
         setCustomerMode('login');
         setModeInUrl('login');
-        setRegisterMessage('Cuenta creada. Ahora inicia sesión para continuar.');
+        if (body?.emailStatus === 'not_configured') {
+          setRegisterMessage('Cuenta creada. El correo de confirmación no se envió porque el servicio de email no está configurado.');
+        } else if (body?.emailStatus === 'failed') {
+          setRegisterMessage('Cuenta creada. El correo de confirmación falló. Intenta más tarde o contacta soporte.');
+        } else {
+          setRegisterMessage('Cuenta creada y correo de confirmación enviado. Ahora inicia sesión para continuar.');
+        }
       }
     } catch {
       setRegisterMessage('No se pudo crear la cuenta en este momento. Intenta nuevamente.');
@@ -247,7 +254,7 @@ export default function IngresarPage() {
                   placeholder="Ejemplo: 5512345678 (también acepta +52)"
                   required
                 />
-                <label className="text-sm font-semibold text-[#4e3b74]" htmlFor="register-email">Email (opcional)</label>
+                <label className="text-sm font-semibold text-[#4e3b74]" htmlFor="register-email">Email</label>
                 <input
                   id="register-email"
                   type="email"
@@ -255,6 +262,7 @@ export default function IngresarPage() {
                   onChange={(event) => setRegisterEmail(event.target.value)}
                   className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-4 py-3 text-sm focus:border-[#7c3aed] focus:outline-none"
                   placeholder="nombre@correo.com"
+                  required
                 />
                 <label className="text-sm font-semibold text-[#4e3b74]" htmlFor="register-password">Contraseña</label>
                 <input

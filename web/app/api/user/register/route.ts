@@ -16,6 +16,9 @@ import {
 import { sendWelcomeEmail } from '@/app/lib/email';
 import { logApiEvent } from '@/app/lib/api-log';
 
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
@@ -29,6 +32,7 @@ export async function POST(request: Request) {
       name: requiredString,
       phone: requiredString,
       password: requiredString,
+      email: requiredString,
     });
     if (!parsedBody.ok) {
       return apiError({
@@ -39,8 +43,17 @@ export async function POST(request: Request) {
       });
     }
 
-    const { name, phone, password } = parsedBody.data;
-    const email = asTrimmedString(body.email);
+    const { name, phone, password, email } = parsedBody.data;
+    const normalizedEmail = asTrimmedString(email).toLowerCase();
+
+    if (!isValidEmail(normalizedEmail)) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Email inválido',
+      });
+    }
 
     if (!isValidPhone(phone)) {
       return apiError({
@@ -99,24 +112,36 @@ export async function POST(request: Request) {
       data: {
         name,
         phone: normalizedPhone || phone,
-        email: email || null,
+        email: normalizedEmail,
         password: hashPassword(password),
         gender: cleanGender,
         birthDate: finalDate,
       },
     });
 
-    if (newUser.email) {
-      const emailResult = await sendWelcomeEmail({ to: newUser.email, name: newUser.name });
-      if (!emailResult.ok) {
-        logApiEvent('/api/user/register', 'welcome_email_failed', {
-          userId: newUser.id,
-          reason: emailResult.error || 'unknown',
-        });
-      }
+    const emailResult = await sendWelcomeEmail({ to: newUser.email || normalizedEmail, name: newUser.name });
+    let emailStatus: 'sent' | 'not_configured' | 'failed' = 'sent';
+    if (!emailResult.ok) {
+      emailStatus = 'failed';
+      logApiEvent('/api/user/register', 'welcome_email_failed', {
+        userId: newUser.id,
+        reason: emailResult.error || 'unknown',
+      });
+    } else if (emailResult.skipped) {
+      emailStatus = 'not_configured';
+      logApiEvent('/api/user/register', 'welcome_email_skipped', {
+        userId: newUser.id,
+      });
     }
 
-    return apiSuccess({ requestId, data: { id: newUser.id, name: newUser.name } });
+    return apiSuccess({
+      requestId,
+      data: {
+        id: newUser.id,
+        name: newUser.name,
+        emailStatus,
+      },
+    });
   } catch (error: unknown) {
     if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'P2002') {
       return apiError({

@@ -13,7 +13,7 @@ Configura estas variables en `web/.env` (o en el provider de despliegue):
 - `SMTP_PASS`
 - `EMAIL_FROM`
 - `EMAIL_REPLY_TO`
-- `PUBLIC_BASE_URL` (requerida para links de recuperación de contraseña)
+- `PUBLIC_BASE_URL` (recomendada en producción para links de recuperación)
 - `NEXT_PUBLIC_APP_URL` (fallback para links en correos)
 
 Ejemplo:
@@ -32,6 +32,13 @@ Ejemplo:
 - En Vercel define los valores como texto plano en *Project Settings → Environment Variables*.
 - No necesitas comillas en Vercel para `SMTP_PASS` aunque tenga símbolos especiales.
 - Asegura `PUBLIC_BASE_URL=https://puntoia.mx` en producción para que los links del correo apunten al dominio correcto.
+- Si no defines `PUBLIC_BASE_URL`, el sistema usa automáticamente el `origin` del request para construir el link de recuperación.
+
+### Diagnóstico rápido (si no llegan correos)
+
+- Revisa logs de `POST /api/user/password/forgot` y `POST /api/user/register`.
+- Si aparece `event: "smtp_not_configured"`, faltan variables SMTP en el entorno desplegado.
+- Si `responseStatusCode` es `200` pero el evento de email es `smtp_not_configured`, el flujo principal funciona pero **no se envía ningún correo** hasta completar variables SMTP.
 
 ## Flujos conectados
 
