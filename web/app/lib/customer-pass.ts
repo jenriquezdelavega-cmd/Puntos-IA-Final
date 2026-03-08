@@ -1,5 +1,4 @@
 import { createHmac, timingSafeEqual } from 'crypto';
-import { appendFileSync } from 'node:fs';
 
 export type CustomerPassPayload = {
   cid: string;
@@ -38,14 +37,6 @@ function getPassSecret() {
   );
 }
 
-function getPassSecretSource() {
-  if (process.env.QR_TOKEN_SECRET) return 'QR_TOKEN_SECRET';
-  if (process.env.PASS_TOKEN_SECRET) return 'PASS_TOKEN_SECRET';
-  if (process.env.NEXTAUTH_SECRET) return 'NEXTAUTH_SECRET';
-  if (process.env.JWT_SECRET) return 'JWT_SECRET';
-  return 'FALLBACK_DEV_SECRET';
-}
-
 function signPart(part: string) {
   return createHmac('sha256', getPassSecret()).update(part).digest('base64url');
 }
@@ -65,16 +56,6 @@ export function generateCustomerPass(customerId: string): CustomerPassData {
   const encodedPayload = base64UrlEncode(JSON.stringify(payload));
   const signature = signPart(encodedPayload);
   const token = `${encodedPayload}.${signature}`;
-  // #region agent log
-  appendFileSync('/opt/cursor/logs/debug.log', JSON.stringify({
-    hypothesisId: 'H1',
-    location: 'web/app/lib/customer-pass.ts:61',
-    message: 'generateCustomerPass created token',
-    data: { customerId: cleanCustomerId, tokenLength: token.length, secretSource: getPassSecretSource() },
-    timestamp: Date.now(),
-  }) + '\n');
-  // #endregion
-
   return {
     customerId: cleanCustomerId,
     token,

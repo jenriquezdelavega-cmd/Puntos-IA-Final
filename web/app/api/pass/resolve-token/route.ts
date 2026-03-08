@@ -1,7 +1,6 @@
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { verifyCustomerToken } from '@/app/lib/customer-token';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
-import { appendFileSync } from 'node:fs';
 
 function extractToken(value: string) {
   const raw = asTrimmedString(value);
@@ -35,20 +34,6 @@ export async function POST(req: Request) {
     }
     const rawInput = asTrimmedString(body?.token || body?.qrValue);
     const token = extractToken(rawInput);
-    // #region agent log
-    appendFileSync('/opt/cursor/logs/debug.log', JSON.stringify({
-      hypothesisId: 'H3',
-      location: 'web/app/api/pass/resolve-token/route.ts:44',
-      message: 'resolve-token extracted token from input',
-      data: {
-        rawLength: rawInput.length,
-        tokenLength: token.length,
-        hasQueryToken: rawInput.includes('token='),
-        hasRouteV: rawInput.includes('/v/'),
-      },
-      timestamp: Date.now(),
-    }) + '\n');
-    // #endregion
     if (!token) {
       return apiError({
         requestId,
