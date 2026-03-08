@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Building2, CircleUserRound } from 'lucide-react';
+import { Building2, CircleUserRound, KeyRound, ShieldCheck, Sparkles } from 'lucide-react';
 import {
   MarketingBackground,
   MarketingFooter,
@@ -152,32 +152,31 @@ export default function IngresarPage() {
       <MarketingHeader badge="Acceso a Punto IA" />
 
       <Section
-        eyebrow="Acceso"
-        title="Autenticación de clientes y negocios"
-        description="Una sola pantalla para acceder al panel de negocio o gestionar el acceso de clientes con login y registro real."
+        eyebrow="Acceso principal"
+        title="Login de cliente simple, rápido y seguro"
+        description="Diseñamos esta sección para que iniciar sesión, crear cuenta y activar pase sea directo desde el primer intento."
       >
-        <div className="grid gap-5 lg:grid-cols-2">
-          <article className={`rounded-3xl border bg-white p-6 ${defaultTab === 'negocio' ? 'border-[#d7c4f2]' : 'border-[#ebdef8]'}`}>
-            <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-[#8a74b3]">
-              <Building2 className="h-4 w-4" />
-              Negocios
-            </p>
-            <h2 className="mt-3 text-2xl font-black">Entrar al panel operativo</h2>
-            <p className="mt-3 text-sm text-[#5f4e84]">
-              Acceso para administradores y equipos de sucursal que operan campañas, check-ins, canjes y reportes.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <a href="/admin" className={buttonStyles('primary')}>Entrar como negocio</a>
-            </div>
-          </article>
-
-          <article className={`rounded-3xl border bg-white p-6 ${defaultTab === 'cliente' ? 'border-[#d7c4f2]' : 'border-[#ebdef8]'}`}>
+        <div className="grid gap-5 lg:grid-cols-[1.25fr,0.75fr]">
+          <article className={`rounded-3xl border bg-[linear-gradient(135deg,#ffffff_0%,#fff7ff_50%,#f4ebff_100%)] p-6 shadow-[0_16px_36px_rgba(102,58,170,0.14)] ${defaultTab === 'cliente' ? 'border-[#d7c4f2]' : 'border-[#ebdef8]'}`}>
             <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-[#8a74b3]">
               <CircleUserRound className="h-4 w-4" />
-              Clientes
+              Clientes · acceso prioritario
             </p>
-            <h2 className="mt-3 text-2xl font-black">Acceso de clientes</h2>
-            <p className="mt-3 text-sm text-[#5f4e84]">Inicia sesión o crea tu cuenta. Ambos flujos conectan con la autenticación real de Punto IA.</p>
+            <h2 className="mt-3 text-3xl font-black">Entra a tu cuenta en menos de 15 segundos.</h2>
+            <p className="mt-3 text-sm text-[#5f4e84]">
+              Aquí está todo el flujo cliente: iniciar sesión, crear cuenta y recuperar contraseña con validación real.
+            </p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              <div className="rounded-xl border border-[#e7d6fa] bg-white px-3 py-2 text-xs font-semibold text-[#5d4889]">
+                <span className="inline-flex items-center gap-1"><KeyRound className="h-3.5 w-3.5" /> Login inmediato</span>
+              </div>
+              <div className="rounded-xl border border-[#e7d6fa] bg-white px-3 py-2 text-xs font-semibold text-[#5d4889]">
+                <span className="inline-flex items-center gap-1"><Sparkles className="h-3.5 w-3.5" /> Registro rápido</span>
+              </div>
+              <div className="rounded-xl border border-[#e7d6fa] bg-white px-3 py-2 text-xs font-semibold text-[#5d4889]">
+                <span className="inline-flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Sesión segura</span>
+              </div>
+            </div>
 
             <div className="mt-5 grid grid-cols-2 rounded-xl border border-[#e8daf7] bg-[#fcf8ff] p-1">
               <button
@@ -274,6 +273,26 @@ export default function IngresarPage() {
                 {registerMessage ? <p className="text-sm font-semibold text-[#4e3b74]">{registerMessage}</p> : null}
               </form>
             )}
+          </article>
+
+          <article className={`rounded-3xl border bg-white p-6 ${defaultTab === 'negocio' ? 'border-[#d7c4f2]' : 'border-[#ebdef8]'}`}>
+            <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-[#8a74b3]">
+              <Building2 className="h-4 w-4" />
+              Negocios
+            </p>
+            <h2 className="mt-3 text-2xl font-black">Panel para operar con estándar premium</h2>
+            <p className="mt-3 text-sm text-[#5f4e84]">
+              Acceso para equipos que gestionan check-ins, canjes, campañas y seguimiento de recompra en tiempo real.
+            </p>
+            <div className="mt-5 rounded-2xl border border-[#ebdef8] bg-[#fcf8ff] p-4">
+              <p className="text-xs font-black uppercase tracking-[0.15em] text-[#7a5ba9]">Enfoque PyME</p>
+              <p className="mt-2 text-sm text-[#4d3a76]">
+                Tecnología y conocimiento práctico para elevar atención al cliente y decisiones comerciales.
+              </p>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <a href="/admin" className={buttonStyles('secondary')}>Entrar como negocio</a>
+            </div>
           </article>
         </div>
       </Section>

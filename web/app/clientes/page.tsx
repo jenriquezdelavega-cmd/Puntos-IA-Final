@@ -16,13 +16,13 @@ import { Reveal, StaggerGrid, StaggerItem } from '../components/marketing/effect
 const actions = [
   {
     title: 'Iniciar sesión',
-    description: 'Si ya tienes cuenta, entra con tu número para ver puntos y recompensas.',
-    href: '/ingresar?tipo=cliente',
+    description: 'Accede en segundos a tus puntos, recompensas y negocios aliados.',
+    href: '/ingresar?tipo=cliente&modo=login',
     cta: 'Entrar a mi cuenta',
   },
   {
     title: 'Crear cuenta',
-    description: 'Si es tu primera vez, crea tu cuenta en minutos y guarda tu progreso.',
+    description: 'Regístrate rápido y deja lista tu cuenta para comenzar a acumular.',
     href: '/ingresar?tipo=cliente&modo=registro',
     cta: 'Crear mi cuenta',
   },
@@ -37,26 +37,26 @@ const actions = [
 const flow = [
   {
     step: '1',
-    title: 'Elige una acción',
-    description: 'Inicia sesión, crea cuenta o activa pase según tu situación.',
+    title: 'Abre tu acceso',
+    description: 'Elige iniciar sesión o crear cuenta según tu caso.',
   },
   {
     step: '2',
-    title: 'Guarda tu pase',
-    description: 'Usa Apple Wallet o Google Wallet para tenerlo siempre a la mano.',
+    title: 'Activa o guarda tu pase',
+    description: 'Usa Apple Wallet o Google Wallet para tenerlo siempre listo.',
   },
   {
     step: '3',
-    title: 'Acumula y canjea',
-    description: 'Muestra tu pase en caja para sumar visitas o canjear recompensas.',
+    title: 'Acumula y canjea fácil',
+    description: 'Muestra tu pase en caja y sigue tu avance en tiempo real.',
   },
 ];
 
 const benefits = [
-  { icon: '⚡', title: 'Sin app extra', description: 'Todo funciona desde tu celular y wallet.' },
-  { icon: '🎁', title: 'Premios claros', description: 'Sabes qué te falta y cuándo puedes canjear.' },
-  { icon: '🔒', title: 'Cuenta protegida', description: 'Tu historial queda guardado para volver cuando quieras.' },
-  { icon: '📍', title: 'Negocios locales', description: 'Aprovecha beneficios en lugares que sí frecuentas.' },
+  { icon: '⚡', title: 'Acceso sin fricción', description: 'Login y registro simples, pensados para uso real diario.' },
+  { icon: '🎁', title: 'Recompensas transparentes', description: 'Siempre sabes cuánto te falta para canjear.' },
+  { icon: '🔒', title: 'Cuenta protegida', description: 'Tu progreso y datos quedan respaldados en tu sesión.' },
+  { icon: '📍', title: 'Más valor local', description: 'Conecta con negocios aliados y beneficios de tu ciudad.' },
 ];
 
 export default function ClientesPage() {
@@ -69,21 +69,21 @@ export default function ClientesPage() {
         <Reveal>
           <div>
             <p className="inline-flex rounded-full border border-[#e9def8] bg-white px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.2em] text-[#7d69a5]">
-              Ruta de clientes simplificada
+              Experiencia cliente premium
             </p>
             <h1 className="mt-6 text-4xl font-black leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
-              Todo claro desde el inicio:
+              El acceso de cliente más claro:
               <span className="block bg-gradient-to-r from-[#ff7a59] via-[#ff3f8e] to-[#8b5cf6] bg-clip-text text-transparent">
-                entrar, crear cuenta o activar pase.
+                iniciar sesión, crear cuenta y activar pase.
               </span>
             </h1>
             <p className="mt-6 max-w-3xl text-base leading-relaxed text-[#3f2d63] sm:text-lg">
-              Esta página elimina dudas. Solo te mostramos las tres acciones que importan para empezar y usar tus recompensas sin fricción.
+              Diseñada para que cualquier cliente avance en segundos: acceso fácil, recompensas claras y seguimiento de progreso en una experiencia de nivel top.
             </p>
           </div>
         </Reveal>
         <Reveal delay={0.08}>
-          <BrandSpotlight caption="Tu pase, tus recompensas y la marca en una experiencia visual más memorable y clara." />
+          <BrandSpotlight caption="Tu pase, tus recompensas y un flujo de acceso directo para usar Punto IA sin confusión." />
         </Reveal>
       </section>
 
@@ -103,9 +103,9 @@ export default function ClientesPage() {
         </StaggerGrid>
       </SectionBand>
 
-      <Reveal><TrustStrip items={['Acción 1: Iniciar sesión', 'Acción 2: Crear cuenta', 'Acción 3: Activar pase']} /></Reveal>
+      <Reveal><TrustStrip items={['Paso 1: Iniciar sesión', 'Paso 2: Crear cuenta', 'Paso 3: Activar pase']} /></Reveal>
 
-      <Section eyebrow="Cómo funciona" title="Tres pasos para usar tus recompensas" description="No necesitas aprender nada complejo.">
+      <Section eyebrow="Cómo funciona" title="Tres pasos para empezar sin fricción" description="No necesitas aprender nada complejo.">
         <StaggerGrid className="grid gap-4 md:grid-cols-3">
           {flow.map((item) => (
             <StaggerItem key={item.step}>
@@ -119,7 +119,7 @@ export default function ClientesPage() {
         </StaggerGrid>
       </Section>
 
-      <Section eyebrow="Beneficios" title="Experiencia rápida y sin carga mental" description="Diseñado para que regreses más fácil a tus negocios favoritos.">
+      <Section eyebrow="Beneficios" title="Diseño premium enfocado en simplicidad" description="Pensado para clientes que quieren resolver rápido y seguir comprando mejor.">
         <StaggerGrid className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {benefits.map((benefit) => (
             <StaggerItem key={benefit.title}><FeatureCard icon={benefit.icon} title={benefit.title} description={benefit.description} /></StaggerItem>
@@ -130,9 +130,9 @@ export default function ClientesPage() {
       <section className="relative mx-auto w-full max-w-7xl px-6 pb-16 pt-2">
         <Reveal>
           <CtaPanel
-            title="¿Qué necesitas hacer ahora?"
-            description="Elige una acción y sigue. Si ya tienes cuenta, entra. Si no, crea tu cuenta o activa pase."
-            primary={{ href: '/ingresar?tipo=cliente', label: 'Iniciar sesión' }}
+            title="¿Listo para entrar a tu cuenta?"
+            description="Si ya eres cliente, inicia sesión ahora. Si aún no, crea tu cuenta o activa tu pase en minutos."
+            primary={{ href: '/ingresar?tipo=cliente&modo=login', label: 'Iniciar sesión' }}
             secondary={{ href: '/activar-pase', label: 'Activar pase' }}
           />
         </Reveal>
