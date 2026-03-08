@@ -8,6 +8,7 @@ import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 import { syncGoogleLoyaltyObjectForCustomer } from '@/app/lib/google-wallet-object-sync';
 import { evaluateChallengesForVisit } from '@/app/lib/challenges';
+import { appendFileSync } from 'node:fs';
 const TZ = 'America/Monterrey';
 
 function accessStatusToCode(status: number): ApiErrorCode {
@@ -83,6 +84,20 @@ export async function POST(request: Request) {
     }
 
     const { userId, code, tenantUserId, tenantSessionToken } = parsedBody.data;
+    // #region agent log
+    appendFileSync('/opt/cursor/logs/debug.log', JSON.stringify({
+      hypothesisId: 'H5',
+      location: 'web/app/api/check-in/scan/route.ts:90',
+      message: 'check-in/scan received normalized inputs',
+      data: {
+        userIdLength: userId.length,
+        codeLength: code.length,
+        tenantUserIdLength: tenantUserId.length,
+        hasTenantSessionToken: Boolean(tenantSessionToken),
+      },
+      timestamp: Date.now(),
+    }) + '\n');
+    // #endregion
     const purchaseAmount = parsePurchaseAmount(body.purchaseAmount);
 
     const dayUTC = dayKeyInBusinessTz();

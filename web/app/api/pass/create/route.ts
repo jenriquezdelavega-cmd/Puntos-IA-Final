@@ -2,6 +2,7 @@ import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { prisma } from '@/app/lib/prisma';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
 import { generateCustomerPass } from '@/app/lib/customer-pass';
+import { appendFileSync } from 'node:fs';
 
 
 export async function POST(req: Request) {
@@ -38,6 +39,15 @@ export async function POST(req: Request) {
     }
 
     const pass = generateCustomerPass(user.id);
+    // #region agent log
+    appendFileSync('/opt/cursor/logs/debug.log', JSON.stringify({
+      hypothesisId: 'H1',
+      location: 'web/app/api/pass/create/route.ts:50',
+      message: 'pass/create generated pass payload',
+      data: { customerId: user.id, tokenLength: pass.token.length, qrPrefix: pass.qrValue.slice(0, 12) },
+      timestamp: Date.now(),
+    }) + '\n');
+    // #endregion
     const passPath = `/pass?customer_id=${encodeURIComponent(user.id)}`;
 
     return apiSuccess({
