@@ -186,8 +186,14 @@ function renderBrandedEmailTemplate(input: {
         <td align="center">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;background:#ffffff;border:1px solid #eadcf8;border-radius:18px;overflow:hidden;">
             <tr>
-              <td style="padding:20px 24px;background:linear-gradient(135deg,#fff8ef 0%,#fff8ff 48%,#f4ecff 100%);border-bottom:1px solid #eadcf8;">
-                ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Punto IA" style="height:34px;width:auto;display:block;" />` : '<p style="margin:0;font-size:22px;font-weight:800;color:#2b1b51;">Punto IA</p>'}
+              <td style="padding:18px 24px;background:linear-gradient(120deg,#241548 0%,#3a236d 58%,#5a33a4 100%);border-bottom:1px solid #eadcf8;">
+                ${
+                  logoUrl
+                    ? `<span style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.24);">
+                         <img src="${escapeHtml(logoUrl)}" alt="Punto IA" style="height:32px;width:auto;display:block;" />
+                       </span>`
+                    : '<p style="margin:0;font-size:22px;font-weight:800;color:#ffffff;">Punto IA</p>'
+                }
               </td>
             </tr>
             <tr>
@@ -232,10 +238,15 @@ export async function sendTransactionalEmail(payload: MailPayload): Promise<Emai
     const info = await transporter.sendMail({
       from: config.from,
       replyTo: config.replyTo,
+      sender: config.from,
       to: payload.to,
       subject: payload.subject,
       text: payload.text,
       html: payload.html,
+      headers: {
+        'X-Auto-Response-Suppress': 'All',
+        'Auto-Submitted': 'auto-generated',
+      },
     });
 
     logApiEvent('/lib/email', 'email_sent', {
