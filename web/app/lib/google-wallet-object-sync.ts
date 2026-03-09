@@ -94,7 +94,7 @@ function resolveBusinessLogoUrl(params: {
 
   if (logoFromBusiness) return logoFromBusiness;
 
-  const fallback = new URL('/icon.svg', params.origin);
+  const fallback = new URL('/icono.png', params.origin);
   return fallback.toString();
 }
 

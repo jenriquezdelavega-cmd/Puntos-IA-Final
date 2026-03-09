@@ -144,11 +144,6 @@ function rewardStatusStyles(status: CoalitionReward['status']) {
   return 'border-[#c8f3d8] bg-[#ecfff2] text-[#11643a]';
 }
 
-function businessInitial(name?: string) {
-  const clean = String(name || '').trim();
-  return clean ? clean.charAt(0).toUpperCase() : 'N';
-}
-
 function BusinessLogo({ name, logoData, size = 'md' }: { name?: string; logoData?: string; size?: 'sm' | 'md' }) {
   const dimensions = size === 'sm' ? 'h-10 w-10 rounded-xl' : 'h-14 w-14 rounded-2xl';
   const inner = size === 'sm' ? 'rounded-[0.6rem]' : 'rounded-xl';
@@ -158,9 +153,12 @@ function BusinessLogo({ name, logoData, size = 'md' }: { name?: string; logoData
       {logoData ? (
         <span className={`h-full w-full bg-contain bg-center bg-no-repeat ${inner}`} style={{ backgroundImage: `url(${logoData})` }} />
       ) : (
-        <span className={`flex h-full w-full items-center justify-center bg-white/10 text-sm font-black text-white ${inner}`}>
-          {businessInitial(name)}
-        </span>
+        <span
+          className={`h-full w-full bg-center bg-cover bg-no-repeat ${inner}`}
+          style={{ backgroundImage: 'url(/icono.png)' }}
+          aria-label={`Ícono de ${name || 'negocio'}`}
+          role="img"
+        />
       )}
     </span>
   );
