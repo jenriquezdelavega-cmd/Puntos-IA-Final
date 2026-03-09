@@ -33,6 +33,9 @@ Ejemplo:
 - No necesitas comillas en Vercel para `SMTP_PASS` aunque tenga símbolos especiales.
 - Asegura `PUBLIC_BASE_URL=https://puntoia.mx` en producción para que los links del correo apunten al dominio correcto.
 - Si no defines `PUBLIC_BASE_URL`, el sistema usa automáticamente el `origin` del request para construir el link de recuperación.
+- El servicio ahora acepta aliases comunes: `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM`.
+- Si no envías `SMTP_HOST`/`SMTP_PORT`, usa defaults Titan (`smtpout.secureserver.net:465`).
+- Si no envías `EMAIL_FROM`, usa fallback automático: `Punto IA <SMTP_USER>`.
 
 ### Diagnóstico rápido (si no llegan correos)
 
