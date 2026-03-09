@@ -43,6 +43,20 @@ Ejemplo:
 - Si aparece `event: "smtp_not_configured"`, faltan variables SMTP en el entorno desplegado.
 - Si `responseStatusCode` es `200` pero el evento de email es `smtp_not_configured`, el flujo principal funciona pero **no se envía ningún correo** hasta completar variables SMTP.
 
+### Si Outlook/Hotmail lo manda a "No deseado"
+
+Esto casi siempre es tema de reputación/autenticación de dominio (no del endpoint).
+
+Checklist recomendado:
+
+1. **SPF** de `puntoia.mx` debe incluir el proveedor SMTP (Titan/GoDaddy).
+2. **DKIM** habilitado y validado desde Titan para `contacto@puntoia.mx`.
+3. **DMARC** publicado (`_dmarc.puntoia.mx`) con política inicial `p=none`, luego subir a `quarantine/reject`.
+4. Usar siempre `FROM` del mismo dominio autenticado (`@puntoia.mx`), evitar remitentes de dominios distintos.
+5. Evitar picos de envío bruscos (calentar dominio de forma gradual).
+
+Nota: En código ya se añadieron headers transaccionales y mejor contraste de branding en header de email.
+
 ## Flujos conectados
 
 1. **Recuperar contraseña**  
