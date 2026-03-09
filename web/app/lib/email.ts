@@ -28,6 +28,16 @@ type SmtpConfig = {
 let cachedTransporter: nodemailer.Transporter | null = null;
 let verifyPromise: Promise<void> | null = null;
 
+function readEnv(...names: string[]) {
+  for (const name of names) {
+    const value = process.env[name];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return '';
+}
+
 function parseBoolean(value: string | undefined, fallback = false) {
   if (!value) return fallback;
   const normalized = value.trim().toLowerCase();
@@ -42,17 +52,31 @@ function maskEmail(email: string) {
 }
 
 function getSmtpConfig(): { config?: SmtpConfig; missing?: string[] } {
-  const host = String(process.env.SMTP_HOST || '').trim();
-  const rawPort = String(process.env.SMTP_PORT || '').trim();
-  const secure = parseBoolean(process.env.SMTP_SECURE, true);
-  const user = String(process.env.SMTP_USER || '').trim();
-  const pass = String(process.env.SMTP_PASS || '');
-  const from = String(process.env.EMAIL_FROM || '').trim();
-  const replyTo = String(process.env.EMAIL_REPLY_TO || '').trim();
+  const secure = parseBoolean(
+    readEnv('SMTP_SECURE', 'MAIL_SECURE', 'EMAIL_SMTP_SECURE'),
+    true,
+  );
+  const host = readEnv('SMTP_HOST', 'MAIL_HOST', 'EMAIL_SMTP_HOST') || 'smtpout.secureserver.net';
+  const rawPort = readEnv('SMTP_PORT', 'MAIL_PORT', 'EMAIL_SMTP_PORT');
+  const user = readEnv(
+    'SMTP_USER',
+    'SMTP_USERNAME',
+    'MAIL_USER',
+    'MAIL_USERNAME',
+    'EMAIL_SMTP_USER',
+  );
+  const pass = readEnv(
+    'SMTP_PASS',
+    'SMTP_PASSWORD',
+    'MAIL_PASS',
+    'MAIL_PASSWORD',
+    'EMAIL_SMTP_PASS',
+  );
+  const from = readEnv('EMAIL_FROM', 'SMTP_FROM', 'MAIL_FROM')
+    || (user ? `Punto IA <${user}>` : '');
+  const replyTo = readEnv('EMAIL_REPLY_TO', 'SMTP_REPLY_TO', 'MAIL_REPLY_TO');
 
   const missing = [
-    !host ? 'SMTP_HOST' : '',
-    !rawPort ? 'SMTP_PORT' : '',
     !user ? 'SMTP_USER' : '',
     !pass ? 'SMTP_PASS' : '',
     !from ? 'EMAIL_FROM' : '',
@@ -63,7 +87,7 @@ function getSmtpConfig(): { config?: SmtpConfig; missing?: string[] } {
   }
 
   const parsedPort = Number(rawPort);
-  const port = Number.isFinite(parsedPort) ? parsedPort : secure ? 465 : 587;
+  const port = Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : secure ? 465 : 587;
 
   return {
     config: {
