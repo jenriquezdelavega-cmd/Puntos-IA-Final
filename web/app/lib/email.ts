@@ -162,7 +162,8 @@ function renderBrandedEmailTemplate(input: {
   helperText?: string;
 }) {
   const brandUrl = getPublicBaseUrl();
-  const logoUrl = `${brandUrl || 'https://puntoia.mx'}/icono.png`;
+  const logoUrl = `${brandUrl || 'https://puntoia.mx'}/logo.png`;
+  const compactIconUrl = `${brandUrl || 'https://puntoia.mx'}/icono.png`;
   const title = escapeHtml(input.title);
   const greeting = escapeHtml(input.greeting);
   const preheader = escapeHtml(input.preheader);
@@ -189,8 +190,9 @@ function renderBrandedEmailTemplate(input: {
               <td style="padding:18px 24px;background:linear-gradient(120deg,#241548 0%,#3a236d 58%,#5a33a4 100%);border-bottom:1px solid #eadcf8;">
                 ${
                   logoUrl
-                    ? `<span style="display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.24);">
-                         <img src="${escapeHtml(logoUrl)}" alt="Punto IA" style="height:32px;width:auto;display:block;" />
+                    ? `<span style="display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.24);">
+                         <img src="${escapeHtml(logoUrl)}" alt="Punto IA" style="height:28px;width:auto;display:block;" />
+                         <img src="${escapeHtml(compactIconUrl)}" alt="" style="height:18px;width:18px;display:block;border-radius:5px;" />
                        </span>`
                     : '<p style="margin:0;font-size:22px;font-weight:800;color:#ffffff;">Punto IA</p>'
                 }

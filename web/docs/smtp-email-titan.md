@@ -57,6 +57,13 @@ Checklist recomendado:
 
 Nota: En código ya se añadieron headers transaccionales y mejor contraste de branding en header de email.
 
+### Logo en cabecera vs icono del remitente
+
+- **Cabecera HTML del correo**: se controla desde `app/lib/email.ts` (logo grande + apoyo visual).
+- **Icono circular del remitente** (el que a veces sale como letra "C" en Gmail/Outlook): **no lo controla el HTML del correo**.
+- Ese icono depende de autenticación/reputación de dominio y proveedor (principalmente **BIMI + DKIM + SPF + DMARC**).
+- Si quieres que ahí aparezca tu `icono.png`, hay que configurar BIMI del dominio (normalmente requiere SVG Tiny PS y, en muchos casos, VMC).
+
 ## Flujos conectados
 
 1. **Recuperar contraseña**  
