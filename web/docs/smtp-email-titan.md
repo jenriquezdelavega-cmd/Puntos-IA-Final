@@ -62,7 +62,26 @@ Nota: En código ya se añadieron headers transaccionales y mejor contraste de b
 - **Cabecera HTML del correo**: se controla desde `app/lib/email.ts` (logo grande + apoyo visual).
 - **Icono circular del remitente** (el que a veces sale como letra "C" en Gmail/Outlook): **no lo controla el HTML del correo**.
 - Ese icono depende de autenticación/reputación de dominio y proveedor (principalmente **BIMI + DKIM + SPF + DMARC**).
-- Si quieres que ahí aparezca tu `icono.png`, hay que configurar BIMI del dominio (normalmente requiere SVG Tiny PS y, en muchos casos, VMC).
+- Si quieres que ahí aparezca tu marca, hay que configurar BIMI del dominio (normalmente requiere SVG Tiny PS y, en muchos casos, VMC/CMC).
+
+### Setup recomendado de avatar (BIMI) para Punto IA
+
+Con el asset `web/public/puntoia.svg`, usa esta URL pública:
+
+- `https://puntoia.mx/puntoia.svg`
+
+Registro DNS sugerido:
+
+- Host: `default._bimi.puntoia.mx`
+- Tipo: `TXT`
+- Valor: `v=BIMI1; l=https://puntoia.mx/puntoia.svg;`
+
+Checklist mínimo para que tenga efecto:
+
+1. DKIM activo y alineado para `puntoia.mx`.
+2. SPF activo (ya está).
+3. DMARC en enforcement (`p=quarantine` o `p=reject`, ya tienes `quarantine`).
+4. Esperar propagación DNS y recalificación del proveedor (puede tardar).
 
 ## Flujos conectados
 
