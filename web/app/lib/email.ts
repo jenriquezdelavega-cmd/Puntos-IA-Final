@@ -162,7 +162,7 @@ function renderBrandedEmailTemplate(input: {
   helperText?: string;
 }) {
   const brandUrl = getPublicBaseUrl();
-  const logoUrl = brandUrl ? `${brandUrl}/logo.png` : '';
+  const logoUrl = `${brandUrl || 'https://puntoia.mx'}/icono.png`;
   const title = escapeHtml(input.title);
   const greeting = escapeHtml(input.greeting);
   const preheader = escapeHtml(input.preheader);

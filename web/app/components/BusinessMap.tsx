@@ -45,11 +45,6 @@ function zoomForRadiusKm(radiusKm: number) {
   return 6;
 }
 
-function businessInitial(name?: string) {
-  const clean = String(name || '').trim();
-  return clean ? clean.charAt(0).toUpperCase() : 'N';
-}
-
 function MapController({
   center,
   radiusKm,
@@ -159,9 +154,10 @@ export default function BusinessMap({
                           style={{ backgroundImage: `url(${t.logoData})` }}
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center rounded-md bg-white/10 text-xs font-black text-white">
-                          {businessInitial(t.name)}
-                        </div>
+                        <div
+                          className="h-full w-full rounded-md bg-white/10 bg-center bg-cover bg-no-repeat"
+                          style={{ backgroundImage: 'url(/icono.png)' }}
+                        />
                       )}
                     </div>
                     <div className="font-black text-gray-900 text-sm">{t.name}</div>
@@ -190,9 +186,10 @@ export default function BusinessMap({
                     style={{ backgroundImage: `url(${selected.logoData})` }}
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center rounded-lg bg-white/10 text-sm font-black text-white">
-                    {businessInitial(selected.name)}
-                  </div>
+                  <div
+                    className="h-full w-full rounded-lg bg-white/10 bg-center bg-cover bg-no-repeat"
+                    style={{ backgroundImage: 'url(/icono.png)' }}
+                  />
                 )}
               </div>
               <div className="min-w-0 flex-1">

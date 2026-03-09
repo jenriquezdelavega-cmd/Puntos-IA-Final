@@ -904,7 +904,8 @@ return (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={logoData} alt="Logo" className="w-full h-full object-cover" />
       ) : (
-        <span className="text-lg font-black text-gray-400">{(tenant?.name?.[0] ?? '?')}</span>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/icono.png" alt="Ícono Punto IA" className="w-full h-full object-cover" />
       )}
     </div>
     <div className="flex-1">
