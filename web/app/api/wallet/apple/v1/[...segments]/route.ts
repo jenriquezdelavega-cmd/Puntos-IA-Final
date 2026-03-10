@@ -3,6 +3,7 @@ import { apiError, getRequestId } from '@/app/lib/api-response';
 import { prisma } from '@/app/lib/prisma';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
 import {
+  ensureWalletRegistrationsTable,
   deleteWalletRegistration,
   listUpdatedSerialsForDevice,
   upsertWalletRegistration,
@@ -73,6 +74,7 @@ export async function GET(req: Request, context: { params: Promise<{ segments: s
   const requestId = getRequestId(req);
 
   try {
+    await ensureWalletRegistrationsTable(prisma);
     const passTypeIdentifier = requiredPassType();
     const { segments = [] } = await context.params;
     const url = new URL(req.url);
@@ -158,6 +160,7 @@ export async function POST(req: Request, context: { params: Promise<{ segments: 
   const requestId = getRequestId(req);
 
   try {
+    await ensureWalletRegistrationsTable(prisma);
     const passTypeIdentifier = requiredPassType();
     const { segments = [] } = await context.params;
 
@@ -210,6 +213,7 @@ export async function DELETE(req: Request, context: { params: Promise<{ segments
   const requestId = getRequestId(req);
 
   try {
+    await ensureWalletRegistrationsTable(prisma);
     const passTypeIdentifier = requiredPassType();
     const { segments = [] } = await context.params;
 

@@ -1,10 +1,17 @@
 import { prisma } from '@/app/lib/prisma';
 import { logApiError, logApiEvent } from '@/app/lib/api-log';
-import { pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
+import {
+  deleteWalletRegistrationsByPushToken,
+  pushWalletUpdateToDevice,
+  shouldDeleteWalletRegistrationForPushResult,
+} from '@/app/lib/apple-wallet-push';
+import { ensureWalletRegistrationsTable } from '@/app/lib/apple-wallet-webservice';
 import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 import { apiError, apiSuccess, type ApiErrorCode, getRequestId } from '@/app/lib/api-response';
 import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import { addGoogleLoyaltyObjectMessage, getGoogleWalletIssuerId } from '@/app/lib/google-wallet';
+import { getGoogleLoyaltyObjectId, syncGoogleLoyaltyObjectForCustomer } from '@/app/lib/google-wallet-object-sync';
 
 const MAX_PUSHES_PER_WEEK = 2;
 
@@ -133,6 +140,8 @@ export async function POST(request: Request) {
       create: { tenantId: access.tenantId, lastPushMessage: trimmedMessage },
     });
 
+    await ensureWalletRegistrationsTable(prisma);
+
     const registrations = await prisma.$queryRawUnsafe<Array<{ push_token: string; serial_number: string }>>(
       `SELECT DISTINCT push_token, serial_number
        FROM apple_wallet_registrations
@@ -151,6 +160,7 @@ export async function POST(request: Request) {
 
     let sent = 0;
     let failed = 0;
+    const appleFailureReasons: Record<string, number> = {};
 
     const seenTokens = new Set<string>();
     for (const reg of registrations) {
@@ -164,13 +174,83 @@ export async function POST(request: Request) {
           sent++;
         } else {
           failed++;
-          if (result.status === 410 || result.status === 400) {
+          const key = `${result.status}:${result.reason || 'unknown'}`;
+          appleFailureReasons[key] = (appleFailureReasons[key] || 0) + 1;
+          if (shouldDeleteWalletRegistrationForPushResult(result)) {
             await deleteWalletRegistrationsByPushToken(prisma, token);
           }
         }
       } catch {
         failed++;
+        const key = '0:unexpected_error';
+        appleFailureReasons[key] = (appleFailureReasons[key] || 0) + 1;
       }
+    }
+
+    const tenantInfo = await prisma.tenant.findUnique({
+      where: { id: access.tenantId },
+      select: { name: true },
+    });
+    const tenantName = asTrimmedString(tenantInfo?.name) || 'tu negocio';
+
+    let googleSent = 0;
+    let googleFailed = 0;
+    const googleFailureReasons: Record<string, number> = {};
+    const googleIssuerId = getGoogleWalletIssuerId();
+    const origin = new URL(request.url).origin;
+
+    if (googleIssuerId) {
+      const memberships = await prisma.membership.findMany({
+        where: { tenantId: access.tenantId },
+        select: { userId: true },
+      });
+
+      const uniqueUserIds = Array.from(new Set(memberships.map((item) => asTrimmedString(item.userId)).filter(Boolean)));
+      const batchSize = 8;
+      for (let index = 0; index < uniqueUserIds.length; index += batchSize) {
+        const batch = uniqueUserIds.slice(index, index + batchSize);
+        const batchResults = await Promise.all(
+          batch.map(async (userId, itemIndex) => {
+            try {
+              const syncResult = await syncGoogleLoyaltyObjectForCustomer({
+                tenantId: access.tenantId,
+                userId,
+                origin,
+              });
+              if (!syncResult.ok) {
+                return { ok: false as const, reason: `sync_${syncResult.reason || 'failed'}` };
+              }
+
+              const objectId = syncResult.objectId || getGoogleLoyaltyObjectId(googleIssuerId, access.tenantId, userId);
+              const pushResult = await addGoogleLoyaltyObjectMessage({
+                objectId,
+                header: `Novedad de ${tenantName}`,
+                body: trimmedMessage,
+                messageId: `push_${Date.now()}_${index + itemIndex}`,
+              });
+              if (!pushResult.ok) {
+                return { ok: false as const, reason: `message_${pushResult.status}` };
+              }
+
+              return { ok: true as const };
+            } catch {
+              return { ok: false as const, reason: 'unexpected_error' };
+            }
+          }),
+        );
+
+        for (const result of batchResults) {
+          if (result.ok) {
+            googleSent += 1;
+          } else {
+            googleFailed += 1;
+            const reason = result.reason || 'unknown';
+            googleFailureReasons[reason] = (googleFailureReasons[reason] || 0) + 1;
+          }
+        }
+      }
+    } else {
+      googleFailureReasons.google_wallet_not_configured = 1;
     }
 
     await prisma.tenantPushLog.create({
@@ -183,8 +263,12 @@ export async function POST(request: Request) {
       tenantId: access.tenantId,
       message: trimmedMessage,
       totalRegistrations: registrations.length,
-      sent,
-      failed,
+      appleSent: sent,
+      appleFailed: failed,
+      appleFailureReasons,
+      googleSent,
+      googleFailed,
+      googleFailureReasons,
       remaining,
     });
 
@@ -194,8 +278,19 @@ export async function POST(request: Request) {
         success: true,
         sent,
         failed,
+        apple: {
+          sent,
+          failed,
+          reasons: appleFailureReasons,
+          totalRegistrations: registrations.length,
+        },
+        google: {
+          sent: googleSent,
+          failed: googleFailed,
+          reasons: googleFailureReasons,
+        },
         remaining,
-        message: `Notificación enviada a ${sent} dispositivo${sent === 1 ? '' : 's'}`,
+        message: `Notificación enviada. Apple: ${sent} dispositivo${sent === 1 ? '' : 's'} · Google: ${googleSent} pase${googleSent === 1 ? '' : 's'}`,
       },
     });
   } catch (error: unknown) {
