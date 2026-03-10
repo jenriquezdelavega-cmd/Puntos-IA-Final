@@ -6,7 +6,6 @@ import {
   buildPhoneLookupCandidates,
   isStrongEnoughPassword,
   isValidPhone,
-  normalizeGender,
   normalizePhone,
   parseBirthDate,
   parseJsonObject,
@@ -33,6 +32,8 @@ export async function POST(request: Request) {
       phone: requiredString,
       password: requiredString,
       email: requiredString,
+      gender: requiredString,
+      birthDate: requiredString,
     });
     if (!parsedBody.ok) {
       return apiError({
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const { name, phone, password, email } = parsedBody.data;
+    const { name, phone, password, email, gender, birthDate } = parsedBody.data;
     const normalizedEmail = asTrimmedString(email).toLowerCase();
 
     if (!isValidEmail(normalizedEmail)) {
@@ -105,8 +106,25 @@ export async function POST(request: Request) {
       });
     }
 
-    const cleanGender = normalizeGender(body.gender);
-    const finalDate = parseBirthDate(body.birthDate);
+    const cleanGender = asTrimmedString(gender);
+    if (!['Hombre', 'Mujer', 'Otro'].includes(cleanGender)) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Selecciona un género válido',
+      });
+    }
+
+    const finalDate = parseBirthDate(birthDate);
+    if (!finalDate) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Fecha de nacimiento inválida',
+      });
+    }
 
     const newUser = await prisma.user.create({
       data: {
