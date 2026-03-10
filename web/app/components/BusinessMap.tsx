@@ -65,15 +65,25 @@ function MapController({
   return null;
 }
 
-// Fix icon paths (Leaflet en Next)
-const DefaultIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
+const BrandMarkerIcon = L.divIcon({
+  className: '',
+  html: `
+    <span style="
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:22px;
+      height:22px;
+      border-radius:999px;
+      background:linear-gradient(140deg,#ff7a59 0%,#ff3f8e 62%,#8b5cf6 100%);
+      border:2px solid #ffffff;
+      box-shadow:0 8px 16px rgba(69,38,126,0.34);
+    "></span>
+  `,
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
+  popupAnchor: [0, -8],
 });
-L.Marker.prototype.options.icon = DefaultIcon;
 
 export default function BusinessMap({
   tenants,
@@ -123,6 +133,17 @@ export default function BusinessMap({
     setSelected(t);
   };
 
+  if (valid.length === 0) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(150deg,#fffdf9_0%,#f7efff_100%)] p-6 text-center">
+        <div className="max-w-sm rounded-2xl border border-[#ead8fb] bg-white/90 p-5 shadow-[0_12px_28px_rgba(63,37,115,0.1)]">
+          <p className="text-sm font-black text-[#2b1b53]">No encontramos negocios para mostrar en el mapa</p>
+          <p className="mt-2 text-xs font-semibold text-[#6e58a0]">Intenta actualizar o vuelve más tarde para ver aliados cercanos.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative h-full w-full">
       <MapContainer
@@ -135,13 +156,23 @@ export default function BusinessMap({
 
         <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-        <Circle center={center} radius={localRadiusKm * 1000} pathOptions={{ opacity: 0.25, fillOpacity: 0.08 }} />
+        <Circle
+          center={center}
+          radius={localRadiusKm * 1000}
+          pathOptions={{
+            color: '#8b5cf6',
+            opacity: 0.22,
+            fillColor: '#d9c5ff',
+            fillOpacity: 0.11,
+          }}
+        />
 
         {valid.map((t) => {
           return (
             <Marker
               key={t.id || `${t.name}-${t.lat}-${t.lng}`}
               position={[t.lat, t.lng]}
+              icon={BrandMarkerIcon}
               eventHandlers={{ click: () => onPick(t) }}
             >
               <Popup>
@@ -160,13 +191,13 @@ export default function BusinessMap({
                         />
                       )}
                     </div>
-                    <div className="font-black text-gray-900 text-sm">{t.name}</div>
+                    <div className="text-sm font-black text-[#291a50]">{t.name}</div>
                   </div>
                   {(t.address || '').trim() && (
-                    <div className="text-[11px] text-gray-500 mt-0.5">{t.address}</div>
+                    <div className="mt-0.5 text-[11px] text-[#6c5799]">{t.address}</div>
                   )}
                   {t.prize && (
-                    <div className="text-[10px] font-bold text-pink-500 mt-1">🎁 {t.prize}</div>
+                    <div className="mt-1 text-[10px] font-bold text-[#b04e2f]">🎁 {t.prize}</div>
                   )}
                 </div>
               </Popup>
@@ -175,9 +206,16 @@ export default function BusinessMap({
         })}
       </MapContainer>
 
+      <div className="pointer-events-none absolute left-3 top-3 z-[500]">
+        <div className="rounded-xl border border-[#e8daf9] bg-white/95 px-3 py-2 text-[11px] font-semibold text-[#5f4a89] shadow-[0_8px_18px_rgba(49,30,94,0.16)] backdrop-blur-sm">
+          <p className="font-black text-[#2b1b53]">{valid.length} negocios visibles</p>
+          <p>Radio actual: {localRadiusKm} km</p>
+        </div>
+      </div>
+
       {selected && (
         <div className="pointer-events-none absolute bottom-3 left-3 right-3">
-          <div className="pointer-events-auto bg-white/95 backdrop-blur-xl border border-gray-100 rounded-2xl p-3.5 shadow-[0_4px_24px_rgba(0,0,0,0.1)]">
+          <div className="pointer-events-auto rounded-2xl border border-[#e8daf9] bg-white/96 p-3.5 shadow-[0_14px_28px_rgba(61,37,112,0.22)] backdrop-blur-xl">
             <div className="flex items-center gap-3">
               <div className="h-11 w-11 shrink-0 rounded-xl border border-[#3b2668] bg-[linear-gradient(120deg,#2a184f_0%,#1e133b_55%,#3a2368_100%)] p-1">
                 {selected.logoData ? (
@@ -193,44 +231,44 @@ export default function BusinessMap({
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-black text-gray-900 truncate">{selected.name}</div>
-                <div className="text-[10px] text-gray-400 font-semibold truncate mt-0.5">
+                <div className="truncate text-[13px] font-black text-[#2a1a52]">{selected.name}</div>
+                <div className="mt-0.5 truncate text-[10px] font-semibold text-[#77629f]">
                   {(selected.address || '').trim() || `${selected.lat.toFixed(4)}, ${selected.lng.toFixed(4)}`}
                 </div>
               </div>
             </div>
 
             {selected.prize && (
-              <div className="mt-2 bg-gradient-to-r from-orange-50 to-pink-50 rounded-lg px-3 py-1.5 border border-orange-100/50">
-                <span className="text-[10px] font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-500">🎁 {selected.prize}</span>
+              <div className="mt-2 rounded-lg border border-[#f8ddcc] bg-gradient-to-r from-[#fff2ea] to-[#fff4fb] px-3 py-1.5">
+                <span className="bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-[10px] font-black text-transparent">🎁 {selected.prize}</span>
               </div>
             )}
 
-            <div className="mt-2.5 flex gap-2">
+            <div className="mt-2.5 flex flex-wrap gap-2">
               {onCreatePass && (
                 <button
                   onClick={() => onCreatePass(selected)}
-                  className="flex-1 bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e] text-white py-2 rounded-xl font-black text-[11px] shadow-sm"
+                  className="flex-1 rounded-xl bg-gradient-to-r from-[#ff7a59] to-[#ff3f8e] py-2 text-[11px] font-black text-white shadow-[0_8px_16px_rgba(255,74,147,0.28)]"
                 >
-                  🎟️ Crear Pase
+                  Abrir pase
                 </button>
               )}
               <a
-                className="flex-1 bg-gray-100 text-gray-600 py-2 rounded-xl font-bold text-[11px] no-underline text-center"
+                className="flex-1 rounded-xl border border-[#dfd0f6] bg-[#faf5ff] py-2 text-center text-[11px] font-bold text-[#4f3a7b] no-underline"
                 target="_blank"
                 rel="noopener noreferrer"
                 href={`https://www.google.com/maps/search/?api=1&query=${selected.lat},${selected.lng}`}
               >
-                📍 Cómo llegar
+                Cómo llegar
               </a>
               {instagramUrl(selected.instagram) && (
                 <a
-                  className="bg-gray-100 text-gray-600 px-3 py-2 rounded-xl font-bold text-[11px] no-underline"
+                  className="rounded-xl border border-[#dfd0f6] bg-[#faf5ff] px-3 py-2 text-[11px] font-bold text-[#4f3a7b] no-underline"
                   target="_blank"
                   rel="noopener noreferrer"
                   href={instagramUrl(selected.instagram)!}
                 >
-                  📸
+                  Instagram
                 </a>
               )}
             </div>

@@ -4,7 +4,21 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { AlertCircle, Award, Building2, Medal, RefreshCw, ScanLine, Target, Trophy, UserRound } from 'lucide-react';
+import {
+  AlertCircle,
+  Award,
+  Building2,
+  Clock3,
+  Gift,
+  Medal,
+  RefreshCw,
+  ScanLine,
+  ShieldCheck,
+  Sparkles,
+  Target,
+  Trophy,
+  UserRound,
+} from 'lucide-react';
 import {
   MarketingBackground,
   MarketingFooter,
@@ -105,7 +119,7 @@ type ChallengeItem = {
 type ClientTab = 'puntos' | 'retos' | 'negocios' | 'perfil';
 
 const tabItems: Array<{ key: ClientTab; label: string; icon: LucideIcon }> = [
-  { key: 'puntos', label: 'Puntos', icon: Medal },
+  { key: 'puntos', label: 'Mis puntos', icon: Medal },
   { key: 'retos', label: 'Retos', icon: Target },
   { key: 'negocios', label: 'Negocios', icon: Building2 },
   { key: 'perfil', label: 'Perfil', icon: UserRound },
@@ -142,6 +156,12 @@ function rewardStatusStyles(status: CoalitionReward['status']) {
     return 'border-[#f7dccb] bg-[#fff3ec] text-[#a34f27]';
   }
   return 'border-[#c8f3d8] bg-[#ecfff2] text-[#11643a]';
+}
+
+function rewardStatusLabel(status: CoalitionReward['status']) {
+  if (status === 'REDEEMED') return 'Canjeado';
+  if (status === 'REQUESTED') return 'Solicitado';
+  return 'Disponible';
 }
 
 function BusinessLogo({ name, logoData, size = 'md' }: { name?: string; logoData?: string; size?: 'sm' | 'md' }) {
@@ -479,6 +499,8 @@ export default function ClientesAppPage() {
     window.location.assign('/ingresar?tipo=cliente&modo=login');
   };
 
+  const statusToneIsError = /no se pudo|fall[oó]|error|inv[aá]lido|inv[aá]lida/i.test(statusMessage);
+
   if (!user) {
     return (
       <main className="relative min-h-screen overflow-hidden bg-[#fffdf9] text-[#1d1238]">
@@ -501,33 +523,78 @@ export default function ClientesAppPage() {
       <Section
         eyebrow="Mi cuenta"
         title={`Hola${user.name ? `, ${user.name.split(' ')[0]}` : ''}`}
-        description="Aquí gestionas puntos, retos, negocios y tu perfil."
+        description="Tu panel de cliente está diseñado para que todo sea claro: progreso, recompensas, negocios y perfil en un solo lugar."
       >
-        <article className="rounded-3xl border border-[#ead8fb] bg-[linear-gradient(120deg,#ffffff_0%,#fff5ef_50%,#f7efff_100%)] p-5 md:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#7f61ad]">Resumen de cuenta</p>
-              <h3 className="mt-2 text-2xl font-black text-[#241646]">Tu progreso en Punto IA</h3>
-              {lastSyncAt ? (
-                <p className="mt-1 text-xs font-semibold text-[#6f58a0]">
-                  Última actualización: {lastSyncAt.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+        <div className="space-y-5">
+          <article className="rounded-[1.75rem] border border-[#ead8fb] bg-[linear-gradient(120deg,#ffffff_0%,#fff6ef_45%,#f8f0ff_100%)] p-5 shadow-[0_18px_42px_rgba(73,42,129,0.1)] md:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="max-w-2xl">
+                <p className="inline-flex items-center gap-2 rounded-full border border-[#efdffb] bg-[#fffafe] px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-[#7755a6]">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Panel activo
                 </p>
-              ) : null}
+                <h3 className="mt-3 text-2xl font-black text-[#241646] md:text-3xl">Todo tu avance en una vista</h3>
+                <p className="mt-2 text-sm leading-relaxed text-[#5d4b82]">
+                  Consulta puntos, retos, negocios aliados y datos de perfil sin salir de esta app.
+                </p>
+                {lastSyncAt ? (
+                  <p className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-[#6f58a0]">
+                    <Clock3 className="h-3.5 w-3.5" />
+                    Última actualización {lastSyncAt.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => void loadClientData()} disabled={syncingData} className={buttonStyles('tertiary')}>
+                  <span className="inline-flex items-center gap-2">
+                    <RefreshCw className={`h-4 w-4 ${syncingData ? 'animate-spin' : ''}`} />
+                    {syncingData ? 'Actualizando' : 'Actualizar datos'}
+                  </span>
+                </button>
+                <Link href={`/pass?customer_id=${encodeURIComponent(user.id)}`} className={buttonStyles('secondary')}>
+                  <span className="inline-flex items-center gap-2"><ScanLine className="h-4 w-4" /> Abrir mi pase</span>
+                </Link>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => void loadClientData()} disabled={syncingData} className={buttonStyles('tertiary')}>
-                <span className="inline-flex items-center gap-2">
-                  <RefreshCw className={`h-4 w-4 ${syncingData ? 'animate-spin' : ''}`} />
-                  {syncingData ? 'Actualizando' : 'Actualizar'}
-                </span>
-              </button>
-              <Link href={`/pass?customer_id=${encodeURIComponent(user.id)}`} className={buttonStyles('secondary')}>
-                <span className="inline-flex items-center gap-2"><ScanLine className="h-4 w-4" /> Abrir mi pase</span>
-              </Link>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <article className="rounded-2xl border border-[#e7d9f8] bg-white p-4">
+                <p className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.12em] text-[#7d61ab]">
+                  <Medal className="h-3.5 w-3.5" />
+                  Puntos totales
+                </p>
+                <p className="mt-2 text-3xl font-black text-[#25174a]">{pointsTotal}</p>
+                <p className="text-xs font-semibold text-[#78639e]">acumulados en tu cuenta</p>
+              </article>
+              <article className="rounded-2xl border border-[#e7d9f8] bg-white p-4">
+                <p className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.12em] text-[#7d61ab]">
+                  <Building2 className="h-3.5 w-3.5" />
+                  Negocios activos
+                </p>
+                <p className="mt-2 text-3xl font-black text-[#25174a]">{activeMemberships.length}</p>
+                <p className="text-xs font-semibold text-[#78639e]">donde ya participas</p>
+              </article>
+              <article className="rounded-2xl border border-[#e7d9f8] bg-white p-4">
+                <p className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.12em] text-[#7d61ab]">
+                  <Gift className="h-3.5 w-3.5" />
+                  Canjeables hoy
+                </p>
+                <p className="mt-2 text-3xl font-black text-[#25174a]">{redeemReadyCount}</p>
+                <p className="text-xs font-semibold text-[#78639e]">recompensas listas</p>
+              </article>
+              <article className="rounded-2xl border border-[#e7d9f8] bg-white p-4">
+                <p className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.12em] text-[#7d61ab]">
+                  <Award className="h-3.5 w-3.5" />
+                  Retos completados
+                </p>
+                <p className="mt-2 text-3xl font-black text-[#25174a]">{completedChallenges}</p>
+                <p className="text-xs font-semibold text-[#78639e]">objetivos alcanzados</p>
+              </article>
             </div>
-          </div>
+          </article>
+
           {warningMessages.length > 0 ? (
-            <div className="mt-4 rounded-2xl border border-[#f7dccb] bg-[#fff7f3] p-3">
+            <article className="rounded-2xl border border-[#f7dccb] bg-[#fff7f3] p-4">
               <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#a34f27]">
                 <AlertCircle className="h-4 w-4" />
                 Avisos de sincronización
@@ -537,114 +604,104 @@ export default function ClientesAppPage() {
                   <li key={`${message}-${index}`}>• {message}</li>
                 ))}
               </ul>
-            </div>
+            </article>
           ) : null}
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-[#ead8fb] bg-white p-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#7f61ad]">Puntos totales</p>
-              <p className="mt-1 text-2xl font-black text-[#2a184f]">{pointsTotal}</p>
-            </div>
-            <div className="rounded-2xl border border-[#ead8fb] bg-white p-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#7f61ad]">Negocios activos</p>
-              <p className="mt-1 text-2xl font-black text-[#2a184f]">{activeMemberships.length}</p>
-            </div>
-            <div className="rounded-2xl border border-[#ead8fb] bg-white p-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#7f61ad]">Canjeables hoy</p>
-              <p className="mt-1 text-2xl font-black text-[#2a184f]">{redeemReadyCount}</p>
-            </div>
-            <div className="rounded-2xl border border-[#ead8fb] bg-white p-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#7f61ad]">Retos completados</p>
-              <p className="mt-1 text-2xl font-black text-[#2a184f]">{completedChallenges}</p>
-            </div>
-          </div>
-        </article>
 
-        <div className="mt-4 rounded-3xl border border-[#e9daf9] bg-white p-4 md:p-5">
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-            {tabItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = tab === item.key;
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => setTab(item.key)}
-                  className={`rounded-xl px-3 py-2 text-sm font-semibold ${isActive ? 'bg-[#2a184f] text-white' : 'bg-[#f8f2ff] text-[#4a3577]'}`}
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    <Icon className="h-4 w-4" />
-                    {item.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {tab === 'puntos' ? (
-          <div className="mt-6 grid gap-4">
-            {activeMemberships.length === 0 ? (
-              <article className="rounded-3xl border border-[#e9daf9] bg-white p-6">
-                <h3 className="text-xl font-black">Aún no tienes membresías activas.</h3>
-                <p className="mt-2 text-sm text-[#5c4a82]">Activa tu pase desde el QR del negocio para comenzar a sumar puntos.</p>
-                <a href="/activar-pase" className={`mt-4 ${buttonStyles('primary')}`}>Activar pase</a>
-              </article>
-            ) : (
-              activeMemberships.map((membership) => {
-                const requiredVisits = Math.max(1, Number(membership.requiredVisits || 10));
-                const currentVisits = Number(membership.visits || 0);
-                const currentPoints = Number(membership.points || 0);
-                const progress = Math.min(100, Math.round((currentVisits / requiredVisits) * 100));
-                const canRedeem = currentVisits >= requiredVisits;
+          <div className="sticky top-[84px] z-20 rounded-2xl border border-[#e9daf9] bg-white/95 p-2 backdrop-blur-xl">
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+              {tabItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = tab === item.key;
                 return (
-                  <article key={membership.tenantId} className="rounded-3xl border border-[#e9daf9] bg-white p-6 shadow-[0_12px_28px_rgba(53,30,95,0.08)]">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <BusinessLogo
-                          name={membership.name}
-                          logoData={membership.logoData || tenantLogoById[membership.tenantId] || undefined}
-                        />
-                        <div className="min-w-0">
-                          <h3 className="truncate text-2xl font-black text-[#231644]">{membership.name || 'Negocio aliado'}</h3>
-                          <p className="mt-1 truncate text-sm text-[#5c4a82]">{membership.prize || 'Premio disponible'}</p>
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setTab(item.key)}
+                    className={`rounded-xl border px-3 py-2.5 text-left transition ${
+                      isActive
+                        ? 'border-[#2a184f] bg-[#2a184f] text-white shadow-[0_10px_24px_rgba(42,24,79,0.35)]'
+                        : 'border-[#e8daf9] bg-[#faf5ff] text-[#4a3577] hover:border-[#cfb6ed] hover:bg-[#f5ecff]'
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-2 text-sm font-semibold">
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                    </span>
+                    <span className={`mt-1 block text-[11px] font-semibold ${isActive ? 'text-white/80' : 'text-[#7b64a7]'}`}>
+                      {item.key === 'puntos' && 'Progreso y canjes'}
+                      {item.key === 'retos' && 'Metas de recompra'}
+                      {item.key === 'negocios' && 'Mapa y aliados'}
+                      {item.key === 'perfil' && 'Datos de cuenta'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {tab === 'puntos' ? (
+            <section className="grid gap-5">
+              {activeMemberships.length === 0 ? (
+                <article className="rounded-3xl border border-[#e9daf9] bg-white p-6">
+                  <h3 className="text-xl font-black text-[#25174a]">Aún no tienes membresías activas</h3>
+                  <p className="mt-2 text-sm text-[#5c4a82]">Activa tu pase en tienda para empezar a acumular visitas y puntos.</p>
+                  <div className="mt-4">
+                    <Link href="/activar-pase" className={buttonStyles('primary')}>Activar pase</Link>
+                  </div>
+                </article>
+              ) : (
+                activeMemberships.map((membership) => {
+                  const requiredVisits = Math.max(1, Number(membership.requiredVisits || 10));
+                  const currentVisits = Number(membership.visits || 0);
+                  const currentPoints = Number(membership.points || 0);
+                  const progress = Math.min(100, Math.round((currentVisits / requiredVisits) * 100));
+                  const canRedeem = currentVisits >= requiredVisits;
+                  return (
+                    <article key={membership.tenantId} className="rounded-3xl border border-[#e9daf9] bg-white p-5 shadow-[0_14px_34px_rgba(53,30,95,0.09)] md:p-6">
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <BusinessLogo
+                            name={membership.name}
+                            logoData={membership.logoData || tenantLogoById[membership.tenantId] || undefined}
+                          />
+                          <div className="min-w-0">
+                            <h3 className="truncate text-xl font-black text-[#231644] md:text-2xl">{membership.name || 'Negocio aliado'}</h3>
+                            <p className="mt-1 truncate text-sm text-[#5c4a82]">{membership.prize || 'Premio disponible'}</p>
+                          </div>
+                        </div>
+                        <div className="rounded-2xl border border-[#eddffb] bg-[#fcf8ff] px-3.5 py-2.5 text-right text-sm font-semibold text-[#4e3a78]">
+                          <p className="text-lg font-black text-[#2a184f]">{currentPoints} pts</p>
+                          <span className="mt-1 block text-xs text-[#7b63a8]">{currentVisits}/{requiredVisits} visitas</span>
                         </div>
                       </div>
-                      <div className="rounded-2xl border border-[#eddffb] bg-[#fcf8ff] px-3 py-2 text-right text-sm font-semibold text-[#4e3a78]">
-                        <p className="text-base font-black text-[#2a184f]">{currentPoints} pts</p>
-                        <span className="mt-1 block text-xs text-[#7b63a8]">{currentVisits}/{requiredVisits} visitas</span>
-                      </div>
-                    </div>
 
-                    <div className="mt-4 rounded-xl border border-[#efe1fd] bg-[#fbf5ff] p-3">
-                      <div className="mb-2 flex items-center justify-between text-xs font-semibold text-[#5f4a89]">
-                        <span>Meta para canjear</span>
-                        <span>{progress}%</span>
+                      <div className="mt-4 rounded-2xl border border-[#efe1fd] bg-[#fbf6ff] p-3.5">
+                        <div className="mb-2 flex items-center justify-between text-xs font-semibold text-[#5f4a89]">
+                          <span>Meta para canjear recompensa</span>
+                          <span>{progress}%</span>
+                        </div>
+                        <div className="h-2.5 rounded-full bg-[#f0e4ff]">
+                          <div
+                            className="h-2.5 rounded-full bg-gradient-to-r from-[#ff7a59] via-[#ff4a93] to-[#8b5cf6]"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                        {!canRedeem ? (
+                          <p className="mt-2 text-xs font-semibold text-[#7b63a8]">
+                            Te faltan {requiredVisits - currentVisits} visita(s) para canjear.
+                          </p>
+                        ) : (
+                          <p className="mt-2 text-xs font-semibold text-[#2c7a4f]">Tu recompensa está lista. Puedes generar tu código de canje.</p>
+                        )}
                       </div>
-                      <div className="h-2 rounded-full bg-[#f0e4ff]">
-                        <div
-                          className="h-2 rounded-full bg-gradient-to-r from-[#ff7a59] to-[#8b5cf6]"
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                      {!canRedeem ? (
-                        <p className="mt-2 text-xs font-semibold text-[#7b63a8]">
-                          Te faltan {requiredVisits - currentVisits} visita(s) para canjear.
-                        </p>
-                      ) : (
-                        <p className="mt-2 text-xs font-semibold text-[#2c7a4f]">Tu recompensa ya está lista para canje.</p>
-                      )}
-                    </div>
 
-                    <div className="mt-5 flex flex-wrap gap-3">
-                      <Link
-                        href={`/pass?customer_id=${encodeURIComponent(user.id)}&business_id=${encodeURIComponent(membership.tenantId)}`}
-                        className={buttonStyles('secondary')}
-                      >
-                        <span className="inline-flex items-center gap-2"><ScanLine className="h-4 w-4" /> Ver pase</span>
-                      </Link>
-                      <div
-                        className={`inline-flex items-center justify-center rounded-xl ${canRedeem ? '' : 'cursor-not-allowed opacity-60'}`}
-                      >
+                      <div className="mt-5 flex flex-wrap gap-3">
+                        <Link
+                          href={`/pass?customer_id=${encodeURIComponent(user.id)}&business_id=${encodeURIComponent(membership.tenantId)}`}
+                          className={buttonStyles('secondary')}
+                        >
+                          <span className="inline-flex items-center gap-2"><ScanLine className="h-4 w-4" /> Ver pase</span>
+                        </Link>
                         <button
                           type="button"
                           onClick={() => handleRedeem(membership)}
@@ -653,282 +710,410 @@ export default function ClientesAppPage() {
                         >
                           Canjear recompensa
                         </button>
-                      </div>
-                      {membership.instagram ? (
-                        <a
-                          href={membership.instagram.startsWith('http') ? membership.instagram : `https://instagram.com/${membership.instagram.replace('@', '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={buttonStyles('tertiary')}
-                        >
-                          Instagram
-                        </a>
-                      ) : null}
-                    </div>
-                  </article>
-                );
-              })
-            )}
-
-            <article className="rounded-3xl border border-[#e9daf9] bg-white p-6">
-              <h3 className="text-xl font-black">Historial de canjes</h3>
-              {loadingHistory ? (
-                <p className="mt-3 text-sm text-[#5c4a82]">Cargando historial...</p>
-              ) : history.length === 0 ? (
-                <p className="mt-3 text-sm text-[#5c4a82]">Aún no tienes canjes registrados.</p>
-              ) : (
-                <ul className="mt-4 space-y-2 text-sm text-[#4f3d76]">
-                  {history.slice(0, 10).map((item) => (
-                    <li key={item.id} className="rounded-xl border border-[#f0e5fc] bg-[#fffdf9] p-3">
-                      <span className="inline-flex items-center gap-2">
-                        <Trophy className="h-4 w-4 text-[#7a4ac8]" />
-                        <span className="font-semibold">{item.tenant}</span>
-                      </span>
-                      <p className="mt-1 text-xs text-[#5b467f]">{item.prize} · {item.date} {item.time}</p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </article>
-          </div>
-        ) : null}
-
-        {tab === 'retos' ? (
-          <div className="mt-6 grid gap-4">
-            <article className="rounded-3xl border border-[#e9daf9] bg-white p-6">
-              <h3 className="text-xl font-black">Retos activos</h3>
-              <p className="mt-1 text-sm text-[#5c4a82]">
-                Completa metas de visitas y negocios para desbloquear recompensas de red.
-              </p>
-              <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                <div className="rounded-2xl border border-[#ead8fb] bg-[#fcf9ff] p-3">
-                  <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#7f61ad]">Total retos</p>
-                  <p className="mt-1 text-2xl font-black text-[#2a184f]">{challenges.length}</p>
-                </div>
-                <div className="rounded-2xl border border-[#ead8fb] bg-[#fcf9ff] p-3">
-                  <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#7f61ad]">En progreso</p>
-                  <p className="mt-1 text-2xl font-black text-[#2a184f]">{Math.max(challenges.length - completedChallenges, 0)}</p>
-                </div>
-                <div className="rounded-2xl border border-[#ead8fb] bg-[#fcf9ff] p-3">
-                  <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#7f61ad]">Completados</p>
-                  <p className="mt-1 text-2xl font-black text-[#2a184f]">{completedChallenges}</p>
-                </div>
-              </div>
-            </article>
-
-            <article className="rounded-3xl border border-[#e9daf9] bg-white p-6">
-              {loadingChallenges ? (
-                <p className="text-sm text-[#5c4a82]">Cargando retos...</p>
-              ) : challenges.length === 0 ? (
-                <>
-                  <h3 className="text-xl font-black">No hay retos activos por ahora</h3>
-                  <p className="mt-2 text-sm text-[#5c4a82]">Cuando haya nuevos retos aparecerán aquí con su progreso.</p>
-                </>
-              ) : (
-                <div className="space-y-3">
-                  {challenges.map((challenge) => {
-                    const target = Math.max(1, Number(challenge.targetValue || 1));
-                    const progressValue = Math.max(0, Number(challenge.progressValue || 0));
-                    const progress = Math.min(100, Math.round((progressValue / target) * 100));
-                    const isCompleted = challenge.status === 'COMPLETED';
-                    const pending = Math.max(target - progressValue, 0);
-
-                    return (
-                      <article key={challenge.id} className="rounded-2xl border border-[#efe1fd] bg-[#fffdfd] p-4">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <h4 className="text-lg font-black text-[#241646]">{challenge.title}</h4>
-                            <p className="mt-1 text-sm text-[#5f4a89]">{challenge.description}</p>
-                          </div>
-                          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.1em] ${challengeStatusStyles(challenge.status)}`}>
-                            {isCompleted ? 'Completado' : 'En progreso'}
-                          </span>
-                        </div>
-
-                        <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-[#674f95]">
-                          <span className="rounded-full border border-[#ead8fb] bg-[#faf4ff] px-2.5 py-1">{challengeTypeLabel(challenge.challengeType)}</span>
-                          <span className="rounded-full border border-[#ead8fb] bg-[#faf4ff] px-2.5 py-1">Meta: {target}</span>
-                          <span className="rounded-full border border-[#ead8fb] bg-[#faf4ff] px-2.5 py-1">Ventana: {challenge.timeWindow} días</span>
-                        </div>
-
-                        <div className="mt-4 rounded-xl border border-[#efe1fd] bg-[#fcf8ff] p-3">
-                          <div className="mb-2 flex items-center justify-between text-xs font-semibold text-[#5f4a89]">
-                            <span>Progreso</span>
-                            <span>{progressValue}/{target}</span>
-                          </div>
-                          <div className="h-2 rounded-full bg-[#f0e4ff]">
-                            <div className="h-2 rounded-full bg-gradient-to-r from-[#ff7a59] to-[#8b5cf6]" style={{ width: `${progress}%` }} />
-                          </div>
-                          <p className="mt-2 text-xs font-semibold text-[#6d55a0]">
-                            {isCompleted ? 'Reto completado.' : `Te faltan ${pending} para completar este reto.`}
-                          </p>
-                        </div>
-
-                        {challenge.reward ? (
-                          <div className="mt-3 rounded-xl border border-[#f7dccb] bg-[#fff8f3] p-3 text-sm text-[#5a3d2f]">
-                            <p className="inline-flex items-center gap-2 font-black">
-                              <Award className="h-4 w-4" />
-                              Recompensa: {challenge.reward.title}
-                            </p>
-                            <p className="mt-1 text-xs font-semibold">
-                              {challenge.reward.rewardValue} · {challenge.reward.businessName}
-                            </p>
-                          </div>
-                        ) : null}
-
-                        {isCompleted && challenge.completedAt ? (
-                          <p className="mt-3 text-xs font-semibold text-[#4b7b5d]">
-                            Completado el {formatDateLabel(challenge.completedAt)}.
-                          </p>
-                        ) : null}
-                      </article>
-                    );
-                  })}
-                </div>
-              )}
-            </article>
-          </div>
-        ) : null}
-
-        {tab === 'negocios' ? (
-          <div className="mt-6 grid gap-4">
-            <article className="rounded-3xl border border-[#e9daf9] bg-white p-6">
-              <h3 className="text-xl font-black">Mis negocios activos</h3>
-              {activeMemberships.length === 0 ? (
-                <p className="mt-3 text-sm text-[#5c4a82]">No tienes negocios activos todavía. Activa tu pase para comenzar.</p>
-              ) : (
-                <ul className="mt-4 space-y-2">
-                  {activeMemberships.map((membership) => {
-                    const requiredVisits = Math.max(1, Number(membership.requiredVisits || 10));
-                    const currentVisits = Number(membership.visits || 0);
-                    return (
-                      <li key={membership.tenantId} className="rounded-2xl border border-[#efe1fd] bg-[#fffdfd] p-3">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div className="flex min-w-0 items-center gap-3">
-                            <BusinessLogo
-                              name={membership.name}
-                              logoData={membership.logoData || tenantLogoById[membership.tenantId] || undefined}
-                              size="sm"
-                            />
-                            <div className="min-w-0">
-                              <p className="truncate font-black text-[#2a184f]">{membership.name || 'Negocio aliado'}</p>
-                              <p className="text-xs font-semibold text-[#6e57a0]">
-                                {currentVisits}/{requiredVisits} visitas · {membership.points || 0} pts
-                              </p>
-                            </div>
-                          </div>
-                          <Link
-                            href={`/pass?customer_id=${encodeURIComponent(user.id)}&business_id=${encodeURIComponent(membership.tenantId)}`}
+                        {membership.instagram ? (
+                          <a
+                            href={membership.instagram.startsWith('http') ? membership.instagram : `https://instagram.com/${membership.instagram.replace('@', '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className={buttonStyles('tertiary')}
                           >
-                            Ver pase
-                          </Link>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </article>
-
-            <article className="rounded-3xl border border-[#e9daf9] bg-white p-4 md:p-6">
-              <h3 className="mb-3 text-xl font-black">Mapa de negocios aliados</h3>
-              <div className="h-[420px] overflow-hidden rounded-3xl border border-[#f0e5fc]">
-                {loadingTenants ? (
-                  <div className="h-full w-full animate-pulse bg-[#f7f0ff]" />
-                ) : (
-                  <BusinessMap tenants={tenants} focusCoords={null} radiusKm={50} onCreatePass={openBusinessPass} />
-                )}
-              </div>
-            </article>
-
-            <article className="rounded-3xl border border-[#e9daf9] bg-white p-6">
-              <h3 className="text-xl font-black">Beneficios de red desbloqueados</h3>
-              {loadingRewards ? (
-                <p className="mt-3 text-sm text-[#5c4a82]">Cargando beneficios...</p>
-              ) : rewards.length === 0 ? (
-                <p className="mt-3 text-sm text-[#5c4a82]">Todavía no tienes beneficios de red desbloqueados.</p>
-              ) : (
-                <ul className="mt-4 space-y-2 text-sm text-[#4f3d76]">
-                  {rewards.slice(0, 10).map((reward) => (
-                    <li key={reward.id} className="rounded-xl border border-[#f0e5fc] bg-[#fffdf9] p-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="font-semibold text-[#2a184f]">
-                          {reward.reward.title} · {reward.reward.rewardValue}
-                        </p>
-                        <span className={`rounded-full border px-2 py-1 text-[11px] font-black uppercase tracking-[0.1em] ${rewardStatusStyles(reward.status)}`}>
-                          {reward.status}
-                        </span>
+                            Instagram
+                          </a>
+                        ) : null}
                       </div>
-                      <p className="mt-1 text-xs text-[#5c4a82]">{reward.reward.business.name}</p>
-                      {reward.redemption?.code ? (
-                        <p className="mt-1 text-xs font-semibold text-[#4b3b71]">Código: {reward.redemption.code}</p>
-                      ) : null}
-                      {reward.unlockedAt ? (
-                        <p className="mt-1 text-[11px] text-[#7e69a9]">Desbloqueado: {formatDateLabel(reward.unlockedAt)}</p>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
+                    </article>
+                  );
+                })
               )}
+
+              <article className="rounded-3xl border border-[#e9daf9] bg-white p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="inline-flex items-center gap-2 text-xl font-black text-[#241646]">
+                    <Trophy className="h-5 w-5 text-[#7a4ac8]" />
+                    Historial de canjes
+                  </h3>
+                  <span className="text-xs font-semibold text-[#7d67aa]">Últimos 10 movimientos</span>
+                </div>
+                {loadingHistory ? (
+                  <p className="mt-4 text-sm text-[#5c4a82]">Cargando historial...</p>
+                ) : history.length === 0 ? (
+                  <p className="mt-4 text-sm text-[#5c4a82]">Aún no tienes canjes registrados.</p>
+                ) : (
+                  <ul className="mt-4 space-y-2.5 text-sm text-[#4f3d76]">
+                    {history.slice(0, 10).map((item) => (
+                      <li key={item.id} className="rounded-xl border border-[#f0e5fc] bg-[#fffdf9] p-3.5">
+                        <p className="font-semibold text-[#2f1d57]">{item.tenant}</p>
+                        <p className="mt-1 text-xs text-[#5b467f]">{item.prize}</p>
+                        <p className="mt-1 text-[11px] font-semibold text-[#7c66a8]">{item.date} · {item.time}</p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </article>
+            </section>
+          ) : null}
+
+          {tab === 'retos' ? (
+            <section className="grid gap-5">
+              <article className="rounded-3xl border border-[#e9daf9] bg-white p-6">
+                <h3 className="text-xl font-black text-[#25174a]">Retos activos</h3>
+                <p className="mt-1 text-sm text-[#5c4a82]">
+                  Completa metas de visitas y negocios para desbloquear recompensas adicionales.
+                </p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-[#ead8fb] bg-[#fcf9ff] p-4">
+                    <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#7f61ad]">Total retos</p>
+                    <p className="mt-1 text-2xl font-black text-[#2a184f]">{challenges.length}</p>
+                  </div>
+                  <div className="rounded-2xl border border-[#ead8fb] bg-[#fcf9ff] p-4">
+                    <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#7f61ad]">En progreso</p>
+                    <p className="mt-1 text-2xl font-black text-[#2a184f]">{Math.max(challenges.length - completedChallenges, 0)}</p>
+                  </div>
+                  <div className="rounded-2xl border border-[#ead8fb] bg-[#fcf9ff] p-4">
+                    <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#7f61ad]">Completados</p>
+                    <p className="mt-1 text-2xl font-black text-[#2a184f]">{completedChallenges}</p>
+                  </div>
+                </div>
+              </article>
+
+              <article className="rounded-3xl border border-[#e9daf9] bg-white p-6">
+                {loadingChallenges ? (
+                  <p className="text-sm text-[#5c4a82]">Cargando retos...</p>
+                ) : challenges.length === 0 ? (
+                  <>
+                    <h3 className="text-xl font-black text-[#25174a]">No hay retos activos por ahora</h3>
+                    <p className="mt-2 text-sm text-[#5c4a82]">Cuando haya nuevos retos aparecerán aquí con su progreso.</p>
+                  </>
+                ) : (
+                  <div className="space-y-3.5">
+                    {challenges.map((challenge) => {
+                      const target = Math.max(1, Number(challenge.targetValue || 1));
+                      const progressValue = Math.max(0, Number(challenge.progressValue || 0));
+                      const progress = Math.min(100, Math.round((progressValue / target) * 100));
+                      const isCompleted = challenge.status === 'COMPLETED';
+                      const pending = Math.max(target - progressValue, 0);
+
+                      return (
+                        <article key={challenge.id} className="rounded-2xl border border-[#efe1fd] bg-[#fffdfd] p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <h4 className="text-lg font-black text-[#241646]">{challenge.title}</h4>
+                              <p className="mt-1 text-sm text-[#5f4a89]">{challenge.description}</p>
+                            </div>
+                            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.1em] ${challengeStatusStyles(challenge.status)}`}>
+                              {isCompleted ? 'Completado' : 'En progreso'}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-[#674f95]">
+                            <span className="rounded-full border border-[#ead8fb] bg-[#faf4ff] px-2.5 py-1">{challengeTypeLabel(challenge.challengeType)}</span>
+                            <span className="rounded-full border border-[#ead8fb] bg-[#faf4ff] px-2.5 py-1">Meta: {target}</span>
+                            <span className="rounded-full border border-[#ead8fb] bg-[#faf4ff] px-2.5 py-1">Ventana: {challenge.timeWindow} días</span>
+                          </div>
+
+                          <div className="mt-4 rounded-xl border border-[#efe1fd] bg-[#fcf8ff] p-3">
+                            <div className="mb-2 flex items-center justify-between text-xs font-semibold text-[#5f4a89]">
+                              <span>Progreso</span>
+                              <span>{progressValue}/{target}</span>
+                            </div>
+                            <div className="h-2 rounded-full bg-[#f0e4ff]">
+                              <div className="h-2 rounded-full bg-gradient-to-r from-[#ff7a59] to-[#8b5cf6]" style={{ width: `${progress}%` }} />
+                            </div>
+                            <p className="mt-2 text-xs font-semibold text-[#6d55a0]">
+                              {isCompleted ? 'Reto completado.' : `Te faltan ${pending} para completar este reto.`}
+                            </p>
+                          </div>
+
+                          {challenge.reward ? (
+                            <div className="mt-3 rounded-xl border border-[#f7dccb] bg-[#fff8f3] p-3 text-sm text-[#5a3d2f]">
+                              <p className="inline-flex items-center gap-2 font-black">
+                                <Award className="h-4 w-4" />
+                                Recompensa: {challenge.reward.title}
+                              </p>
+                              <p className="mt-1 text-xs font-semibold">
+                                {challenge.reward.rewardValue} · {challenge.reward.businessName}
+                              </p>
+                            </div>
+                          ) : null}
+
+                          {isCompleted && challenge.completedAt ? (
+                            <p className="mt-3 text-xs font-semibold text-[#4b7b5d]">
+                              Completado el {formatDateLabel(challenge.completedAt)}.
+                            </p>
+                          ) : null}
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </article>
+            </section>
+          ) : null}
+
+          {tab === 'negocios' ? (
+            <section className="grid gap-5">
+              <article className="rounded-3xl border border-[#e9daf9] bg-white p-6">
+                <h3 className="text-xl font-black text-[#25174a]">Negocios aliados</h3>
+                <p className="mt-1 text-sm text-[#5c4a82]">
+                  Explora negocios cercanos, abre tu pase al instante y revisa tu avance por aliado.
+                </p>
+
+                {activeMemberships.length > 0 ? (
+                  <ul className="mt-4 space-y-2.5">
+                    {activeMemberships.map((membership) => {
+                      const requiredVisits = Math.max(1, Number(membership.requiredVisits || 10));
+                      const currentVisits = Number(membership.visits || 0);
+                      return (
+                        <li key={membership.tenantId} className="rounded-2xl border border-[#efe1fd] bg-[#fffdfd] p-3.5">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-3">
+                              <BusinessLogo
+                                name={membership.name}
+                                logoData={membership.logoData || tenantLogoById[membership.tenantId] || undefined}
+                                size="sm"
+                              />
+                              <div className="min-w-0">
+                                <p className="truncate font-black text-[#2a184f]">{membership.name || 'Negocio aliado'}</p>
+                                <p className="text-xs font-semibold text-[#6e57a0]">
+                                  {currentVisits}/{requiredVisits} visitas · {membership.points || 0} pts
+                                </p>
+                              </div>
+                            </div>
+                            <Link
+                              href={`/pass?customer_id=${encodeURIComponent(user.id)}&business_id=${encodeURIComponent(membership.tenantId)}`}
+                              className={buttonStyles('tertiary')}
+                            >
+                              Ver pase
+                            </Link>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="mt-3 text-sm text-[#5c4a82]">Aún no tienes negocios activos. Activa tu pase para comenzar.</p>
+                )}
+              </article>
+
+              <article className="rounded-3xl border border-[#e9daf9] bg-white p-4 md:p-6">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-xl font-black text-[#25174a]">Mapa de negocios</h3>
+                  <span className="text-xs font-semibold text-[#7a63a8]">{tenants.length} negocios disponibles</span>
+                </div>
+                <div className="grid gap-4 lg:grid-cols-[1fr_1.65fr]">
+                  <div className="rounded-2xl border border-[#efe2fc] bg-[#fffafe] p-3.5">
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7859a8]">Directorio rápido</p>
+                    {loadingTenants ? (
+                      <div className="mt-3 space-y-2">
+                        <div className="h-14 animate-pulse rounded-xl bg-[#f4ebff]" />
+                        <div className="h-14 animate-pulse rounded-xl bg-[#f4ebff]" />
+                        <div className="h-14 animate-pulse rounded-xl bg-[#f4ebff]" />
+                      </div>
+                    ) : tenants.length === 0 ? (
+                      <p className="mt-3 text-sm text-[#5d4a82]">No encontramos negocios en este momento.</p>
+                    ) : (
+                      <ul className="mt-3 space-y-2">
+                        {tenants.slice(0, 8).map((tenant) => (
+                          <li key={tenant.id || `${tenant.name}-${tenant.lat}-${tenant.lng}`} className="rounded-xl border border-[#eee2fb] bg-white p-2.5">
+                            <div className="flex items-start gap-2.5">
+                              <BusinessLogo name={tenant.name} logoData={tenant.logoData || undefined} size="sm" />
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-black text-[#26174c]">{tenant.name}</p>
+                                <p className="truncate text-[11px] font-semibold text-[#77629f]">{tenant.address || `${tenant.lat.toFixed(4)}, ${tenant.lng.toFixed(4)}`}</p>
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => openBusinessPass(tenant)}
+                                    disabled={!tenant.id}
+                                    className={`${buttonStyles('tertiary')} px-2.5 py-1.5 text-[11px] ${tenant.id ? '' : 'cursor-not-allowed opacity-50'}`}
+                                  >
+                                    Abrir pase
+                                  </button>
+                                  <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${tenant.lat},${tenant.lng}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`${buttonStyles('tertiary')} px-2.5 py-1.5 text-[11px]`}
+                                  >
+                                    Cómo llegar
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <div className="h-[460px] overflow-hidden rounded-3xl border border-[#f0e5fc] shadow-[0_14px_28px_rgba(79,46,142,0.12)] lg:h-[520px]">
+                    {loadingTenants ? (
+                      <div className="h-full w-full animate-pulse bg-[#f7f0ff]" />
+                    ) : (
+                      <BusinessMap tenants={tenants} focusCoords={null} radiusKm={50} onCreatePass={openBusinessPass} />
+                    )}
+                  </div>
+                </div>
+              </article>
+
+              <article className="rounded-3xl border border-[#e9daf9] bg-white p-6">
+                <h3 className="text-xl font-black text-[#25174a]">Beneficios de red desbloqueados</h3>
+                {loadingRewards ? (
+                  <p className="mt-3 text-sm text-[#5c4a82]">Cargando beneficios...</p>
+                ) : rewards.length === 0 ? (
+                  <p className="mt-3 text-sm text-[#5c4a82]">Todavía no tienes beneficios de red desbloqueados.</p>
+                ) : (
+                  <ul className="mt-4 space-y-2.5 text-sm text-[#4f3d76]">
+                    {rewards.slice(0, 10).map((reward) => (
+                      <li key={reward.id} className="rounded-xl border border-[#f0e5fc] bg-[#fffdf9] p-3.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="font-semibold text-[#2a184f]">
+                            {reward.reward.title} · {reward.reward.rewardValue}
+                          </p>
+                          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.1em] ${rewardStatusStyles(reward.status)}`}>
+                            {rewardStatusLabel(reward.status)}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-[#5c4a82]">{reward.reward.business.name}</p>
+                        {reward.redemption?.code ? (
+                          <p className="mt-1 text-xs font-semibold text-[#4b3b71]">Código: {reward.redemption.code}</p>
+                        ) : null}
+                        {reward.unlockedAt ? (
+                          <p className="mt-1 text-[11px] text-[#7e69a9]">Desbloqueado: {formatDateLabel(reward.unlockedAt)}</p>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </article>
+            </section>
+          ) : null}
+
+          {tab === 'perfil' ? (
+            <section className="grid gap-5 lg:grid-cols-[1.45fr_1fr]">
+              <article className="rounded-3xl border border-[#e9daf9] bg-white p-6">
+                <h3 className="text-2xl font-black text-[#25174a]">Mi perfil</h3>
+                <p className="mt-1 text-sm text-[#5c4a82]">Mantén tus datos actualizados para recibir mejores experiencias y soporte.</p>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <div className="grid gap-1.5">
+                    <label htmlFor="name" className="text-xs font-bold uppercase tracking-[0.14em] text-[#7e67a8]">Nombre</label>
+                    <input
+                      id="name"
+                      value={profileName}
+                      onChange={(event) => setProfileName(event.target.value)}
+                      className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-3 py-2.5 text-sm text-[#2e1e54] focus:border-[#9f7bd3] focus:outline-none"
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <label htmlFor="phone" className="text-xs font-bold uppercase tracking-[0.14em] text-[#7e67a8]">Teléfono</label>
+                    <input
+                      id="phone"
+                      value={profilePhone}
+                      onChange={(event) => setProfilePhone(event.target.value)}
+                      className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-3 py-2.5 text-sm text-[#2e1e54] focus:border-[#9f7bd3] focus:outline-none"
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <label htmlFor="email" className="text-xs font-bold uppercase tracking-[0.14em] text-[#7e67a8]">Email</label>
+                    <input
+                      id="email"
+                      type="email"
+                      value={profileEmail}
+                      onChange={(event) => setProfileEmail(event.target.value)}
+                      className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-3 py-2.5 text-sm text-[#2e1e54] focus:border-[#9f7bd3] focus:outline-none"
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <label htmlFor="gender" className="text-xs font-bold uppercase tracking-[0.14em] text-[#7e67a8]">Género</label>
+                    <select
+                      id="gender"
+                      value={profileGender}
+                      onChange={(event) => setProfileGender(event.target.value)}
+                      className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-3 py-2.5 text-sm text-[#2e1e54] focus:border-[#9f7bd3] focus:outline-none"
+                    >
+                      <option value="">Selecciona</option>
+                      <option value="Hombre">Hombre</option>
+                      <option value="Mujer">Mujer</option>
+                      <option value="Otro">Otro</option>
+                    </select>
+                  </div>
+                  <div className="grid gap-1.5 md:col-span-2">
+                    <label htmlFor="birthDate" className="text-xs font-bold uppercase tracking-[0.14em] text-[#7e67a8]">Fecha de nacimiento</label>
+                    <input
+                      id="birthDate"
+                      type="date"
+                      value={profileBirthDate}
+                      onChange={(event) => setProfileBirthDate(event.target.value)}
+                      className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-3 py-2.5 text-sm text-[#2e1e54] focus:border-[#9f7bd3] focus:outline-none md:max-w-xs"
+                    />
+                  </div>
+                </div>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button type="button" onClick={saveProfile} disabled={savingProfile} className={buttonStyles('primary')}>
+                    {savingProfile ? 'Guardando...' : 'Guardar cambios'}
+                  </button>
+                  <Link href={`/pass?customer_id=${encodeURIComponent(user.id)}`} className={buttonStyles('secondary')}>
+                    Ver mi pase
+                  </Link>
+                </div>
+              </article>
+
+              <article className="rounded-3xl border border-[#e9daf9] bg-[linear-gradient(145deg,#fffdfa_0%,#f9f3ff_100%)] p-6">
+                <h3 className="inline-flex items-center gap-2 text-xl font-black text-[#25174a]">
+                  <ShieldCheck className="h-5 w-5 text-[#6f4ea2]" />
+                  Seguridad de cuenta
+                </h3>
+                <p className="mt-2 text-sm text-[#5c4a82]">
+                  Tu sesión está protegida y puedes cerrar sesión en cualquier momento desde este panel.
+                </p>
+                <div className="mt-4 rounded-2xl border border-[#ecdffb] bg-white p-4">
+                  <p className="text-xs font-black uppercase tracking-[0.12em] text-[#7d61ab]">Información de acceso</p>
+                  <dl className="mt-3 space-y-2 text-sm">
+                    <div>
+                      <dt className="font-semibold text-[#6a5498]">Usuario</dt>
+                      <dd className="font-black text-[#28184f]">{profileName || 'Cliente Punto IA'}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold text-[#6a5498]">Teléfono</dt>
+                      <dd className="font-black text-[#28184f]">{profilePhone || '-'}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold text-[#6a5498]">Email</dt>
+                      <dd className="font-black text-[#28184f]">{profileEmail || '-'}</dd>
+                    </div>
+                  </dl>
+                </div>
+                <div className="mt-4 rounded-2xl border border-[#efe3fc] bg-white p-4">
+                  <p className="text-sm font-semibold text-[#533c82]">
+                    Si usas un equipo compartido, cierra sesión al terminar.
+                  </p>
+                  <button type="button" onClick={logout} className={`mt-3 w-full ${buttonStyles('secondary')}`}>
+                    Cerrar sesión
+                  </button>
+                </div>
+              </article>
+            </section>
+          ) : null}
+
+          {redeemCode ? (
+            <article className="rounded-3xl border border-[#f7d9cc] bg-[#fff8f4] p-6">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#c9654c]">Código de canje</p>
+              <p className="mt-2 text-3xl font-black tracking-[0.1em] text-[#2a184f]">{redeemCode.code}</p>
+              <p className="mt-2 text-sm text-[#5c4a82]">Muestra este código en {redeemCode.business}.</p>
             </article>
-          </div>
-        ) : null}
+          ) : null}
 
-        {tab === 'perfil' ? (
-          <article className="mt-6 rounded-3xl border border-[#e9daf9] bg-white p-6">
-            <h3 className="text-2xl font-black">Mi perfil</h3>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <div className="grid gap-1">
-                <label htmlFor="name" className="text-xs font-bold uppercase tracking-[0.14em] text-[#7e67a8]">Nombre</label>
-                <input id="name" value={profileName} onChange={(event) => setProfileName(event.target.value)} className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-3 py-2 text-sm" />
-              </div>
-              <div className="grid gap-1">
-                <label htmlFor="phone" className="text-xs font-bold uppercase tracking-[0.14em] text-[#7e67a8]">Teléfono</label>
-                <input id="phone" value={profilePhone} onChange={(event) => setProfilePhone(event.target.value)} className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-3 py-2 text-sm" />
-              </div>
-              <div className="grid gap-1">
-                <label htmlFor="email" className="text-xs font-bold uppercase tracking-[0.14em] text-[#7e67a8]">Email</label>
-                <input id="email" type="email" value={profileEmail} onChange={(event) => setProfileEmail(event.target.value)} className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-3 py-2 text-sm" />
-              </div>
-              <div className="grid gap-1">
-                <label htmlFor="gender" className="text-xs font-bold uppercase tracking-[0.14em] text-[#7e67a8]">Género</label>
-                <select id="gender" value={profileGender} onChange={(event) => setProfileGender(event.target.value)} className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-3 py-2 text-sm">
-                  <option value="">Selecciona</option>
-                  <option value="Hombre">Hombre</option>
-                  <option value="Mujer">Mujer</option>
-                  <option value="Otro">Otro</option>
-                </select>
-              </div>
-              <div className="grid gap-1 md:col-span-2">
-                <label htmlFor="birthDate" className="text-xs font-bold uppercase tracking-[0.14em] text-[#7e67a8]">Fecha de nacimiento</label>
-                <input id="birthDate" type="date" value={profileBirthDate} onChange={(event) => setProfileBirthDate(event.target.value)} className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-3 py-2 text-sm md:max-w-xs" />
-              </div>
-            </div>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <button type="button" onClick={saveProfile} disabled={savingProfile} className={buttonStyles('primary')}>
-                {savingProfile ? 'Guardando...' : 'Guardar cambios'}
-              </button>
-              <button type="button" onClick={logout} className={buttonStyles('secondary')}>
-                Cerrar sesión
-              </button>
-            </div>
-          </article>
-        ) : null}
-
-        {redeemCode ? (
-          <article className="mt-6 rounded-3xl border border-[#f7d9cc] bg-[#fff8f4] p-6">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#c9654c]">Código de canje</p>
-            <p className="mt-2 text-3xl font-black tracking-[0.1em] text-[#2a184f]">{redeemCode.code}</p>
-            <p className="mt-2 text-sm text-[#5c4a82]">Muestra este código en {redeemCode.business}.</p>
-          </article>
-        ) : null}
-
-        {statusMessage ? (
-          <p className="mt-4 rounded-xl border border-[#ead8fb] bg-white p-3 text-sm font-semibold text-[#4f3d76]">
-            {statusMessage}
-          </p>
-        ) : null}
+          {statusMessage ? (
+            <p
+              className={`rounded-xl border p-3 text-sm font-semibold ${
+                statusToneIsError
+                  ? 'border-[#f4d2c4] bg-[#fff7f2] text-[#8a4226]'
+                  : 'border-[#d8f0e1] bg-[#f3fff7] text-[#1f6a44]'
+              }`}
+            >
+              {statusMessage}
+            </p>
+          ) : null}
+        </div>
       </Section>
 
       <MarketingFooter />
