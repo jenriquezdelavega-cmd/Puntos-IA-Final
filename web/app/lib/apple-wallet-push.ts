@@ -8,6 +8,20 @@ import { join } from 'path';
 
 const execFileAsync = promisify(execFile);
 const TABLE_NAME = 'apple_wallet_registrations';
+const APNS_ENV_MISMATCH_REASONS = new Set([
+  'BadDeviceToken',
+  'BadCertificateEnvironment',
+  'DeviceTokenNotForTopic',
+  'BadTopic',
+  'TopicDisallowed',
+]);
+const APNS_TOKEN_INVALID_REASONS = new Set([
+  'BadDeviceToken',
+  'DeviceTokenNotForTopic',
+  'Unregistered',
+]);
+
+type PushResult = { ok: boolean; status: number; reason?: string; host?: string };
 
 function decodeP12Base64(raw: string) {
   const value = String(raw || '').trim();
@@ -24,6 +38,11 @@ function optionalEnv(name: string) {
     return trimmed.slice(1, -1);
   }
   return trimmed;
+}
+
+function envIsTruthy(value: string) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
 }
 
 function p12PasswordCandidates(rawPassword: string) {
@@ -130,22 +149,28 @@ export async function deleteWalletRegistrationsByPushToken(prisma: PrismaClient,
   );
 }
 
-export async function pushWalletUpdateToDevice(pushToken: string, passTypeIdentifier: string) {
-  const p12Base64 = optionalEnv('APPLE_P12_BASE64');
-  if (!p12Base64) return { ok: false as const, status: 0, reason: 'APPLE_P12_BASE64 no configurado' };
+export function shouldDeleteWalletRegistrationForPushResult(result: { status: number; reason?: string }) {
+  const reason = String(result.reason || '').trim();
+  if (result.status === 410) return true;
+  if (result.status !== 400) return false;
+  return APNS_TOKEN_INVALID_REASONS.has(reason);
+}
 
-  const p12Password = optionalEnv('APPLE_P12_PASSWORD');
-  const host = optionalEnv('APPLE_APNS_HOST') || (optionalEnv('APPLE_APNS_USE_SANDBOX') === 'true' ? 'api.sandbox.push.apple.com' : 'api.push.apple.com');
-
-  const { cert, key } = await extractPemFromP12(decodeP12Base64(p12Base64), p12Password);
-  const client = connect(`https://${host}`, { cert, key });
+async function pushWalletUpdateToDeviceHost(params: {
+  pushToken: string;
+  passTypeIdentifier: string;
+  host: string;
+  cert: string;
+  key: string;
+}): Promise<PushResult> {
+  const client = connect(`https://${params.host}`, { cert: params.cert, key: params.key });
 
   try {
-    const result = await new Promise<{ ok: boolean; status: number; reason?: string }>((resolve, reject) => {
+    const result = await new Promise<PushResult>((resolve, reject) => {
       const req = client.request({
         ':method': 'POST',
-        ':path': `/3/device/${pushToken}`,
-        'apns-topic': passTypeIdentifier,
+        ':path': `/3/device/${params.pushToken}`,
+        'apns-topic': params.passTypeIdentifier,
         'apns-priority': '5',
         'apns-push-type': 'background',
         'content-type': 'application/json',
@@ -168,7 +193,7 @@ export async function pushWalletUpdateToDevice(pushToken: string, passTypeIdenti
       });
       req.on('end', () => {
         if (status >= 200 && status < 300) {
-          resolve({ ok: true, status });
+          resolve({ ok: true, status, host: params.host });
           return;
         }
 
@@ -180,7 +205,7 @@ export async function pushWalletUpdateToDevice(pushToken: string, passTypeIdenti
           reason = body.trim();
         }
 
-        resolve({ ok: false, status, reason });
+        resolve({ ok: false, status, reason, host: params.host });
       });
 
       req.end('{}');
@@ -190,4 +215,39 @@ export async function pushWalletUpdateToDevice(pushToken: string, passTypeIdenti
   } finally {
     client.close();
   }
+}
+
+export async function pushWalletUpdateToDevice(pushToken: string, passTypeIdentifier: string) {
+  const p12Base64 = optionalEnv('APPLE_P12_BASE64');
+  if (!p12Base64) return { ok: false as const, status: 0, reason: 'APPLE_P12_BASE64 no configurado' };
+
+  const p12Password = optionalEnv('APPLE_P12_PASSWORD');
+  const configuredHost = optionalEnv('APPLE_APNS_HOST');
+  const useSandbox = envIsTruthy(optionalEnv('APPLE_APNS_USE_SANDBOX'));
+  const hostCandidates = configuredHost
+    ? [configuredHost]
+    : useSandbox
+      ? ['api.sandbox.push.apple.com', 'api.push.apple.com']
+      : ['api.push.apple.com', 'api.sandbox.push.apple.com'];
+
+  const { cert, key } = await extractPemFromP12(decodeP12Base64(p12Base64), p12Password);
+
+  let lastResult: PushResult | null = null;
+  for (const host of hostCandidates) {
+    const result = await pushWalletUpdateToDeviceHost({
+      pushToken,
+      passTypeIdentifier,
+      host,
+      cert,
+      key,
+    });
+    if (result.ok) return result;
+
+    lastResult = result;
+    if (!APNS_ENV_MISMATCH_REASONS.has(String(result.reason || '').trim())) {
+      break;
+    }
+  }
+
+  return lastResult || { ok: false as const, status: 0, reason: 'APNS push failed' };
 }

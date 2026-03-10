@@ -1,8 +1,13 @@
 import { apiError, apiSuccess, getRequestId, type ApiErrorCode } from '@/app/lib/api-response';
 import { logApiError, logApiEvent } from '@/app/lib/api-log';
 import { RewardPeriod } from '@prisma/client';
-import { touchWalletPassRegistrations, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
-import { listWalletPushTokens, pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
+import { ensureWalletRegistrationsTable, touchWalletPassRegistrations, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
+import {
+  deleteWalletRegistrationsByPushToken,
+  listWalletPushTokens,
+  pushWalletUpdateToDevice,
+  shouldDeleteWalletRegistrationForPushResult,
+} from '@/app/lib/apple-wallet-push';
 import { prisma } from '@/app/lib/prisma';
 import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
@@ -238,6 +243,7 @@ export async function POST(request: Request) {
     }
 
     try {
+      await ensureWalletRegistrationsTable(prisma);
       const serialNumber = walletSerialNumber(userId, validCode.tenantId);
       const passTypeIdentifier = asTrimmedString(process.env.APPLE_PASS_TYPE_ID) || undefined;
 
@@ -264,15 +270,17 @@ export async function POST(request: Request) {
             logApiEvent('/api/check-in/scan#wallet-push', 'push_sent', {
               serialNumber,
               status: result.status,
+              host: result.host || null,
             });
           } else {
-            if (result.status === 410 || result.status === 400) {
+            if (shouldDeleteWalletRegistrationForPushResult(result)) {
               await deleteWalletRegistrationsByPushToken(prisma, pushToken);
             }
             logApiEvent('/api/check-in/scan#wallet-push', 'push_failed', {
               serialNumber,
               status: result.status,
               reason: result.reason || 'unknown',
+              host: result.host || null,
             });
           }
         }

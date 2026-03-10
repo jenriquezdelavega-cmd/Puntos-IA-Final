@@ -422,6 +422,60 @@ export async function upsertGoogleLoyaltyObject(payload: Record<string, unknown>
   };
 }
 
+export async function addGoogleLoyaltyObjectMessage(params: {
+  objectId: string;
+  header: string;
+  body: string;
+  messageId?: string;
+}) {
+  const objectId = String(params.objectId || '').trim();
+  if (!objectId) {
+    throw new Error('Google loyalty object message requires objectId');
+  }
+
+  const accessToken = await getGoogleServiceAccountAccessToken(['https://www.googleapis.com/auth/wallet_object.issuer']);
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  };
+  const requestUrl = `${WALLET_OBJECT_URL}/${encodeURIComponent(objectId)}/addMessage`;
+  const messageId = String(params.messageId || '').trim() || `msg_${Date.now()}`;
+
+  const payloadVariants = [
+    {
+      message: {
+        id: messageId,
+        header: String(params.header || '').trim(),
+        body: String(params.body || '').trim(),
+        messageType: 'TEXT_AND_NOTIFY',
+      },
+    },
+    {
+      message: {
+        id: messageId,
+        header: String(params.header || '').trim(),
+        body: String(params.body || '').trim(),
+        message_type: 'TEXT_AND_NOTIFY',
+      },
+    },
+  ];
+
+  let lastResponse: { ok: boolean; status: number; body: unknown } | null = null;
+
+  for (const payload of payloadVariants) {
+    const response = await fetch(requestUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+    const parsedBody = await parseGoogleWalletApiResponse(response);
+    lastResponse = { ok: response.ok, status: response.status, body: parsedBody };
+    if (response.ok) return lastResponse;
+  }
+
+  return lastResponse || { ok: false, status: 0, body: { error: 'Unknown Google Wallet message error' } };
+}
+
 export function ensureGoogleLoyaltyClassSynced(options?: {
   ttlMs?: number;
   classId?: string;
