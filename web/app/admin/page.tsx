@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react';
 import QRCode from 'react-qr-code';
 import dynamic from 'next/dynamic';
+import { motion, AnimatePresence } from 'framer-motion';
 import AdvancedDashboard, { type AdvancedReportView } from '../components/admin/AdvancedDashboard';
 
 const AdminMap = dynamic(() => import('../components/AdminMap'), { ssr: false, loading: () => <div className="h-full bg-gray-100 animate-pulse text-center pt-10 text-gray-400">Cargando...</div> });
@@ -75,6 +76,24 @@ const [uiNotice, setUiNotice] = useState<{ type: 'success' | 'error' | 'info'; t
 const [scannerOpen, setScannerOpen] = useState(false);
 const [scannerMsg, setScannerMsg] = useState('');
 const lastScanRef = useRef<string>('');
+const [scannerSuccessFlash, setScannerSuccessFlash] = useState(false);
+
+const playSuccessSound = () => {
+  try {
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.15);
+  } catch(e) { /* ignore */ }
+};
 
 const [team, setTeam] = useState<TeamMember[]>([]);
 const [newStaff, setNewStaff] = useState({ name: '', username: '', password: '', role: 'STAFF' });
@@ -540,6 +559,9 @@ const handleAdminScan = async (rawValue: string) => {
     setMsg(`✅ ${data.message || 'Visita registrada'} (${data.visits}/${data.requiredVisits})${amountBadge}`);
     setLastScannedCustomerId(customerId);
     setVisitPurchaseAmount('');
+    playSuccessSound();
+    setScannerSuccessFlash(true);
+    setTimeout(() => setScannerSuccessFlash(false), 800);
   } catch (error: unknown) {
     const text = error instanceof Error ? error.message : 'Error al escanear';
     setScannerMsg(`❌ ${text}`);
@@ -720,9 +742,15 @@ return (
 
 
 {scannerOpen && (
-<div className="fixed inset-0 z-[70] bg-black/80 p-4 md:p-8">
-  <div className="max-w-xl mx-auto bg-white rounded-3xl p-4 md:p-6 shadow-2xl border border-gray-200">
-    <div className="flex items-center justify-between mb-3">
+<AnimatePresence>
+<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] bg-black/90 p-0 md:p-8 flex items-center justify-center backdrop-blur-sm">
+  <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="w-full h-full md:h-auto max-w-xl mx-auto bg-white md:rounded-3xl p-4 md:p-6 shadow-2xl md:border border-gray-200 flex flex-col relative overflow-hidden">
+    
+    {scannerSuccessFlash && (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-emerald-500/20 z-10 pointer-events-none" />
+    )}
+
+    <div className="flex items-center justify-between mb-3 shrink-0">
       <h3 className="text-lg font-black text-gray-900">Escanear pase de cliente</h3>
       <button
         onClick={() => setScannerOpen(false)}
@@ -732,7 +760,15 @@ return (
       </button>
     </div>
 
-    <div className="rounded-2xl overflow-hidden border border-gray-200 h-[360px] bg-black">
+    <div className="relative rounded-2xl overflow-hidden border-2 border-gray-900 flex-1 bg-black min-h-[300px]">
+      <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+        <div className="w-64 h-64 border-2 border-white/50 rounded-3xl shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]">
+           <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-3xl"></div>
+           <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-3xl"></div>
+           <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-3xl"></div>
+           <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-3xl"></div>
+        </div>
+      </div>
       <QRScanner
         paused={!scannerOpen}
         constraints={{ facingMode: 'environment' }}
@@ -745,7 +781,7 @@ return (
         }}
       />
     </div>
-    <div className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-center">
+    <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-center shrink-0 relative z-20">
       <input
         inputMode="decimal"
         value={visitPurchaseAmount}
@@ -755,10 +791,15 @@ return (
       />
       <span className="text-[11px] font-bold text-gray-500">Se guarda con esta visita (ej: 129.90)</span>
     </div>
-    <p className="mt-2 text-xs font-semibold text-gray-600">Escanea el QR del pase en Apple Wallet para registrar una visita.</p>
-    {scannerMsg ? <p className="mt-2 text-sm font-black text-emerald-700">{scannerMsg}</p> : null}
-  </div>
-</div>
+    <p className="mt-2 text-xs font-semibold text-gray-500 text-center">Centra el código QR del cliente en el recuadro</p>
+    {scannerMsg ? (
+      <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className={`mt-4 p-4 rounded-xl text-center text-sm font-black shadow-lg ${scannerMsg.includes('❌') ? 'bg-red-100 text-red-700' : 'bg-emerald-500 text-white'}`}>
+        {scannerMsg}
+      </motion.div>
+    ) : null}
+  </motion.div>
+</motion.div>
+</AnimatePresence>
 )}
 
 
