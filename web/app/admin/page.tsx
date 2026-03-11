@@ -86,6 +86,16 @@ const [pushLoading, setPushLoading] = useState(false);
 const [pushResult, setPushResult] = useState('');
 const [pushRemaining, setPushRemaining] = useState<number | null>(null);
 const [pushHistory, setPushHistory] = useState<Array<{ message: string; devices: number; sentAt: string }>>([]);
+const [pushCoverage, setPushCoverage] = useState<{
+  appleRegisteredDevices: number;
+  customerMemberships: number;
+  appleConfigured: boolean;
+  googleConfigured: boolean;
+} | null>(null);
+const [pushDiagnostics, setPushDiagnostics] = useState<{
+  apple?: { sent?: number; failed?: number; targetedDevices?: number; reasons?: Record<string, number> };
+  google?: { sent?: number; failed?: number; reasons?: Record<string, number> };
+} | null>(null);
 const [isLoggingIn, setIsLoggingIn] = useState(false);
 const [isCreatingStaff, setIsCreatingStaff] = useState(false);
 const [isSavingSettings, setIsSavingSettings] = useState(false);
@@ -194,6 +204,7 @@ const loadPushStatus = async (tid: string, currentTenantUserId = tenantUserId, c
     const data = await res.json();
     if (data.remaining != null) setPushRemaining(data.remaining);
     if (data.recent) setPushHistory(data.recent);
+    if (data.coverage) setPushCoverage(data.coverage);
   } catch {}
 };
 
@@ -209,7 +220,18 @@ const sendPush = async () => {
     });
     const data = await res.json();
     if (res.ok) {
-      setPushResult(`✅ ${data.message}`);
+      const delivered =
+        Number(data?.apple?.sent || 0) > 0 ||
+        Number(data?.google?.sent || 0) > 0;
+      if (delivered) {
+        setPushResult(`✅ ${data.message}`);
+      } else {
+        setPushResult(`⚠️ ${data.message}`);
+      }
+      setPushDiagnostics({
+        apple: data?.apple,
+        google: data?.google,
+      });
       setPushMessage('');
       if (data.remaining != null) setPushRemaining(data.remaining);
       loadPushStatus(String((tenant as Record<string, unknown>).id));
@@ -813,6 +835,14 @@ return (
           </p>
         </div>
       </div>
+      {pushCoverage ? (
+        <div className="grid grid-cols-2 gap-2 rounded-xl border border-gray-100 bg-gray-50 p-3 text-xs font-semibold text-gray-600">
+          <p>Clientes con membresía: <span className="font-black text-gray-800">{pushCoverage.customerMemberships}</span></p>
+          <p>Apple registrados: <span className="font-black text-gray-800">{pushCoverage.appleRegisteredDevices}</span></p>
+          <p>Apple config: <span className={`font-black ${pushCoverage.appleConfigured ? 'text-emerald-600' : 'text-red-500'}`}>{pushCoverage.appleConfigured ? 'OK' : 'Falta'}</span></p>
+          <p>Google config: <span className={`font-black ${pushCoverage.googleConfigured ? 'text-emerald-600' : 'text-red-500'}`}>{pushCoverage.googleConfigured ? 'OK' : 'Falta'}</span></p>
+        </div>
+      ) : null}
 
       <div>
         <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Mensaje de notificación</label>
@@ -836,10 +866,16 @@ return (
       </button>
 
       {pushResult && (
-        <div className={`p-3 rounded-xl text-center font-bold text-sm border ${pushResult.startsWith('✅') ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+        <div className={`p-3 rounded-xl text-center font-bold text-sm border ${pushResult.startsWith('✅') ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : pushResult.startsWith('⚠️') ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
           {pushResult}
         </div>
       )}
+      {pushDiagnostics ? (
+        <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 text-[11px] font-semibold text-gray-600">
+          <p>Apple → enviados: <span className="font-black text-gray-800">{pushDiagnostics.apple?.sent || 0}</span> · fallidos: <span className="font-black text-gray-800">{pushDiagnostics.apple?.failed || 0}</span> · objetivo: <span className="font-black text-gray-800">{pushDiagnostics.apple?.targetedDevices || 0}</span></p>
+          <p className="mt-1">Google → enviados: <span className="font-black text-gray-800">{pushDiagnostics.google?.sent || 0}</span> · fallidos: <span className="font-black text-gray-800">{pushDiagnostics.google?.failed || 0}</span></p>
+        </div>
+      ) : null}
     </div>
   </div>
 

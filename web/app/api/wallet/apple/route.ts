@@ -11,6 +11,7 @@ import { generateCustomerToken } from '@/app/lib/customer-token';
 import { walletAuthTokenForSerial, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
 import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 import { asTrimmedString } from '@/app/lib/request-validation';
+import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
 
 const execFileAsync = promisify(execFile);
 let cachedOpenSslBin: string | null = null;
@@ -544,15 +545,31 @@ async function createPassPackage(params: {
       authenticationToken,
       storeCard: {
         headerFields: [
-          { key: 'visits', label: 'VISITAS', value: `${params.currentVisits} / ${params.requiredVisits}` },
+          {
+            key: 'visits',
+            label: 'VISITAS',
+            value: `${params.currentVisits} / ${params.requiredVisits}`,
+            changeMessage: 'Tus visitas ahora son %@.',
+          },
         ],
         secondaryFields: [
-          { key: 'client', label: 'CLIENTE', value: params.customerName || 'Cliente' },
+          { key: 'client', label: 'CLIENTE', value: params.customerName || 'Cliente', changeMessage: 'Cliente %@' },
           { key: 'period', label: 'PERIODO', value: formatPeriodLabel(params.rewardPeriod) },
         ],
         auxiliaryFields: [
-          { key: 'prize', label: '🎁 TU PREMIO', value: params.prize },
-          { key: 'remaining', label: remaining > 0 ? 'FALTAN' : '¡LISTO!', value: remaining > 0 ? `${remaining} visita${remaining === 1 ? '' : 's'}` : 'Canjea tu premio' },
+          { key: 'prize', label: '🎁 TU PREMIO', value: params.prize, changeMessage: 'Premio actualizado: %@' },
+          {
+            key: 'remaining',
+            label: remaining > 0 ? 'FALTAN' : '¡LISTO!',
+            value: remaining > 0 ? `${remaining} visita${remaining === 1 ? '' : 's'}` : 'Canjea tu premio',
+            changeMessage: 'Estado de canje: %@',
+          },
+          {
+            key: 'pushNotice',
+            label: 'AVISO',
+            value: params.lastPushMessage || 'Sin avisos',
+            changeMessage: 'Nuevo aviso: %@',
+          },
         ],
         backFields,
       },
@@ -692,6 +709,18 @@ export async function GET(req: Request) {
       select: { currentVisits: true, totalVisits: true, lastVisitAt: true, periodKey: true, periodType: true },
     });
 
+    let lastPushMessage = '';
+    try {
+      lastPushMessage = (await prisma.tenantWalletStyle.findUnique({
+        where: { tenantId: tenant.id },
+        select: { lastPushMessage: true },
+      }))?.lastPushMessage || '';
+    } catch (error: unknown) {
+      if (!isMissingTableOrColumnError(error)) {
+        throw error;
+      }
+    }
+
     const pkpass = await createPassPackage({
       customerId: user.id,
       customerName: asTrimmedString(user.name) || 'Cliente',
@@ -707,7 +736,7 @@ export async function GET(req: Request) {
       memberSince: user.createdAt || null,
       address: tenant.address || null,
       instagram: tenant.instagram || null,
-      lastPushMessage: (await prisma.tenantWalletStyle.findUnique({ where: { tenantId: tenant.id }, select: { lastPushMessage: true } }))?.lastPushMessage || '',
+      lastPushMessage,
       tenantLogoData: walletLogoData,
       walletBackgroundColor: walletStyle.backgroundColor,
       walletForegroundColor: walletStyle.foregroundColor,
