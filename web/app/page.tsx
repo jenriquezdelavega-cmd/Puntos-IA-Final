@@ -4,6 +4,7 @@ import {
   HeroSection,
   BentoGrid,
   ScrollJourney,
+  InfiniteTicker,
   PageShell,
   SiteFooter,
   SiteHeader,
@@ -26,6 +27,15 @@ export default function HomePage() {
         b2bImage={home.hero.b2bImage}
         b2cImage={home.hero.b2cImage}
       />
+
+      <InfiniteTicker items={[
+        { text: '✨ +15% Visitas en Cafeterías' },
+        { text: '🚀 3x Retención en Barberías' },
+        { text: '🌐 Red de Coalición Activa' },
+        { text: '🔥 Pagos y Retos Sincronizados' },
+        { text: '📈 Métricas en Tiempo Real' },
+        { text: '💳 Apple Wallet Integrado' }
+      ]} />
 
       <BentoGrid
         title={home.bento.title}

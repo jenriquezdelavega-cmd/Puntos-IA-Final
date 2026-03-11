@@ -20,6 +20,7 @@ export const marketingContent = {
     { label: 'Inicio', href: marketingRoutes.home },
     { label: 'Negocios', href: marketingRoutes.negocios },
     { label: 'Clientes', href: marketingRoutes.clientes },
+    { label: 'Precios', href: marketingRoutes.precios },
     { label: 'Entrar', href: marketingRoutes.login },
   ],
   home: {

@@ -117,6 +117,38 @@ export function HeroSection({
            >
               <img src={b2cImage.src} alt={b2cImage.alt} className="w-full h-full object-cover opacity-95" />
            </motion.div>
+
+           {/* Toast Notification B2B */}
+           <motion.div
+             initial={{ opacity: 0, y: 20, scale: 0.9 }}
+             animate={{ opacity: 1, y: 0, scale: 1 }}
+             transition={{ duration: 0.5, delay: 1.8, ease: 'backOut' }}
+             className="absolute left-[5%] top-[10%] lg:top-[15%] z-20 flex max-w-[240px] items-center gap-3 rounded-2xl border border-emerald-500/30 bg-[#0d1612]/90 px-4 py-3 shadow-[0_8px_30px_rgb(16,185,129,0.2)] backdrop-blur-md"
+           >
+             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+             </div>
+             <div>
+               <p className="text-xs font-bold text-white">Canje Exitoso</p>
+               <p className="text-[10px] text-emerald-200/80">Juan P. acaba de recibir un café y sumó +1 visita.</p>
+             </div>
+           </motion.div>
+
+           {/* Toast Notification B2C */}
+           <motion.div
+             initial={{ opacity: 0, x: 20, scale: 0.9 }}
+             animate={{ opacity: 1, x: 0, scale: 1 }}
+             transition={{ duration: 0.5, delay: 2.5, ease: 'backOut' }}
+             className="absolute right-[0%] lg:right-[5%] bottom-[5%] lg:bottom-[15%] z-20 flex max-w-[220px] items-center gap-3 rounded-2xl border border-indigo-500/30 bg-[#120a21]/90 px-4 py-3 shadow-[0_8px_30px_rgb(99,102,241,0.2)] backdrop-blur-md"
+           >
+             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-400">
+               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+             </div>
+             <div>
+               <p className="text-xs font-bold text-white">Puntos de Red</p>
+               <p className="text-[10px] text-indigo-200/80">Recibiste +5xp por visitar un aliado de Coalición.</p>
+             </div>
+           </motion.div>
         </div>
       </div>
     </section>

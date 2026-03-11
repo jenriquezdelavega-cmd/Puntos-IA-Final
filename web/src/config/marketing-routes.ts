@@ -2,6 +2,7 @@ export const marketingRoutes = {
   home: '/',
   negocios: '/negocios',
   clientes: '/clientes',
+  precios: '/precios',
   login: '/ingresar?tipo=cliente&modo=login',
   signup: '/ingresar?tipo=cliente&modo=registro',
   activatePass: '/activar-pase',
