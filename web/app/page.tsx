@@ -1,13 +1,12 @@
 import { marketingContent } from '@/src/content/marketing-content';
 import {
-  AudienceSplitCards,
   CTASection,
-  FeatureGrid,
-  MarketingHero,
+  HeroSection,
+  BentoGrid,
+  ScrollJourney,
   PageShell,
   SiteFooter,
   SiteHeader,
-  StepGrid,
 } from '@/src/components/marketing';
 
 export default function HomePage() {
@@ -17,30 +16,28 @@ export default function HomePage() {
     <PageShell>
       <SiteHeader navItems={nav} cta={{ label: 'Entrar', href: home.hero.secondaryCta.href }} />
 
-      <MarketingHero
+      <HeroSection
         eyebrow={home.hero.eyebrow}
         title={home.hero.title}
         description={home.hero.description}
         chips={home.hero.chips}
         primaryCta={home.hero.primaryCta}
         secondaryCta={home.hero.secondaryCta}
-        image={home.hero.image}
+        b2bImage={home.hero.b2bImage}
+        b2cImage={home.hero.b2cImage}
       />
 
-      <AudienceSplitCards
-        title={home.split.title}
-        description={home.split.description}
-        items={home.split.items}
+      <BentoGrid
+        title={home.bento.title}
+        description={home.bento.description}
+        items={home.bento.items}
       />
 
-      <StepGrid
-        title={home.howItWorks.title}
-        description={home.howItWorks.description}
-        steps={home.howItWorks.steps}
-        image={home.howItWorks.image}
+      <ScrollJourney
+        title={home.journey.title}
+        subtitle={home.journey.subtitle}
+        steps={home.journey.steps}
       />
-
-      <FeatureGrid title={home.diferencial.title} features={home.diferencial.features} />
 
       <CTASection
         title={home.cta.title}

@@ -10,3 +10,6 @@ export { ProofChips } from './proof-chips';
 export { SiteFooter } from './site-footer';
 export { SiteHeader } from './site-header';
 export { StepGrid } from './step-grid';
+export { HeroSection } from './hero-section';
+export { BentoGrid } from './bento-grid';
+export { ScrollJourney } from './scroll-journey';
