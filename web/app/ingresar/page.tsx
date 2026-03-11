@@ -2,13 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Building2, CircleUserRound, ShieldCheck } from 'lucide-react';
-import {
-  MarketingBackground,
-  MarketingFooter,
-  MarketingHeader,
-  Section,
-  buttonStyles,
-} from '../components/marketing/ui';
+import { PageShell, SiteHeader, SiteFooter } from '@/src/components/marketing';
+import { marketingContent } from '@/src/content/marketing-content';
 
 type UserLoginResponse = {
   id: string;
@@ -154,42 +149,44 @@ export default function IngresarPage() {
     }
   };
 
+  const { nav } = marketingContent;
+
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#fffaf8] text-[#231644]">
-      <MarketingBackground />
-      <MarketingHeader badge="Acceso a Punto IA" />
+    <PageShell>
+      <SiteHeader navItems={nav} />
+      <main className="relative flex-grow flex items-center justify-center py-20 px-6 sm:px-12 bg-[#0d071a] overflow-hidden">
+        {/* Background Glows (Tech Feel) */}
+        <div className="pointer-events-none absolute top-[-20%] left-1/2 w-[800px] -translate-x-1/2 opacity-30 mix-blend-screen" aria-hidden="true">
+           <div className="aspect-[1/1] rounded-full bg-gradient-radial from-[#8a60f6] to-transparent blur-[100px]" />
+        </div>
 
-      <Section
-        eyebrow="Acceso principal"
-        title="Entrar a Punto IA"
-        description="Inicia sesión o crea tu cuenta de cliente en pocos pasos, con un flujo claro y directo."
-      >
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr),320px]">
-          <article className="rounded-3xl border border-[#e5d4f7] bg-white p-6 shadow-[0_14px_30px_rgba(95,58,152,0.12)] md:p-7">
-            <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-[#8a74b3]">
+        <div className="relative z-10 w-full max-w-5xl mx-auto grid gap-6 lg:gap-8 lg:grid-cols-[minmax(0,1fr),350px]">
+          {/* Tarjeta de Clientes */}
+          <article className="rounded-[2.5rem] border border-white/10 bg-[#160b2b]/80 p-8 shadow-2xl backdrop-blur-xl md:p-10">
+            <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-[#dacbf0]">
               <CircleUserRound className="h-4 w-4" />
-              Clientes
+              Portal de Clientes
             </p>
-            <h2 className="mt-3 text-2xl font-black text-[#28184f] md:text-3xl">
-              {customerMode === 'login' ? 'Inicia sesión' : 'Crea tu cuenta'}
+            <h2 className="mt-4 text-3xl font-black text-white md:text-4xl">
+              {customerMode === 'login' ? 'Bienvenido de vuelta.' : 'Desbloquea tus beneficios.'}
             </h2>
-            <p className="mt-2 text-sm text-[#5f4e84]">
+            <p className="mt-3 text-[#a593c2]">
               {customerMode === 'login'
-                ? 'Accede con tu teléfono y contraseña.'
-                : 'Completa tus datos para activar tu cuenta desde hoy.'}
+                ? 'Ingresa tus datos para ver tus recompensas.'
+                : 'Activa tu Wallet Pass y empieza a ganar retos.'}
             </p>
 
-            <div className="mt-5 grid grid-cols-2 rounded-xl border border-[#e7d7f8] bg-[#faf5ff] p-1">
+            <div className="mt-8 flex rounded-xl border border-white/10 bg-white/5 p-1">
               <button
                 type="button"
                 onClick={() => {
                   setCustomerMode('login');
                   setModeInUrl('login');
                 }}
-                className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
                   customerMode === 'login'
-                    ? 'bg-white text-[#2f1f57] shadow-sm'
-                    : 'text-[#654f8c] hover:text-[#3c2a62]'
+                    ? 'bg-[#7e4fd3] text-white shadow-lg shadow-purple-500/25'
+                    : 'text-[#dacbf0] hover:text-white hover:bg-white/5'
                 }`}
               >
                 Iniciar sesión
@@ -200,10 +197,10 @@ export default function IngresarPage() {
                   setCustomerMode('registro');
                   setModeInUrl('registro');
                 }}
-                className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
                   customerMode === 'registro'
-                    ? 'bg-white text-[#2f1f57] shadow-sm'
-                    : 'text-[#654f8c] hover:text-[#3c2a62]'
+                    ? 'bg-[#7e4fd3] text-white shadow-lg shadow-purple-500/25'
+                    : 'text-[#dacbf0] hover:text-white hover:bg-white/5'
                 }`}
               >
                 Crear cuenta
@@ -211,150 +208,166 @@ export default function IngresarPage() {
             </div>
 
             {customerMode === 'login' ? (
-              <form className="mt-5 grid gap-4" onSubmit={onCustomerLogin}>
-                <div className="grid gap-1.5">
-                  <label className="text-sm font-semibold text-[#4e3b74]" htmlFor="phone">Teléfono</label>
+              <form className="mt-8 grid gap-4 relative" onSubmit={onCustomerLogin}>
+                <div className="grid gap-2">
+                  <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="phone">Número de WhatsApp</label>
                   <input
                     id="phone"
                     value={phone}
                     onChange={(event) => setPhone(event.target.value)}
-                    className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-4 py-3 text-sm focus:border-[#7c3aed] focus:outline-none"
+                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none transition-colors"
                     placeholder="Ejemplo: 5512345678"
                     required
                   />
                 </div>
-                <div className="grid gap-1.5">
-                  <label className="text-sm font-semibold text-[#4e3b74]" htmlFor="password">Contraseña</label>
+                <div className="grid gap-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="password">Contraseña</label>
+                    <a href="/recuperar" className="text-xs font-semibold text-[#ff5e91] hover:text-pink-400 transition-colors">¿Olvidaste tu contraseña?</a>
+                  </div>
                   <input
                     id="password"
                     type="password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-4 py-3 text-sm focus:border-[#7c3aed] focus:outline-none"
-                    placeholder="Tu contraseña"
+                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none transition-colors"
+                    placeholder="Escribe tu contraseña"
                     required
                   />
                 </div>
-                <button type="submit" className={buttonStyles('primary')} disabled={loading}>
-                  {loading ? 'Entrando...' : 'Entrar a mi cuenta'}
-                </button>
-                <a href="/recuperar" className="mt-1 inline-flex text-xs font-semibold text-[#6a51a0] hover:text-[#3c2a62]">Recuperar contraseña</a>
-                {loginMessage ? (
-                  <p className="rounded-lg border border-[#f6d3dd] bg-[#fff4f8] px-3 py-2 text-sm font-semibold text-[#b4234f]">
+                
+                {loginMessage && (
+                  <p className="mt-2 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200">
                     {loginMessage}
                   </p>
-                ) : null}
+                )}
+
+                <button type="submit" className={`mt-2 w-full py-3.5 px-6 rounded-xl font-bold bg-[#7e4fd3] text-white hover:bg-[#6c40bb] shadow-lg shadow-purple-500/25 transition-all ${loading ? 'opacity-70 cursor-wait' : ''}`} disabled={loading}>
+                  {loading ? 'Validando...' : 'Entrar a mi Wallet'}
+                </button>
               </form>
             ) : (
-              <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={onCustomerRegister}>
-                <div className="grid gap-1.5 md:col-span-2">
-                  <label className="text-sm font-semibold text-[#4e3b74]" htmlFor="register-name">Nombre completo</label>
+               <form className="mt-8 grid gap-4 sm:grid-cols-2 relative" onSubmit={onCustomerRegister}>
+                <div className="grid gap-2 sm:col-span-2">
+                  <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="register-name">Nombre completo</label>
                   <input
                     id="register-name"
                     value={registerName}
                     onChange={(event) => setRegisterName(event.target.value)}
-                    className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-4 py-3 text-sm focus:border-[#7c3aed] focus:outline-none"
-                    placeholder="Tu nombre completo"
+                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none"
+                    placeholder="¿Cómo te llamas?"
                     required
                   />
                 </div>
-                <div className="grid gap-1.5">
-                  <label className="text-sm font-semibold text-[#4e3b74]" htmlFor="register-phone">Teléfono</label>
+                <div className="grid gap-2">
+                  <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="register-phone">WhatsApp</label>
                   <input
                     id="register-phone"
                     value={registerPhone}
                     onChange={(event) => setRegisterPhone(event.target.value)}
-                    className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-4 py-3 text-sm focus:border-[#7c3aed] focus:outline-none"
-                    placeholder="Ejemplo: 5512345678"
+                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none"
+                    placeholder="10 dígitos"
                     required
                   />
                 </div>
-                <div className="grid gap-1.5">
-                  <label className="text-sm font-semibold text-[#4e3b74]" htmlFor="register-email">Email</label>
+                <div className="grid gap-2">
+                  <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="register-email">Email</label>
                   <input
                     id="register-email"
                     type="email"
                     value={registerEmail}
                     onChange={(event) => setRegisterEmail(event.target.value)}
-                    className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-4 py-3 text-sm focus:border-[#7c3aed] focus:outline-none"
-                    placeholder="nombre@correo.com"
+                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none"
+                    placeholder="correo@ejemplo.com"
                     required
                   />
                 </div>
-                <div className="grid gap-1.5">
-                  <label className="text-sm font-semibold text-[#4e3b74]" htmlFor="register-gender">Género</label>
+                <div className="grid gap-2">
+                  <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="register-gender">Identidad</label>
                   <select
                     id="register-gender"
                     value={registerGender}
                     onChange={(event) => setRegisterGender(event.target.value)}
-                    className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-4 py-3 text-sm focus:border-[#7c3aed] focus:outline-none"
+                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none [&>option]:text-black"
                     required
                   >
                     <option value="">Selecciona</option>
                     <option value="Hombre">Hombre</option>
                     <option value="Mujer">Mujer</option>
-                    <option value="Otro">Otro</option>
+                    <option value="Otro">Prefiero no decir</option>
                   </select>
                 </div>
-                <div className="grid gap-1.5">
-                  <label className="text-sm font-semibold text-[#4e3b74]" htmlFor="register-birth-date">Fecha de nacimiento</label>
+                <div className="grid gap-2">
+                  <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="register-birth-date">Cumpleaños</label>
                   <input
                     id="register-birth-date"
                     type="date"
                     value={registerBirthDate}
                     onChange={(event) => setRegisterBirthDate(event.target.value)}
-                    className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-4 py-3 text-sm focus:border-[#7c3aed] focus:outline-none"
+                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none sm:[color-scheme:dark]"
                     required
                   />
                 </div>
-                <div className="grid gap-1.5 md:col-span-2">
-                  <label className="text-sm font-semibold text-[#4e3b74]" htmlFor="register-password">Contraseña</label>
+                <div className="grid gap-2 sm:col-span-2">
+                  <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="register-password">Contraseña segura</label>
                   <input
                     id="register-password"
                     type="password"
                     value={registerPassword}
                     onChange={(event) => setRegisterPassword(event.target.value)}
-                    className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-4 py-3 text-sm focus:border-[#7c3aed] focus:outline-none"
-                    placeholder="Mínimo 6 caracteres"
+                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none"
+                    placeholder="Min. 6 caracteres"
                     minLength={6}
                     required
                   />
                 </div>
-                <button type="submit" className={`md:col-span-2 ${buttonStyles('primary')}`} disabled={registerLoading}>
-                  {registerLoading ? 'Creando cuenta...' : 'Crear cuenta'}
-                </button>
-                {registerMessage ? (
-                  <p className="md:col-span-2 rounded-lg border border-[#e7d6fa] bg-[#faf5ff] px-3 py-2 text-sm font-semibold text-[#4e3b74]">
+                
+                {registerMessage && (
+                  <p className="sm:col-span-2 mt-2 rounded-lg border border-[#7e4fd3]/30 bg-[#7e4fd3]/10 px-4 py-3 text-sm font-semibold text-[#dacbf0]">
                     {registerMessage}
                   </p>
-                ) : null}
+                )}
+
+                <button type="submit" className={`sm:col-span-2 mt-2 w-full py-3.5 px-6 rounded-xl font-bold bg-[#7e4fd3] text-white hover:bg-[#6c40bb] shadow-lg shadow-purple-500/25 transition-all ${registerLoading ? 'opacity-70 cursor-wait' : ''}`} disabled={registerLoading}>
+                  {registerLoading ? 'Generando Pase...' : 'Generar mi Wallet Pass'}
+                </button>
               </form>
             )}
           </article>
 
-          <article className="rounded-3xl border border-[#ebdef8] bg-white p-6">
-            <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-[#8a74b3]">
-              <Building2 className="h-4 w-4" />
-              Negocios
-            </p>
-            <h2 className="mt-3 text-xl font-black text-[#28184f]">Acceso para negocio</h2>
-            <p className="mt-3 text-sm text-[#5f4e84]">
-              Gestiona check-ins, canjes y reportes desde tu panel administrativo.
-            </p>
-            <div className="mt-4 rounded-2xl border border-[#ebdef8] bg-[#fcf8ff] p-4">
-              <p className="inline-flex items-center gap-2 text-xs font-semibold text-[#5e4989]">
-                <ShieldCheck className="h-4 w-4" />
-                Sesión protegida para equipo operativo.
+          {/* Tarjeta de Negocios */}
+          <article className="rounded-[2.5rem] border border-white/10 bg-[#1e1333] p-8 md:p-10 flex flex-col justify-between relative overflow-hidden">
+             
+            <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+              <Building2 className="w-48 h-48 rotate-12" />
+            </div>
+
+            <div className="relative z-10">
+              <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-[#ff5e91]">
+                <Building2 className="h-4 w-4" />
+                Negocios
+              </p>
+              <h2 className="mt-4 text-2xl font-black text-white">¿Eres dueño o equipo?</h2>
+              <p className="mt-3 text-sm leading-relaxed text-[#a593c2]">
+                Ingresa al punto de venta o panel administrativo para escanear pases y ver métricas.
               </p>
             </div>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <a href="/admin" className={buttonStyles('secondary')}>Entrar como negocio</a>
+
+            <div className="mt-8 relative z-10">
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 mb-6">
+                <p className="inline-flex items-center gap-2 text-xs font-semibold text-amber-200">
+                  <ShieldCheck className="h-4 w-4" />
+                  Conexión segura (Staff / Admin).
+                </p>
+              </div>
+              <a href="/admin" className="block w-full text-center py-3.5 px-6 rounded-xl font-bold bg-white/10 text-white border border-white/10 hover:bg-white/20 transition-all">
+                Ir a mi Operación
+              </a>
             </div>
           </article>
         </div>
-      </Section>
-
-      <MarketingFooter />
-    </main>
+      </main>
+      <SiteFooter navItems={nav} />
+    </PageShell>
   );
 }

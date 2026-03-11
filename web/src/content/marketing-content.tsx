@@ -120,7 +120,7 @@ export const marketingContent = {
         'Punto IA le da a tu PyME la misma tecnología de lealtad y retención que usan las grandes corporaciones. Aumenta el engagement de tus clientes y únete a la coalición de aliados.',
       chips: ['Wallet Pass Integrado', 'Retos de Coalición', 'Dashboard en Tiempo Real'],
       primaryCta: { label: 'Agendar demo', href: marketingRoutes.businessDemo } satisfies Cta,
-      secondaryCta: { label: 'Empezar ahora', href: marketingRoutes.signup } satisfies Cta,
+      secondaryCta: { label: 'Empezar ahora', href: marketingRoutes.precios } satisfies Cta,
       b2bImage: {
         src: '/images/negocios/negocios-hero-dashboard.jpg',
         alt: 'Panel de Punto IA para negocios',
