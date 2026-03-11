@@ -585,6 +585,9 @@ async function createPassPackage(params: {
     if (tenantLogo && tenantLogo.length > 0) {
       await writeFile(join(tempDir, 'logo.png'), tenantLogo);
       await writeFile(join(tempDir, 'logo@2x.png'), tenantLogo);
+      // Usar también el logo del negocio como icono para las notificaciones push
+      await writeFile(join(tempDir, 'icon.png'), tenantLogo);
+      await writeFile(join(tempDir, 'icon@2x.png'), tenantLogo);
     }
 
     const tenantStrip = decodeTenantImageData(String(params.walletStripImageData || ''));
@@ -604,11 +607,11 @@ async function createPassPackage(params: {
           continue;
         }
 
-        if (file.startsWith('logo')) {
-          const logoFromTenant = await readFile(join(tempDir, file)).catch(() => null);
-          const logoData = logoFromTenant || await readFile(join(assetsDir, file)).catch(() => null);
-          if (logoData) {
-            await writeFile(join(tempDir, file), logoData);
+        if (file.startsWith('logo') || file.startsWith('icon')) {
+          const imageFromTenant = await readFile(join(tempDir, file)).catch(() => null);
+          const imageData = imageFromTenant || await readFile(join(assetsDir, file)).catch(() => null);
+          if (imageData) {
+            await writeFile(join(tempDir, file), imageData);
           }
           continue;
         }
