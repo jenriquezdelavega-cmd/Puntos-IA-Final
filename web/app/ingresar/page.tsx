@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { Building2, CircleUserRound, ShieldCheck } from 'lucide-react';
-import { PageShell, SiteHeader, SiteFooter } from '@/src/components/marketing';
+import { PageShell } from '@/src/components/marketing/page-shell';
+import { SiteHeader } from '@/src/components/marketing/site-header';
+import { SiteFooter } from '@/src/components/marketing/site-footer';
 import { marketingRoutes } from '@/src/config/marketing-routes';
 
 const NAV_ITEMS = [
