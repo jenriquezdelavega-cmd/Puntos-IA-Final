@@ -1,6 +1,5 @@
 'use client';
-
-type ReportPoint = { date?: string; label?: string; count?: number; revenue?: number };
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from 'recharts';type ReportPoint = { date?: string; label?: string; count?: number; revenue?: number };
 type ReportBucket = { label?: string; value?: number; color?: string };
 type CustomerProfile = {
   name?: string;
@@ -49,21 +48,25 @@ function formatShortDate(value?: string | null) {
   return parsed.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
 }
 
-function renderMiniBars(series: ReportPoint[], colorClass: string) {
-  const max = Math.max(...series.map((item) => Number(item.count || 0)), 1);
+function renderAreaChart(series: ReportPoint[], color: string, fill: string) {
   return (
-    <div className="mt-4 grid grid-cols-7 gap-2">
-      {series.slice(-7).map((item) => {
-        const height = Math.max((Number(item.count || 0) / max) * 84, 6);
-        return (
-          <div key={`${item.date}-${item.label}`} className="flex flex-col items-center gap-1">
-            <div className="h-[88px] w-full rounded-lg bg-gray-100 p-1">
-              <div className={`w-full rounded-md ${colorClass}`} style={{ height }} />
-            </div>
-            <span className="text-[10px] font-bold text-gray-500">{item.label || formatShortDate(item.date)}</span>
-          </div>
-        );
-      })}
+    <div className="mt-4 h-[120px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={series} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id={`gradient-${color}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={color} stopOpacity={0.8}/>
+              <stop offset="95%" stopColor={color} stopOpacity={0}/>
+            </linearGradient>
+          </defs>
+          <Tooltip 
+             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+             labelStyle={{ fontWeight: 'bold', color: '#374151' }}
+             formatter={(value: number) => [`${value}`, 'Visitas']} 
+          />
+          <Area type="monotone" dataKey="count" stroke={color} fillOpacity={1} fill={`url(#gradient-${color})`} />
+        </AreaChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -153,7 +156,7 @@ export default function AdvancedDashboard(props: Props) {
             <p className="rounded-xl bg-gray-50 px-3 py-2 font-semibold text-gray-700">Clientes nuevos: <span className="font-black">{Number(week.newClients || 0)}</span></p>
             <p className="rounded-xl bg-gray-50 px-3 py-2 font-semibold text-gray-700">Clientes recurrentes: <span className="font-black">{Number(week.returningClients || 0)}</span></p>
           </div>
-          {weekSeries.length > 0 ? renderMiniBars(weekSeries, 'bg-gradient-to-t from-indigo-500 to-fuchsia-500') : <p className="mt-4 text-sm text-gray-400">Sin datos semanales.</p>}
+          {weekSeries.length > 0 ? renderAreaChart(weekSeries, '#6366f1', '#e0e7ff') : <p className="mt-4 text-sm text-gray-400">Sin datos semanales.</p>}
         </article>
 
         <article className="rounded-3xl border border-gray-100 bg-white p-6">
@@ -165,23 +168,30 @@ export default function AdvancedDashboard(props: Props) {
             <p className="rounded-xl bg-gray-50 px-3 py-2 font-semibold text-gray-700">Clientes activos: <span className="font-black">{Number(month.uniqueClients || 0)}</span></p>
             <p className="rounded-xl bg-gray-50 px-3 py-2 font-semibold text-gray-700">Ticket prom: <span className="font-black">{formatCurrency(Number(month.avgTicket || 0))}</span></p>
           </div>
-          {monthSeries.length > 0 ? renderMiniBars(monthSeries, 'bg-gradient-to-t from-orange-500 to-pink-500') : <p className="mt-4 text-sm text-gray-400">Sin datos mensuales.</p>}
+          {monthSeries.length > 0 ? renderAreaChart(monthSeries, '#f43f5e', '#ffe4e6') : <p className="mt-4 text-sm text-gray-400">Sin datos mensuales.</p>}
         </article>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <article className="rounded-3xl border border-gray-100 bg-white p-6">
           <h3 className="text-lg font-black text-gray-900">Perfil de clientes por género</h3>
-          <div className="mt-4 space-y-3">
-            {genderData.length === 0 ? <p className="text-sm text-gray-400">Sin datos.</p> : genderData.map((item) => (
-              <div key={item.label}>
-                <div className="mb-1 flex justify-between text-xs font-semibold text-gray-600">
-                  <span>{item.label}</span>
-                  <span>{item.value || 0}</span>
-                </div>
-                <div className="h-2 rounded-full bg-gray-100">
-                  <div className="h-2 rounded-full" style={{ width: `${Math.min(100, (Number(item.value || 0) / Math.max(...genderData.map((entry) => Number(entry.value || 0)), 1)) * 100)}%`, backgroundColor: item.color || '#6366f1' }} />
-                </div>
+          <div className="mt-4 h-[200px] w-full">
+            {genderData.length === 0 ? <p className="text-sm text-gray-400">Sin datos.</p> : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={genderData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                    {genderData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color || '#6366f1'} />)}
+                  </Pie>
+                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-3 justify-center">
+            {genderData.map(entry => (
+              <div key={entry.label} className="flex items-center gap-1.5 text-xs font-semibold text-gray-600">
+                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color || '#6366f1' }}></span>
+                {entry.label}: {entry.value}
               </div>
             ))}
           </div>
@@ -189,18 +199,31 @@ export default function AdvancedDashboard(props: Props) {
 
         <article className="rounded-3xl border border-gray-100 bg-white p-6">
           <h3 className="text-lg font-black text-gray-900">Perfil por edades</h3>
-          <div className="mt-4 space-y-3">
-            {ageData.length === 0 ? <p className="text-sm text-gray-400">Sin datos.</p> : ageData.map((item) => (
-              <div key={item.label}>
-                <div className="mb-1 flex justify-between text-xs font-semibold text-gray-600">
-                  <span>{item.label}</span>
-                  <span>{item.value || 0}</span>
+          <div className="mt-4 h-[200px] w-full">
+            {ageData.length === 0 ? <p className="text-sm text-gray-400">Sin datos.</p> : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={ageData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                    {ageData.map((entry, index) => {
+                      const colors = ['#f43f5e', '#f97316', '#eab308', '#84cc16', '#06b6d4', '#8b5cf6'];
+                      return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                    })}
+                  </Pie>
+                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-3 justify-center">
+            {ageData.map((entry, index) => {
+               const colors = ['#f43f5e', '#f97316', '#eab308', '#84cc16', '#06b6d4', '#8b5cf6'];
+               return (
+                <div key={entry.label} className="flex items-center gap-1.5 text-xs font-semibold text-gray-600">
+                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: colors[index % colors.length] }}></span>
+                  {entry.label}: {entry.value}
                 </div>
-                <div className="h-2 rounded-full bg-gray-100">
-                  <div className="h-2 rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500" style={{ width: `${Math.min(100, (Number(item.value || 0) / Math.max(...ageData.map((entry) => Number(entry.value || 0)), 1)) * 100)}%` }} />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </article>
       </div>

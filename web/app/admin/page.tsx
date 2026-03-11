@@ -401,6 +401,67 @@ const saveSettings = async () => {
   }
 };
 
+const triggerDownload = (filename: string, content: string, type: 'text/csv' | 'application/json') => {
+  const blob = new Blob([content], { type: `${type};charset=utf-8;` });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+const jsonToCsv = (items: Record<string, unknown>[]) => {
+  if (!items || items.length === 0) return '';
+  const headers = Object.keys(items[0]);
+  const rows = items.map(row => 
+    headers.map(fieldName => JSON.stringify(row[fieldName] ?? '')).join(',')
+  );
+  return [headers.join(','), ...rows].join('\r\n');
+};
+
+const downloadClientsCsv = () => {
+  if (!reportData?.clientsCsvData?.length) {
+    notify('error', 'No hay datos de clientes para exportar');
+    return;
+  }
+  const csv = jsonToCsv(reportData.clientsCsvData);
+  triggerDownload(`clientes-${tenant?.slug || 'export'}-${new Date().toISOString().split('T')[0]}.csv`, csv, 'text/csv');
+  notify('success', 'Archivo CSV de clientes descargado');
+};
+
+const downloadVisitsCsv = () => {
+  if (!reportData?.visitsCsvData?.length) {
+    notify('error', 'No hay datos de visitas para exportar');
+    return;
+  }
+  const csv = jsonToCsv(reportData.visitsCsvData);
+  triggerDownload(`visitas-${tenant?.slug || 'export'}-${new Date().toISOString().split('T')[0]}.csv`, csv, 'text/csv');
+  notify('success', 'Archivo CSV de visitas descargado');
+};
+
+const downloadDatabaseJson = () => {
+  if (!reportData) {
+    notify('error', 'No hay datos cargados para exportar');
+    return;
+  }
+  const fullExport = {
+    tenant: tenant?.name,
+    exportedAt: new Date().toISOString(),
+    metrics: {
+      totalRevenue: reportData.totalRevenue,
+      avgTicket: reportData.avgTicket,
+      clvAverage: reportData.clvAverage,
+    },
+    clients: reportData.customerProfiles,
+    visits: reportData.visitsCsvData,
+  };
+  triggerDownload(`db-completa-${tenant?.slug || 'export'}.json`, JSON.stringify(fullExport, null, 2), 'application/json');
+  notify('success', 'Base de datos descargada en JSON');
+};
+
 const validateRedeem = async () => {
   setMsg('Validando...');
   setIsValidatingRedeem(true);
@@ -422,72 +483,6 @@ const validateRedeem = async () => {
     setMsg('Error');
   } finally {
     setIsValidatingRedeem(false);
-  }
-};
-const escapeCsv = (value: unknown) => {
-  const text = String(value ?? '');
-  if (/[",\n]/.test(text)) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
-};
-
-const downloadCsvRows = (rows: Record<string, unknown>[], filename: string) => {
-  if (!rows.length) {
-    notify('info', 'No hay datos para exportar.');
-    return;
-  }
-  const headers = Object.keys(rows[0]);
-  const lines = [headers.join(',')].concat(rows.map((row) => headers.map((key) => escapeCsv(row[key])).join(',')));
-  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-};
-
-const downloadJsonFile = (payload: unknown, filename: string) => {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-};
-
-const downloadClientsCsv = () => {
-  const rows = reportData?.clientsCsvData || [];
-  downloadCsvRows(rows, `clientes_${tenant.slug}.csv`);
-};
-
-const downloadVisitsCsv = () => {
-  const rows = reportData?.visitsCsvData || [];
-  downloadCsvRows(rows, `visitas_${tenant.slug}.csv`);
-};
-
-const downloadDatabaseJson = async () => {
-  if (!tenant?.id) return;
-  try {
-    const res = await fetch('/api/admin/export', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      notify('error', String(data?.error || 'No se pudo descargar la base.'));
-      return;
-    }
-    downloadJsonFile(data, `base_${tenant.slug}_${new Date().toISOString().slice(0, 10)}.json`);
-  } catch {
-    notify('error', 'No se pudo conectar para descargar la base.');
   }
 };
 
