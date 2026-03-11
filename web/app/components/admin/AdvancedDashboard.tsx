@@ -64,7 +64,7 @@ function renderComparisonBadge(current: number, previous: number) {
   );
 }
 
-function renderAreaChart(series: ReportPoint[], color: string, fill: string) {
+function renderAreaChart(series: ReportPoint[], color: string, _fill?: string) {
   return (
     <div className="mt-4 h-[180px] w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -230,6 +230,39 @@ export default function AdvancedDashboard(props: Props) {
           {monthSeries.length > 0 ? renderAreaChart(monthSeries, '#f43f5e', '#ffe4e6') : <p className="mt-4 text-sm text-gray-400">Sin datos mensuales.</p>}
         </article>
       </div>
+
+      {redemptions && (
+        <section className="rounded-3xl border border-gray-100 bg-white p-6">
+          <div className="mb-4">
+             <h3 className="text-lg font-black text-gray-900">Reporte de Premios y Canjes</h3>
+             <p className="mt-1 text-xs font-semibold text-gray-500">Actividad de recompensas durante el mes seleccionado.</p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+             <article className="rounded-2xl border border-gray-100 bg-orange-50/50 p-5">
+               <p className="text-[10px] font-black uppercase tracking-wider text-orange-500">Canjes Totales (Mes)</p>
+               <p className="mt-2 text-4xl font-black text-orange-600">{redemptions.totalMonth}</p>
+             </article>
+             <article className="col-span-2 rounded-2xl border border-gray-100 bg-gray-50 p-5">
+               <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-3">Premios Favoritos</p>
+               {redemptions.items.length === 0 ? (
+                 <p className="text-sm font-semibold text-gray-400">Ningún canje registrado este mes.</p>
+               ) : (
+                 <div className="space-y-3">
+                   {redemptions.items.slice(0, 3).map((item, idx) => (
+                      <div key={item.name} className="flex items-center justify-between">
+                         <div className="flex items-center gap-3">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-100 text-xs font-black text-orange-600">{idx + 1}</span>
+                            <span className="text-sm font-bold text-gray-800">{item.name}</span>
+                         </div>
+                         <span className="text-sm font-black text-gray-500">{item.count} canje{item.count !== 1 && 's'}</span>
+                      </div>
+                   ))}
+                 </div>
+               )}
+             </article>
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <article className="rounded-3xl border border-gray-100 bg-white p-6">

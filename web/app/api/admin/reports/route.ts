@@ -280,8 +280,8 @@ export async function POST(request: Request) {
     const clvAverage = revenueByUser.size > 0 ? totalRevenue / revenueByUser.size : 0;
 
     // Métricas de Canjes (Redemptions)
-    let redemptionsList: any[] = [];
-    let redemptionsByItem = new Map<string, number>();
+    let redemptionsList: { name: string; count: number }[] = [];
+    const redemptionsByItem = new Map<string, number>();
     
     try {
       const redemptions = await prisma.redemption.findMany({

@@ -93,7 +93,7 @@ const playSuccessSound = () => {
     gain.gain.setValueAtTime(0.1, ctx.currentTime);
     osc.start();
     osc.stop(ctx.currentTime + 0.15);
-  } catch(e) { /* ignore */ }
+  } catch { /* ignore */ }
 };
 
 const [team, setTeam] = useState<TeamMember[]>([]);
