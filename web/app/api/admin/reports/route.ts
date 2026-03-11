@@ -287,14 +287,18 @@ export async function POST(request: Request) {
       const redemptions = await prisma.redemption.findMany({
         where: {
           tenantId: access.tenantId,
-          redeemedAt: { gte: monthStart, lt: nextMonthStart }
+          createdAt: { gte: monthStart, lt: nextMonthStart }
         },
-        include: { reward: true },
-        orderBy: { redeemedAt: 'desc' }
+        include: { 
+          coalitionRewardUnlock: {
+            include: { reward: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
       });
       
       redemptions.forEach(r => {
-        const itemName = r.reward.name || 'Premio desconocido';
+        const itemName = r.coalitionRewardUnlock?.reward?.title || `Canje ${r.code}`;
         redemptionsByItem.set(itemName, (redemptionsByItem.get(itemName) || 0) + 1);
       });
       
