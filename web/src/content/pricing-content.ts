@@ -14,9 +14,10 @@ export const pricingContent = {
         '1 Sucursal',
         'Hasta 500 escaneos/mes',
         'Panel de Métricas Básico',
-        'Apple y Google Wallet Integrados'
+        'Apple y Google Wallet Integrados',
       ],
       cta: 'Empezar ahora',
+      href: '/ingresar?tipo=negocio&modo=registro&plan=starter',
       highlight: false,
     },
     {
@@ -31,9 +32,10 @@ export const pricingContent = {
         'Escaneos ilimitados',
         'Acceso a la Red de Coalición',
         'Métricas de Tráfico Cruzado',
-        'Notificaciones Push (Automáticas)'
+        'Notificaciones Push (Automáticas)',
       ],
       cta: 'Comenzar 15 días gratis',
+      href: '/ingresar?tipo=negocio&modo=registro&plan=pro',
       highlight: true,
       badge: 'Más Popular',
     },
@@ -49,10 +51,11 @@ export const pricingContent = {
         'Pase Wallet Diseño Marca Blanca',
         'API Access y Webhooks',
         'Soporte Prioritario 24/7',
-        'Reportes Personalizados'
+        'Reportes Personalizados',
       ],
       cta: 'Hablar con Ventas',
+      href: 'mailto:ventas@puntoia.mx?subject=Consulta%20Plan%20Corporativo',
       highlight: false,
-    }
+    },
   ],
 };

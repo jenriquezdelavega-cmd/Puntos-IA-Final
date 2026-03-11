@@ -1,14 +1,12 @@
 import { marketingContent } from '@/src/content/marketing-content';
-import {
-  CTASection,
-  HeroSection,
-  BentoGrid,
-  ScrollJourney,
-  InfiniteTicker,
-  PageShell,
-  SiteFooter,
-  SiteHeader,
-} from '@/src/components/marketing';
+import { CTASection } from '@/src/components/marketing/cta-section';
+import { HeroSection } from '@/src/components/marketing/hero-section';
+import { BentoGrid } from '@/src/components/marketing/bento-grid';
+import { ScrollJourney } from '@/src/components/marketing/scroll-journey';
+import { InfiniteTicker } from '@/src/components/marketing/infinite-ticker';
+import { PageShell } from '@/src/components/marketing/page-shell';
+import { SiteFooter } from '@/src/components/marketing/site-footer';
+import { SiteHeader } from '@/src/components/marketing/site-header';
 
 export default function HomePage() {
   const { nav, home } = marketingContent;

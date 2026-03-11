@@ -1,3 +1,4 @@
+// NOTE: metadata is exported from app/ingresar/layout.tsx since this is a 'use client' component.
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -161,13 +162,9 @@ export default function IngresarPage() {
 
 
   return (
-    <PageShell>
-      <SiteHeader navItems={NAV_ITEMS} />
-      <main className="relative flex-grow flex items-center justify-center py-20 px-6 sm:px-12 bg-[#0d071a] overflow-hidden">
-        {/* Background Glows (Tech Feel) */}
-        <div className="pointer-events-none absolute top-[-20%] left-1/2 w-[800px] -translate-x-1/2 opacity-30 mix-blend-screen" aria-hidden="true">
-           <div className="aspect-[1/1] rounded-full bg-gradient-radial from-[#8a60f6] to-transparent blur-[100px]" />
-        </div>
+    <PageShell variant="dark">
+      <SiteHeader navItems={NAV_ITEMS} dark />
+      <main className="relative flex-grow flex items-center justify-center py-20 px-6 sm:px-12 overflow-hidden">
 
         <div className="relative z-10 w-full max-w-5xl mx-auto grid gap-6 lg:gap-8 lg:grid-cols-[minmax(0,1fr),350px]">
           {/* Tarjeta de Clientes */}
