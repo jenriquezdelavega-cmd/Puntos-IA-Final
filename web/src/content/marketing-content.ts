@@ -48,19 +48,26 @@ export const marketingContent = {
           icon: '🚀',
         },
         {
-           title: 'Métricas que se Entienden',
-           description: 'Olvídate de Excel. Entra a tu dashboard para ver exactamente quién vino hoy, quién regresó este mes, y cuántos premios de recompensa real has dado.',
-           colSpan: 2,
+          title: 'Coalición de Aliados (Pro)',
+          description: 'A medida que la red crece, se activan retos cruzados. Tus clientes pueden ganar puntos extra por visitar otros negocios aliados, y tú recibes tráfico de la red completa. Compite al nivel de las grandes corporaciones.',
+          colSpan: 2,
+          rowSpan: 1,
+          highlight: true,
+          icon: '🤝',
+        },
+        {
+           title: 'Métricas Reales',
+           description: 'Entra a tu dashboard para ver exactamente quién vino hoy y quién regresó este mes.',
+           colSpan: 1,
            rowSpan: 1,
-           highlight: true,
            icon: '📈',
         },
         {
-           title: 'Automatizaciones',
-           description: 'Envía campañas push directamente a las pantallas de bloqueo de tus clientes cuando llevan mucho tiempo sin visitarte.',
+           title: 'Mayor Engagement',
+           description: 'Al ser un Wallet pass nativo y no una app olvidada, tus clientes interactúan hasta 3x más con tus recompensas y campañas de retención.',
            colSpan: 1,
            rowSpan: 1,
-           icon: '⚡',
+           icon: '🔥',
         }
       ]
     },
@@ -95,148 +102,157 @@ export const marketingContent = {
   },
   negocios: {
     hero: {
-      eyebrow: 'Lealtad para aumentar recompra',
-      title: 'Convierte visitas sueltas en clientes que regresan.',
+      eyebrow: 'Lealtad para PyMEs',
+      title: 'Compite como Gigante. Crece como Local.',
       description:
-        'Punto IA te ayuda a activar recompra con una experiencia clara para tu equipo y simple para tu cliente.',
-      chips: ['3–7 días de implementación', '1 panel para operar', 'Sin app para el cliente'],
+        'Punto IA le da a tu PyME la misma tecnología de lealtad y retención que usan las grandes corporaciones. Aumenta el engagement de tus clientes y únete a la coalición de aliados.',
+      chips: ['Wallet Pass Integrado', 'Retos de Coalición', 'Dashboard en Tiempo Real'],
       primaryCta: { label: 'Agendar demo', href: marketingRoutes.businessDemo } satisfies Cta,
-      secondaryCta: { label: 'Ver cómo funciona', href: '#como-funciona' } satisfies Cta,
-      image: {
+      secondaryCta: { label: 'Empezar ahora', href: marketingRoutes.signup } satisfies Cta,
+      b2bImage: {
         src: '/images/negocios/negocios-hero-dashboard.jpg',
         alt: 'Panel de Punto IA para negocios',
-        eyebrow: 'Operación comercial',
-        title: 'Controla recompra desde un solo panel',
-        description: 'Visual de dashboard y operación en caja.',
       },
-    },
-    problema: {
-      title: 'Si hoy te cuesta que vuelvan, aquí está el cambio',
-      description:
-        'Punto IA no se basa en descuentos sueltos. Se enfoca en crear hábitos de recompra con reglas claras, seguimiento y una experiencia fácil de usar.',
-      bullets: [
-        'Tus clientes compran una vez y no regresan con frecuencia',
-        'Tus promociones no siempre generan recompra',
-        'Tu equipo necesita una operación simple en caja',
-      ],
-    },
-    steps: {
-      title: 'Así empieza tu programa',
-      steps: [
-        { title: 'Diseñamos reglas simples de visitas o puntos', description: 'Definición comercial sin fricción operativa.' },
-        { title: 'Activamos wallet y operación en caja', description: 'Tu equipo opera rápido desde el primer día.' },
-        { title: 'Medimos recurrencia, canjes y recompra', description: 'Decisiones con métricas reales y accionables.' },
-      ] satisfies Step[],
-      image: {
+      b2cImage: {
         src: '/images/negocios/negocios-operation-scene.jpg',
-        alt: 'Escena de operación del negocio usando Punto IA',
-        eyebrow: 'Operación diaria',
-        title: 'Caja + campañas + seguimiento',
-        description: 'Visual de uso real en punto de venta.',
+        alt: 'Operación en el punto de venta',
       },
     },
-    includes: {
-      title: 'Todo lo necesario para operar lealtad sin fricción',
-      features: [
-        { title: 'Wallet listo desde el día uno', description: 'Pase digital para clientes sin descargar app adicional.' },
-        { title: 'Reglas y recompensas fáciles de entender', description: 'Mecánica clara para tu equipo y tus clientes.' },
-        { title: 'Panel para seguimiento comercial', description: 'Visitas, comportamiento y evolución de recompra.' },
-        { title: 'Activaciones para volver a traer clientes', description: 'Campañas accionables con enfoque en recurrencia.' },
-      ] satisfies Feature[],
+    bento: {
+      title: 'Todo el poder, cero complicaciones',
+      description: 'Herramientas diseñadas para que el dueño de negocio tome el control de sus ventas recurrentes.',
+      items: [
+        {
+          title: 'Red de Coalición',
+          description: 'Únete a otros negocios locales. Cuando la red crece, se activan retos especiales (ej. "Visita 3 negocios locales y gana") enviándote tráfico cruzado de alto valor.',
+          colSpan: 2,
+          rowSpan: 1,
+          icon: '🌐',
+          highlight: true,
+        },
+        {
+          title: 'Engagement Activo',
+          description: 'Mantén a tus clientes regresando con notificaciones Push directas a su Wallet. Sin intermediarios.',
+          colSpan: 1,
+          rowSpan: 1,
+          icon: '📲',
+        },
+        {
+          title: 'Métricas Claras',
+          description: 'Visualiza el ciclo de vida de tus clientes. Separa a los esporádicos de tus embajadores leales.',
+          colSpan: 1,
+          rowSpan: 1,
+          icon: '📊',
+        },
+        {
+          title: 'Operación Simple',
+          description: 'Tu equipo solo escanea. Olvídate de tarjetas de cartón selladas o iPads exclusivas en mostrador.',
+          colSpan: 2,
+          rowSpan: 1,
+          icon: '⚡',
+        }
+      ]
     },
-    casos: {
-      title: 'Cómo se vería en negocios como el tuyo',
-      cards: [
+    journey: {
+      title: 'De la primera visita al cliente leal',
+      subtitle: 'Así es como Punto IA transforma tu flujo comercial desde el día uno.',
+      steps: [
         {
-          title: 'Cafetería',
-          description: 'Aumenta frecuencia semanal con recompensas claras por visitas.',
-          image: '/images/negocios/case-cafe.jpg',
+          title: 'Digitaliza tu Oferta',
+          description: 'Define qué recompensa darás. Tu programa de lealtad vive en la nube y se actualiza al instante en todos tus clientes.',
+          imageSrc: '/images/negocios/case-cafe.jpg',
         },
         {
-          title: 'Barbería',
-          description: 'Transforma citas esporádicas en clientes con recurrencia estable.',
-          image: '/images/negocios/case-barber.jpg',
+          title: 'Escaneo Rapidísimo',
+          description: 'El cliente muestra su QR del Wallet en su celular. Tu cajero lo escanea desde cualquier dispositivo y los puntos se asignan en 1 segundo.',
+          imageSrc: '/images/negocios/case-barber.jpg',
         },
         {
-          title: 'Boutique',
-          description: 'Conecta recompra y campañas con una experiencia premium en tienda.',
-          image: '/images/negocios/case-boutique.jpg',
-        },
-      ],
+          title: 'Retención Automática',
+          description: 'El sistema detecta cuando un cliente lleva semanas sin ir y le envía recordatorios. Tu base de datos trabaja por ti.',
+          imageSrc: '/images/negocios/case-boutique.jpg',
+        }
+      ]
     },
     cta: {
-      title: 'Ve cómo se vería en tu negocio',
-      description: 'Agenda una demo y sal con un plan claro de implementación, tiempos y próximos pasos.',
+      title: 'Sube de nivel tu negocio hoy',
+      description: 'Agenda una demo y descubre cómo la inteligencia artificial y la coalición de comercios pueden escalar tus ingresos.',
       primary: { label: 'Agendar demo', href: marketingRoutes.businessDemo } satisfies Cta,
       secondary: { label: 'Hablar con ventas', href: marketingRoutes.contactSales } satisfies Cta,
     },
   },
   clientes: {
     hero: {
-      eyebrow: 'Acceso simple para clientes',
-      title: 'Entra, crea tu cuenta o activa tu pase sin complicarte.',
+      eyebrow: 'Recompensas sin fricción',
+      title: 'Colecciona Beneficios. Sube de Nivel.',
       description:
-        'Todo pasa desde tu celular en minutos: acceso fácil, recompensas claras y seguimiento de tu progreso.',
+        'Disfruta de una experiencia unificada en el Wallet de tu celular. Acumula puntos, supera los retos de la coalición y gana recompensas en las mejores PyMEs locales.',
+      chips: ['Apple Wallet', 'Google Wallet', 'Sin Descargar Apps'],
       primaryCta: { label: 'Iniciar sesión', href: marketingRoutes.login } satisfies Cta,
       secondaryCta: { label: 'Crear cuenta', href: marketingRoutes.signup } satisfies Cta,
-      tertiaryCta: { label: 'Activar pase', href: marketingRoutes.activatePass } satisfies Cta,
-      image: {
+      b2bImage: {
         src: '/images/clientes/clientes-hero-wallet.jpg',
-        alt: 'Cliente usando wallet de Punto IA',
-        eyebrow: 'Experiencia en celular',
-        title: 'Todo desde tu teléfono',
-        description: 'Acceso, pase y recompensas en minutos.',
+        alt: 'Cliente usando Punto IA',
+      },
+      b2cImage: {
+        src: '/images/clientes/clientes-steps-pass.jpg',
+        alt: 'Escaneo de Punto IA en celular',
       },
     },
-    actions: {
-      title: '¿Qué necesitas hacer hoy?',
+    bento: {
+      title: 'Mucho más que puntos sueltos',
+      description: 'Una billetera digital inteligente que agrupa todos tus negocios favoritos en un solo pase.',
       items: [
         {
-          title: 'Ya tengo cuenta',
-          description: 'Entra para ver tu progreso, tus recompensas y tus negocios participantes.',
-          cta: { label: 'Iniciar sesión', href: marketingRoutes.login },
+          title: 'Siempre Contigo',
+          description: 'Tu pase vive donde viven tus tarjetas de crédito (Apple Wallet / Google Wallet). Literalmente a dos toques de distancia.',
+          colSpan: 1,
+          rowSpan: 1,
+          icon: '💳',
         },
         {
-          title: 'Es mi primera vez',
-          description: 'Crea tu cuenta en minutos y empieza a usar Punto IA.',
-          cta: { label: 'Crear cuenta', href: marketingRoutes.signup },
+          title: 'Diversión y Retos de Red',
+          description: 'Participa en misiones que te premian por explorar nuevos comercios locales aliados de la red Punto IA.',
+          colSpan: 2,
+          rowSpan: 1,
+          highlight: true,
+          icon: '🎯',
         },
         {
-          title: 'Estoy en tienda y tengo mi QR',
-          description: 'Activa tu pase para empezar a acumular.',
-          cta: { label: 'Activar pase', href: marketingRoutes.activatePass },
-        },
-      ],
+          title: 'Privacidad Total',
+          description: 'Los negocios te reconocen al escanear, pero tus datos y tu perfil siempre están encriptados.',
+          colSpan: 3,
+          rowSpan: 1,
+          icon: '🔒',
+        }
+      ]
     },
-    steps: {
-      title: 'Cómo funciona en 3 pasos',
+    journey: {
+      title: 'Tu camino como embajador local',
+      subtitle: 'Solo te toma unos segundos comenzar a ganar.',
       steps: [
-        { title: 'Entras o creas tu cuenta', description: 'Acceso directo sin proceso confuso.' },
-        { title: 'Guardas o activas tu pase', description: 'Todo listo en Apple Wallet o Google Wallet.' },
-        { title: 'Acumulas y canjeas cuando vuelves', description: 'Tu progreso siempre visible en tu cuenta.' },
-      ] satisfies Step[],
-      image: {
-        src: '/images/clientes/clientes-steps-pass.jpg',
-        alt: 'Pasos para usar el pase de cliente',
-        eyebrow: 'Flujo cliente',
-        title: 'Tres pasos, cero fricción',
-        description: 'Visual del proceso completo de acceso y uso.',
-      },
-    },
-    benefits: {
-      title: 'Todo claro desde tu celular',
-      features: [
-        { title: 'Acceso simple', description: 'Login y registro directos para avanzar rápido.' },
-        { title: 'Recompensas visibles', description: 'Siempre sabes tu progreso y beneficios.' },
-        { title: 'Cuenta protegida', description: 'Tu sesión y tu información con controles seguros.' },
-        { title: 'Más valor en negocios participantes', description: 'Usa Punto IA en los lugares que frecuentas.' },
-      ] satisfies Feature[],
+        {
+          title: 'Escanea en Caja',
+          description: 'Apunta la cámara de tu celular al código QR del mostrador en cualquier negocio afiliado.',
+          imageSrc: '/images/clientes/clientes-hero-wallet.jpg',
+        },
+        {
+          title: 'Guarda tu Pase',
+          description: 'Toca el botón y agrégalo a tu Wallet. No hay formularios eternos ni correos mágicos.',
+          imageSrc: '/images/clientes/clientes-steps-pass.jpg',
+        },
+        {
+          title: 'Reclama tus Premios',
+          description: 'Cada visita se registra en tiempo real. Cuando llegas a la meta, el cajero te regala tu recompensa.',
+          imageSrc: '/images/home/home-hero-business-client.jpg',
+        }
+      ]
     },
     cta: {
-      title: '¿Ya sabes qué quieres hacer?',
+      title: '¿Listo para activar tus recompensas?',
+      description: 'Lleva tu pase contigo y ayuda al comercio local mientras ganas beneficios.',
       primary: { label: 'Iniciar sesión', href: marketingRoutes.login } satisfies Cta,
       secondary: { label: 'Crear cuenta', href: marketingRoutes.signup } satisfies Cta,
-      tertiary: { label: 'Activar pase', href: marketingRoutes.activatePass } satisfies Cta,
     },
   },
 } as const;
