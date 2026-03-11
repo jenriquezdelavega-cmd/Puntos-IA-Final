@@ -1,6 +1,17 @@
+import React from 'react';
 import { marketingRoutes } from '@/src/config/marketing-routes';
-
-type Cta = { label: string; href: string };
+import { 
+  Zap, 
+  LineChart, 
+  BellRing, 
+  Network, 
+  ShieldCheck, 
+  WalletCards, 
+  Flame, 
+  Target, 
+  Smartphone,
+  ScanFace 
+} from 'lucide-react';type Cta = { label: string; href: string };
 type Step = { title: string; description: string };
 type Feature = { title: string; description: string; icon?: string };
 
@@ -34,40 +45,40 @@ export const marketingContent = {
       description: 'Diseñamos la plataforma que siempre quisiste usar, para el negocio y el cliente.',
       items: [
         {
-          title: 'Conexión desde el Celular',
-          description: 'El cliente solo abre su cámara, activa su pase digital y lo guarda en su Wallet. Listo. Jamás le pediremos que descargue otra App más que ocupa espacio.',
+          title: 'Conexión Nativa',
+          description: 'El cliente activa su pase digital y lo guarda directo en su Apple o Google Wallet. Jamás le pediremos que descargue otra App que ocupa espacio.',
           colSpan: 1,
           rowSpan: 1,
-          icon: '✨',
+          icon: <WalletCards strokeWidth={1.5} />,
         },
         {
-          title: 'Operación Claro que Funciona',
-          description: 'Tu equipo en caja solo pide el número, o escanea el QR en un segundo. Cero filas lentas. Cero confusiones. La magia sucede automáticamente en la nube.',
+          title: 'Operación a la Velocidad de la Luz',
+          description: 'Tu equipo escanea el pase en fracciones de segundo. Cero filas lentas. Cero confusiones. La magia sucede automáticamente en la nube.',
           colSpan: 2,
           rowSpan: 1,
-          icon: '🚀',
+          icon: <Zap strokeWidth={1.5} />,
         },
         {
-          title: 'Coalición de Aliados (Pro)',
-          description: 'A medida que la red crece, se activan retos cruzados. Tus clientes pueden ganar puntos extra por visitar otros negocios aliados, y tú recibes tráfico de la red completa. Compite al nivel de las grandes corporaciones.',
+          title: 'Red de Aliados (Coalición Pro)',
+          description: 'A medida que la plataforma crece, se activan retos cruzados. Tus clientes ganan bonos por expandir su consumo, y tú recibes tráfico de la red completa. Compite al nivel de las grandes marcas.',
           colSpan: 2,
           rowSpan: 1,
           highlight: true,
-          icon: '🤝',
+          icon: <Network strokeWidth={1.5} />,
         },
         {
-           title: 'Métricas Reales',
-           description: 'Entra a tu dashboard para ver exactamente quién vino hoy y quién regresó este mes.',
+           title: 'Métricas de Precisión',
+           description: 'Olvida Excel. Tu dashboard en vivo te dice quién vino hoy y quién regresó este mes.',
            colSpan: 1,
            rowSpan: 1,
-           icon: '📈',
+           icon: <Target strokeWidth={1.5} />,
         },
         {
-           title: 'Mayor Engagement',
-           description: 'Al ser un Wallet pass nativo y no una app olvidada, tus clientes interactúan hasta 3x más con tus recompensas y campañas de retención.',
+           title: 'Engagement Imparable',
+           description: 'Al ser un Wallet pass nativo y no una app, las campañas Push generan hasta 3x más retención real.',
            colSpan: 1,
            rowSpan: 1,
-           icon: '🔥',
+           icon: <Flame strokeWidth={1.5} />,
         }
       ]
     },
@@ -124,32 +135,32 @@ export const marketingContent = {
       items: [
         {
           title: 'Red de Coalición',
-          description: 'Únete a otros negocios locales. Cuando la red crece, se activan retos especiales (ej. "Visita 3 negocios locales y gana") enviándote tráfico cruzado de alto valor.',
+          description: 'Únete a las PyMEs visionarias. Los retos interconectados envían a clientes leales de otros comercios directamente a tu puerta.',
           colSpan: 2,
           rowSpan: 1,
-          icon: '🌐',
+          icon: <Network strokeWidth={1.5} />,
           highlight: true,
         },
         {
-          title: 'Engagement Activo',
-          description: 'Mantén a tus clientes regresando con notificaciones Push directas a su Wallet. Sin intermediarios.',
+          title: 'Retención Push',
+          description: 'Trae de vuelta a clientes inactivos con notificaciones directas a su Lock Screen.',
           colSpan: 1,
           rowSpan: 1,
-          icon: '📲',
+          icon: <BellRing strokeWidth={1.5} />,
         },
         {
-          title: 'Métricas Claras',
-          description: 'Visualiza el ciclo de vida de tus clientes. Separa a los esporádicos de tus embajadores leales.',
+          title: 'Visibilidad Absoluta',
+          description: 'Inteligencia de negocio clara. Separa a los esporádicos de tus embajadores VIP.',
           colSpan: 1,
           rowSpan: 1,
-          icon: '📊',
+          icon: <LineChart strokeWidth={1.5} />,
         },
         {
-          title: 'Operación Simple',
-          description: 'Tu equipo solo escanea. Olvídate de tarjetas de cartón selladas o iPads exclusivas en mostrador.',
+          title: 'Escaneo Inteligente',
+          description: 'Lectura de pases en microsegundos. Cero hardware especializado, puro software rápido.',
           colSpan: 2,
           rowSpan: 1,
-          icon: '⚡',
+          icon: <ScanFace strokeWidth={1.5} />,
         }
       ]
     },
@@ -204,26 +215,26 @@ export const marketingContent = {
       description: 'Una billetera digital inteligente que agrupa todos tus negocios favoritos en un solo pase.',
       items: [
         {
-          title: 'Siempre Contigo',
-          description: 'Tu pase vive donde viven tus tarjetas de crédito (Apple Wallet / Google Wallet). Literalmente a dos toques de distancia.',
+          title: 'Inmortal en tu Bolsillo',
+          description: 'Tu pase vive en la app nativa de Apple Wallet o Google Wallet. Más accesible, imposible.',
           colSpan: 1,
           rowSpan: 1,
-          icon: '💳',
+          icon: <Smartphone strokeWidth={1.5} />,
         },
         {
-          title: 'Diversión y Retos de Red',
-          description: 'Participa en misiones que te premian por explorar nuevos comercios locales aliados de la red Punto IA.',
+          title: 'Compite y Conquista la Red',
+          description: 'Desbloquea misiones épicas al recorrer la coalición de comercios aliados de Punto IA.',
           colSpan: 2,
           rowSpan: 1,
           highlight: true,
-          icon: '🎯',
+          icon: <Target strokeWidth={1.5} />,
         },
         {
-          title: 'Privacidad Total',
-          description: 'Los negocios te reconocen al escanear, pero tus datos y tu perfil siempre están encriptados.',
+          title: 'Identidad Segura',
+          description: 'Te reconocen y recompensan al instante, respaldado con cifrado de grado bancario.',
           colSpan: 3,
           rowSpan: 1,
-          icon: '🔒',
+          icon: <ShieldCheck strokeWidth={1.5} />,
         }
       ]
     },

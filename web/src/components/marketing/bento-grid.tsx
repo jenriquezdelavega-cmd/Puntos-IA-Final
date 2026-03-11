@@ -1,14 +1,14 @@
 'use client';
-
+import React from 'react';
 import { motion } from 'framer-motion';
 
-type BentoItem = {
+export type BentoItem = {
   title: string;
   description: string;
   colSpan?: number;
   rowSpan?: number;
   highlight?: boolean;
-  icon?: string;
+  icon?: React.ReactNode;
   imageUrl?: string;
 };
 
@@ -58,7 +58,7 @@ export function BentoGrid({ title, description, items }: BentoGridProps) {
               }`}
             >
               <div>
-                 {item.icon && <div className="mb-4 text-3xl">{item.icon}</div>}
+                 {item.icon && <div className="mb-4 text-[#7e4fd3] inline-block p-3 bg-[#f5ecff] rounded-2xl">{item.icon}</div>}
                  <h3 className={`text-xl font-black tracking-tight ${item.highlight ? 'text-indigo-900' : 'text-gray-900'}`}>{item.title}</h3>
                  <p className="mt-4 text-base leading-relaxed text-gray-600">{item.description}</p>
               </div>
