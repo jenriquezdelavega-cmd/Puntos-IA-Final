@@ -3,9 +3,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
-import { ActionLink, actionButtonStyles } from './action-link';
+import { ActionLink } from './action-link';
 import { pricingContent } from '@/src/content/pricing-content';
-import { marketingRoutes } from '@/src/config/marketing-routes';
 
 export function PricingSection() {
   const [isAnnual, setIsAnnual] = useState(false);
@@ -93,7 +92,7 @@ export function PricingSection() {
 
               <div className="mt-10">
                 <ActionLink 
-                  href={marketingRoutes.signup} 
+                  href={tier.href} 
                   className={`w-full text-center py-3 px-6 rounded-xl font-semibold transition ${
                     tier.highlight 
                     ? 'bg-[#7e4fd3] text-white hover:bg-[#6c40bb] shadow-lg shadow-purple-500/25' 
