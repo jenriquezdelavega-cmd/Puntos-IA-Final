@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import QRCode from 'react-qr-code';
+import { motion } from 'framer-motion';
 
 const PASS_CACHE_PREFIX = 'punto_pass_cache:';
 const PASS_CACHE_TTL_MS = 60_000;
@@ -222,6 +223,10 @@ export default function PassPage() {
         <p className="mt-2 text-sm text-white/90">
           Muestra este QR en caja para registrar visitas y acumular puntos en el negocio actual.
         </p>
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="mt-3 bg-white/20 px-3 py-2 rounded-xl border border-white/20 flex items-center gap-2">
+          <span className="text-xl">☀️</span>
+          <span className="text-xs font-bold text-white">Sube el brillo de tu pantalla para facilitar el escaneo</span>
+        </motion.div>
 
         {sourceBusinessName ? (
           <p className="mt-3 text-xs font-bold text-white/90">Negocio seleccionado: {sourceBusinessName}</p>
@@ -245,37 +250,49 @@ export default function PassPage() {
               </p>
             )}
 
-            <div id="punto-pass-qr" className="mt-5 rounded-xl border border-pink-100 p-4 flex items-center justify-center bg-white">
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+              id="punto-pass-qr" 
+              className="mt-5 rounded-xl border border-pink-100 p-4 flex items-center justify-center bg-white"
+            >
               <QRCode value={pass.qr.value} size={240} />
-            </div>
-            <div className="mt-4 grid gap-2">
-              <button onClick={downloadQrSvg} className="w-full rounded-xl border border-pink-100 bg-pink-50 py-2 text-sm font-black text-pink-700 hover:bg-pink-100">
+            </motion.div>
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+              className="mt-4 grid gap-2"
+            >
+              <motion.button whileTap={{ scale: 0.95 }} onClick={downloadQrSvg} className="w-full rounded-xl border border-pink-100 bg-pink-50 py-2 text-sm font-black text-pink-700 hover:bg-pink-100">
                 Descargar QR (SVG)
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
                 type="button"
                 onClick={openAppleWallet}
                 disabled={!pass.business?.id}
                 className="w-full rounded-xl border-2 border-black bg-black py-2 text-sm font-black text-white hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 🍎 Descargar en Apple Wallet (.pkpass)
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
                 type="button"
                 onClick={openGoogleWallet}
                 disabled={!pass.business?.id}
                 className="w-full rounded-xl border-2 border-slate-900 bg-white py-2 text-sm font-black text-slate-900 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 🇬 Descargar en Google Wallet
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
                 type="button"
                 onClick={goToPoints}
                 className="w-full rounded-xl border border-indigo-200 bg-indigo-50 py-2.5 text-sm font-black text-indigo-700 hover:bg-indigo-100"
               >
                 ⬅️ Ir a mi área de cliente
-              </button>
-            </div>
+              </motion.button>
+            </motion.div>
           </div>
         ) : null}
       </div>
