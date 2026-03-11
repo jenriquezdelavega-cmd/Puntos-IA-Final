@@ -61,15 +61,18 @@ export async function POST(request: Request) {
     let monthStart: Date;
     let nextMonthStart: Date;
     let startOfToday: Date;
+    let prevMonthStart: Date;
 
     if (targetMonth) {
       const [year, month] = targetMonth.split('-').map(Number);
       monthStart = new Date(year, month - 1, 1);
       nextMonthStart = new Date(year, month, 1);
+      prevMonthStart = new Date(year, month - 2, 1);
       startOfToday = new Date(year, month - 1, new Date(year, month, 0).getDate()); // Último día del mes seleccionado para los cálculos de semana
     } else {
       monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       startOfToday = new Date(now);
       startOfToday.setHours(0, 0, 0, 0);
     }
@@ -183,6 +186,14 @@ export async function POST(request: Request) {
 
     const weekVisits = visits.filter((visit) => visit.visitedAt >= weekStart && visit.visitedAt < nextMonthStart);
     const monthVisits = visits.filter((visit) => visit.visitedAt >= monthStart && visit.visitedAt < nextMonthStart);
+    const prevMonthVisitsList = visits.filter((visit) => visit.visitedAt >= prevMonthStart && visit.visitedAt < monthStart);
+    
+    // Promedios semanales del mes anterior
+    const daysInPrevMonth = new Date(monthStart.getFullYear(), monthStart.getMonth(), 0).getDate() || 30;
+    const prevMonthWeeks = daysInPrevMonth / 7;
+    const prevMonthAvgVisits = prevMonthVisitsList.length / prevMonthWeeks;
+    const prevMonthAvgRevenue = sumRevenue(prevMonthVisitsList) / prevMonthWeeks;
+
     const weekClients = new Set(weekVisits.map((visit) => visit.userId));
     const monthClients = new Set(monthVisits.map((visit) => visit.userId));
     const hadPreviousVisit = (userId: string, before: Date) => visits.some((visit) => visit.userId === userId && visit.visitedAt < before);
@@ -296,16 +307,21 @@ export async function POST(request: Request) {
     
     const monthlyRedemptionsTotal = redemptionsList.reduce((acc, curr) => acc + curr.count, 0);
 
+    const totalProfilesWithGender = genderCounters.Hombres + genderCounters.Mujeres + genderCounters.Otros;
+    const formatPercent = (val: number, total: number) => total > 0 ? ` (${Math.round((val / total) * 100)}%)` : '';
+    
+    const totalProfilesWithAge = Object.values(ageCounters).reduce((sum, val) => sum + val, 0);
+
     return apiSuccess({
       requestId,
       data: {
         chartData,
         genderData: [
-          { label: 'Hombres', value: genderCounters.Hombres, color: '#3b82f6' },
-          { label: 'Mujeres', value: genderCounters.Mujeres, color: '#ec4899' },
-          { label: 'Otros', value: genderCounters.Otros, color: '#9ca3af' },
+          { label: `Hombres${formatPercent(genderCounters.Hombres, totalProfilesWithGender)}`, value: genderCounters.Hombres, color: '#3b82f6' },
+          { label: `Mujeres${formatPercent(genderCounters.Mujeres, totalProfilesWithGender)}`, value: genderCounters.Mujeres, color: '#ec4899' },
+          { label: `Otros${formatPercent(genderCounters.Otros, totalProfilesWithGender)}`, value: genderCounters.Otros, color: '#9ca3af' },
         ],
-        ageData: Object.entries(ageCounters).map(([label, value]) => ({ label, value })),
+        ageData: Object.entries(ageCounters).map(([label, value]) => ({ label: `${label}${formatPercent(value, totalProfilesWithAge)}`, value })),
         clientsCsvData,
         visitsCsvData,
         customerProfiles,
@@ -320,6 +336,7 @@ export async function POST(request: Request) {
           newClients: memberships.filter((membership) => membership.user.createdAt >= weekStart).length,
           returningClients: Array.from(weekClients).filter((userId) => hadPreviousVisit(userId, weekStart)).length,
           series: weekSeries,
+          compare: { prevAvgVisits: prevMonthAvgVisits, prevAvgRevenue: prevMonthAvgRevenue }
         },
         monthSummary: {
           totalVisits: monthVisits.length,

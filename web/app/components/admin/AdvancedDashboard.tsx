@@ -21,6 +21,7 @@ type SummaryCard = {
   newClients?: number;
   returningClients?: number;
   series?: ReportPoint[];
+  compare?: { prevAvgVisits: number; prevAvgRevenue: number };
 };
 
 export type AdvancedReportView = {
@@ -50,6 +51,17 @@ function formatShortDate(value?: string | null) {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return '—';
   return parsed.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+}
+
+function renderComparisonBadge(current: number, previous: number) {
+  if (!previous) return null;
+  const pctDiff = Math.round(((current - previous) / previous) * 100);
+  const isPositive = pctDiff >= 0;
+  return (
+    <span className={`ml-2 inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-black ${isPositive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`} title={`Vs promedio mensual anterior: ${previous.toFixed(1)}`}>
+      {isPositive ? '+' : ''}{pctDiff}%
+    </span>
+  );
 }
 
 function renderAreaChart(series: ReportPoint[], color: string, fill: string) {
@@ -196,12 +208,12 @@ export default function AdvancedDashboard(props: Props) {
       <div className="grid gap-6 lg:grid-cols-2">
         <article className="rounded-3xl border border-gray-100 bg-white p-6">
           <h3 className="text-lg font-black text-gray-900">Comportamiento semanal</h3>
-          <p className="mt-1 text-xs font-semibold text-gray-500">Últimos 7 días de visitas e ingreso.</p>
+          <p className="mt-1 text-xs font-semibold text-gray-500">Últimos 7 días respecto al promedio del mes anterior.</p>
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-            <p className="rounded-xl bg-gray-50 px-3 py-2 font-semibold text-gray-700">Visitas: <span className="font-black">{Number(week.totalVisits || 0)}</span></p>
-            <p className="rounded-xl bg-gray-50 px-3 py-2 font-semibold text-gray-700">Ticket prom: <span className="font-black">{formatCurrency(Number(week.avgTicket || 0))}</span></p>
+            <p className="rounded-xl bg-gray-50 px-3 py-2 font-semibold text-gray-700">Visitas: <span className="font-black">{Number(week.totalVisits || 0)}</span>{renderComparisonBadge(Number(week.totalVisits || 0), Number(week.compare?.prevAvgVisits || 0))}</p>
+            <p className="rounded-xl bg-gray-50 px-3 py-2 font-semibold text-gray-700">Ingreso: <span className="font-black">{formatCurrency(Number(week.totalRevenue || 0))}</span>{renderComparisonBadge(Number(week.totalRevenue || 0), Number(week.compare?.prevAvgRevenue || 0))}</p>
             <p className="rounded-xl bg-gray-50 px-3 py-2 font-semibold text-gray-700">Clientes nuevos: <span className="font-black">{Number(week.newClients || 0)}</span></p>
-            <p className="rounded-xl bg-gray-50 px-3 py-2 font-semibold text-gray-700">Clientes recurrentes: <span className="font-black">{Number(week.returningClients || 0)}</span></p>
+            <p className="rounded-xl bg-gray-50 px-3 py-2 font-semibold text-gray-700">Recurrentes: <span className="font-black">{Number(week.returningClients || 0)}</span></p>
           </div>
           {weekSeries.length > 0 ? renderAreaChart(weekSeries, '#6366f1', '#e0e7ff') : <p className="mt-4 text-sm text-gray-400">Sin datos semanales.</p>}
         </article>
