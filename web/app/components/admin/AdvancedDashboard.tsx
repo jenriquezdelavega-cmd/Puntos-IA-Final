@@ -35,6 +35,10 @@ export type AdvancedReportView = {
   weekSummary?: SummaryCard;
   monthSummary?: SummaryCard;
   customerProfiles?: CustomerProfile[];
+  redemptions?: {
+    totalMonth: number;
+    items: { name: string; count: number }[];
+  }
 };
 
 function formatCurrency(value: number) {
@@ -50,21 +54,36 @@ function formatShortDate(value?: string | null) {
 
 function renderAreaChart(series: ReportPoint[], color: string, fill: string) {
   return (
-    <div className="mt-4 h-[120px] w-full">
+    <div className="mt-4 h-[180px] w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={series} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+        <AreaChart data={series} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id={`gradient-${color}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={color} stopOpacity={0.8}/>
               <stop offset="95%" stopColor={color} stopOpacity={0}/>
             </linearGradient>
           </defs>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+          <XAxis 
+            dataKey="label" 
+            axisLine={false} 
+            tickLine={false} 
+            tick={{ fontSize: 10, fill: '#9ca3af' }} 
+            dy={8}
+            minTickGap={15}
+          />
+          <YAxis 
+            axisLine={false} 
+            tickLine={false} 
+            tick={{ fontSize: 10, fill: '#9ca3af' }}
+            tickFormatter={(value) => value >= 1000 ? `${(value/1000).toFixed(1)}k` : value}
+          />
           <Tooltip 
              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
              labelStyle={{ fontWeight: 'bold', color: '#374151' }}
              formatter={(value: number) => [`${value}`, 'Visitas']} 
           />
-          <Area type="monotone" dataKey="count" stroke={color} fillOpacity={1} fill={`url(#gradient-${color})`} />
+          <Area type="monotone" dataKey="count" stroke={color} strokeWidth={2} fillOpacity={1} fill={`url(#gradient-${color})`} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -82,6 +101,8 @@ type Props = {
   onGoQr: () => void;
   onGoRedeem: () => void;
   onGoSettings: () => void;
+  targetMonth?: string;
+  onMonthChange?: (month: string) => void;
 };
 
 export default function AdvancedDashboard(props: Props) {
@@ -95,6 +116,20 @@ export default function AdvancedDashboard(props: Props) {
   const ageData = reportData?.ageData || [];
   const totalClients = reportData?.clientsCsvData?.length || 0;
   const totalVisits = Number(reportData?.chartData?.reduce((sum, point) => sum + Number(point.count || 0), 0) || 0);
+  const redemptions = reportData?.redemptions;
+
+  // Generar últimos 12 meses para el selector
+  const generateMonths = () => {
+    const months = [];
+    const d = new Date();
+    for(let i=0; i<12; i++) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        months.push({ value: `${year}-${month}`, label: d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }) });
+        d.setMonth(d.getMonth() - 1);
+    }
+    return months;
+  };
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -105,12 +140,24 @@ export default function AdvancedDashboard(props: Props) {
             <h2 className="mt-1 text-2xl font-black md:text-3xl">{props.tenantName}</h2>
             <p className="mt-1 text-sm text-gray-300">Analítica semanal y mensual para operar con decisiones de alto nivel.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-3">
+            {props.onMonthChange && (
+              <select 
+                value={props.targetMonth || ''} 
+                onChange={(e) => props.onMonthChange?.(e.target.value)}
+                className="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-bold text-white outline-none cursor-pointer hover:bg-white/20 appearance-none min-w-[150px]"
+              >
+                <option value="" className="text-gray-900">Seleccionar Mes (Actual)</option>
+                {generateMonths().map(m => (
+                    <option key={m.value} value={m.value} className="text-gray-900 capitalize">{m.label}</option>
+                ))}
+              </select>
+            )}
             <button
               type="button"
               onClick={props.onRefresh}
               disabled={props.isRefreshing}
-              className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-black hover:bg-white/20 disabled:opacity-60"
+              className="rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black hover:bg-white/20 disabled:opacity-60"
             >
               {props.isRefreshing ? 'Actualizando...' : 'Actualizar'}
             </button>

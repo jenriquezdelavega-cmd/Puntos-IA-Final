@@ -34,6 +34,7 @@ export async function POST(request: Request) {
       tenantId: requiredString,
       tenantUserId: requiredString,
       tenantSessionToken: requiredString,
+      targetMonth: (v: unknown): string | undefined => typeof v === 'string' && /^\d{4}-\d{2}$/.test(v) ? v : undefined,
     });
     if (!parsedBody.ok) {
       return apiError({
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const { tenantId, tenantUserId, tenantSessionToken } = parsedBody.data;
+    const { tenantId, tenantUserId, tenantSessionToken, targetMonth } = parsedBody.data;
     const access = await requireTenantRoleAccess({ tenantId, tenantUserId, tenantSessionToken, allowedRoles: ['ADMIN'] });
     if (!access.ok) {
       return apiError({
@@ -55,12 +56,26 @@ export async function POST(request: Request) {
       });
     }
 
+    // Calcular las fechas usando targetMonth o la fecha actual
     const now = new Date();
-    const startOfToday = new Date(now);
-    startOfToday.setHours(0, 0, 0, 0);
+    let monthStart: Date;
+    let nextMonthStart: Date;
+    let startOfToday: Date;
+
+    if (targetMonth) {
+      const [year, month] = targetMonth.split('-').map(Number);
+      monthStart = new Date(year, month - 1, 1);
+      nextMonthStart = new Date(year, month, 1);
+      startOfToday = new Date(year, month - 1, new Date(year, month, 0).getDate()); // Último día del mes seleccionado para los cálculos de semana
+    } else {
+      monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      startOfToday = new Date(now);
+      startOfToday.setHours(0, 0, 0, 0);
+    }
+
     const weekStart = new Date(startOfToday);
     weekStart.setDate(weekStart.getDate() - 6);
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const chartStart = new Date(startOfToday);
     chartStart.setDate(chartStart.getDate() - 29);
 
@@ -155,7 +170,8 @@ export async function POST(request: Request) {
       else genderCounters.Otros += 1;
 
       if (membership.user.birthDate) {
-        const age = now.getFullYear() - new Date(membership.user.birthDate).getFullYear();
+        const referenceYear = targetMonth ? Number(targetMonth.split('-')[0]) : now.getFullYear();
+        const age = referenceYear - new Date(membership.user.birthDate).getFullYear();
         if (age < 18) ageCounters['<18'] += 1;
         else if (age <= 25) ageCounters['18-25'] += 1;
         else if (age <= 35) ageCounters['26-35'] += 1;
@@ -165,8 +181,8 @@ export async function POST(request: Request) {
       }
     });
 
-    const weekVisits = visits.filter((visit) => visit.visitedAt >= weekStart);
-    const monthVisits = visits.filter((visit) => visit.visitedAt >= monthStart);
+    const weekVisits = visits.filter((visit) => visit.visitedAt >= weekStart && visit.visitedAt < nextMonthStart);
+    const monthVisits = visits.filter((visit) => visit.visitedAt >= monthStart && visit.visitedAt < nextMonthStart);
     const weekClients = new Set(weekVisits.map((visit) => visit.userId));
     const monthClients = new Set(monthVisits.map((visit) => visit.userId));
     const hadPreviousVisit = (userId: string, before: Date) => visits.some((visit) => visit.userId === userId && visit.visitedAt < before);
@@ -192,9 +208,9 @@ export async function POST(request: Request) {
     }));
 
     const monthSeriesMap = new Map<string, { count: number; revenue: number }>();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
     for (let day = 1; day <= daysInMonth; day++) {
-      const d = new Date(now.getFullYear(), now.getMonth(), day);
+      const d = new Date(monthStart.getFullYear(), monthStart.getMonth(), day);
       monthSeriesMap.set(d.toISOString().split('T')[0], { count: 0, revenue: 0 });
     }
     monthVisits.forEach((visit) => {
@@ -252,6 +268,34 @@ export async function POST(request: Request) {
     const overallAvgTicket = avgTicket(visits);
     const clvAverage = revenueByUser.size > 0 ? totalRevenue / revenueByUser.size : 0;
 
+    // Métricas de Canjes (Redemptions)
+    let redemptionsList: any[] = [];
+    let redemptionsByItem = new Map<string, number>();
+    
+    try {
+      const redemptions = await prisma.redemption.findMany({
+        where: {
+          tenantId: access.tenantId,
+          redeemedAt: { gte: monthStart, lt: nextMonthStart }
+        },
+        include: { reward: true },
+        orderBy: { redeemedAt: 'desc' }
+      });
+      
+      redemptions.forEach(r => {
+        const itemName = r.reward.name || 'Premio desconocido';
+        redemptionsByItem.set(itemName, (redemptionsByItem.get(itemName) || 0) + 1);
+      });
+      
+      redemptionsList = Array.from(redemptionsByItem.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count);
+    } catch (e) {
+      console.error('Error fetching redemptions:', e);
+    }
+    
+    const monthlyRedemptionsTotal = redemptionsList.reduce((acc, curr) => acc + curr.count, 0);
+
     return apiSuccess({
       requestId,
       data: {
@@ -287,6 +331,10 @@ export async function POST(request: Request) {
           series: monthSeries,
         },
         purchaseDataTracked: visits.some((visit) => visit.purchaseTracked),
+        redemptions: {
+          totalMonth: monthlyRedemptionsTotal,
+          items: redemptionsList,
+        }
       },
     });
   } catch (error: unknown) {

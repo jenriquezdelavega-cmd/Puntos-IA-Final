@@ -49,6 +49,7 @@ const [password, setPassword] = useState('');
 
 const [, setCode] = useState('');
 const [reportData, setReportData] = useState<AdvancedReportView | null>(null);
+const [targetMonth, setTargetMonth] = useState<string>('');
 const [baseUrl, setBaseUrl] = useState('');
 const [tab, setTab] = useState<AdminTab>('qr');
 const [userRole, setUserRole] = useState('');
@@ -182,7 +183,7 @@ const handleLogin = async (e: React.FormEvent) => {
 
       setTab(data.user.role === 'ADMIN' ? 'dashboard' : 'qr');
       if (data.user.role === 'ADMIN') {
-        loadReports(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
+        loadReports(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''), targetMonth);
         loadTeam(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
         loadPushStatus(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
       }
@@ -196,13 +197,18 @@ const handleLogin = async (e: React.FormEvent) => {
   }
 };
 
-const loadReports = async (tid: string, currentTenantUserId = tenantUserId, currentTenantSessionToken = tenantSessionToken) => {
+const loadReports = async (tid: string, currentTenantUserId = tenantUserId, currentTenantSessionToken = tenantSessionToken, monthToLoad = targetMonth) => {
   setIsRefreshingReports(true);
   try {
     const res = await fetch('/api/admin/reports', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tenantId: tid, tenantUserId: currentTenantUserId, tenantSessionToken: currentTenantSessionToken }),
+      body: JSON.stringify({ 
+        tenantId: tid, 
+        tenantUserId: currentTenantUserId, 
+        tenantSessionToken: currentTenantSessionToken,
+        targetMonth: monthToLoad || undefined 
+      }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -605,8 +611,13 @@ return (
   tenantName={String(tenant.name || 'Negocio')}
   reportData={reportData}
   isRefreshing={isRefreshingReports}
+  targetMonth={targetMonth}
+  onMonthChange={(m) => {
+    setTargetMonth(m);
+    loadReports(tenant.id, tenantUserId, tenantSessionToken, m);
+  }}
   onRefresh={() => {
-    loadReports(tenant.id, tenantUserId, tenantSessionToken);
+    loadReports(tenant.id, tenantUserId, tenantSessionToken, targetMonth);
     loadTeam(tenant.id, tenantUserId, tenantSessionToken);
   }}
   onExportClientsCsv={downloadClientsCsv}
