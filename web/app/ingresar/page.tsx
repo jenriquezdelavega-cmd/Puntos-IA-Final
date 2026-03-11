@@ -3,7 +3,15 @@
 import { useEffect, useState } from 'react';
 import { Building2, CircleUserRound, ShieldCheck } from 'lucide-react';
 import { PageShell, SiteHeader, SiteFooter } from '@/src/components/marketing';
-import { marketingContent } from '@/src/content/marketing-content';
+import { marketingRoutes } from '@/src/config/marketing-routes';
+
+const NAV_ITEMS = [
+  { label: 'Inicio', href: marketingRoutes.home },
+  { label: 'Negocios', href: marketingRoutes.negocios },
+  { label: 'Clientes', href: marketingRoutes.clientes },
+  { label: 'Precios', href: marketingRoutes.precios },
+  { label: 'Entrar', href: marketingRoutes.login },
+] as const;
 
 type UserLoginResponse = {
   id: string;
@@ -149,11 +157,10 @@ export default function IngresarPage() {
     }
   };
 
-  const { nav } = marketingContent;
 
   return (
     <PageShell>
-      <SiteHeader navItems={nav} />
+      <SiteHeader navItems={NAV_ITEMS} />
       <main className="relative flex-grow flex items-center justify-center py-20 px-6 sm:px-12 bg-[#0d071a] overflow-hidden">
         {/* Background Glows (Tech Feel) */}
         <div className="pointer-events-none absolute top-[-20%] left-1/2 w-[800px] -translate-x-1/2 opacity-30 mix-blend-screen" aria-hidden="true">
@@ -367,7 +374,7 @@ export default function IngresarPage() {
           </article>
         </div>
       </main>
-      <SiteFooter navItems={nav} />
+      <SiteFooter navItems={NAV_ITEMS} />
     </PageShell>
   );
 }
