@@ -148,6 +148,8 @@ model Redemption {
   user      User     @relation(fields: [userId], references: [id])
   coalitionRewardUnlockId String? @unique @map("coalition_reward_unlock_id")
   coalitionRewardUnlock   CustomerCoalitionReward? @relation(fields: [coalitionRewardUnlockId], references: [id], onDelete: SetNull)
+  loyaltyMilestoneId String? @map("loyalty_milestone_id")
+  loyaltyMilestone   LoyaltyMilestone? @relation(fields: [loyaltyMilestoneId], references: [id], onDelete: SetNull)
 }
 
 
@@ -259,7 +261,8 @@ model LoyaltyMilestone {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  redemptions Redemption[]
 
   @@unique([tenantId, visitTarget])
   @@index([tenantId])
