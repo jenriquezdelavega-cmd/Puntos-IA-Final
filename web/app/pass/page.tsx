@@ -7,6 +7,8 @@ import { motion } from 'framer-motion';
 const PASS_CACHE_PREFIX = 'punto_pass_cache:';
 const PASS_CACHE_TTL_MS = 60_000;
 
+type MilestoneData = { visitTarget: number; reward: string; emoji: string };
+
 type PassResponse = {
   customer_id: string;
   name: string;
@@ -17,6 +19,7 @@ type PassResponse = {
     name: string;
     currentVisits: number;
     requiredVisits: number;
+    milestones: MilestoneData[];
   } | null;
 };
 
@@ -241,9 +244,39 @@ export default function PassPage() {
             <p className="text-xl font-black mt-1">{pass.name}</p>
 
             {pass.business ? (
-              <p className="text-xs font-bold text-emerald-700 mt-1">
-                {pass.business.name} · {pass.business.currentVisits}/{pass.business.requiredVisits} visitas
-              </p>
+              <>
+                <p className="text-xs font-bold text-emerald-700 mt-1">
+                  {pass.business.name} · {pass.business.currentVisits}/{pass.business.requiredVisits} visitas
+                </p>
+                {pass.business.milestones && pass.business.milestones.length > 0 ? (
+                  <div className="mt-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-pink-500 mb-2">Escalera de beneficios</p>
+                    <div className="flex flex-col gap-1.5">
+                      {pass.business.milestones.map((m) => {
+                        const unlocked = (pass.business?.currentVisits ?? 0) >= m.visitTarget;
+                        return (
+                          <div
+                            key={m.visitTarget}
+                            className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-all ${
+                              unlocked
+                                ? 'bg-emerald-50 border border-emerald-200'
+                                : 'bg-gray-50 border border-gray-100 opacity-60'
+                            }`}
+                          >
+                            <span className="text-base">{unlocked ? '✅' : m.emoji}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className={`font-bold text-xs truncate ${unlocked ? 'text-emerald-800' : 'text-gray-600'}`}>{m.reward}</p>
+                              <p className={`text-[10px] font-semibold ${unlocked ? 'text-emerald-600' : 'text-gray-400'}`}>
+                                Visita {m.visitTarget} {unlocked ? '· ¡Desbloqueado!' : `· Faltan ${m.visitTarget - (pass.business?.currentVisits ?? 0)} visita(s)`}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </>
             ) : (
               <p className="text-xs font-bold text-amber-700 mt-1">
                 No se pudo resolver el negocio del pase. Regresa a la app y abre el pase desde una tarjeta de negocio.

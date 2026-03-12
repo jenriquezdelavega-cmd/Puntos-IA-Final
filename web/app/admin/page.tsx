@@ -36,6 +36,8 @@ type TenantView = {
   coalitionProduct?: string;
 };
 
+type MilestoneRow = { id?: string; visitTarget: string; reward: string; emoji: string };
+
 type TeamMember = { id: string; name?: string; username?: string; role?: string };
 type AdminTab = 'dashboard' | 'team' | 'qr' | 'redeem' | 'push' | 'settings';
 type NavItem = { key: AdminTab; icon: string; label: string; adminOnly?: boolean };
@@ -116,6 +118,9 @@ const [pushDiagnostics, setPushDiagnostics] = useState<{
   apple?: { sent?: number; failed?: number; targetedDevices?: number; reasons?: Record<string, number> };
   google?: { sent?: number; failed?: number; reasons?: Record<string, number> };
 } | null>(null);
+const [milestones, setMilestones] = useState<MilestoneRow[]>([]);
+const [isSavingMilestones, setIsSavingMilestones] = useState(false);
+
 const [isLoggingIn, setIsLoggingIn] = useState(false);
 const [isCreatingStaff, setIsCreatingStaff] = useState(false);
 const [isSavingSettings, setIsSavingSettings] = useState(false);
@@ -186,6 +191,7 @@ const handleLogin = async (e: React.FormEvent) => {
         loadReports(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''), targetMonth);
         loadTeam(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
         loadPushStatus(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
+        loadMilestones(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
       }
     } else {
       notify('error', String(data.error || 'No se pudo iniciar sesión'));
@@ -271,6 +277,56 @@ const sendPush = async () => {
 
 const loadTeam = async (tid: string, currentTenantUserId = tenantUserId, currentTenantSessionToken = tenantSessionToken) => {
 try { const res = await fetch(`/api/tenant/users?tenantId=${tid}&tenantUserId=${currentTenantUserId}&tenantSessionToken=${encodeURIComponent(currentTenantSessionToken)}`); const data = await res.json(); if(data.users) setTeam(data.users); } catch {}
+};
+
+const loadMilestones = async (tid: string, currentTenantUserId = tenantUserId, currentTenantSessionToken = tenantSessionToken) => {
+  try {
+    const res = await fetch(`/api/admin/milestones?tenantId=${tid}&tenantUserId=${currentTenantUserId}&tenantSessionToken=${encodeURIComponent(currentTenantSessionToken)}`);
+    const data = await res.json();
+    if (data.milestones) {
+      setMilestones(data.milestones.map((m: { id?: string; visitTarget: number; reward: string; emoji: string }) => ({
+        id: m.id,
+        visitTarget: String(m.visitTarget),
+        reward: m.reward,
+        emoji: m.emoji || '🎁',
+      })));
+    }
+  } catch {}
+};
+
+const saveMilestones = async () => {
+  if (!tenant?.id) return;
+  setIsSavingMilestones(true);
+  try {
+    const cleaned = milestones.filter(m => m.visitTarget && m.reward).map(m => ({
+      visitTarget: parseInt(m.visitTarget, 10),
+      reward: m.reward.trim(),
+      emoji: m.emoji || '🎁',
+    }));
+    const res = await fetch('/api/admin/milestones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken, milestones: cleaned }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      notify('error', String(data.error || 'No se pudo guardar la escalera'));
+      return;
+    }
+    if (data.milestones) {
+      setMilestones(data.milestones.map((m: { id?: string; visitTarget: number; reward: string; emoji: string }) => ({
+        id: m.id,
+        visitTarget: String(m.visitTarget),
+        reward: m.reward,
+        emoji: m.emoji || '🎁',
+      })));
+    }
+    notify('success', 'Escalera de beneficios guardada correctamente.');
+  } catch {
+    notify('error', 'Error de conexión al guardar la escalera.');
+  } finally {
+    setIsSavingMilestones(false);
+  }
 };
 
 const createStaff = async () => {
@@ -1151,6 +1207,74 @@ return (
       <button onClick={searchLocation} disabled={isSearching} className="bg-blue-600 text-white px-4 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 shrink-0 text-sm" aria-label="Buscar">{isSearching ? '...' : '🔍'}</button>
     </div>
     <div className="h-[280px] w-full rounded-2xl overflow-hidden border border-gray-200 z-0 relative"><AdminMap coords={coords} setCoords={setCoords} /></div>
+  </div>
+</div>
+
+<div className="bg-white rounded-3xl shadow-sm border border-yellow-100 overflow-hidden">
+  <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-5 text-white">
+    <div className="flex items-center gap-3">
+      <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🪜</span>
+      <div>
+        <h3 className="text-sm font-black">Escalera de Beneficios</h3>
+        <p className="text-white/80 text-xs font-semibold">Premio intermedio en visitas específicas (ej: visita 3, 7, 10)</p>
+      </div>
+    </div>
+  </div>
+  <div className="p-5 space-y-3">
+    {milestones.length === 0 && (
+      <p className="text-xs text-gray-400 font-semibold text-center py-2">Sin hitos configurados. Agrega el primero abajo.</p>
+    )}
+    {milestones.map((m, idx) => (
+      <div key={idx} className="flex items-center gap-2">
+        <input
+          type="text"
+          value={m.emoji}
+          onChange={e => setMilestones(prev => prev.map((row, i) => i === idx ? { ...row, emoji: e.target.value } : row))}
+          className="w-12 text-center p-2 bg-amber-50 border border-amber-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-amber-300"
+          maxLength={4}
+          placeholder="🎁"
+        />
+        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-2 focus-within:ring-2 focus-within:ring-amber-300 focus-within:bg-white transition">
+          <span className="text-xs font-black text-gray-400 shrink-0">Visita</span>
+          <input
+            type="number"
+            min="1"
+            value={m.visitTarget}
+            onChange={e => setMilestones(prev => prev.map((row, i) => i === idx ? { ...row, visitTarget: e.target.value } : row))}
+            className="w-14 bg-transparent p-2 text-sm font-black text-gray-900 outline-none"
+          />
+        </div>
+        <input
+          type="text"
+          value={m.reward}
+          onChange={e => setMilestones(prev => prev.map((row, i) => i === idx ? { ...row, reward: e.target.value } : row))}
+          className="flex-1 p-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-amber-300 focus:bg-amber-50 transition"
+          placeholder="Ej: Agua, Postre, Tacos"
+        />
+        <button
+          type="button"
+          onClick={() => setMilestones(prev => prev.filter((_, i) => i !== idx))}
+          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 transition"
+          title="Eliminar hito"
+        >
+          ✕
+        </button>
+      </div>
+    ))}
+    <button
+      type="button"
+      onClick={() => setMilestones(prev => [...prev, { visitTarget: '', reward: '', emoji: '🎁' }])}
+      className="w-full py-2.5 rounded-xl border-2 border-dashed border-amber-200 text-amber-600 font-black text-sm hover:bg-amber-50 transition"
+    >
+      + Agregar hito
+    </button>
+    <button
+      onClick={saveMilestones}
+      disabled={isSavingMilestones}
+      className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black py-3 rounded-xl shadow-md disabled:opacity-60 text-sm"
+    >
+      {isSavingMilestones ? 'Guardando escalera...' : '🪜 Guardar Escalera de Beneficios'}
+    </button>
   </div>
 </div>
 

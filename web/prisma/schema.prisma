@@ -39,6 +39,7 @@ model Tenant {
   walletStyle TenantWalletStyle?
   pushLogs    TenantPushLog[]
   coalitionRewards CoalitionReward[]
+  loyaltyMilestones LoyaltyMilestone[]
 }
 
 model TenantUser {
@@ -246,6 +247,23 @@ model TenantPushLog {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("tenant_push_logs")
+}
+
+model LoyaltyMilestone {
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  visitTarget Int      @map("visit_target")
+  reward      String
+  emoji       String   @default("🎁")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, visitTarget])
+  @@index([tenantId])
+  @@map("loyalty_milestones")
 }
 
 model TenantWalletStyle {

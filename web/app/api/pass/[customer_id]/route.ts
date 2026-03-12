@@ -40,17 +40,27 @@ export async function GET(req: Request, { params }: Params) {
     const url = new URL(req.url);
     const businessId = asTrimmedString(url.searchParams.get('businessId') || url.searchParams.get('business_id'));
 
+    type MilestoneData = { visitTarget: number; reward: string; emoji: string };
     let business: {
       id: string;
       name: string;
       currentVisits: number;
       requiredVisits: number;
+      milestones: MilestoneData[];
     } | null = null;
 
     if (businessId) {
       const tenant = await prisma.tenant.findUnique({
         where: { id: businessId },
-        select: { id: true, name: true, requiredVisits: true },
+        select: {
+          id: true,
+          name: true,
+          requiredVisits: true,
+          loyaltyMilestones: {
+            orderBy: { visitTarget: 'asc' },
+            select: { visitTarget: true, reward: true, emoji: true },
+          },
+        },
       });
 
       if (tenant) {
@@ -69,6 +79,7 @@ export async function GET(req: Request, { params }: Params) {
           name: tenant.name,
           currentVisits: membership?.currentVisits ?? 0,
           requiredVisits: tenant.requiredVisits,
+          milestones: tenant.loyaltyMilestones,
         };
       }
     }

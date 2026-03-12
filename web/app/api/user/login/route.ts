@@ -90,6 +90,10 @@ export async function POST(req: Request) {
                 prize: true,
                 instagram: true,
                 requiredVisits: true,
+                loyaltyMilestones: {
+                  orderBy: { visitTarget: 'asc' },
+                  select: { visitTarget: true, reward: true, emoji: true },
+                },
               },
             },
           },
@@ -166,6 +170,7 @@ export async function POST(req: Request) {
           logoData: '',
           visits,
           points,
+          milestones: membership.tenant?.loyaltyMilestones ?? [],
         };
       });
 
