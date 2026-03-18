@@ -4,6 +4,7 @@ import QRCode from 'react-qr-code';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdvancedDashboard, { type AdvancedReportView } from '../components/admin/AdvancedDashboard';
+import { buildMilestonesPayloadForSave, normalizeMilestonesForEditor } from '../lib/loyalty-milestones';
 
 const AdminMap = dynamic(() => import('../components/AdminMap'), { ssr: false, loading: () => <div className="h-full bg-gray-100 animate-pulse text-center pt-10 text-gray-400">Cargando...</div> });
 
@@ -286,16 +287,19 @@ try { const res = await fetch(`/api/tenant/users?tenantId=${tid}&tenantUserId=${
     const data = await res.json();
     if (data.milestones) {
       const req = parseInt(requiredVisits || '10', 10);
-      const finalMilestone = data.milestones.find((m: { visitTarget: number }) => m.visitTarget === req);
+      const { intermediateMilestones, finalMilestone } = normalizeMilestonesForEditor(data.milestones, req);
       if (finalMilestone?.emoji) setPrizeEmoji(finalMilestone.emoji);
-      setMilestones(data.milestones
-        .filter((m: { visitTarget: number }) => m.visitTarget !== req)
-        .map((m: { id?: string; visitTarget: number; reward: string; emoji: string }) => ({
-          id: m.id,
-          visitTarget: String(m.visitTarget),
-          reward: m.reward,
-          emoji: m.emoji || '🎁',
-        })));
+      setMilestones(
+        data.milestones
+          .filter((milestone: { visitTarget: number }) => milestone.visitTarget !== req)
+          .sort((left: { visitTarget: number }, right: { visitTarget: number }) => left.visitTarget - right.visitTarget)
+          .map((milestone: { id?: string; visitTarget: number; reward: string; emoji: string }, index: number) => ({
+            id: milestone.id,
+            visitTarget: intermediateMilestones[index]?.visitTarget ?? String(milestone.visitTarget),
+            reward: intermediateMilestones[index]?.reward ?? milestone.reward,
+            emoji: intermediateMilestones[index]?.emoji ?? milestone.emoji ?? '🎁',
+          })),
+      );
     }
   } catch {}
 };
@@ -305,28 +309,28 @@ const saveMilestones = async () => {
   setIsSavingMilestones(true);
   try {
     const required = parseInt(requiredVisits || '10', 10);
-    const cleaned = milestones.filter(m => m.visitTarget && m.reward).map(m => ({
-      visitTarget: parseInt(m.visitTarget, 10),
-      reward: m.reward.trim(),
-      emoji: m.emoji || '🎁',
-    }));
+    const validation = buildMilestonesPayloadForSave({
+      milestones,
+      requiredVisits: required,
+      finalReward: prizeName || 'Premio Final',
+      finalEmoji: prizeEmoji || '🏆',
+    });
 
-    const invalidMilestone = cleaned.find(m => m.visitTarget >= required);
-    if (invalidMilestone) {
-      notify('error', `El premio "${invalidMilestone.reward}" en la visita ${invalidMilestone.visitTarget} no puede ser igual o mayor a la meta final (${required}).`);
+    if (!validation.ok) {
+      notify('error', validation.message);
       setIsSavingMilestones(false);
       return;
     }
 
-    const milestonesWithFinal = [
-      ...cleaned.filter(m => m.visitTarget < required),
-      { visitTarget: required, reward: prizeName || 'Premio Final', emoji: prizeEmoji || '🏆' },
-    ];
-
     const res = await fetch('/api/admin/milestones', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken, milestones: milestonesWithFinal }),
+      body: JSON.stringify({
+        tenantId: tenant.id,
+        tenantUserId,
+        tenantSessionToken,
+        milestones: validation.milestones.map(({ visitTarget, reward, emoji }) => ({ visitTarget, reward, emoji })),
+      }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -335,16 +339,19 @@ const saveMilestones = async () => {
     }
     if (data.milestones) {
       const req = parseInt(requiredVisits || '10', 10);
-      const finalM = data.milestones.find((m: { visitTarget: number }) => m.visitTarget === req);
-      if (finalM?.emoji) setPrizeEmoji(finalM.emoji);
-      setMilestones(data.milestones
-        .filter((m: { visitTarget: number }) => m.visitTarget !== req)
-        .map((m: { id?: string; visitTarget: number; reward: string; emoji: string }) => ({
-          id: m.id,
-          visitTarget: String(m.visitTarget),
-          reward: m.reward,
-          emoji: m.emoji || '🎁',
-        })));
+      const { intermediateMilestones, finalMilestone } = normalizeMilestonesForEditor(data.milestones, req);
+      if (finalMilestone?.emoji) setPrizeEmoji(finalMilestone.emoji);
+      setMilestones(
+        data.milestones
+          .filter((milestone: { visitTarget: number }) => milestone.visitTarget !== req)
+          .sort((left: { visitTarget: number }, right: { visitTarget: number }) => left.visitTarget - right.visitTarget)
+          .map((milestone: { id?: string; visitTarget: number; reward: string; emoji: string }, index: number) => ({
+            id: milestone.id,
+            visitTarget: intermediateMilestones[index]?.visitTarget ?? String(milestone.visitTarget),
+            reward: intermediateMilestones[index]?.reward ?? milestone.reward,
+            emoji: intermediateMilestones[index]?.emoji ?? milestone.emoji ?? '🎁',
+          })),
+      );
     }
     notify('success', 'Escalera de beneficios guardada correctamente.');
   } catch {
