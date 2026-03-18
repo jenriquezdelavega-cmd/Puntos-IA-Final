@@ -45,6 +45,7 @@ export async function generateDynamicStripResponse({
   prizeEmoji = '\u{1F3C6}',
   milestones,
 }: DynamicStripParams): Promise<ImageResponse> {
+  void _businessName;
   const fontData = await getFontBuffer();
 
   const maxVisits = Math.max(requiredVisits, currentVisits, 1);
