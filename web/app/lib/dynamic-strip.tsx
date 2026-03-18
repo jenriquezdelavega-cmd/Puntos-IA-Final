@@ -20,6 +20,21 @@ const HEIGHT = 336;
 // Cache font buffer in module scope so we only fetch once per cold start
 let _cachedFontBuffer: ArrayBuffer | null = null;
 
+function normalizeHexColor(value: string, fallback: string) {
+  const hexMatch = String(value || '').trim().match(/^#?([0-9a-fA-F]{6})$/);
+  if (!hexMatch) return fallback;
+  return `#${hexMatch[1].toUpperCase()}`;
+}
+
+function getContrastTextColor(backgroundHex: string) {
+  const safeHex = normalizeHexColor(backgroundHex, '#111827').replace('#', '');
+  const r = parseInt(safeHex.slice(0, 2), 16);
+  const g = parseInt(safeHex.slice(2, 4), 16);
+  const b = parseInt(safeHex.slice(4, 6), 16);
+  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+  return luminance > 0.57 ? '#0F172A' : '#F8FAFC';
+}
+
 async function getFontBuffer(): Promise<ArrayBuffer | undefined> {
   if (_cachedFontBuffer) return _cachedFontBuffer;
   try {
@@ -50,6 +65,8 @@ export async function generateDynamicStripResponse({
   const fontData = await getFontBuffer();
 
   const maxVisits = Math.max(requiredVisits, currentVisits, 1);
+  const safeLabelColor = normalizeHexColor(labelColor, '#14B8A6');
+  const achievedNumberColor = getContrastTextColor(safeLabelColor);
   const nodes = Array.from({ length: maxVisits }, (_, i) => {
     const visitIndex = i + 1;
     const isAchieved = visitIndex <= currentVisits;
@@ -159,10 +176,10 @@ export async function generateDynamicStripResponse({
                         width: '84px',
                         height: '84px',
                         borderRadius: '50%',
-                        backgroundColor: node.isAchieved ? labelColor : 'rgba(255,255,255,0.78)',
+                        backgroundColor: node.isAchieved ? safeLabelColor : 'rgba(255,255,255,0.78)',
                         boxShadow:
                           node.isAchieved
-                            ? `0 0 22px ${labelColor}`
+                            ? `0 0 24px ${safeLabelColor}`
                             : '0 10px 22px rgba(0,0,0,0.28)',
                         border: `4px solid ${node.isAchieved ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.9)'}`,
                       }}
@@ -186,14 +203,14 @@ export async function generateDynamicStripResponse({
                             borderRadius: '50%',
                             background:
                               node.isAchieved
-                                ? 'linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.14) 100%)'
+                                ? 'linear-gradient(180deg, rgba(2,6,23,0.68) 0%, rgba(15,23,42,0.84) 100%)'
                                 : 'linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(30,41,59,0.78) 100%)',
                             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.32), 0 6px 14px rgba(0,0,0,0.26)',
                             border: `2px solid ${node.isAchieved ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.3)'}`,
                             fontSize: '28px',
                             fontWeight: 900,
-                            color: '#FFFFFF',
-                            textShadow: '0 2px 8px rgba(0,0,0,0.62)',
+                            color: node.isAchieved ? achievedNumberColor : '#F8FAFC',
+                            textShadow: '0 2px 10px rgba(0,0,0,0.72)',
                           }}
                         >
                           {String(node.visitIndex)}

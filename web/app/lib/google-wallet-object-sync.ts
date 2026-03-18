@@ -191,6 +191,22 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
         int: membership?.currentVisits ?? 0,
       },
     },
+    imageModulesData: [
+      {
+        id: 'hero',
+        mainImage: {
+          sourceUri: {
+            uri: dynamicStripUri,
+          },
+          contentDescription: {
+            defaultValue: {
+              language: 'es-MX',
+              value: `Tarjeta de sellos de ${tenant.name || 'Punto IA'}`,
+            },
+          },
+        },
+      },
+    ],
     textModulesData: [
       {
         id: 'cliente',

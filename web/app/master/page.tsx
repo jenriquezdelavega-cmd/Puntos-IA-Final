@@ -49,6 +49,66 @@ interface Challenge {
   } | null;
 }
 
+type WalletSyncConfig = {
+  appleEnabled: boolean;
+  googleEnabled: boolean;
+  appleTouchConcurrency: number;
+  applePushConcurrency: number;
+  googleSyncMaxCustomers: number;
+  alertErrorThreshold: number;
+  alertWindowMinutes: number;
+  executionMode: 'immediate' | 'queued';
+  workerBatchSize: number;
+  workerMaxAttempts: number;
+  workerRetryDelaySeconds: number;
+  workerEnabled: boolean;
+  workerLockTimeoutMinutes: number;
+  maintenanceEnabled: boolean;
+  maintenanceHourUtc: number;
+  auditRetentionDays: number;
+  jobRetentionDays: number;
+  updatedAt: string | null;
+};
+
+type WalletSyncLog = {
+  id: number;
+  tenant_id: string;
+  reason: string;
+  channel: string;
+  status: string;
+  message: string;
+  metadata: unknown;
+  created_at: string;
+};
+
+type WalletSyncAlert = {
+  id: string;
+  severity: 'high' | 'medium' | 'low';
+  message: string;
+};
+
+type WalletSyncMetrics = {
+  recentErrors: number;
+  alertThreshold: number;
+  alertWindowMinutes: number;
+  auditLast24h: { success: number; error: number; skipped: number };
+  queue: { pending: number; running: number; failed: number; completed: number };
+};
+
+type WalletSyncJob = {
+  id: number;
+  tenant_id: string;
+  reason: string;
+  origin: string;
+  status: string;
+  attempts: number;
+  max_attempts: number;
+  run_after: string;
+  last_error: string;
+  created_at: string;
+  updated_at: string;
+};
+
 type ChallengeForm = {
   title: string;
   description: string;
@@ -73,7 +133,7 @@ export default function MasterPage() {
   const [auth, setAuth] = useState(false);
   const [masterUser, setMasterUser] = useState('');
   const [masterPass, setMasterPass] = useState('');
-  const [activeTab, setActiveTab] = useState<'negocios' | 'retos'>('negocios');
+  const [activeTab, setActiveTab] = useState<'negocios' | 'retos' | 'wallet'>('negocios');
 
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [coalitionOnly, setCoalitionOnly] = useState(true);
@@ -97,6 +157,39 @@ export default function MasterPage() {
   const [editingChallengeId, setEditingChallengeId] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isSavingChallenge, setIsSavingChallenge] = useState(false);
+  const [isSavingWalletConfig, setIsSavingWalletConfig] = useState(false);
+  const [walletConfig, setWalletConfig] = useState<WalletSyncConfig>({
+    appleEnabled: true,
+    googleEnabled: true,
+    appleTouchConcurrency: 10,
+    applePushConcurrency: 8,
+    googleSyncMaxCustomers: 500,
+    alertErrorThreshold: 5,
+    alertWindowMinutes: 60,
+    executionMode: 'queued',
+    workerBatchSize: 50,
+    workerMaxAttempts: 5,
+    workerRetryDelaySeconds: 60,
+    workerEnabled: true,
+    workerLockTimeoutMinutes: 15,
+    maintenanceEnabled: true,
+    maintenanceHourUtc: 8,
+    auditRetentionDays: 30,
+    jobRetentionDays: 14,
+    updatedAt: null,
+  });
+  const [walletLogs, setWalletLogs] = useState<WalletSyncLog[]>([]);
+  const [walletAlerts, setWalletAlerts] = useState<WalletSyncAlert[]>([]);
+  const [walletJobs, setWalletJobs] = useState<WalletSyncJob[]>([]);
+  const [walletMetrics, setWalletMetrics] = useState<WalletSyncMetrics>({
+    recentErrors: 0,
+    alertThreshold: 5,
+    alertWindowMinutes: 60,
+    auditLast24h: { success: 0, error: 0, skipped: 0 },
+    queue: { pending: 0, running: 0, failed: 0, completed: 0 },
+  });
+  const [isRunningWalletJobs, setIsRunningWalletJobs] = useState(false);
+  const [isRunningMaintenance, setIsRunningMaintenance] = useState(false);
 
   const [msg, setMsg] = useState('');
 
@@ -171,13 +264,44 @@ export default function MasterPage() {
     }
   };
 
+  const applyWalletSyncData = (data: Record<string, unknown>) => {
+    if (data.config && typeof data.config === 'object') {
+      setWalletConfig((data.config as WalletSyncConfig));
+    }
+    setWalletLogs((data.logs as WalletSyncLog[]) ?? []);
+    setWalletAlerts((data.alerts as WalletSyncAlert[]) ?? []);
+    setWalletJobs((data.jobs as WalletSyncJob[]) ?? []);
+    if (data.metrics && typeof data.metrics === 'object') {
+      setWalletMetrics((data.metrics as WalletSyncMetrics));
+    }
+  };
+
+  const loadWalletSync = async () => {
+    try {
+      const { response, data } = await postMasterJson('/api/master/wallet-sync', {
+        ...withMasterAuth,
+        action: 'LIST',
+        limit: 120,
+      });
+      if (!response.ok) return false;
+      applyWalletSyncData(data);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsAuthenticating(true);
-    const [tenantsOk, challengesOk] = await Promise.all([loadTenants(masterUser, masterPass, coalitionOnly), loadChallenges()]);
+    const [tenantsOk, challengesOk, walletOk] = await Promise.all([
+      loadTenants(masterUser, masterPass, coalitionOnly),
+      loadChallenges(),
+      loadWalletSync(),
+    ]);
     setIsAuthenticating(false);
 
-    if (!tenantsOk || !challengesOk) {
+    if (!tenantsOk || !challengesOk || !walletOk) {
       alert('Usuario o contraseña maestra incorrectos.');
       return;
     }
@@ -370,6 +494,72 @@ export default function MasterPage() {
     });
   };
 
+  const saveWalletConfig = async () => {
+    setIsSavingWalletConfig(true);
+    try {
+      const { response, data } = await postMasterJson('/api/master/wallet-sync', {
+        ...withMasterAuth,
+        action: 'UPDATE',
+        ...walletConfig,
+        limit: 120,
+      });
+
+      if (!response.ok) {
+        setMsg(`❌ ${String(data.error || 'No se pudo guardar la configuración de sync')}`);
+        return;
+      }
+      applyWalletSyncData(data);
+      setMsg('✅ Configuración de sincronización wallet actualizada.');
+    } finally {
+      setIsSavingWalletConfig(false);
+    }
+  };
+
+  const runWalletJobsNow = async () => {
+    setIsRunningWalletJobs(true);
+    try {
+      const { response, data } = await postMasterJson('/api/master/wallet-sync', {
+        ...withMasterAuth,
+        action: 'RUN_JOBS',
+        batchSize: walletConfig.workerBatchSize,
+        limit: 120,
+        jobsLimit: 120,
+      });
+      if (!response.ok) {
+        setMsg(`❌ ${String(data.error || 'No se pudo ejecutar la cola de sync')}`);
+        return;
+      }
+      applyWalletSyncData(data);
+      const processed = Number(data.processed || 0);
+      const succeeded = Number(data.succeeded || 0);
+      const failed = Number(data.failed || 0);
+      setMsg(`✅ Cola procesada. Total: ${processed}, OK: ${succeeded}, Fallos: ${failed}.`);
+    } finally {
+      setIsRunningWalletJobs(false);
+    }
+  };
+
+  const runMaintenanceNow = async () => {
+    setIsRunningMaintenance(true);
+    try {
+      const { response, data } = await postMasterJson('/api/master/wallet-sync', {
+        ...withMasterAuth,
+        action: 'RUN_MAINTENANCE',
+        forceRun: true,
+      });
+      if (!response.ok) {
+        setMsg(`❌ ${String(data.error || 'No se pudo ejecutar mantenimiento')}`);
+        return;
+      }
+      const deletedAuditRows = Number(data.deletedAuditRows || 0);
+      const deletedCompletedJobs = Number(data.deletedCompletedJobs || 0);
+      setMsg(`✅ Mantenimiento ejecutado. Logs eliminados: ${deletedAuditRows}, jobs depurados: ${deletedCompletedJobs}.`);
+      await loadWalletSync();
+    } finally {
+      setIsRunningMaintenance(false);
+    }
+  };
+
   if (!auth) {
     return (
       <main className="min-h-screen bg-slate-950 text-slate-100 p-6 flex items-center justify-center">
@@ -397,6 +587,7 @@ export default function MasterPage() {
           <div className="flex gap-2">
             <button onClick={() => setActiveTab('negocios')} className={`px-4 py-2 rounded-lg text-sm ${activeTab === 'negocios' ? 'bg-emerald-500 text-slate-950 font-semibold' : 'bg-slate-800 text-slate-200'}`}>Negocios</button>
             <button onClick={() => setActiveTab('retos')} className={`px-4 py-2 rounded-lg text-sm ${activeTab === 'retos' ? 'bg-emerald-500 text-slate-950 font-semibold' : 'bg-slate-800 text-slate-200'}`}>Retos de red</button>
+            <button onClick={() => setActiveTab('wallet')} className={`px-4 py-2 rounded-lg text-sm ${activeTab === 'wallet' ? 'bg-emerald-500 text-slate-950 font-semibold' : 'bg-slate-800 text-slate-200'}`}>Wallet Sync</button>
           </div>
         </div>
         {msg ? <p className="mt-4 text-sm text-emerald-300">{msg}</p> : null}
@@ -478,7 +669,7 @@ export default function MasterPage() {
             </div>
           </div>
         </section>
-      ) : (
+      ) : activeTab === 'retos' ? (
         <section className="grid xl:grid-cols-[460px_minmax(0,1fr)] gap-5">
           <article className="rounded-2xl border border-slate-700 bg-slate-900 p-4 space-y-3">
             <div className="grid grid-cols-3 gap-2 text-xs">
@@ -553,6 +744,175 @@ export default function MasterPage() {
                 </article>
               ))}
               {networkChallenges.length === 0 ? <p className="text-sm text-slate-400">No hay retos de red configurados todavía.</p> : null}
+            </div>
+          </article>
+        </section>
+      ) : (
+        <section className="grid xl:grid-cols-[420px_minmax(0,1fr)] gap-5">
+          <article className="rounded-2xl border border-slate-700 bg-slate-900 p-4 space-y-3">
+            <h2 className="font-semibold">Controles de sincronización Wallet</h2>
+            <label className="flex items-center justify-between rounded-lg bg-slate-800 p-3 text-sm">
+              <span>Apple sync habilitado</span>
+              <input type="checkbox" checked={walletConfig.appleEnabled} onChange={(e) => setWalletConfig((prev) => ({ ...prev, appleEnabled: e.target.checked }))} />
+            </label>
+            <label className="flex items-center justify-between rounded-lg bg-slate-800 p-3 text-sm">
+              <span>Google sync habilitado</span>
+              <input type="checkbox" checked={walletConfig.googleEnabled} onChange={(e) => setWalletConfig((prev) => ({ ...prev, googleEnabled: e.target.checked }))} />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-xs text-slate-300 space-y-1">
+                <span>Concurrency touch Apple</span>
+                <input className="w-full rounded-lg bg-slate-800 p-2" type="number" min={1} max={20} value={walletConfig.appleTouchConcurrency} onChange={(e) => setWalletConfig((prev) => ({ ...prev, appleTouchConcurrency: Number(e.target.value) }))} />
+              </label>
+              <label className="text-xs text-slate-300 space-y-1">
+                <span>Concurrency push Apple</span>
+                <input className="w-full rounded-lg bg-slate-800 p-2" type="number" min={1} max={20} value={walletConfig.applePushConcurrency} onChange={(e) => setWalletConfig((prev) => ({ ...prev, applePushConcurrency: Number(e.target.value) }))} />
+              </label>
+            </div>
+            <label className="text-xs text-slate-300 space-y-1 block">
+              <span>Máximo clientes por sync Google</span>
+              <input className="w-full rounded-lg bg-slate-800 p-2" type="number" min={10} max={5000} value={walletConfig.googleSyncMaxCustomers} onChange={(e) => setWalletConfig((prev) => ({ ...prev, googleSyncMaxCustomers: Number(e.target.value) }))} />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-xs text-slate-300 space-y-1">
+                <span>Umbral de alerta (errores)</span>
+                <input className="w-full rounded-lg bg-slate-800 p-2" type="number" min={1} max={1000} value={walletConfig.alertErrorThreshold} onChange={(e) => setWalletConfig((prev) => ({ ...prev, alertErrorThreshold: Number(e.target.value) }))} />
+              </label>
+              <label className="text-xs text-slate-300 space-y-1">
+                <span>Ventana alerta (min)</span>
+                <input className="w-full rounded-lg bg-slate-800 p-2" type="number" min={5} max={1440} value={walletConfig.alertWindowMinutes} onChange={(e) => setWalletConfig((prev) => ({ ...prev, alertWindowMinutes: Number(e.target.value) }))} />
+              </label>
+            </div>
+            <label className="text-xs text-slate-300 space-y-1 block">
+              <span>Modo de ejecución</span>
+              <select className="w-full rounded-lg bg-slate-800 p-2" value={walletConfig.executionMode} onChange={(e) => setWalletConfig((prev) => ({ ...prev, executionMode: e.target.value as 'immediate' | 'queued' }))}>
+                <option value="queued">Queued (recomendado)</option>
+                <option value="immediate">Immediate</option>
+              </select>
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              <label className="text-xs text-slate-300 space-y-1">
+                <span>Batch worker</span>
+                <input className="w-full rounded-lg bg-slate-800 p-2" type="number" min={1} max={500} value={walletConfig.workerBatchSize} onChange={(e) => setWalletConfig((prev) => ({ ...prev, workerBatchSize: Number(e.target.value) }))} />
+              </label>
+              <label className="text-xs text-slate-300 space-y-1">
+                <span>Max intentos</span>
+                <input className="w-full rounded-lg bg-slate-800 p-2" type="number" min={1} max={20} value={walletConfig.workerMaxAttempts} onChange={(e) => setWalletConfig((prev) => ({ ...prev, workerMaxAttempts: Number(e.target.value) }))} />
+              </label>
+              <label className="text-xs text-slate-300 space-y-1">
+                <span>Retry delay (seg)</span>
+                <input className="w-full rounded-lg bg-slate-800 p-2" type="number" min={10} max={86400} value={walletConfig.workerRetryDelaySeconds} onChange={(e) => setWalletConfig((prev) => ({ ...prev, workerRetryDelaySeconds: Number(e.target.value) }))} />
+              </label>
+              <label className="text-xs text-slate-300 space-y-1">
+                <span>Stale lock (min)</span>
+                <input className="w-full rounded-lg bg-slate-800 p-2" type="number" min={1} max={240} value={walletConfig.workerLockTimeoutMinutes} onChange={(e) => setWalletConfig((prev) => ({ ...prev, workerLockTimeoutMinutes: Number(e.target.value) }))} />
+              </label>
+            </div>
+            <label className="flex items-center justify-between rounded-lg bg-slate-800 p-3 text-sm">
+              <span>Worker de cola habilitado</span>
+              <input type="checkbox" checked={walletConfig.workerEnabled} onChange={(e) => setWalletConfig((prev) => ({ ...prev, workerEnabled: e.target.checked }))} />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex items-center justify-between rounded-lg bg-slate-800 p-3 text-sm">
+                <span>Mantenimiento habilitado</span>
+                <input type="checkbox" checked={walletConfig.maintenanceEnabled} onChange={(e) => setWalletConfig((prev) => ({ ...prev, maintenanceEnabled: e.target.checked }))} />
+              </label>
+              <label className="text-xs text-slate-300 space-y-1">
+                <span>Hora mantenimiento UTC</span>
+                <input className="w-full rounded-lg bg-slate-800 p-2" type="number" min={0} max={23} value={walletConfig.maintenanceHourUtc} onChange={(e) => setWalletConfig((prev) => ({ ...prev, maintenanceHourUtc: Number(e.target.value) }))} />
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-xs text-slate-300 space-y-1">
+                <span>Retención logs (días)</span>
+                <input className="w-full rounded-lg bg-slate-800 p-2" type="number" min={1} max={365} value={walletConfig.auditRetentionDays} onChange={(e) => setWalletConfig((prev) => ({ ...prev, auditRetentionDays: Number(e.target.value) }))} />
+              </label>
+              <label className="text-xs text-slate-300 space-y-1">
+                <span>Retención jobs (días)</span>
+                <input className="w-full rounded-lg bg-slate-800 p-2" type="number" min={1} max={365} value={walletConfig.jobRetentionDays} onChange={(e) => setWalletConfig((prev) => ({ ...prev, jobRetentionDays: Number(e.target.value) }))} />
+              </label>
+            </div>
+            <p className="text-xs text-slate-400">Última actualización: {walletConfig.updatedAt ? new Date(walletConfig.updatedAt).toLocaleString('es-MX') : '—'}</p>
+            <div className="flex gap-2">
+              <button onClick={saveWalletConfig} disabled={isSavingWalletConfig} className="flex-1 rounded-lg bg-emerald-500 text-slate-950 py-2 font-semibold disabled:opacity-60">
+                {isSavingWalletConfig ? 'Guardando...' : 'Guardar configuración'}
+              </button>
+              <button onClick={runWalletJobsNow} disabled={isRunningWalletJobs} className="rounded-lg bg-blue-600 px-3 py-2 disabled:opacity-60">
+                {isRunningWalletJobs ? 'Procesando cola...' : 'Procesar cola'}
+              </button>
+              <button onClick={runMaintenanceNow} disabled={isRunningMaintenance} className="rounded-lg bg-amber-500 text-slate-900 px-3 py-2 disabled:opacity-60">
+                {isRunningMaintenance ? 'Ejecutando maintenance...' : 'Maintenance ahora'}
+              </button>
+              <button onClick={loadWalletSync} className="rounded-lg bg-slate-700 px-3 py-2">Recargar</button>
+            </div>
+          </article>
+
+          <article className="rounded-2xl border border-slate-700 bg-slate-900 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold">Alertas y logs de wallet sync</h2>
+              <span className="text-xs text-slate-400">Últimos {walletLogs.length} eventos</span>
+            </div>
+            {walletAlerts.length > 0 ? (
+              <div className="space-y-2">
+                {walletAlerts.map((alert) => (
+                  <div key={alert.id} className="rounded-lg border border-rose-500/60 bg-rose-950/30 p-3 text-sm text-rose-200">
+                    ⚠️ {alert.message}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-emerald-300">Sin alertas activas.</p>
+            )}
+
+            <div className="space-y-2 max-h-[64vh] overflow-auto pr-1">
+              {walletLogs.map((log) => (
+                <article key={log.id} className="rounded-lg border border-slate-700 bg-slate-800 p-3 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`px-2 py-0.5 rounded ${log.status === 'success' ? 'bg-emerald-900 text-emerald-300' : log.status === 'error' ? 'bg-rose-900 text-rose-300' : 'bg-slate-700 text-slate-300'}`}>
+                      {log.status.toUpperCase()}
+                    </span>
+                    <span className="text-slate-400">{new Date(log.created_at).toLocaleString('es-MX')}</span>
+                  </div>
+                  <p className="mt-1 text-slate-200">
+                    <strong>Tenant:</strong> {log.tenant_id} · <strong>Canal:</strong> {log.channel} · <strong>Motivo:</strong> {log.reason}
+                  </p>
+                  {log.message ? <p className="mt-1 text-slate-300">{log.message}</p> : null}
+                </article>
+              ))}
+              {walletLogs.length === 0 ? <p className="text-sm text-slate-400">No hay logs de sincronización todavía.</p> : null}
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+              <div className="rounded-lg bg-slate-800 p-2">
+                <p className="text-slate-400">Queue Pending</p>
+                <p className="text-base font-semibold">{walletMetrics.queue.pending}</p>
+              </div>
+              <div className="rounded-lg bg-slate-800 p-2">
+                <p className="text-slate-400">Queue Running</p>
+                <p className="text-base font-semibold">{walletMetrics.queue.running}</p>
+              </div>
+              <div className="rounded-lg bg-slate-800 p-2">
+                <p className="text-slate-400">Errores (24h)</p>
+                <p className="text-base font-semibold">{walletMetrics.auditLast24h.error}</p>
+              </div>
+              <div className="rounded-lg bg-slate-800 p-2">
+                <p className="text-slate-400">Success (24h)</p>
+                <p className="text-base font-semibold">{walletMetrics.auditLast24h.success}</p>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-slate-700 bg-slate-800 p-3">
+              <h3 className="font-medium mb-2">Cola de trabajos ({walletJobs.length})</h3>
+              <div className="space-y-2 max-h-48 overflow-auto pr-1 text-xs">
+                {walletJobs.map((job) => (
+                  <div key={job.id} className="rounded-md border border-slate-700 p-2">
+                    <p><strong>Job {job.id}</strong> · {job.status.toUpperCase()} · Tenant {job.tenant_id}</p>
+                    <p className="text-slate-300">Intentos: {job.attempts}/{job.max_attempts} · Run after: {new Date(job.run_after).toLocaleString('es-MX')}</p>
+                    {job.last_error ? <p className="text-rose-300">Error: {job.last_error}</p> : null}
+                  </div>
+                ))}
+                {walletJobs.length === 0 ? <p className="text-slate-400">Sin trabajos en cola.</p> : null}
+              </div>
             </div>
           </article>
         </section>

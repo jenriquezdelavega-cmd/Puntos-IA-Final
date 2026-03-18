@@ -1,13 +1,11 @@
 import { prisma } from '@/app/lib/prisma';
 import { getTenantWalletStyle, upsertTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
-import { logApiError, logApiEvent } from '@/app/lib/api-log';
-import { touchWalletPassRegistrations } from '@/app/lib/apple-wallet-webservice';
-import { pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
+import { logApiError } from '@/app/lib/api-log';
 import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { apiError, apiSuccess, type ApiErrorCode, getRequestId } from '@/app/lib/api-response';
 import { parseOptionalRequiredVisits } from '@/app/lib/loyalty-program';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
-import { syncGoogleLoyaltyObjectsForTenant } from '@/app/lib/google-wallet-object-sync';
+import { requestWalletRefreshForTenant } from '@/app/lib/wallet-sync-orchestrator';
 
 function accessStatusToCode(status: number): ApiErrorCode {
   if (status === 400) return 'BAD_REQUEST';
@@ -125,47 +123,14 @@ export async function POST(request: Request) {
     const walletStyle = await getTenantWalletStyle(authorizedTenantId);
 
     try {
-      const passTypeIdentifier = asTrimmedString(process.env.APPLE_PASS_TYPE_ID);
-      if (passTypeIdentifier) {
-        const regs = await prisma.$queryRawUnsafe<Array<{ push_token: string; serial_number: string }>>(
-          `SELECT DISTINCT push_token, serial_number FROM apple_wallet_registrations WHERE serial_number LIKE $1 AND pass_type_identifier = $2`,
-          `%-${authorizedTenantId}`,
-          passTypeIdentifier,
-        );
-
-        for (const reg of regs) {
-          await touchWalletPassRegistrations(prisma, { serialNumber: reg.serial_number, passTypeIdentifier });
-        }
-
-        const seen = new Set<string>();
-        for (const reg of regs) {
-          const token = asTrimmedString(reg.push_token);
-          if (!token || seen.has(token)) continue;
-          seen.add(token);
-          const result = await pushWalletUpdateToDevice(token, passTypeIdentifier);
-          if (!result.ok && (result.status === 410 || result.status === 400)) {
-            await deleteWalletRegistrationsByPushToken(prisma, token);
-          }
-        }
-
-        logApiEvent('/api/tenant/settings', 'settings_push_sent', { tenantId: authorizedTenantId, devices: seen.size });
-      }
-    } catch (pushErr) {
-      logApiError('/api/tenant/settings#wallet-push', pushErr);
-    }
-
-    try {
-      const googleSync = await syncGoogleLoyaltyObjectsForTenant({
+      await requestWalletRefreshForTenant({
+        prisma,
         tenantId: authorizedTenantId,
         origin: new URL(request.url).origin,
+        reason: 'tenant-settings',
       });
-      logApiEvent('/api/tenant/settings#google-sync', 'sync_complete', {
-        tenantId: authorizedTenantId,
-        total: googleSync.total,
-        synced: googleSync.synced,
-      });
-    } catch (googleError) {
-      logApiError('/api/tenant/settings#google-sync', googleError);
+    } catch (walletSyncError) {
+      logApiError('/api/tenant/settings#wallet-sync', walletSyncError);
     }
 
     return apiSuccess({
