@@ -327,7 +327,7 @@ async function buildPkPassBuffer(tempDir: string, archive: ReturnType<typeof bui
 
 function buildPkPassArchiveEntries() {
   const required = ['pass.json', 'manifest.json', 'signature', 'icon.png', 'logo.png'] as const;
-  const optional = ['icon@2x.png', 'logo@2x.png', 'strip.png', 'footer.png', 'footer@2x.png'] as const;
+  const optional = ['icon@2x.png', 'logo@2x.png', 'strip.png', 'strip@2x.png', 'footer.png', 'footer@2x.png'] as const;
   return { required, optional };
 }
 
@@ -797,10 +797,8 @@ export async function GET(req: Request) {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.apple.pkpass',
-        'Content-Disposition': `inline; filename="puntoia.pkpass"; filename*=UTF-8''puntoia.pkpass`,
-        'Content-Transfer-Encoding': 'binary',
+        'Content-Disposition': 'attachment; filename="puntoia.pkpass"',
         'Content-Length': String(pkpass.length),
-        'Accept-Ranges': 'none',
         'X-Content-Type-Options': 'nosniff',
         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
         'x-request-id': requestId,
