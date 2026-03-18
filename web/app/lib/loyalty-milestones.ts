@@ -16,8 +16,8 @@ export type NormalizedMilestone = {
 };
 
 type ValidationResult =
-  | { ok: true; milestones: NormalizedMilestone[] }
-  | { ok: false; message: string };
+  | { ok: true; milestones: NormalizedMilestone[]; message?: undefined }
+  | { ok: false; milestones?: undefined; message: string };
 
 function parseVisitTarget(value: number | string | null | undefined): number {
   return Number.parseInt(String(value ?? ''), 10);
