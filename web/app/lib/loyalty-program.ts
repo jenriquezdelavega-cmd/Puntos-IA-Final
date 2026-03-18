@@ -1,5 +1,5 @@
 export const DEFAULT_REQUIRED_VISITS = 10;
-export const MAX_REQUIRED_VISITS = 12;
+export const MAX_REQUIRED_VISITS = 10;
 export const MIN_REQUIRED_VISITS = 1;
 
 export function sanitizeRequiredVisits(value: unknown, fallback = DEFAULT_REQUIRED_VISITS): number {

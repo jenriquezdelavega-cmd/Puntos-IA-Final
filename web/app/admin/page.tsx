@@ -1291,7 +1291,7 @@ return (
           backgroundPosition: 'center',
         }}
       >
-        <div className="grid grid-cols-6 justify-items-center items-start w-full gap-x-2 gap-y-5 md:gap-x-4 md:gap-y-6">
+        <div className="grid grid-cols-5 justify-items-center items-start w-full gap-x-2 gap-y-5 md:gap-x-4 md:gap-y-6">
           {Array.from({ length: normalizedRequiredVisits }, (_, i) => {
             const visitIndex = i + 1;
             const isAchieved = visitIndex <= Math.floor(normalizedRequiredVisits * 0.4);
@@ -1304,9 +1304,9 @@ return (
                 <div 
                   className={`flex items-center justify-center rounded-full border-[3px] shadow-sm transition-all overflow-hidden w-12 h-12 md:w-16 md:h-16`}
                   style={{
-                    backgroundColor: isAchieved ? (walletLabelColor || '#3B82F6') : (walletForegroundColor || '#9CA3AF'),
-                    borderColor: walletBackgroundColor || '#1F2937',
-                    boxShadow: isAchieved && hasMilestone ? `0 0 15px ${walletLabelColor || '#3B82F6'}` : '0 2px 4px rgba(0,0,0,0.3)',
+                    backgroundColor: isAchieved ? (walletLabelColor || '#3B82F6') : 'rgba(255,255,255,0.74)',
+                    borderColor: 'rgba(255,255,255,0.92)',
+                    boxShadow: isAchieved ? `0 0 15px ${walletLabelColor || '#3B82F6'}` : '0 6px 14px rgba(0,0,0,0.22)',
                   }}
                 >
                   {hasMilestone ? (
@@ -1314,8 +1314,20 @@ return (
                   ) : isFinalNode ? (
                     <span className="text-xl md:text-2xl translate-y-px">🏆</span>
                   ) : (
-                    <div className="rounded-full w-2/3 h-2/3 flex items-center justify-center font-bold text-xs md:text-sm" style={{ backgroundColor: walletBackgroundColor || '#1F2937', opacity: isAchieved ? 0 : 0.6, color: (walletForegroundColor || '#9CA3AF') }}>
-                       {!isAchieved ? visitIndex : '✓'}
+                    <div
+                      className="rounded-full w-2/3 h-2/3 flex items-center justify-center text-sm md:text-base"
+                      style={{
+                        background: isAchieved
+                          ? 'linear-gradient(180deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.08) 100%)'
+                          : 'linear-gradient(180deg, rgba(17,24,39,0.84) 0%, rgba(17,24,39,0.62) 100%)',
+                        color: '#FFFFFF',
+                        fontWeight: 900,
+                        textShadow: '0 2px 6px rgba(0,0,0,0.55)',
+                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.28), 0 4px 10px rgba(0,0,0,0.18)',
+                        border: `2px solid ${isAchieved ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.3)'}`,
+                      }}
+                    >
+                       {visitIndex}
                     </div>
                   )}
                 </div>

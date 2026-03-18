@@ -39,13 +39,14 @@ export async function generateDynamicStripResponse({
   currentVisits,
   requiredVisits,
   bgColor,
-  fgColor,
+  fgColor: _fgColor,
   labelColor,
   stripImageData = '',
   prizeEmoji = '\u{1F3C6}',
   milestones,
 }: DynamicStripParams): Promise<ImageResponse> {
   void _businessName;
+  void _fgColor;
   const fontData = await getFontBuffer();
 
   const maxVisits = Math.max(requiredVisits, currentVisits, 1);
@@ -57,8 +58,8 @@ export async function generateDynamicStripResponse({
   });
   const rows: Array<typeof nodes> = [];
 
-  for (let index = 0; index < nodes.length; index += 6) {
-    rows.push(nodes.slice(index, index + 6));
+  for (let index = 0; index < nodes.length; index += 5) {
+    rows.push(nodes.slice(index, index + 5));
   }
 
   const fontsConfig = fontData
@@ -113,7 +114,7 @@ export async function generateDynamicStripResponse({
             justifyContent: 'center',
             alignItems: 'center',
             width: '100%',
-            gap: rows.length > 1 ? '14px' : '8px',
+            gap: rows.length > 1 ? '10px' : '6px',
             flex: '1 1 auto',
           }}
         >
@@ -126,7 +127,7 @@ export async function generateDynamicStripResponse({
                 justifyContent: 'center',
                 alignItems: 'flex-start',
                 width: '100%',
-                gap: '18px',
+                gap: '14px',
               }}
             >
               {row.map((node) => {
@@ -146,8 +147,8 @@ export async function generateDynamicStripResponse({
                       alignItems: 'center',
                       justifyContent: 'flex-start',
                       position: 'relative',
-                      width: '140px',
-                      minHeight: '130px',
+                      width: '166px',
+                      minHeight: '110px',
                     }}
                   >
                     <div
@@ -155,15 +156,15 @@ export async function generateDynamicStripResponse({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '88px',
-                        height: '88px',
+                        width: '84px',
+                        height: '84px',
                         borderRadius: '50%',
-                        backgroundColor: node.isAchieved ? labelColor : 'rgba(255,255,255,0.8)',
+                        backgroundColor: node.isAchieved ? labelColor : 'rgba(255,255,255,0.74)',
                         boxShadow:
-                          node.isAchieved && hasMilestone
+                          node.isAchieved
                             ? `0 0 20px ${labelColor}`
-                            : '0 4px 10px rgba(0,0,0,0.22)',
-                        border: '4px solid rgba(255,255,255,0.92)',
+                            : '0 6px 14px rgba(0,0,0,0.24)',
+                        border: `4px solid ${node.isAchieved ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.9)'}`,
                       }}
                     >
                       {hasMilestone ? (
@@ -183,14 +184,19 @@ export async function generateDynamicStripResponse({
                             width: '58px',
                             height: '58px',
                             borderRadius: '50%',
-                            backgroundColor: node.isAchieved ? 'rgba(255,255,255,0.96)' : 'rgba(255,255,255,0.88)',
-                            opacity: node.isAchieved ? 0.9 : 0.72,
-                            fontSize: '24px',
-                            fontWeight: 'bold',
-                            color: node.isAchieved ? labelColor : fgColor,
+                            background:
+                              node.isAchieved
+                                ? 'linear-gradient(180deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.08) 100%)'
+                                : 'linear-gradient(180deg, rgba(17,24,39,0.84) 0%, rgba(17,24,39,0.62) 100%)',
+                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.28), 0 4px 10px rgba(0,0,0,0.18)',
+                            border: `2px solid ${node.isAchieved ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.3)'}`,
+                            fontSize: '26px',
+                            fontWeight: 900,
+                            color: '#FFFFFF',
+                            textShadow: '0 2px 6px rgba(0,0,0,0.55)',
                           }}
                         >
-                          {node.isAchieved ? '\u2713' : String(node.visitIndex)}
+                          {String(node.visitIndex)}
                         </div>
                       )}
                     </div>
@@ -201,21 +207,21 @@ export async function generateDynamicStripResponse({
                           display: 'flex',
                           alignItems: 'flex-start',
                           justifyContent: 'center',
-                          width: '136px',
-                          marginTop: '8px',
-                          minHeight: '28px',
+                          width: '150px',
+                          marginTop: '6px',
+                          minHeight: '22px',
                         }}
                       >
                         <span
                           style={{
                             display: 'flex',
                             color: '#FFFFFF',
-                            fontSize: '14px',
+                            fontSize: '12px',
                             fontWeight: 'bold',
                             textAlign: 'center',
                             textTransform: 'uppercase',
                             letterSpacing: '0.8px',
-                            lineHeight: 1.15,
+                            lineHeight: 1.08,
                             textShadow: '0 2px 4px rgba(0,0,0,0.48)',
                           }}
                         >
