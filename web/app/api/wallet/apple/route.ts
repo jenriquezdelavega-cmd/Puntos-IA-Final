@@ -604,7 +604,7 @@ async function createPassPackage(params: {
     const passPath = join(tempDir, 'pass.json');
     await writeFile(passPath, JSON.stringify(passJson, null, 2));
 
-    const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png', 'strip.png', 'footer.png', 'footer@2x.png'] as const;
+    const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png', 'strip.png', 'strip@2x.png', 'footer.png', 'footer@2x.png'] as const;
     for (const file of packageFiles) {
       try {
         if (file === 'pass.json') {

@@ -170,18 +170,12 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
         value: tenant.name || 'Punto IA',
       },
     },
-    imageModulesData: [
-      {
-        id: 'hero',
-        mainImage: {
-          sourceUri: { uri: dynamicStripUri },
-          contentDescription: {
-            defaultValue: { language: 'es-MX', value: `Progreso de lealtad de ${tenant.name || 'Punto IA'}` },
-          },
-        },
+    heroImage: {
+      sourceUri: { uri: dynamicStripUri },
+      contentDescription: {
+        defaultValue: { language: 'es-MX', value: `Progreso de lealtad de ${tenant.name || 'Punto IA'}` },
       },
-    ],
-    heroImage: null,
+    },
     ...(logoUri
       ? {
         logo: {

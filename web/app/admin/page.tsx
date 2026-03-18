@@ -1028,10 +1028,10 @@ return (
 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
   <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-5 text-white">
     <div className="flex items-center gap-3">
-      <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">⚙️</span>
+      <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🏪</span>
       <div>
-        <h2 className="text-lg font-black">Configuración</h2>
-        <p className="text-white/80 text-xs font-semibold">Personaliza tu negocio, premio y pase digital</p>
+        <h2 className="text-lg font-black">Perfil del Negocio</h2>
+        <p className="text-white/80 text-xs font-semibold">Datos básicos e identidad de tu marca</p>
       </div>
     </div>
   </div>
@@ -1041,8 +1041,8 @@ return (
       <input className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 text-gray-500 font-bold border border-gray-100 cursor-not-allowed text-sm" value={tenant.name} readOnly />
     </div>
     <div>
-      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">🎁 Premio al Completar Visitas</label>
-      <input className="w-full p-3.5 bg-white rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm placeholder:text-gray-400" value={prizeName} onChange={e => setPrizeName(e.target.value)} placeholder="Ej: Café gratis, 2x1, Descuento 20%" />
+      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">📸 Instagram</label>
+      <input className="w-full p-3.5 bg-pink-50 rounded-xl mt-1 font-semibold text-pink-600 border border-pink-100 focus:bg-white focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm" value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="@tu_negocio" />
     </div>
 <div>
   <label className="text-xs font-bold text-gray-400 uppercase ml-1">Logo del negocio</label>
@@ -1150,29 +1150,24 @@ return (
 
 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
   <div className="px-6 py-4 border-b border-gray-100">
-    <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">🎯 Reglas del Programa</h3>
-    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Visitas necesarias y periodo de vigencia</p>
+    <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">📍 Ubicación</h3>
+    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Aparece en el mapa de negocios aliados</p>
   </div>
-  <div className="p-6 space-y-4">
-    <div>
-      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Visitas para ganar premio</label>
-      <input type="number" min="1" className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm" value={requiredVisits} onChange={e => setRequiredVisits(e.target.value)} />
-      <p className="text-[11px] text-gray-400 font-semibold mt-1.5 ml-1">El cliente necesita {requiredVisits || 10} visitas para obtener su premio.</p>
+  <div className="p-6 space-y-3">
+    <div className="flex gap-2">
+      <input className="flex-1 p-3 bg-gray-50 rounded-xl text-gray-800 text-sm border border-gray-200 outline-none focus:ring-2 focus:ring-blue-200 font-semibold" placeholder="Buscar dirección..." value={addressSearch} onChange={(e) => setAddressSearch(e.target.value)} />
+      <button onClick={searchLocation} disabled={isSearching} className="bg-blue-600 text-white px-4 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 shrink-0 text-sm" aria-label="Buscar">{isSearching ? '...' : '🔍'}</button>
     </div>
-    <div>
-      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Vigencia del contador</label>
-      <select className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm" value={rewardPeriod} onChange={e => setRewardPeriod(e.target.value)}>
-        <option value="OPEN">♾️ Sin caducidad (acumulan siempre)</option>
-        <option value="MONTHLY">📅 Mensual (se reinicia cada mes)</option>
-        <option value="QUARTERLY">📊 Trimestral (cada 3 meses)</option>
-        <option value="SEMESTER">📆 Semestral (cada 6 meses)</option>
-        <option value="ANNUAL">🗓️ Anual (cada año)</option>
-      </select>
-    </div>
-    <div>
-      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">📸 Instagram</label>
-      <input className="w-full p-3.5 bg-pink-50 rounded-xl mt-1 font-semibold text-pink-600 border border-pink-100 focus:bg-white focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm" value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="@tu_negocio" />
-    </div>
+    <div className="h-[280px] w-full rounded-2xl overflow-hidden border border-gray-200 z-0 relative"><AdminMap coords={coords} setCoords={setCoords} /></div>
+  </div>
+</div>
+
+<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+  <div className="px-6 py-4 border-b border-gray-100">
+    <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">🤝 Red Punto IA</h3>
+    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Participación en campañas y promociones de la coalición</p>
+  </div>
+  <div className="p-6">
     <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 space-y-3">
       <p className="text-xs font-black text-indigo-700">🤝 Promo de Coalición (captación de nuevos clientes)</p>
       <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
@@ -1205,33 +1200,45 @@ return (
   </div>
 </div>
 
-<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-  <div className="px-6 py-4 border-b border-gray-100">
-    <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">📍 Ubicación</h3>
-    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Aparece en el mapa de negocios aliados</p>
-  </div>
-  <div className="p-6 space-y-3">
-    <div className="flex gap-2">
-      <input className="flex-1 p-3 bg-gray-50 rounded-xl text-gray-800 text-sm border border-gray-200 outline-none focus:ring-2 focus:ring-blue-200 font-semibold" placeholder="Buscar dirección..." value={addressSearch} onChange={(e) => setAddressSearch(e.target.value)} />
-      <button onClick={searchLocation} disabled={isSearching} className="bg-blue-600 text-white px-4 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 shrink-0 text-sm" aria-label="Buscar">{isSearching ? '...' : '🔍'}</button>
-    </div>
-    <div className="h-[280px] w-full rounded-2xl overflow-hidden border border-gray-200 z-0 relative"><AdminMap coords={coords} setCoords={setCoords} /></div>
-  </div>
-</div>
-
 <div className="bg-white rounded-3xl shadow-sm border border-yellow-100 overflow-hidden">
   <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-5 text-white">
     <div className="flex items-center gap-3">
-      <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🪜</span>
+      <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🎯</span>
       <div>
-        <h3 className="text-sm font-black">Escalera de Beneficios</h3>
-        <p className="text-white/80 text-xs font-semibold">Premio intermedio en visitas específicas (ej: visita 3, 7, 10)</p>
+        <h3 className="text-sm font-black">Programa Lealtad y Premios</h3>
+        <p className="text-white/80 text-xs font-semibold">Configura metas, premio final y beneficios intermedios</p>
       </div>
     </div>
   </div>
-  <div className="p-5 space-y-5">
+  <div className="p-5 space-y-6">
+    <div className="space-y-4">
+      <h4 className="text-xs font-black text-amber-700 uppercase tracking-wider border-b border-amber-100 pb-2">Reglas del Programa Base</h4>
+      <div>
+        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">🎁 Premio al Completar Visitas</label>
+        <input className="w-full p-3.5 bg-white rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm placeholder:text-gray-400" value={prizeName} onChange={e => setPrizeName(e.target.value)} placeholder="Ej: Café gratis, 2x1, Descuento 20%" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Visitas para ganar premio</label>
+          <input type="number" min="1" className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm" value={requiredVisits} onChange={e => setRequiredVisits(e.target.value)} />
+          <p className="text-[11px] text-gray-400 font-semibold mt-1.5 ml-1">Meta del pase: {requiredVisits || 10} visitas.</p>
+        </div>
+        <div>
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Vigencia del contador</label>
+          <select className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm" value={rewardPeriod} onChange={e => setRewardPeriod(e.target.value)}>
+            <option value="OPEN">♾️ Sin caducidad</option>
+            <option value="MONTHLY">📅 Mensual</option>
+            <option value="QUARTERLY">📊 Trimestral</option>
+            <option value="SEMESTER">📆 Semestral</option>
+            <option value="ANNUAL">🗓️ Anual</option>
+          </select>
+        </div>
+      </div>
+    </div>
     
-    <div className="space-y-2">
+    <div className="space-y-3 pt-4 border-t border-amber-100">
+      <h4 className="text-xs font-black text-amber-700 uppercase tracking-wider mb-2">🪜 Escalera de Beneficios (Opcional)</h4>
+      <p className="text-[11px] text-gray-400 font-semibold -mt-2 mb-3">Premia a tus clientes en visitas intermedias específicas (ej: visita 3, 7, 10).</p>
       <p className="text-xs font-black text-amber-700 uppercase tracking-wider">Vista Previa del Pase (Wallet)</p>
       <div 
         className="w-full rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center p-6 relative py-10"
