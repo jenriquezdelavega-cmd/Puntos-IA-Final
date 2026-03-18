@@ -20,25 +20,14 @@ let _cachedFontBuffer: ArrayBuffer | null = null;
 async function getFontBuffer(): Promise<ArrayBuffer | undefined> {
   if (_cachedFontBuffer) return _cachedFontBuffer;
   try {
-    // Use the Inter font from bunny.net CDN (reliable, no CORS issues)
     const res = await fetch(
       'https://fonts.bunny.net/inter/files/inter-latin-700-normal.woff'
     );
-    if (!res.ok) throw new Error('Failed to fetch font');
+    if (!res.ok) throw new Error('fetch failed');
     _cachedFontBuffer = await res.arrayBuffer();
     return _cachedFontBuffer;
   } catch {
-    try {
-      // Fallback: Google Fonts static CDN
-      const res2 = await fetch(
-        'https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2'
-      );
-      if (!res2.ok) return undefined;
-      _cachedFontBuffer = await res2.arrayBuffer();
-      return _cachedFontBuffer;
-    } catch {
-      return undefined;
-    }
+    return undefined;
   }
 }
 
@@ -49,7 +38,7 @@ export async function generateDynamicStripResponse({
   bgColor,
   fgColor,
   labelColor,
-  prizeEmoji = '🏆',
+  prizeEmoji = '\u{1F3C6}',
   milestones,
 }: DynamicStripParams): Promise<ImageResponse> {
   const fontData = await getFontBuffer();
@@ -60,22 +49,11 @@ export async function generateDynamicStripResponse({
     const visitIndex = i + 1;
     const isAchieved = visitIndex <= currentVisits;
     const milestone = milestones.find((m) => m.visitTarget === visitIndex);
-    return {
-      visitIndex,
-      isAchieved,
-      milestone,
-    };
+    return { visitIndex, isAchieved, milestone };
   });
 
   const fontsConfig = fontData
-    ? [
-        {
-          name: 'Inter',
-          data: fontData,
-          style: 'normal' as const,
-          weight: 700 as const,
-        },
-      ]
+    ? [{ name: 'Inter', data: fontData, style: 'normal' as const, weight: 700 as const }]
     : undefined;
 
   return new ImageResponse(
@@ -93,6 +71,7 @@ export async function generateDynamicStripResponse({
           fontFamily: fontsConfig ? 'Inter' : 'sans-serif',
         }}
       >
+        {/* Stamp grid */}
         <div
           style={{
             display: 'flex',
@@ -108,6 +87,10 @@ export async function generateDynamicStripResponse({
           {nodes.map((node) => {
             const hasMilestone = !!node.milestone;
             const isFinalNode = node.visitIndex === maxVisits;
+            const showLabel = hasMilestone || isFinalNode;
+            const labelText = hasMilestone
+              ? (node.milestone?.reward ?? '')
+              : 'PREMIO FINAL';
 
             return (
               <div
@@ -117,17 +100,17 @@ export async function generateDynamicStripResponse({
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  zIndex: 2,
                   position: 'relative',
                 }}
               >
+                {/* Circle */}
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '120px',
-                    height: '120px',
+                    width: '110px',
+                    height: '110px',
                     borderRadius: '50%',
                     backgroundColor: node.isAchieved ? labelColor : fgColor,
                     boxShadow:
@@ -135,62 +118,63 @@ export async function generateDynamicStripResponse({
                         ? `0 0 20px ${labelColor}`
                         : '0 4px 6px rgba(0,0,0,0.3)',
                     border: `6px solid ${bgColor}`,
-                    overflow: 'hidden',
                   }}
                 >
                   {hasMilestone ? (
-                    <span style={{ fontSize: '60px', transform: 'translateY(2px)' }}>
-                      {node.milestone?.emoji || '🎁'}
+                    <span style={{ fontSize: '52px', display: 'flex' }}>
+                      {node.milestone?.emoji ?? '\u{1F381}'}
                     </span>
                   ) : isFinalNode ? (
-                    <span style={{ fontSize: '50px', transform: 'translateY(2px)' }}>
+                    <span style={{ fontSize: '46px', display: 'flex' }}>
                       {prizeEmoji}
                     </span>
                   ) : (
                     <div
                       style={{
-                        width: '80px',
-                        height: '80px',
-                        borderRadius: '50%',
-                        backgroundColor: bgColor,
-                        opacity: node.isAchieved ? 0 : 0.6,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '30px',
+                        width: '74px',
+                        height: '74px',
+                        borderRadius: '50%',
+                        backgroundColor: bgColor,
+                        opacity: node.isAchieved ? 0 : 0.6,
+                        fontSize: '28px',
                         fontWeight: 'bold',
                         color: fgColor,
                       }}
                     >
-                      {!node.isAchieved ? node.visitIndex : '✔'}
+                      {node.isAchieved ? '\u2713' : String(node.visitIndex)}
                     </div>
                   )}
                 </div>
-                {/* Text underneath milestone/final nodes */}
-                {(hasMilestone || isFinalNode) && (
+
+                {/* Label below milestone/final nodes */}
+                {showLabel && (
                   <div
                     style={{
-                      position: 'absolute',
-                      bottom: '-35px',
                       display: 'flex',
-                      flexDirection: 'column',
+                      position: 'absolute',
+                      bottom: '-32px',
                       alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '140px',
                     }}
                   >
                     <span
                       style={{
+                        display: 'flex',
                         color: node.isAchieved ? '#FFFFFF' : 'rgba(255,255,255,0.7)',
-                        fontSize: '18px',
+                        fontSize: '16px',
                         fontWeight: 'bold',
                         textAlign: 'center',
                         textTransform: 'uppercase',
                         letterSpacing: '1px',
-                        width: '140px',
                         lineHeight: 1.2,
                         textShadow: '0 2px 4px rgba(0,0,0,0.5)',
                       }}
                     >
-                      {hasMilestone ? node.milestone?.reward : 'Premio Final'}
+                      {labelText}
                     </span>
                   </div>
                 )}
@@ -199,10 +183,14 @@ export async function generateDynamicStripResponse({
           })}
         </div>
 
+        {/* Bottom progress bar */}
         <div
           style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             color: 'rgba(255,255,255,0.9)',
-            fontSize: '24px',
+            fontSize: '22px',
             marginTop: 'auto',
             fontWeight: 800,
             letterSpacing: '2px',
@@ -210,7 +198,7 @@ export async function generateDynamicStripResponse({
             textShadow: '0 2px 4px rgba(0,0,0,0.5)',
           }}
         >
-          {businessName} · Progreso: {currentVisits}/{requiredVisits} Visitas
+          {businessName} \u00B7 Progreso: {currentVisits}/{requiredVisits} Visitas
         </div>
       </div>
     ),
