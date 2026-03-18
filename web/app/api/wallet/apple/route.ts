@@ -12,6 +12,7 @@ import { walletAuthTokenForSerial, walletSerialNumber } from '@/app/lib/apple-wa
 import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 import { asTrimmedString } from '@/app/lib/request-validation';
 import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
+import { generateDynamicStripResponse } from '@/app/lib/dynamic-strip';
 
 const execFileAsync = promisify(execFile);
 let cachedOpenSslBin: string | null = null;
@@ -440,6 +441,7 @@ async function createPassPackage(params: {
   walletForegroundColor?: string | null;
   walletLabelColor?: string | null;
   walletStripImageData?: string | null;
+  dynamicStripImgBuffer?: Buffer | null;
 }) {
   const passTypeIdentifier = requiredEnv('APPLE_PASS_TYPE_ID');
   const teamIdentifier = requiredEnv('APPLE_TEAM_ID');
@@ -591,7 +593,11 @@ async function createPassPackage(params: {
     }
 
     const tenantStrip = decodeTenantImageData(String(params.walletStripImageData || ''));
-    if (tenantStrip && tenantStrip.length > 0) {
+    if (params.dynamicStripImgBuffer) {
+      // Usar la tira dinámica generada si la pasamos
+      await writeFile(join(tempDir, 'strip.png'), params.dynamicStripImgBuffer);
+      await writeFile(join(tempDir, 'strip@2x.png'), params.dynamicStripImgBuffer);
+    } else if (tenantStrip && tenantStrip.length > 0) {
       await writeFile(join(tempDir, 'strip.png'), tenantStrip);
     }
 
@@ -711,17 +717,40 @@ export async function GET(req: Request) {
       where: { tenantId: tenant.id, userId: user.id },
       select: { currentVisits: true, totalVisits: true, lastVisitAt: true, periodKey: true, periodType: true },
     });
+    
+    // Obtener hitos de lealtad para la tira dinámica
+    const milestones = await prisma.loyaltyMilestone.findMany({
+      where: { tenantId: tenant.id },
+      orderBy: { visitTarget: 'asc' },
+    });
 
     let lastPushMessage = '';
     try {
       lastPushMessage = (await prisma.tenantWalletStyle.findUnique({
         where: { tenantId: tenant.id },
         select: { lastPushMessage: true },
-      }))?.lastPushMessage || '';
+        }))?.lastPushMessage || '';
     } catch (error: unknown) {
       if (!isMissingTableOrColumnError(error)) {
         throw error;
       }
+    }
+      
+    let dynamicStripImgBuffer: Buffer | null = null;
+    try {
+      const response = generateDynamicStripResponse({
+        businessName: tenant.name || 'Punto IA',
+        currentVisits: membership?.currentVisits ?? 0,
+        requiredVisits: tenant.requiredVisits ?? 10,
+        bgColor: walletStyle.backgroundColor || '#1F2937',
+        fgColor: walletStyle.foregroundColor || '#9CA3AF',
+        labelColor: walletStyle.labelColor || '#3B82F6',
+        milestones: milestones,
+      });
+      const arrayBuffer = await response.arrayBuffer();
+      dynamicStripImgBuffer = Buffer.from(arrayBuffer);
+    } catch (e) {
+      console.error('Error generating dynamic strip for apple pass', e);
     }
 
     const pkpass = await createPassPackage({
@@ -745,6 +774,7 @@ export async function GET(req: Request) {
       walletForegroundColor: walletStyle.foregroundColor,
       walletLabelColor: walletStyle.labelColor,
       walletStripImageData: walletStyle.stripImageData,
+      dynamicStripImgBuffer,
     });
 
     return new NextResponse(pkpass, {

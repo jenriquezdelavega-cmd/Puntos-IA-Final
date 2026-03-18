@@ -1220,7 +1220,67 @@ return (
       </div>
     </div>
   </div>
-  <div className="p-5 space-y-3">
+  <div className="p-5 space-y-5">
+    
+    <div className="space-y-2">
+      <p className="text-xs font-black text-amber-700 uppercase tracking-wider">Vista Previa del Pase (Wallet)</p>
+      <div 
+        className="w-full rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center p-6 relative"
+        style={{ backgroundColor: walletBackgroundColor || '#1F2937' }}
+      >
+        <div className="flex flex-row justify-between items-center w-full relative h-[60px] md:h-[80px]">
+          {/* Línea conectora base */}
+          <div className="absolute top-1/2 left-[2%] right-[2%] h-1.5 md:h-2 bg-white/20 -translate-y-1/2 rounded-full z-0" />
+          
+          {/* Línea conectora progreso */}
+          <div 
+            className="absolute top-1/2 left-[2%] h-1.5 md:h-2 -translate-y-1/2 rounded-full z-[1]"
+            style={{ 
+              width: `${(Math.min(Math.floor((Number(requiredVisits) || 10) * 0.4), (Number(requiredVisits) || 10) - 1) / ((Number(requiredVisits) || 10) - 1)) * 96}%`,
+              backgroundColor: walletLabelColor || '#3B82F6',
+              boxShadow: `0 0 8px ${walletLabelColor || '#3B82F6'}`
+            }}
+          />
+
+          {Array.from({ length: Math.max(Number(requiredVisits) || 10, 1) }, (_, i) => {
+            const visitIndex = i + 1;
+            const isAchieved = visitIndex <= Math.floor((Number(requiredVisits) || 10) * 0.4);
+            const milestone = milestones.find(m => Number(m.visitTarget) === visitIndex);
+            const hasMilestone = !!milestone;
+            
+            return (
+              <div key={visitIndex} className="flex flex-col items-center justify-center z-[2] relative">
+                <div 
+                  className={`flex items-center justify-center rounded-full border-[3px] md:border-[4px] shadow-sm transition-all ${hasMilestone ? 'w-10 h-10 md:w-14 md:h-14' : 'w-5 h-5 md:w-8 md:h-8'}`}
+                  style={{
+                    backgroundColor: isAchieved ? (walletLabelColor || '#3B82F6') : (walletForegroundColor || '#9CA3AF'),
+                    borderColor: walletBackgroundColor || '#1F2937',
+                    boxShadow: isAchieved && hasMilestone ? `0 0 15px ${walletLabelColor || '#3B82F6'}` : '0 2px 4px rgba(0,0,0,0.3)',
+                  }}
+                >
+                  {hasMilestone ? (
+                    <span className="text-xl md:text-3xl translate-y-px">{milestone.emoji || '🎁'}</span>
+                  ) : (
+                    <div className="rounded-full w-1/2 h-1/2" style={{ backgroundColor: walletBackgroundColor || '#1F2937', opacity: isAchieved ? 0 : 0.5 }} />
+                  )}
+                </div>
+                {hasMilestone && (
+                  <div className="absolute top-[45px] md:top-[60px] text-center w-[40px] md:w-[60px]">
+                    <span style={{ color: isAchieved ? '#FFFFFF' : 'rgba(255,255,255,0.5)' }} className="text-[10px] md:text-xs font-bold">{visitIndex}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-8 text-[10px] md:text-xs font-semibold tracking-wider uppercase" style={{ color: 'rgba(255,255,255,0.8)' }}>
+          {tenant.name} · Progreso de Ejemplo
+        </div>
+      </div>
+      <p className="text-[10px] text-gray-400 font-semibold text-center">Así se verá tu escalera gráfica en el Apple Wallet y Google Wallet de tus clientes.</p>
+    </div>
+
+    <div className="space-y-3 pt-2 border-t border-amber-100">
     {milestones.length === 0 && (
       <p className="text-xs text-gray-400 font-semibold text-center py-2">Sin hitos configurados. Agrega el primero abajo.</p>
     )}
@@ -1276,6 +1336,7 @@ return (
       {isSavingMilestones ? 'Guardando escalera...' : '🪜 Guardar Escalera de Beneficios'}
     </button>
   </div>
+</div>
 </div>
 
 <button onClick={saveSettings} disabled={isSavingSettings} className="w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white py-4 rounded-2xl font-black shadow-md hover:shadow-lg transition-all text-sm disabled:opacity-60">

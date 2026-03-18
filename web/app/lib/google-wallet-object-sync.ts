@@ -152,12 +152,8 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
     origin: qrBaseUrl,
     businessId: tenant.id,
   });
-  const stripUri = resolveGoogleWalletImageUrl({
-    imageValue: walletStyle.stripImageData,
-    origin: qrBaseUrl,
-    businessId: tenant.id,
-    kind: 'strip',
-  });
+
+  const dynamicStripUri = `${qrBaseUrl}/api/wallet/dynamic-strip?businessId=${encodeURIComponent(tenant.id)}&customerId=${encodeURIComponent(user.id)}`;
 
   const objectId = getGoogleLoyaltyObjectId(issuerId, tenant.id, user.id);
 
@@ -174,19 +170,17 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
         value: tenant.name || 'Punto IA',
       },
     },
-    imageModulesData: stripUri
-      ? [
-          {
-            id: 'hero',
-            mainImage: {
-              sourceUri: { uri: stripUri },
-              contentDescription: {
-                defaultValue: { language: 'es-MX', value: `Imagen del pase de ${tenant.name || 'Punto IA'}` },
-              },
-            },
+    imageModulesData: [
+      {
+        id: 'hero',
+        mainImage: {
+          sourceUri: { uri: dynamicStripUri },
+          contentDescription: {
+            defaultValue: { language: 'es-MX', value: `Progreso de lealtad de ${tenant.name || 'Punto IA'}` },
           },
-        ]
-      : [],
+        },
+      },
+    ],
     heroImage: null,
     ...(logoUri
       ? {
