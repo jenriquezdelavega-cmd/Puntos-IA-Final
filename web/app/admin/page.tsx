@@ -1304,9 +1304,9 @@ return (
                 <div 
                   className={`flex items-center justify-center rounded-full border-[3px] shadow-sm transition-all overflow-hidden w-12 h-12 md:w-16 md:h-16`}
                   style={{
-                    backgroundColor: isAchieved ? (walletLabelColor || '#3B82F6') : 'rgba(255,255,255,0.74)',
+                    backgroundColor: isAchieved ? (walletLabelColor || '#3B82F6') : 'rgba(255,255,255,0.78)',
                     borderColor: 'rgba(255,255,255,0.92)',
-                    boxShadow: isAchieved ? `0 0 15px ${walletLabelColor || '#3B82F6'}` : '0 6px 14px rgba(0,0,0,0.22)',
+                    boxShadow: isAchieved ? `0 0 18px ${walletLabelColor || '#3B82F6'}` : '0 10px 22px rgba(0,0,0,0.26)',
                   }}
                 >
                   {hasMilestone ? (
@@ -1318,12 +1318,12 @@ return (
                       className="rounded-full w-2/3 h-2/3 flex items-center justify-center text-sm md:text-base"
                       style={{
                         background: isAchieved
-                          ? 'linear-gradient(180deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.08) 100%)'
-                          : 'linear-gradient(180deg, rgba(17,24,39,0.84) 0%, rgba(17,24,39,0.62) 100%)',
+                          ? 'linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.14) 100%)'
+                          : 'linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(30,41,59,0.78) 100%)',
                         color: '#FFFFFF',
                         fontWeight: 900,
-                        textShadow: '0 2px 6px rgba(0,0,0,0.55)',
-                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.28), 0 4px 10px rgba(0,0,0,0.18)',
+                        textShadow: '0 2px 8px rgba(0,0,0,0.62)',
+                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.32), 0 6px 14px rgba(0,0,0,0.26)',
                         border: `2px solid ${isAchieved ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.3)'}`,
                       }}
                     >
@@ -1332,8 +1332,16 @@ return (
                   )}
                 </div>
                 {(hasMilestone || isFinalNode) && (
-                  <div className="absolute -bottom-6 text-center w-20 md:w-24 flex flex-col items-center">
-                    <span style={{ color: isAchieved ? '#FFFFFF' : 'rgba(255,255,255,0.7)', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }} className="text-[9px] md:text-[10px] font-bold leading-[1.1] uppercase">
+                  <div className="absolute -bottom-6 text-center w-24 md:w-28 flex flex-col items-center">
+                    <span
+                      style={{
+                        color: '#FFFFFF',
+                        textShadow: '0 2px 6px rgba(0,0,0,0.6)',
+                        backgroundColor: 'rgba(17,24,39,0.34)',
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.18)',
+                      }}
+                      className="text-[10px] md:text-[11px] font-black leading-[1.05] uppercase rounded-full px-2 py-1"
+                    >
                       {hasMilestone ? milestone.reward : 'Premio Final'}
                     </span>
                   </div>
