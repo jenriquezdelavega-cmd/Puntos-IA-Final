@@ -1,6 +1,4 @@
 import { ImageResponse } from 'next/og';
-import fs from 'fs';
-import path from 'path';
 
 export type DynamicStripParams = {
   businessName: string;
@@ -9,21 +7,53 @@ export type DynamicStripParams = {
   bgColor: string;
   fgColor: string;
   labelColor: string;
+  prizeEmoji?: string;
   milestones: Array<{ visitTarget: number; emoji: string; reward: string }>;
 };
 
 const WIDTH = 1032;
 const HEIGHT = 336;
 
-export function generateDynamicStripResponse({
+// Cache font buffer in module scope so we only fetch once per cold start
+let _cachedFontBuffer: ArrayBuffer | null = null;
+
+async function getFontBuffer(): Promise<ArrayBuffer | undefined> {
+  if (_cachedFontBuffer) return _cachedFontBuffer;
+  try {
+    // Use the Inter font from bunny.net CDN (reliable, no CORS issues)
+    const res = await fetch(
+      'https://fonts.bunny.net/inter/files/inter-latin-700-normal.woff'
+    );
+    if (!res.ok) throw new Error('Failed to fetch font');
+    _cachedFontBuffer = await res.arrayBuffer();
+    return _cachedFontBuffer;
+  } catch {
+    try {
+      // Fallback: Google Fonts static CDN
+      const res2 = await fetch(
+        'https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2'
+      );
+      if (!res2.ok) return undefined;
+      _cachedFontBuffer = await res2.arrayBuffer();
+      return _cachedFontBuffer;
+    } catch {
+      return undefined;
+    }
+  }
+}
+
+export async function generateDynamicStripResponse({
   businessName,
   currentVisits,
   requiredVisits,
   bgColor,
   fgColor,
   labelColor,
+  prizeEmoji = '🏆',
   milestones,
-}: DynamicStripParams): ImageResponse {
+}: DynamicStripParams): Promise<ImageResponse> {
+  const fontData = await getFontBuffer();
+
   const maxVisits = Math.max(requiredVisits, currentVisits, 1);
 
   const nodes = Array.from({ length: maxVisits }, (_, i) => {
@@ -37,6 +67,17 @@ export function generateDynamicStripResponse({
     };
   });
 
+  const fontsConfig = fontData
+    ? [
+        {
+          name: 'Inter',
+          data: fontData,
+          style: 'normal' as const,
+          weight: 700 as const,
+        },
+      ]
+    : undefined;
+
   return new ImageResponse(
     (
       <div
@@ -49,7 +90,7 @@ export function generateDynamicStripResponse({
           justifyContent: 'center',
           alignItems: 'center',
           padding: '40px',
-          fontFamily: 'sans-serif',
+          fontFamily: fontsConfig ? 'Inter' : 'sans-serif',
         }}
       >
         <div
@@ -64,7 +105,6 @@ export function generateDynamicStripResponse({
             marginTop: '20px',
           }}
         >
-          {/* Nodes (Punch card stamps) */}
           {nodes.map((node) => {
             const hasMilestone = !!node.milestone;
             const isFinalNode = node.visitIndex === maxVisits;
@@ -90,9 +130,10 @@ export function generateDynamicStripResponse({
                     height: '120px',
                     borderRadius: '50%',
                     backgroundColor: node.isAchieved ? labelColor : fgColor,
-                    boxShadow: node.isAchieved && hasMilestone
-                      ? `0 0 20px ${labelColor}`
-                      : '0 4px 6px rgba(0,0,0,0.3)',
+                    boxShadow:
+                      node.isAchieved && hasMilestone
+                        ? `0 0 20px ${labelColor}`
+                        : '0 4px 6px rgba(0,0,0,0.3)',
                     border: `6px solid ${bgColor}`,
                     overflow: 'hidden',
                   }}
@@ -103,7 +144,7 @@ export function generateDynamicStripResponse({
                     </span>
                   ) : isFinalNode ? (
                     <span style={{ fontSize: '50px', transform: 'translateY(2px)' }}>
-                      🏆
+                      {prizeEmoji}
                     </span>
                   ) : (
                     <div
@@ -121,11 +162,11 @@ export function generateDynamicStripResponse({
                         color: fgColor,
                       }}
                     >
-                      {!node.isAchieved ? node.visitIndex : '✔️'}
+                      {!node.isAchieved ? node.visitIndex : '✔'}
                     </div>
                   )}
                 </div>
-                {/* Text underneath the node */}
+                {/* Text underneath milestone/final nodes */}
                 {(hasMilestone || isFinalNode) && (
                   <div
                     style={{
@@ -176,22 +217,7 @@ export function generateDynamicStripResponse({
     {
       width: WIDTH,
       height: HEIGHT,
-      fonts: (() => {
-        try {
-          const fontPath = path.join(process.cwd(), 'wallet-assets', 'Inter-Bold.ttf');
-          const fontData = fs.readFileSync(fontPath);
-          return [
-            {
-              name: 'Inter',
-              data: fontData.buffer.slice(fontData.byteOffset, fontData.byteOffset + fontData.byteLength),
-              style: 'normal',
-              weight: 800,
-            },
-          ];
-        } catch {
-          return undefined;
-        }
-      })() as any,
+      fonts: fontsConfig,
     }
   );
 }

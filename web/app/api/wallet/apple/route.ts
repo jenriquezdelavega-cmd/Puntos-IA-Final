@@ -738,7 +738,7 @@ export async function GET(req: Request) {
       
     let dynamicStripImgBuffer: Buffer | null = null;
     try {
-      const response = generateDynamicStripResponse({
+      const imgResponse = await generateDynamicStripResponse({
         businessName: tenant.name || 'Punto IA',
         currentVisits: membership?.currentVisits ?? 0,
         requiredVisits: tenant.requiredVisits ?? 10,
@@ -747,7 +747,7 @@ export async function GET(req: Request) {
         labelColor: walletStyle.labelColor || '#3B82F6',
         milestones: milestones,
       });
-      const arrayBuffer = await response.arrayBuffer();
+      const arrayBuffer = await imgResponse.arrayBuffer();
       dynamicStripImgBuffer = Buffer.from(arrayBuffer);
     } catch (e) {
       console.error('Error generating dynamic strip for apple pass', e);

@@ -57,6 +57,7 @@ const [tab, setTab] = useState<AdminTab>('qr');
 const [userRole, setUserRole] = useState('');
 
 const [prizeName, setPrizeName] = useState('');
+const [prizeEmoji, setPrizeEmoji] = useState('🏆');
 const [requiredVisits, setRequiredVisits] = useState('10');
 const [rewardPeriod, setRewardPeriod] = useState('OPEN');
 const [logoData, setLogoData] = useState<string>('');
@@ -279,17 +280,22 @@ const loadTeam = async (tid: string, currentTenantUserId = tenantUserId, current
 try { const res = await fetch(`/api/tenant/users?tenantId=${tid}&tenantUserId=${currentTenantUserId}&tenantSessionToken=${encodeURIComponent(currentTenantSessionToken)}`); const data = await res.json(); if(data.users) setTeam(data.users); } catch {}
 };
 
-const loadMilestones = async (tid: string, currentTenantUserId = tenantUserId, currentTenantSessionToken = tenantSessionToken) => {
+  const loadMilestones = async (tid: string, currentTenantUserId = tenantUserId, currentTenantSessionToken = tenantSessionToken) => {
   try {
     const res = await fetch(`/api/admin/milestones?tenantId=${tid}&tenantUserId=${currentTenantUserId}&tenantSessionToken=${encodeURIComponent(currentTenantSessionToken)}`);
     const data = await res.json();
     if (data.milestones) {
-      setMilestones(data.milestones.map((m: { id?: string; visitTarget: number; reward: string; emoji: string }) => ({
-        id: m.id,
-        visitTarget: String(m.visitTarget),
-        reward: m.reward,
-        emoji: m.emoji || '🎁',
-      })));
+      const req = parseInt(requiredVisits || '10', 10);
+      const finalMilestone = data.milestones.find((m: { visitTarget: number }) => m.visitTarget === req);
+      if (finalMilestone?.emoji) setPrizeEmoji(finalMilestone.emoji);
+      setMilestones(data.milestones
+        .filter((m: { visitTarget: number }) => m.visitTarget !== req)
+        .map((m: { id?: string; visitTarget: number; reward: string; emoji: string }) => ({
+          id: m.id,
+          visitTarget: String(m.visitTarget),
+          reward: m.reward,
+          emoji: m.emoji || '🎁',
+        })));
     }
   } catch {}
 };
@@ -312,10 +318,15 @@ const saveMilestones = async () => {
       return;
     }
 
+    const milestonesWithFinal = [
+      ...cleaned.filter(m => m.visitTarget < required),
+      { visitTarget: required, reward: prizeName || 'Premio Final', emoji: prizeEmoji || '🏆' },
+    ];
+
     const res = await fetch('/api/admin/milestones', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken, milestones: cleaned }),
+      body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken, milestones: milestonesWithFinal }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -323,12 +334,17 @@ const saveMilestones = async () => {
       return;
     }
     if (data.milestones) {
-      setMilestones(data.milestones.map((m: { id?: string; visitTarget: number; reward: string; emoji: string }) => ({
-        id: m.id,
-        visitTarget: String(m.visitTarget),
-        reward: m.reward,
-        emoji: m.emoji || '🎁',
-      })));
+      const req = parseInt(requiredVisits || '10', 10);
+      const finalM = data.milestones.find((m: { visitTarget: number }) => m.visitTarget === req);
+      if (finalM?.emoji) setPrizeEmoji(finalM.emoji);
+      setMilestones(data.milestones
+        .filter((m: { visitTarget: number }) => m.visitTarget !== req)
+        .map((m: { id?: string; visitTarget: number; reward: string; emoji: string }) => ({
+          id: m.id,
+          visitTarget: String(m.visitTarget),
+          reward: m.reward,
+          emoji: m.emoji || '🎁',
+        })));
     }
     notify('success', 'Escalera de beneficios guardada correctamente.');
   } catch {
@@ -1332,10 +1348,15 @@ return (
       </div>
     ))}
 
-    <div className="flex items-center gap-2 mt-2 opacity-80 select-none">
-      <div className="w-12 text-center p-2 bg-amber-200 border border-amber-300 rounded-xl text-sm font-bold text-amber-800">
-        🏆
-      </div>
+    <div className="flex items-center gap-2 mt-2 select-none">
+      <input
+        type="text"
+        value={prizeEmoji}
+        onChange={e => setPrizeEmoji(e.target.value)}
+        className="w-12 text-center p-2 bg-amber-200 border border-amber-300 rounded-xl text-sm font-bold text-amber-800 outline-none focus:ring-2 focus:ring-amber-400"
+        maxLength={4}
+        title="Emoji del premio final"
+      />
       <div className="flex items-center bg-gray-100 border border-gray-300 rounded-xl px-2">
         <span className="text-xs font-black text-gray-500 shrink-0">Visita</span>
         <div className="w-14 bg-transparent p-2 text-sm font-black text-gray-900 text-center">
@@ -1345,7 +1366,7 @@ return (
       <div className="flex-1 p-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 truncate" title={prizeName || 'Premio Final'}>
         {prizeName || 'Premio Final'}
       </div>
-      <div className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400" title="Premio final (no editable aquí)">
+      <div className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400" title="Premio final (guarda la escalera para actualizar el emoji)">
         🔒
       </div>
     </div>

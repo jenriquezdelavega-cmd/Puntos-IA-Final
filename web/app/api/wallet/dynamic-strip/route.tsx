@@ -40,13 +40,16 @@ export async function GET(req: Request) {
 
     const walletStyle = (await getTenantWalletStyle(tenant.id)) || defaultTenantWalletStyle(tenant.id);
 
-    return generateDynamicStripResponse({
+    const prizeEmoji = asTrimmedString(searchParams.get('prizeEmoji')) || '🏆';
+
+    return await generateDynamicStripResponse({
       businessName: tenant.name || 'Punto IA',
       currentVisits,
       requiredVisits: tenant.requiredVisits ?? 10,
       bgColor: walletStyle.backgroundColor || '#1F2937',
       fgColor: walletStyle.foregroundColor || '#9CA3AF',
       labelColor: walletStyle.labelColor || '#3B82F6',
+      prizeEmoji,
       milestones: tenant.loyaltyMilestones || [],
     });
   } catch (e: unknown) {
