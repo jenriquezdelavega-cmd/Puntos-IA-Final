@@ -35,7 +35,7 @@ async function getFontBuffer(): Promise<ArrayBuffer | undefined> {
 }
 
 export async function generateDynamicStripResponse({
-  businessName,
+  businessName: _businessName,
   currentVisits,
   requiredVisits,
   bgColor,
@@ -229,26 +229,6 @@ export async function generateDynamicStripResponse({
           ))}
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            position: 'relative',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#FFFFFF',
-            fontSize: '20px',
-            marginTop: '8px',
-            fontWeight: 800,
-            letterSpacing: '1.4px',
-            textTransform: 'uppercase',
-            textShadow: '0 2px 4px rgba(0,0,0,0.5)',
-            backgroundColor: 'rgba(0,0,0,0.18)',
-            borderRadius: '999px',
-            padding: '6px 18px',
-          }}
-        >
-          {businessName} \u00B7 Progreso: {currentVisits}/{requiredVisits} Visitas
-        </div>
       </div>
     ),
     {
