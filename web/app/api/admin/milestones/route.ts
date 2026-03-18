@@ -3,6 +3,8 @@ import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { parseJsonObject, asTrimmedString } from '@/app/lib/request-validation';
 import { validateMilestonesPayload } from '@/app/lib/loyalty-milestones';
+import { logApiError, logApiEvent } from '@/app/lib/api-log';
+import { requestWalletRefreshForTenant } from '@/app/lib/wallet-sync-orchestrator';
 
 export async function GET(request: Request) {
   const requestId = getRequestId(request);
@@ -106,6 +108,23 @@ export async function POST(request: Request) {
       orderBy: { visitTarget: 'asc' },
       select: { id: true, visitTarget: true, reward: true, emoji: true, sortOrder: true },
     });
+
+    try {
+      const walletRequest = await requestWalletRefreshForTenant({
+        prisma,
+        tenantId: access.tenantId,
+        origin: new URL(request.url).origin,
+        reason: 'milestones',
+      });
+
+      logApiEvent('/api/admin/milestones#wallet-sync', 'refresh_requested', {
+        tenantId: access.tenantId,
+        mode: walletRequest.mode,
+        jobId: 'jobId' in walletRequest ? walletRequest.jobId : null,
+      });
+    } catch (walletSyncError) {
+      logApiError('/api/admin/milestones#wallet-sync', walletSyncError);
+    }
 
     return apiSuccess({ requestId, data: { milestones: updated, count: milestones } });
   } catch (e: unknown) {
