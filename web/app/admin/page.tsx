@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import AdvancedDashboard, { type AdvancedReportView } from '../components/admin/AdvancedDashboard';
 import { buildMilestonesPayloadForSave, normalizeMilestonesForEditor } from '../lib/loyalty-milestones';
+import { DEFAULT_REQUIRED_VISITS, MAX_REQUIRED_VISITS, sanitizeRequiredVisits } from '../lib/loyalty-program';
 
 const AdminMap = dynamic(() => import('../components/AdminMap'), { ssr: false, loading: () => <div className="h-full bg-gray-100 animate-pulse text-center pt-10 text-gray-400">Cargando...</div> });
 
@@ -59,7 +60,7 @@ const [userRole, setUserRole] = useState('');
 
 const [prizeName, setPrizeName] = useState('');
 const [prizeEmoji, setPrizeEmoji] = useState('🏆');
-const [requiredVisits, setRequiredVisits] = useState('10');
+const [requiredVisits, setRequiredVisits] = useState(String(DEFAULT_REQUIRED_VISITS));
 const [rewardPeriod, setRewardPeriod] = useState('OPEN');
 const [logoData, setLogoData] = useState<string>('');
 const [walletBackgroundColor, setWalletBackgroundColor] = useState('#1f2937');
@@ -139,6 +140,7 @@ const navItems: NavItem[] = [
 ];
 
 const visibleNavItems = navItems.filter((item) => !item.adminOnly || userRole === 'ADMIN');
+const normalizedRequiredVisits = sanitizeRequiredVisits(requiredVisits || DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS);
 
 const notify = (type: 'success' | 'error' | 'info', text: string) => {
   setUiNotice({ type, text });
@@ -174,7 +176,7 @@ const handleLogin = async (e: React.FormEvent) => {
       setCoalitionOptIn(Boolean(data.tenant.coalitionOptIn));
       setCoalitionDiscountPercent(String(data.tenant.coalitionDiscountPercent ?? 10));
       setCoalitionProduct(String(data.tenant.coalitionProduct ?? ''));
-      setRequiredVisits(String(data.tenant.requiredVisits ?? 10));
+      setRequiredVisits(String(sanitizeRequiredVisits(data.tenant.requiredVisits ?? DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS)));
       setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
       setLogoData(String(data.tenant.logoData ?? ''));
       setWalletBackgroundColor(String(data.tenant.walletBackgroundColor ?? '#1f2937'));
@@ -286,7 +288,7 @@ try { const res = await fetch(`/api/tenant/users?tenantId=${tid}&tenantUserId=${
     const res = await fetch(`/api/admin/milestones?tenantId=${tid}&tenantUserId=${currentTenantUserId}&tenantSessionToken=${encodeURIComponent(currentTenantSessionToken)}`);
     const data = await res.json();
     if (data.milestones) {
-      const req = parseInt(requiredVisits || '10', 10);
+      const req = sanitizeRequiredVisits(requiredVisits || DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS);
       const { intermediateMilestones, finalMilestone } = normalizeMilestonesForEditor(data.milestones, req);
       if (finalMilestone?.emoji) setPrizeEmoji(finalMilestone.emoji);
       setMilestones(
@@ -308,7 +310,7 @@ const saveMilestones = async () => {
   if (!tenant?.id) return;
   setIsSavingMilestones(true);
   try {
-    const required = parseInt(requiredVisits || '10', 10);
+    const required = sanitizeRequiredVisits(requiredVisits || DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS);
     const validation = buildMilestonesPayloadForSave({
       milestones,
       requiredVisits: required,
@@ -338,7 +340,7 @@ const saveMilestones = async () => {
       return;
     }
     if (data.milestones) {
-      const req = parseInt(requiredVisits || '10', 10);
+      const req = sanitizeRequiredVisits(requiredVisits || DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS);
       const { intermediateMilestones, finalMilestone } = normalizeMilestonesForEditor(data.milestones, req);
       if (finalMilestone?.emoji) setPrizeEmoji(finalMilestone.emoji);
       setMilestones(
@@ -446,7 +448,7 @@ const saveSettings = async () => {
         tenantUserId,
         tenantSessionToken,
         prize: prizeName,
-        requiredVisits,
+        requiredVisits: normalizedRequiredVisits,
         rewardPeriod,
         logoData, // ✅ AHORA SÍ SE ENVÍA
         lat: coords[0],
@@ -478,7 +480,7 @@ const saveSettings = async () => {
       setCoalitionOptIn(Boolean(data.tenant.coalitionOptIn));
       setCoalitionDiscountPercent(String(data.tenant.coalitionDiscountPercent ?? 10));
       setCoalitionProduct(String(data.tenant.coalitionProduct ?? ''));
-      setRequiredVisits(String(data.tenant.requiredVisits ?? 10));
+      setRequiredVisits(String(sanitizeRequiredVisits(data.tenant.requiredVisits ?? DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS)));
       setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
       setWalletBackgroundColor(String(data.tenant.walletBackgroundColor ?? walletBackgroundColor));
       setWalletForegroundColor(String(data.tenant.walletForegroundColor ?? walletForegroundColor));
@@ -1243,8 +1245,23 @@ return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Visitas para ganar premio</label>
-          <input type="number" min="1" className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm" value={requiredVisits} onChange={e => setRequiredVisits(e.target.value)} />
-          <p className="text-[11px] text-gray-400 font-semibold mt-1.5 ml-1">Meta del pase: {requiredVisits || 10} visitas.</p>
+          <input
+            type="number"
+            min="1"
+            max={String(MAX_REQUIRED_VISITS)}
+            className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+            value={requiredVisits}
+            onChange={e => {
+              const nextValue = e.target.value;
+              if (!nextValue) {
+                setRequiredVisits('');
+                return;
+              }
+              setRequiredVisits(String(sanitizeRequiredVisits(nextValue, DEFAULT_REQUIRED_VISITS)));
+            }}
+            onBlur={() => setRequiredVisits(String(sanitizeRequiredVisits(requiredVisits || DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS)))}
+          />
+          <p className="text-[11px] text-gray-400 font-semibold mt-1.5 ml-1">Meta del pase: {normalizedRequiredVisits} visitas. M&aacute;ximo {MAX_REQUIRED_VISITS}.</p>
         </div>
         <div>
           <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Vigencia del contador</label>
@@ -1265,24 +1282,31 @@ return (
       <p className="text-xs font-black text-amber-700 uppercase tracking-wider">Vista Previa del Pase (Wallet)</p>
       <div 
         className="w-full rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center p-6 relative py-10"
-        style={{ backgroundColor: walletBackgroundColor || '#1F2937' }}
+        style={{
+          backgroundColor: walletBackgroundColor || '#1F2937',
+          backgroundImage: walletStripImageData
+            ? `linear-gradient(rgba(0,0,0,0.16), rgba(0,0,0,0.34)), url("${walletStripImageData}")`
+            : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
       >
-        <div className="flex flex-row flex-wrap justify-center items-center w-full gap-4 md:gap-5">
-          {Array.from({ length: Math.max(Number(requiredVisits) || 10, 1) }, (_, i) => {
+        <div className="grid grid-cols-5 justify-items-center items-start w-full gap-x-2 gap-y-5 md:gap-x-4 md:gap-y-6">
+          {Array.from({ length: normalizedRequiredVisits }, (_, i) => {
             const visitIndex = i + 1;
-            const isAchieved = visitIndex <= Math.floor((Number(requiredVisits) || 10) * 0.4);
+            const isAchieved = visitIndex <= Math.floor(normalizedRequiredVisits * 0.4);
             const milestone = milestones.find(m => Number(m.visitTarget) === visitIndex);
             const hasMilestone = !!milestone;
-            const isFinalNode = visitIndex === (Number(requiredVisits) || 10);
+            const isFinalNode = visitIndex === normalizedRequiredVisits;
             
             return (
-              <div key={visitIndex} className="flex flex-col items-center justify-center z-[2] relative mb-6">
+              <div key={visitIndex} className="flex flex-col items-center justify-center z-[2] relative">
                 <div 
                   className={`flex items-center justify-center rounded-full border-[3px] shadow-sm transition-all overflow-hidden w-12 h-12 md:w-16 md:h-16`}
                   style={{
-                    backgroundColor: isAchieved ? (walletLabelColor || '#3B82F6') : (walletForegroundColor || '#9CA3AF'),
-                    borderColor: walletBackgroundColor || '#1F2937',
-                    boxShadow: isAchieved && hasMilestone ? `0 0 15px ${walletLabelColor || '#3B82F6'}` : '0 2px 4px rgba(0,0,0,0.3)',
+                    backgroundColor: isAchieved ? (walletLabelColor || '#3B82F6') : 'rgba(255,255,255,0.74)',
+                    borderColor: 'rgba(255,255,255,0.92)',
+                    boxShadow: isAchieved ? `0 0 15px ${walletLabelColor || '#3B82F6'}` : '0 6px 14px rgba(0,0,0,0.22)',
                   }}
                 >
                   {hasMilestone ? (
@@ -1290,8 +1314,20 @@ return (
                   ) : isFinalNode ? (
                     <span className="text-xl md:text-2xl translate-y-px">🏆</span>
                   ) : (
-                    <div className="rounded-full w-2/3 h-2/3 flex items-center justify-center font-bold text-xs md:text-sm" style={{ backgroundColor: walletBackgroundColor || '#1F2937', opacity: isAchieved ? 0 : 0.6, color: (walletForegroundColor || '#9CA3AF') }}>
-                       {!isAchieved ? visitIndex : '✓'}
+                    <div
+                      className="rounded-full w-2/3 h-2/3 flex items-center justify-center text-sm md:text-base"
+                      style={{
+                        background: isAchieved
+                          ? 'linear-gradient(180deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.08) 100%)'
+                          : 'linear-gradient(180deg, rgba(17,24,39,0.84) 0%, rgba(17,24,39,0.62) 100%)',
+                        color: '#FFFFFF',
+                        fontWeight: 900,
+                        textShadow: '0 2px 6px rgba(0,0,0,0.55)',
+                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.28), 0 4px 10px rgba(0,0,0,0.18)',
+                        border: `2px solid ${isAchieved ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.3)'}`,
+                      }}
+                    >
+                       {visitIndex}
                     </div>
                   )}
                 </div>
@@ -1367,7 +1403,7 @@ return (
       <div className="flex items-center bg-gray-100 border border-gray-300 rounded-xl px-2">
         <span className="text-xs font-black text-gray-500 shrink-0">Visita</span>
         <div className="w-14 bg-transparent p-2 text-sm font-black text-gray-900 text-center">
-          {requiredVisits || 10}
+          {normalizedRequiredVisits}
         </div>
       </div>
       <div className="flex-1 p-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 truncate" title={prizeName || 'Premio Final'}>

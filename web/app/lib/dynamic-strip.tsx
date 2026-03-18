@@ -1,5 +1,7 @@
 import { ImageResponse } from 'next/og';
 
+/* eslint-disable @next/next/no-img-element */
+
 export type DynamicStripParams = {
   businessName: string;
   currentVisits: number;
@@ -7,6 +9,7 @@ export type DynamicStripParams = {
   bgColor: string;
   fgColor: string;
   labelColor: string;
+  stripImageData?: string;
   prizeEmoji?: string;
   milestones: Array<{ visitTarget: number; emoji: string; reward: string }>;
 };
@@ -32,25 +35,32 @@ async function getFontBuffer(): Promise<ArrayBuffer | undefined> {
 }
 
 export async function generateDynamicStripResponse({
-  businessName,
+  businessName: _businessName,
   currentVisits,
   requiredVisits,
   bgColor,
-  fgColor,
+  fgColor: _fgColor,
   labelColor,
+  stripImageData = '',
   prizeEmoji = '\u{1F3C6}',
   milestones,
 }: DynamicStripParams): Promise<ImageResponse> {
+  void _businessName;
+  void _fgColor;
   const fontData = await getFontBuffer();
 
   const maxVisits = Math.max(requiredVisits, currentVisits, 1);
-
   const nodes = Array.from({ length: maxVisits }, (_, i) => {
     const visitIndex = i + 1;
     const isAchieved = visitIndex <= currentVisits;
     const milestone = milestones.find((m) => m.visitTarget === visitIndex);
     return { visitIndex, isAchieved, milestone };
   });
+  const rows: Array<typeof nodes> = [];
+
+  for (let index = 0; index < nodes.length; index += 5) {
+    rows.push(nodes.slice(index, index + 5));
+  }
 
   const fontsConfig = fontData
     ? [{ name: 'Inter', data: fontData, style: 'normal' as const, weight: 700 as const }]
@@ -62,144 +72,170 @@ export async function generateDynamicStripResponse({
         style={{
           display: 'flex',
           flexDirection: 'column',
+          position: 'relative',
           width: '100%',
           height: '100%',
           backgroundColor: bgColor,
           justifyContent: 'center',
           alignItems: 'center',
-          padding: '40px',
+          overflow: 'hidden',
+          padding: '22px 32px 18px',
           fontFamily: fontsConfig ? 'Inter' : 'sans-serif',
         }}
       >
-        {/* Stamp grid */}
+        {stripImageData ? (
+          <img
+            src={stripImageData}
+            alt="Wallet strip background"
+            style={{
+              position: 'absolute',
+              inset: '0',
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+          />
+        ) : null}
+        <div
+          style={{
+            position: 'absolute',
+            inset: '0',
+            background: stripImageData
+              ? `linear-gradient(180deg, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.34) 100%)`
+              : 'transparent',
+          }}
+        />
+
         <div
           style={{
             display: 'flex',
-            flexDirection: 'row',
-            flexWrap: 'wrap',
+            position: 'relative',
+            flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
             width: '100%',
-            gap: '30px',
-            marginTop: '20px',
+            gap: rows.length > 1 ? '10px' : '6px',
+            flex: '1 1 auto',
           }}
         >
-          {nodes.map((node) => {
-            const hasMilestone = !!node.milestone;
-            const isFinalNode = node.visitIndex === maxVisits;
-            const showLabel = hasMilestone || isFinalNode;
-            const labelText = hasMilestone
-              ? (node.milestone?.reward ?? '')
-              : 'PREMIO FINAL';
+          {rows.map((row, rowIndex) => (
+            <div
+              key={`row-${rowIndex}`}
+              style={{
+                display: 'flex',
+                flexDirection: 'row',
+                justifyContent: 'center',
+                alignItems: 'flex-start',
+                width: '100%',
+                gap: '14px',
+              }}
+            >
+              {row.map((node) => {
+                const hasMilestone = !!node.milestone;
+                const isFinalNode = node.visitIndex === maxVisits;
+                const showLabel = hasMilestone || isFinalNode;
+                const labelText = hasMilestone
+                  ? (node.milestone?.reward ?? '')
+                  : 'PREMIO FINAL';
 
-            return (
-              <div
-                key={node.visitIndex}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  position: 'relative',
-                }}
-              >
-                {/* Circle */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '110px',
-                    height: '110px',
-                    borderRadius: '50%',
-                    backgroundColor: node.isAchieved ? labelColor : fgColor,
-                    boxShadow:
-                      node.isAchieved && hasMilestone
-                        ? `0 0 20px ${labelColor}`
-                        : '0 4px 6px rgba(0,0,0,0.3)',
-                    border: `6px solid ${bgColor}`,
-                  }}
-                >
-                  {hasMilestone ? (
-                    <span style={{ fontSize: '52px', display: 'flex' }}>
-                      {node.milestone?.emoji ?? '\u{1F381}'}
-                    </span>
-                  ) : isFinalNode ? (
-                    <span style={{ fontSize: '46px', display: 'flex' }}>
-                      {prizeEmoji}
-                    </span>
-                  ) : (
+                return (
+                  <div
+                    key={node.visitIndex}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'flex-start',
+                      position: 'relative',
+                      width: '166px',
+                      minHeight: '110px',
+                    }}
+                  >
                     <div
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '74px',
-                        height: '74px',
+                        width: '84px',
+                        height: '84px',
                         borderRadius: '50%',
-                        backgroundColor: bgColor,
-                        opacity: node.isAchieved ? 0 : 0.6,
-                        fontSize: '28px',
-                        fontWeight: 'bold',
-                        color: fgColor,
+                        backgroundColor: node.isAchieved ? labelColor : 'rgba(255,255,255,0.74)',
+                        boxShadow:
+                          node.isAchieved
+                            ? `0 0 20px ${labelColor}`
+                            : '0 6px 14px rgba(0,0,0,0.24)',
+                        border: `4px solid ${node.isAchieved ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.9)'}`,
                       }}
                     >
-                      {node.isAchieved ? '\u2713' : String(node.visitIndex)}
+                      {hasMilestone ? (
+                        <span style={{ fontSize: '42px', display: 'flex' }}>
+                          {node.milestone?.emoji ?? '\u{1F381}'}
+                        </span>
+                      ) : isFinalNode ? (
+                        <span style={{ fontSize: '40px', display: 'flex' }}>
+                          {prizeEmoji}
+                        </span>
+                      ) : (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '58px',
+                            height: '58px',
+                            borderRadius: '50%',
+                            background:
+                              node.isAchieved
+                                ? 'linear-gradient(180deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.08) 100%)'
+                                : 'linear-gradient(180deg, rgba(17,24,39,0.84) 0%, rgba(17,24,39,0.62) 100%)',
+                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.28), 0 4px 10px rgba(0,0,0,0.18)',
+                            border: `2px solid ${node.isAchieved ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.3)'}`,
+                            fontSize: '26px',
+                            fontWeight: 900,
+                            color: '#FFFFFF',
+                            textShadow: '0 2px 6px rgba(0,0,0,0.55)',
+                          }}
+                        >
+                          {String(node.visitIndex)}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                {/* Label below milestone/final nodes */}
-                {showLabel && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      position: 'absolute',
-                      bottom: '-32px',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '140px',
-                    }}
-                  >
-                    <span
-                      style={{
-                        display: 'flex',
-                        color: node.isAchieved ? '#FFFFFF' : 'rgba(255,255,255,0.7)',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        textAlign: 'center',
-                        textTransform: 'uppercase',
-                        letterSpacing: '1px',
-                        lineHeight: 1.2,
-                        textShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                      }}
-                    >
-                      {labelText}
-                    </span>
+                    {showLabel && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'center',
+                          width: '150px',
+                          marginTop: '6px',
+                          minHeight: '22px',
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: 'flex',
+                            color: '#FFFFFF',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            textAlign: 'center',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.8px',
+                            lineHeight: 1.08,
+                            textShadow: '0 2px 4px rgba(0,0,0,0.48)',
+                          }}
+                        >
+                          {labelText}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          ))}
         </div>
 
-        {/* Bottom progress bar */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'rgba(255,255,255,0.9)',
-            fontSize: '22px',
-            marginTop: 'auto',
-            fontWeight: 800,
-            letterSpacing: '2px',
-            textTransform: 'uppercase',
-            textShadow: '0 2px 4px rgba(0,0,0,0.5)',
-          }}
-        >
-          {businessName} \u00B7 Progreso: {currentVisits}/{requiredVisits} Visitas
-        </div>
       </div>
     ),
     {
