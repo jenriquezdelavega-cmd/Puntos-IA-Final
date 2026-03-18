@@ -1331,6 +1331,24 @@ return (
         </button>
       </div>
     ))}
+
+    <div className="flex items-center gap-2 mt-2 opacity-80 select-none">
+      <div className="w-12 text-center p-2 bg-amber-200 border border-amber-300 rounded-xl text-sm font-bold text-amber-800">
+        🏆
+      </div>
+      <div className="flex items-center bg-gray-100 border border-gray-300 rounded-xl px-2">
+        <span className="text-xs font-black text-gray-500 shrink-0">Visita</span>
+        <div className="w-14 bg-transparent p-2 text-sm font-black text-gray-900 text-center">
+          {requiredVisits || 10}
+        </div>
+      </div>
+      <div className="flex-1 p-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 truncate" title={prizeName || 'Premio Final'}>
+        {prizeName || 'Premio Final'}
+      </div>
+      <div className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400" title="Premio final (no editable aquí)">
+        🔒
+      </div>
+    </div>
     <button
       type="button"
       onClick={() => setMilestones(prev => [...prev, { visitTarget: '', reward: '', emoji: '🎁' }])}

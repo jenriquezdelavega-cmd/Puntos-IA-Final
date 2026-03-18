@@ -1,4 +1,6 @@
 import { ImageResponse } from 'next/og';
+import fs from 'fs';
+import path from 'path';
 
 export type DynamicStripParams = {
   businessName: string;
@@ -174,6 +176,22 @@ export function generateDynamicStripResponse({
     {
       width: WIDTH,
       height: HEIGHT,
+      fonts: (() => {
+        try {
+          const fontPath = path.join(process.cwd(), 'wallet-assets', 'Inter-Bold.ttf');
+          const fontData = fs.readFileSync(fontPath);
+          return [
+            {
+              name: 'Inter',
+              data: fontData.buffer.slice(fontData.byteOffset, fontData.byteOffset + fontData.byteLength),
+              style: 'normal',
+              weight: 800,
+            },
+          ];
+        } catch {
+          return undefined;
+        }
+      })() as any,
     }
   );
 }
