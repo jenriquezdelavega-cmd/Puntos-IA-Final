@@ -13,6 +13,7 @@ import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant
 import { asTrimmedString } from '@/app/lib/request-validation';
 import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
 import { generateDynamicStripResponse } from '@/app/lib/dynamic-strip';
+import { generateSolidColorPng } from '@/app/lib/png-generator';
 
 const execFileAsync = promisify(execFile);
 let cachedOpenSslBin: string | null = null;
@@ -754,6 +755,18 @@ export async function GET(req: Request) {
       const errStack = e instanceof Error ? e.stack : '';
       console.error('Error generating dynamic strip for apple pass:', errMsg);
       console.error('Strip error stack:', errStack);
+      // Fallback: generate a guaranteed-valid solid-color strip PNG
+      try {
+        // Parse hex background color, default to #1F2937 (dark blue-gray)
+        const hex = (walletStyle.backgroundColor || '#1F2937').replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16) || 31;
+        const g = parseInt(hex.substring(2, 4), 16) || 41;
+        const b = parseInt(hex.substring(4, 6), 16) || 55;
+        dynamicStripImgBuffer = generateSolidColorPng(1032, 336, r, g, b);
+        console.info('Using solid-color PNG fallback for apple pass strip');
+      } catch (fallbackErr) {
+        console.error('Fallback PNG generation also failed:', fallbackErr);
+      }
     }
 
     const pkpass = await createPassPackage({
