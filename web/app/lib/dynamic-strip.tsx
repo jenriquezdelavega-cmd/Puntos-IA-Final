@@ -1,5 +1,7 @@
 import { ImageResponse } from 'next/og';
 
+/* eslint-disable @next/next/no-img-element */
+
 export type DynamicStripParams = {
   businessName: string;
   currentVisits: number;
