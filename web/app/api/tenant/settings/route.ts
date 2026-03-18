@@ -5,6 +5,7 @@ import { touchWalletPassRegistrations } from '@/app/lib/apple-wallet-webservice'
 import { pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
 import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { apiError, apiSuccess, type ApiErrorCode, getRequestId } from '@/app/lib/api-response';
+import { parseOptionalRequiredVisits } from '@/app/lib/loyalty-program';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
 import { syncGoogleLoyaltyObjectsForTenant } from '@/app/lib/google-wallet-object-sync';
 
@@ -55,10 +56,7 @@ export async function POST(request: Request) {
 
     const authorizedTenantId = access.tenantId;
 
-    const parsedVisits =
-      requiredVisits === undefined || requiredVisits === null || requiredVisits === ''
-        ? undefined
-        : Math.max(1, parseInt(String(requiredVisits), 10));
+    const parsedVisits = parseOptionalRequiredVisits(requiredVisits);
 
     const allowedPeriods = ['OPEN', 'MONTHLY', 'QUARTERLY', 'SEMESTER', 'ANNUAL'] as const;
     type RewardPeriodValue = (typeof allowedPeriods)[number];

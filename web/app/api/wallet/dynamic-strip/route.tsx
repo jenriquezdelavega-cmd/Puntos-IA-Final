@@ -49,6 +49,7 @@ export async function GET(req: Request) {
       bgColor: walletStyle.backgroundColor || '#1F2937',
       fgColor: walletStyle.foregroundColor || '#9CA3AF',
       labelColor: walletStyle.labelColor || '#3B82F6',
+      stripImageData: walletStyle.stripImageData,
       prizeEmoji,
       milestones: tenant.loyaltyMilestones || [],
     });
