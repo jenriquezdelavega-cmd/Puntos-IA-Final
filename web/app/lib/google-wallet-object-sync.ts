@@ -170,12 +170,6 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
         value: tenant.name || 'Punto IA',
       },
     },
-    heroImage: {
-      sourceUri: { uri: dynamicStripUri },
-      contentDescription: {
-        defaultValue: { language: 'es-MX', value: `Progreso de lealtad de ${tenant.name || 'Punto IA'}` },
-      },
-    },
     ...(logoUri
       ? {
         logo: {
@@ -236,15 +230,23 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
     ],
   };
 
-  await ensureGoogleLoyaltyClassSynced({
-    ttlMs: 0,
-    classId,
-    issuerName: tenant.name || 'Negocio afiliado',
-    programName: GOOGLE_WALLET_PROGRAM_NAME_HIDDEN,
-    logoUri: logoUri || undefined,
-  });
+  // Sync the class first — swallow errors so object upsert can still proceed
+  try {
+    await ensureGoogleLoyaltyClassSynced({
+      ttlMs: 5 * 60 * 1000,
+      classId,
+      issuerName: tenant.name || 'Negocio afiliado',
+      programName: GOOGLE_WALLET_PROGRAM_NAME_HIDDEN,
+      logoUri: logoUri || undefined,
+    });
+  } catch (classErr) {
+    console.warn('Google Wallet class sync warning (non-fatal):', classErr);
+  }
 
   const result = await upsertGoogleLoyaltyObject(loyaltyObject);
+  if (result.operation === 'failed') {
+    console.error('Google Wallet object upsert failed:', result.status, JSON.stringify(result.body));
+  }
   return {
     ok: result.operation !== 'failed',
     objectId,

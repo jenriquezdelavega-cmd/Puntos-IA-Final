@@ -750,7 +750,10 @@ export async function GET(req: Request) {
       const arrayBuffer = await imgResponse.arrayBuffer();
       dynamicStripImgBuffer = Buffer.from(arrayBuffer);
     } catch (e) {
-      console.error('Error generating dynamic strip for apple pass', e);
+      const errMsg = e instanceof Error ? e.message : String(e);
+      const errStack = e instanceof Error ? e.stack : '';
+      console.error('Error generating dynamic strip for apple pass:', errMsg);
+      console.error('Strip error stack:', errStack);
     }
 
     const pkpass = await createPassPackage({
