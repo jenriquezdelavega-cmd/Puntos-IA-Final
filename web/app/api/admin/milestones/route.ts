@@ -62,6 +62,18 @@ export async function POST(request: Request) {
       return apiError({ requestId, status: access.status, code: 'UNAUTHORIZED', message: access.error });
     }
 
+    // Fetch the tenant to check requiredVisits
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: access.tenantId },
+      select: { requiredVisits: true },
+    });
+
+    if (!tenant) {
+      return apiError({ requestId, status: 404, code: 'NOT_FOUND', message: 'Negocio no encontrado' });
+    }
+
+    const { requiredVisits } = tenant;
+
     const rawMilestones = body.milestones;
     if (!Array.isArray(rawMilestones)) {
       return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'milestones debe ser un arreglo' });
@@ -83,6 +95,14 @@ export async function POST(request: Request) {
           status: 400,
           code: 'BAD_REQUEST',
           message: `visitTarget inválido: ${String(rec.visitTarget)}`,
+        });
+      }
+      if (visitTarget >= requiredVisits) {
+        return apiError({
+          requestId,
+          status: 400,
+          code: 'BAD_REQUEST',
+          message: `El premio intermedio (visita ${visitTarget}) no puede ser igual o mayor a la meta final (${requiredVisits}).`,
         });
       }
       if (!reward) {
