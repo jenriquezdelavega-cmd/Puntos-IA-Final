@@ -40,17 +40,27 @@ export async function GET(req: Request, { params }: Params) {
     const url = new URL(req.url);
     const businessId = asTrimmedString(url.searchParams.get('businessId') || url.searchParams.get('business_id'));
 
+    type MilestoneData = { id: string; visitTarget: number; reward: string; emoji: string; redeemed: boolean };
     let business: {
       id: string;
       name: string;
       currentVisits: number;
       requiredVisits: number;
+      milestones: MilestoneData[];
     } | null = null;
 
     if (businessId) {
       const tenant = await prisma.tenant.findUnique({
         where: { id: businessId },
-        select: { id: true, name: true, requiredVisits: true },
+        select: {
+          id: true,
+          name: true,
+          requiredVisits: true,
+          loyaltyMilestones: {
+            orderBy: { visitTarget: 'asc' },
+            select: { id: true, visitTarget: true, reward: true, emoji: true },
+          },
+        },
       });
 
       if (tenant) {
@@ -64,14 +74,34 @@ export async function GET(req: Request, { params }: Params) {
           select: { currentVisits: true },
         });
 
+        // Find which milestones already have a used redemption for this user
+        const usedRedemptions = await prisma.redemption.findMany({
+          where: {
+            userId: user.id,
+            tenantId: tenant.id,
+            loyaltyMilestoneId: { in: tenant.loyaltyMilestones.map(m => m.id) },
+            isUsed: true,
+          },
+          select: { loyaltyMilestoneId: true },
+        });
+        const redeemedSet = new Set(usedRedemptions.map(r => r.loyaltyMilestoneId).filter(Boolean));
+
         business = {
           id: tenant.id,
           name: tenant.name,
           currentVisits: membership?.currentVisits ?? 0,
           requiredVisits: tenant.requiredVisits,
+          milestones: tenant.loyaltyMilestones.map(m => ({
+            id: m.id,
+            visitTarget: m.visitTarget,
+            reward: m.reward,
+            emoji: m.emoji,
+            redeemed: redeemedSet.has(m.id),
+          })),
         };
       }
     }
+
 
     const pass = generateCustomerPass(user.id);
 

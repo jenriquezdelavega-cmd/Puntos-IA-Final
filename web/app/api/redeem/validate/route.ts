@@ -77,8 +77,16 @@ export async function POST(request: Request) {
             prize: true,
           },
         },
+        loyaltyMilestone: {
+          select: {
+            reward: true,
+            emoji: true,
+            visitTarget: true,
+          },
+        },
       },
     });
+
 
     if (!redemption) {
       logApiEvent('/api/redeem/validate', 'invalid_or_used_code', { tenantId: access.tenantId, code });
@@ -132,6 +140,10 @@ export async function POST(request: Request) {
       data: {
         ok: true,
         user: redemption.user?.name || redemption.user?.phone || 'Usuario',
+        prize: redemption.loyaltyMilestone
+          ? `${redemption.loyaltyMilestone.emoji} ${redemption.loyaltyMilestone.reward} (hito visita ${redemption.loyaltyMilestone.visitTarget})`
+          : (redemption.tenant.prize ?? 'Premio'),
+        isMilestone: Boolean(redemption.loyaltyMilestone),
         redemption: {
           id: redemption.id,
           code: redemption.code,
@@ -141,6 +153,7 @@ export async function POST(request: Request) {
         },
       },
     });
+
   } catch (error: unknown) {
     logApiError('/api/redeem/validate', error);
     return apiError({

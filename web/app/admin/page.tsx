@@ -36,6 +36,8 @@ type TenantView = {
   coalitionProduct?: string;
 };
 
+type MilestoneRow = { id?: string; visitTarget: string; reward: string; emoji: string };
+
 type TeamMember = { id: string; name?: string; username?: string; role?: string };
 type AdminTab = 'dashboard' | 'team' | 'qr' | 'redeem' | 'push' | 'settings';
 type NavItem = { key: AdminTab; icon: string; label: string; adminOnly?: boolean };
@@ -55,6 +57,7 @@ const [tab, setTab] = useState<AdminTab>('qr');
 const [userRole, setUserRole] = useState('');
 
 const [prizeName, setPrizeName] = useState('');
+const [prizeEmoji, setPrizeEmoji] = useState('🏆');
 const [requiredVisits, setRequiredVisits] = useState('10');
 const [rewardPeriod, setRewardPeriod] = useState('OPEN');
 const [logoData, setLogoData] = useState<string>('');
@@ -116,6 +119,9 @@ const [pushDiagnostics, setPushDiagnostics] = useState<{
   apple?: { sent?: number; failed?: number; targetedDevices?: number; reasons?: Record<string, number> };
   google?: { sent?: number; failed?: number; reasons?: Record<string, number> };
 } | null>(null);
+const [milestones, setMilestones] = useState<MilestoneRow[]>([]);
+const [isSavingMilestones, setIsSavingMilestones] = useState(false);
+
 const [isLoggingIn, setIsLoggingIn] = useState(false);
 const [isCreatingStaff, setIsCreatingStaff] = useState(false);
 const [isSavingSettings, setIsSavingSettings] = useState(false);
@@ -186,6 +192,7 @@ const handleLogin = async (e: React.FormEvent) => {
         loadReports(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''), targetMonth);
         loadTeam(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
         loadPushStatus(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
+        loadMilestones(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
       }
     } else {
       notify('error', String(data.error || 'No se pudo iniciar sesión'));
@@ -271,6 +278,80 @@ const sendPush = async () => {
 
 const loadTeam = async (tid: string, currentTenantUserId = tenantUserId, currentTenantSessionToken = tenantSessionToken) => {
 try { const res = await fetch(`/api/tenant/users?tenantId=${tid}&tenantUserId=${currentTenantUserId}&tenantSessionToken=${encodeURIComponent(currentTenantSessionToken)}`); const data = await res.json(); if(data.users) setTeam(data.users); } catch {}
+};
+
+  const loadMilestones = async (tid: string, currentTenantUserId = tenantUserId, currentTenantSessionToken = tenantSessionToken) => {
+  try {
+    const res = await fetch(`/api/admin/milestones?tenantId=${tid}&tenantUserId=${currentTenantUserId}&tenantSessionToken=${encodeURIComponent(currentTenantSessionToken)}`);
+    const data = await res.json();
+    if (data.milestones) {
+      const req = parseInt(requiredVisits || '10', 10);
+      const finalMilestone = data.milestones.find((m: { visitTarget: number }) => m.visitTarget === req);
+      if (finalMilestone?.emoji) setPrizeEmoji(finalMilestone.emoji);
+      setMilestones(data.milestones
+        .filter((m: { visitTarget: number }) => m.visitTarget !== req)
+        .map((m: { id?: string; visitTarget: number; reward: string; emoji: string }) => ({
+          id: m.id,
+          visitTarget: String(m.visitTarget),
+          reward: m.reward,
+          emoji: m.emoji || '🎁',
+        })));
+    }
+  } catch {}
+};
+
+const saveMilestones = async () => {
+  if (!tenant?.id) return;
+  setIsSavingMilestones(true);
+  try {
+    const required = parseInt(requiredVisits || '10', 10);
+    const cleaned = milestones.filter(m => m.visitTarget && m.reward).map(m => ({
+      visitTarget: parseInt(m.visitTarget, 10),
+      reward: m.reward.trim(),
+      emoji: m.emoji || '🎁',
+    }));
+
+    const invalidMilestone = cleaned.find(m => m.visitTarget >= required);
+    if (invalidMilestone) {
+      notify('error', `El premio "${invalidMilestone.reward}" en la visita ${invalidMilestone.visitTarget} no puede ser igual o mayor a la meta final (${required}).`);
+      setIsSavingMilestones(false);
+      return;
+    }
+
+    const milestonesWithFinal = [
+      ...cleaned.filter(m => m.visitTarget < required),
+      { visitTarget: required, reward: prizeName || 'Premio Final', emoji: prizeEmoji || '🏆' },
+    ];
+
+    const res = await fetch('/api/admin/milestones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken, milestones: milestonesWithFinal }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      notify('error', String(data.error || 'No se pudo guardar la escalera'));
+      return;
+    }
+    if (data.milestones) {
+      const req = parseInt(requiredVisits || '10', 10);
+      const finalM = data.milestones.find((m: { visitTarget: number }) => m.visitTarget === req);
+      if (finalM?.emoji) setPrizeEmoji(finalM.emoji);
+      setMilestones(data.milestones
+        .filter((m: { visitTarget: number }) => m.visitTarget !== req)
+        .map((m: { id?: string; visitTarget: number; reward: string; emoji: string }) => ({
+          id: m.id,
+          visitTarget: String(m.visitTarget),
+          reward: m.reward,
+          emoji: m.emoji || '🎁',
+        })));
+    }
+    notify('success', 'Escalera de beneficios guardada correctamente.');
+  } catch {
+    notify('error', 'Error de conexión al guardar la escalera.');
+  } finally {
+    setIsSavingMilestones(false);
+  }
 };
 
 const createStaff = async () => {
@@ -963,10 +1044,10 @@ return (
 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
   <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-5 text-white">
     <div className="flex items-center gap-3">
-      <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">⚙️</span>
+      <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🏪</span>
       <div>
-        <h2 className="text-lg font-black">Configuración</h2>
-        <p className="text-white/80 text-xs font-semibold">Personaliza tu negocio, premio y pase digital</p>
+        <h2 className="text-lg font-black">Perfil del Negocio</h2>
+        <p className="text-white/80 text-xs font-semibold">Datos básicos e identidad de tu marca</p>
       </div>
     </div>
   </div>
@@ -976,8 +1057,8 @@ return (
       <input className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 text-gray-500 font-bold border border-gray-100 cursor-not-allowed text-sm" value={tenant.name} readOnly />
     </div>
     <div>
-      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">🎁 Premio al Completar Visitas</label>
-      <input className="w-full p-3.5 bg-white rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm placeholder:text-gray-400" value={prizeName} onChange={e => setPrizeName(e.target.value)} placeholder="Ej: Café gratis, 2x1, Descuento 20%" />
+      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">📸 Instagram</label>
+      <input className="w-full p-3.5 bg-pink-50 rounded-xl mt-1 font-semibold text-pink-600 border border-pink-100 focus:bg-white focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm" value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="@tu_negocio" />
     </div>
 <div>
   <label className="text-xs font-bold text-gray-400 uppercase ml-1">Logo del negocio</label>
@@ -1085,29 +1166,24 @@ return (
 
 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
   <div className="px-6 py-4 border-b border-gray-100">
-    <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">🎯 Reglas del Programa</h3>
-    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Visitas necesarias y periodo de vigencia</p>
+    <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">📍 Ubicación</h3>
+    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Aparece en el mapa de negocios aliados</p>
   </div>
-  <div className="p-6 space-y-4">
-    <div>
-      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Visitas para ganar premio</label>
-      <input type="number" min="1" className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm" value={requiredVisits} onChange={e => setRequiredVisits(e.target.value)} />
-      <p className="text-[11px] text-gray-400 font-semibold mt-1.5 ml-1">El cliente necesita {requiredVisits || 10} visitas para obtener su premio.</p>
+  <div className="p-6 space-y-3">
+    <div className="flex gap-2">
+      <input className="flex-1 p-3 bg-gray-50 rounded-xl text-gray-800 text-sm border border-gray-200 outline-none focus:ring-2 focus:ring-blue-200 font-semibold" placeholder="Buscar dirección..." value={addressSearch} onChange={(e) => setAddressSearch(e.target.value)} />
+      <button onClick={searchLocation} disabled={isSearching} className="bg-blue-600 text-white px-4 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 shrink-0 text-sm" aria-label="Buscar">{isSearching ? '...' : '🔍'}</button>
     </div>
-    <div>
-      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Vigencia del contador</label>
-      <select className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm" value={rewardPeriod} onChange={e => setRewardPeriod(e.target.value)}>
-        <option value="OPEN">♾️ Sin caducidad (acumulan siempre)</option>
-        <option value="MONTHLY">📅 Mensual (se reinicia cada mes)</option>
-        <option value="QUARTERLY">📊 Trimestral (cada 3 meses)</option>
-        <option value="SEMESTER">📆 Semestral (cada 6 meses)</option>
-        <option value="ANNUAL">🗓️ Anual (cada año)</option>
-      </select>
-    </div>
-    <div>
-      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">📸 Instagram</label>
-      <input className="w-full p-3.5 bg-pink-50 rounded-xl mt-1 font-semibold text-pink-600 border border-pink-100 focus:bg-white focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm" value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="@tu_negocio" />
-    </div>
+    <div className="h-[280px] w-full rounded-2xl overflow-hidden border border-gray-200 z-0 relative"><AdminMap coords={coords} setCoords={setCoords} /></div>
+  </div>
+</div>
+
+<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+  <div className="px-6 py-4 border-b border-gray-100">
+    <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">🤝 Red Punto IA</h3>
+    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Participación en campañas y promociones de la coalición</p>
+  </div>
+  <div className="p-6">
     <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 space-y-3">
       <p className="text-xs font-black text-indigo-700">🤝 Promo de Coalición (captación de nuevos clientes)</p>
       <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
@@ -1140,18 +1216,176 @@ return (
   </div>
 </div>
 
-<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-  <div className="px-6 py-4 border-b border-gray-100">
-    <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">📍 Ubicación</h3>
-    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Aparece en el mapa de negocios aliados</p>
-  </div>
-  <div className="p-6 space-y-3">
-    <div className="flex gap-2">
-      <input className="flex-1 p-3 bg-gray-50 rounded-xl text-gray-800 text-sm border border-gray-200 outline-none focus:ring-2 focus:ring-blue-200 font-semibold" placeholder="Buscar dirección..." value={addressSearch} onChange={(e) => setAddressSearch(e.target.value)} />
-      <button onClick={searchLocation} disabled={isSearching} className="bg-blue-600 text-white px-4 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 shrink-0 text-sm" aria-label="Buscar">{isSearching ? '...' : '🔍'}</button>
+<div className="bg-white rounded-3xl shadow-sm border border-yellow-100 overflow-hidden">
+  <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-5 text-white">
+    <div className="flex items-center gap-3">
+      <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🎯</span>
+      <div>
+        <h3 className="text-sm font-black">Programa Lealtad y Premios</h3>
+        <p className="text-white/80 text-xs font-semibold">Configura metas, premio final y beneficios intermedios</p>
+      </div>
     </div>
-    <div className="h-[280px] w-full rounded-2xl overflow-hidden border border-gray-200 z-0 relative"><AdminMap coords={coords} setCoords={setCoords} /></div>
   </div>
+  <div className="p-5 space-y-6">
+    <div className="space-y-4">
+      <h4 className="text-xs font-black text-amber-700 uppercase tracking-wider border-b border-amber-100 pb-2">Reglas del Programa Base</h4>
+      <div>
+        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">🎁 Premio al Completar Visitas</label>
+        <input className="w-full p-3.5 bg-white rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm placeholder:text-gray-400" value={prizeName} onChange={e => setPrizeName(e.target.value)} placeholder="Ej: Café gratis, 2x1, Descuento 20%" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Visitas para ganar premio</label>
+          <input type="number" min="1" className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm" value={requiredVisits} onChange={e => setRequiredVisits(e.target.value)} />
+          <p className="text-[11px] text-gray-400 font-semibold mt-1.5 ml-1">Meta del pase: {requiredVisits || 10} visitas.</p>
+        </div>
+        <div>
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Vigencia del contador</label>
+          <select className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm" value={rewardPeriod} onChange={e => setRewardPeriod(e.target.value)}>
+            <option value="OPEN">♾️ Sin caducidad</option>
+            <option value="MONTHLY">📅 Mensual</option>
+            <option value="QUARTERLY">📊 Trimestral</option>
+            <option value="SEMESTER">📆 Semestral</option>
+            <option value="ANNUAL">🗓️ Anual</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    
+    <div className="space-y-3 pt-4 border-t border-amber-100">
+      <h4 className="text-xs font-black text-amber-700 uppercase tracking-wider mb-2">🪜 Escalera de Beneficios (Opcional)</h4>
+      <p className="text-[11px] text-gray-400 font-semibold -mt-2 mb-3">Premia a tus clientes en visitas intermedias específicas (ej: visita 3, 7, 10).</p>
+      <p className="text-xs font-black text-amber-700 uppercase tracking-wider">Vista Previa del Pase (Wallet)</p>
+      <div 
+        className="w-full rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center p-6 relative py-10"
+        style={{ backgroundColor: walletBackgroundColor || '#1F2937' }}
+      >
+        <div className="flex flex-row flex-wrap justify-center items-center w-full gap-4 md:gap-5">
+          {Array.from({ length: Math.max(Number(requiredVisits) || 10, 1) }, (_, i) => {
+            const visitIndex = i + 1;
+            const isAchieved = visitIndex <= Math.floor((Number(requiredVisits) || 10) * 0.4);
+            const milestone = milestones.find(m => Number(m.visitTarget) === visitIndex);
+            const hasMilestone = !!milestone;
+            const isFinalNode = visitIndex === (Number(requiredVisits) || 10);
+            
+            return (
+              <div key={visitIndex} className="flex flex-col items-center justify-center z-[2] relative mb-6">
+                <div 
+                  className={`flex items-center justify-center rounded-full border-[3px] shadow-sm transition-all overflow-hidden w-12 h-12 md:w-16 md:h-16`}
+                  style={{
+                    backgroundColor: isAchieved ? (walletLabelColor || '#3B82F6') : (walletForegroundColor || '#9CA3AF'),
+                    borderColor: walletBackgroundColor || '#1F2937',
+                    boxShadow: isAchieved && hasMilestone ? `0 0 15px ${walletLabelColor || '#3B82F6'}` : '0 2px 4px rgba(0,0,0,0.3)',
+                  }}
+                >
+                  {hasMilestone ? (
+                    <span className="text-2xl md:text-3xl translate-y-px">{milestone.emoji || '🎁'}</span>
+                  ) : isFinalNode ? (
+                    <span className="text-xl md:text-2xl translate-y-px">🏆</span>
+                  ) : (
+                    <div className="rounded-full w-2/3 h-2/3 flex items-center justify-center font-bold text-xs md:text-sm" style={{ backgroundColor: walletBackgroundColor || '#1F2937', opacity: isAchieved ? 0 : 0.6, color: (walletForegroundColor || '#9CA3AF') }}>
+                       {!isAchieved ? visitIndex : '✓'}
+                    </div>
+                  )}
+                </div>
+                {(hasMilestone || isFinalNode) && (
+                  <div className="absolute -bottom-6 text-center w-20 md:w-24 flex flex-col items-center">
+                    <span style={{ color: isAchieved ? '#FFFFFF' : 'rgba(255,255,255,0.7)', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }} className="text-[9px] md:text-[10px] font-bold leading-[1.1] uppercase">
+                      {hasMilestone ? milestone.reward : 'Premio Final'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-8 text-[10px] md:text-xs font-semibold tracking-wider uppercase" style={{ color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
+          {tenant.name} · Progreso de Ejemplo
+        </div>
+      </div>
+      <p className="text-[10px] text-gray-400 font-semibold text-center">Así se verá tu escalera gráfica en el Apple Wallet y Google Wallet de tus clientes.</p>
+    </div>
+
+    <div className="space-y-3 pt-2 border-t border-amber-100">
+    {milestones.length === 0 && (
+      <p className="text-xs text-gray-400 font-semibold text-center py-2">Sin hitos configurados. Agrega el primero abajo.</p>
+    )}
+    {milestones.map((m, idx) => (
+      <div key={idx} className="flex items-center gap-2">
+        <input
+          type="text"
+          value={m.emoji}
+          onChange={e => setMilestones(prev => prev.map((row, i) => i === idx ? { ...row, emoji: e.target.value } : row))}
+          className="w-12 text-center p-2 bg-amber-50 border border-amber-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-amber-300"
+          maxLength={4}
+          placeholder="🎁"
+        />
+        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-2 focus-within:ring-2 focus-within:ring-amber-300 focus-within:bg-white transition">
+          <span className="text-xs font-black text-gray-400 shrink-0">Visita</span>
+          <input
+            type="number"
+            min="1"
+            value={m.visitTarget}
+            onChange={e => setMilestones(prev => prev.map((row, i) => i === idx ? { ...row, visitTarget: e.target.value } : row))}
+            className="w-14 bg-transparent p-2 text-sm font-black text-gray-900 outline-none"
+          />
+        </div>
+        <input
+          type="text"
+          value={m.reward}
+          onChange={e => setMilestones(prev => prev.map((row, i) => i === idx ? { ...row, reward: e.target.value } : row))}
+          className="flex-1 p-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-amber-300 focus:bg-amber-50 transition"
+          placeholder="Ej: Agua, Postre, Tacos"
+        />
+        <button
+          type="button"
+          onClick={() => setMilestones(prev => prev.filter((_, i) => i !== idx))}
+          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 transition"
+          title="Eliminar hito"
+        >
+          ✕
+        </button>
+      </div>
+    ))}
+
+    <div className="flex items-center gap-2 mt-2 select-none">
+      <input
+        type="text"
+        value={prizeEmoji}
+        onChange={e => setPrizeEmoji(e.target.value)}
+        className="w-12 text-center p-2 bg-amber-200 border border-amber-300 rounded-xl text-sm font-bold text-amber-800 outline-none focus:ring-2 focus:ring-amber-400"
+        maxLength={4}
+        title="Emoji del premio final"
+      />
+      <div className="flex items-center bg-gray-100 border border-gray-300 rounded-xl px-2">
+        <span className="text-xs font-black text-gray-500 shrink-0">Visita</span>
+        <div className="w-14 bg-transparent p-2 text-sm font-black text-gray-900 text-center">
+          {requiredVisits || 10}
+        </div>
+      </div>
+      <div className="flex-1 p-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 truncate" title={prizeName || 'Premio Final'}>
+        {prizeName || 'Premio Final'}
+      </div>
+      <div className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400" title="Premio final (guarda la escalera para actualizar el emoji)">
+        🔒
+      </div>
+    </div>
+    <button
+      type="button"
+      onClick={() => setMilestones(prev => [...prev, { visitTarget: '', reward: '', emoji: '🎁' }])}
+      className="w-full py-2.5 rounded-xl border-2 border-dashed border-amber-200 text-amber-600 font-black text-sm hover:bg-amber-50 transition"
+    >
+      + Agregar hito
+    </button>
+    <button
+      onClick={saveMilestones}
+      disabled={isSavingMilestones}
+      className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black py-3 rounded-xl shadow-md disabled:opacity-60 text-sm"
+    >
+      {isSavingMilestones ? 'Guardando escalera...' : '🪜 Guardar Escalera de Beneficios'}
+    </button>
+  </div>
+</div>
 </div>
 
 <button onClick={saveSettings} disabled={isSavingSettings} className="w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white py-4 rounded-2xl font-black shadow-md hover:shadow-lg transition-all text-sm disabled:opacity-60">

@@ -12,6 +12,8 @@ import { walletAuthTokenForSerial, walletSerialNumber } from '@/app/lib/apple-wa
 import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 import { asTrimmedString } from '@/app/lib/request-validation';
 import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
+import { generateDynamicStripResponse } from '@/app/lib/dynamic-strip';
+import { generateSolidColorPng } from '@/app/lib/png-generator';
 
 const execFileAsync = promisify(execFile);
 let cachedOpenSslBin: string | null = null;
@@ -440,6 +442,7 @@ async function createPassPackage(params: {
   walletForegroundColor?: string | null;
   walletLabelColor?: string | null;
   walletStripImageData?: string | null;
+  dynamicStripImgBuffer?: Buffer | null;
 }) {
   const passTypeIdentifier = requiredEnv('APPLE_PASS_TYPE_ID');
   const teamIdentifier = requiredEnv('APPLE_TEAM_ID');
@@ -591,14 +594,18 @@ async function createPassPackage(params: {
     }
 
     const tenantStrip = decodeTenantImageData(String(params.walletStripImageData || ''));
-    if (tenantStrip && tenantStrip.length > 0) {
+    if (params.dynamicStripImgBuffer) {
+      // Usar la tira dinámica generada si la pasamos
+      await writeFile(join(tempDir, 'strip.png'), params.dynamicStripImgBuffer);
+      await writeFile(join(tempDir, 'strip@2x.png'), params.dynamicStripImgBuffer);
+    } else if (tenantStrip && tenantStrip.length > 0) {
       await writeFile(join(tempDir, 'strip.png'), tenantStrip);
     }
 
     const passPath = join(tempDir, 'pass.json');
     await writeFile(passPath, JSON.stringify(passJson, null, 2));
 
-    const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png', 'strip.png', 'footer.png', 'footer@2x.png'] as const;
+    const packageFiles = ['pass.json', 'icon.png', 'logo.png', 'icon@2x.png', 'logo@2x.png', 'strip.png', 'strip@2x.png', 'footer.png', 'footer@2x.png'] as const;
     for (const file of packageFiles) {
       try {
         if (file === 'pass.json') {
@@ -711,16 +718,54 @@ export async function GET(req: Request) {
       where: { tenantId: tenant.id, userId: user.id },
       select: { currentVisits: true, totalVisits: true, lastVisitAt: true, periodKey: true, periodType: true },
     });
+    
+    // Obtener hitos de lealtad para la tira dinámica
+    const milestones = await prisma.loyaltyMilestone.findMany({
+      where: { tenantId: tenant.id },
+      orderBy: { visitTarget: 'asc' },
+    });
 
     let lastPushMessage = '';
     try {
       lastPushMessage = (await prisma.tenantWalletStyle.findUnique({
         where: { tenantId: tenant.id },
         select: { lastPushMessage: true },
-      }))?.lastPushMessage || '';
+        }))?.lastPushMessage || '';
     } catch (error: unknown) {
       if (!isMissingTableOrColumnError(error)) {
         throw error;
+      }
+    }
+      
+    let dynamicStripImgBuffer: Buffer | null = null;
+    try {
+      const imgResponse = await generateDynamicStripResponse({
+        businessName: tenant.name || 'Punto IA',
+        currentVisits: membership?.currentVisits ?? 0,
+        requiredVisits: tenant.requiredVisits ?? 10,
+        bgColor: walletStyle.backgroundColor || '#1F2937',
+        fgColor: walletStyle.foregroundColor || '#9CA3AF',
+        labelColor: walletStyle.labelColor || '#3B82F6',
+        milestones: milestones,
+      });
+      const arrayBuffer = await imgResponse.arrayBuffer();
+      dynamicStripImgBuffer = Buffer.from(arrayBuffer);
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      const errStack = e instanceof Error ? e.stack : '';
+      console.error('Error generating dynamic strip for apple pass:', errMsg);
+      console.error('Strip error stack:', errStack);
+      // Fallback: generate a guaranteed-valid solid-color strip PNG
+      try {
+        // Parse hex background color, default to #1F2937 (dark blue-gray)
+        const hex = (walletStyle.backgroundColor || '#1F2937').replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16) || 31;
+        const g = parseInt(hex.substring(2, 4), 16) || 41;
+        const b = parseInt(hex.substring(4, 6), 16) || 55;
+        dynamicStripImgBuffer = generateSolidColorPng(1032, 336, r, g, b);
+        console.info('Using solid-color PNG fallback for apple pass strip');
+      } catch (fallbackErr) {
+        console.error('Fallback PNG generation also failed:', fallbackErr);
       }
     }
 
@@ -745,6 +790,7 @@ export async function GET(req: Request) {
       walletForegroundColor: walletStyle.foregroundColor,
       walletLabelColor: walletStyle.labelColor,
       walletStripImageData: walletStyle.stripImageData,
+      dynamicStripImgBuffer,
     });
 
     return new NextResponse(pkpass, {

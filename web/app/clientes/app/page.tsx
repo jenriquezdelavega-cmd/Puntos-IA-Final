@@ -34,6 +34,12 @@ const BusinessMap = dynamic(() => import('../../components/BusinessMap'), {
   ),
 });
 
+type MilestoneData = {
+  visitTarget: number;
+  reward: string;
+  emoji: string;
+};
+
 type Membership = {
   tenantId: string;
   name?: string;
@@ -44,6 +50,7 @@ type Membership = {
   logoData?: string;
   visits?: number;
   points?: number;
+  milestones?: MilestoneData[];
 };
 
 type StoredUser = {
@@ -694,6 +701,35 @@ export default function ClientesAppPage() {
                           <p className="mt-2 text-xs font-semibold text-[#2c7a4f]">Tu recompensa está lista. Puedes generar tu código de canje.</p>
                         )}
                       </div>
+
+                      {membership.milestones && membership.milestones.length > 0 ? (
+                        <div className="mt-3 rounded-2xl border border-[#e9daf9] bg-[#faf5ff] p-3.5">
+                          <p className="mb-2 text-[10px] font-black uppercase tracking-[0.15em] text-[#7755a6]">Escalera de beneficios</p>
+                          <div className="flex flex-col gap-1.5">
+                            {membership.milestones.map((m) => {
+                              const unlocked = currentVisits >= m.visitTarget;
+                              return (
+                                <div
+                                  key={m.visitTarget}
+                                  className={`flex items-center gap-2.5 rounded-xl px-3 py-2 transition-all ${
+                                    unlocked
+                                      ? 'bg-[#ecfff2] border border-[#c8f3d8]'
+                                      : 'bg-white border border-[#efe1fd] opacity-60'
+                                  }`}
+                                >
+                                  <span className="text-base">{unlocked ? '✅' : m.emoji}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <p className={`font-bold text-xs truncate ${unlocked ? 'text-[#11643a]' : 'text-[#5c4a82]'}`}>{m.reward}</p>
+                                    <p className={`text-[10px] font-semibold ${unlocked ? 'text-[#2c7a4f]' : 'text-[#9b88be]'}`}>
+                                      Visita {m.visitTarget}{unlocked ? ' · ¡Desbloqueado!' : ` · Faltan ${m.visitTarget - currentVisits} visita(s)`}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
 
                       <div className="mt-5 flex flex-wrap gap-3">
                         <Link

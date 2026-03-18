@@ -7,6 +7,8 @@ import { motion } from 'framer-motion';
 const PASS_CACHE_PREFIX = 'punto_pass_cache:';
 const PASS_CACHE_TTL_MS = 60_000;
 
+type MilestoneData = { id: string; visitTarget: number; reward: string; emoji: string; redeemed: boolean };
+
 type PassResponse = {
   customer_id: string;
   name: string;
@@ -17,6 +19,7 @@ type PassResponse = {
     name: string;
     currentVisits: number;
     requiredVisits: number;
+    milestones: MilestoneData[];
   } | null;
 };
 
@@ -65,6 +68,41 @@ export default function PassPage() {
   const [error, setError] = useState('');
   const [pass, setPass] = useState<PassResponse | null>(null);
   const [sourceBusinessName, setSourceBusinessName] = useState('');
+  // milestoneCode: maps milestoneId -> { code, loading }
+  const [milestoneCodes, setMilestoneCodes] = useState<Record<string, { code: string; loading: boolean }>>({});
+
+  const requestMilestoneCode = async (milestone: MilestoneData) => {
+    if (!pass) return;
+    const sessionToken = typeof window !== 'undefined' ? (localStorage.getItem('punto_session_token') || '') : '';
+    const userId = pass.customer_id;
+    const tenantId = pass.business?.id;
+    if (!tenantId) return;
+
+    // If we already have a code for this milestone, toggle hide it
+    if (milestoneCodes[milestone.id]?.code) {
+      setMilestoneCodes(prev => ({ ...prev, [milestone.id]: { code: '', loading: false } }));
+      return;
+    }
+
+    setMilestoneCodes(prev => ({ ...prev, [milestone.id]: { code: '', loading: true } }));
+    try {
+      const res = await fetch('/api/redeem/milestone-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, tenantId, sessionToken, milestoneId: milestone.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'No se pudo generar el código');
+        setMilestoneCodes(prev => ({ ...prev, [milestone.id]: { code: '', loading: false } }));
+      } else {
+        setMilestoneCodes(prev => ({ ...prev, [milestone.id]: { code: String(data.code), loading: false } }));
+      }
+    } catch {
+      setMilestoneCodes(prev => ({ ...prev, [milestone.id]: { code: '', loading: false } }));
+    }
+  };
+
 
   const loadPass = async (customerId: string, businessId?: string, silent = false) => {
     const cleanCustomerId = String(customerId || '').trim();
@@ -241,9 +279,63 @@ export default function PassPage() {
             <p className="text-xl font-black mt-1">{pass.name}</p>
 
             {pass.business ? (
-              <p className="text-xs font-bold text-emerald-700 mt-1">
-                {pass.business.name} · {pass.business.currentVisits}/{pass.business.requiredVisits} visitas
-              </p>
+              <>
+                <p className="text-xs font-bold text-emerald-700 mt-1">
+                  {pass.business.name} · {pass.business.currentVisits}/{pass.business.requiredVisits} visitas
+                </p>
+                {pass.business.milestones && pass.business.milestones.length > 0 ? (
+                  <div className="mt-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-pink-500 mb-2">Escalera de beneficios</p>
+                    <div className="flex flex-col gap-2">
+                      {pass.business.milestones.map((m) => {
+                        const unlocked = (pass.business?.currentVisits ?? 0) >= m.visitTarget;
+                        const redeemed = m.redeemed;
+                        const codeEntry = milestoneCodes[m.id];
+                        const showCode = Boolean(codeEntry?.code);
+                        const codeLoading = Boolean(codeEntry?.loading);
+
+                        return (
+                          <div key={m.id} className={`rounded-xl border transition-all ${
+                            redeemed ? 'bg-gray-50 border-gray-100 opacity-60' :
+                            unlocked ? 'bg-emerald-50 border-emerald-200' :
+                            'bg-gray-50 border-gray-100 opacity-50'
+                          }`}>
+                            <div className="flex items-center gap-2.5 px-3 py-2">
+                              <span className="text-base shrink-0">{redeemed ? '✅' : unlocked ? m.emoji : '🔒'}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className={`font-bold text-xs truncate ${redeemed ? 'text-gray-400 line-through' : unlocked ? 'text-emerald-800' : 'text-gray-500'}`}>{m.reward}</p>
+                                <p className={`text-[10px] font-semibold ${redeemed ? 'text-gray-400' : unlocked ? 'text-emerald-600' : 'text-gray-400'}`}>
+                                  {redeemed ? '¡Ya canjeado!' : unlocked ? '¡Desbloqueado!' : `Faltan ${m.visitTarget - (pass.business?.currentVisits ?? 0)} visita(s)`} · Visita {m.visitTarget}
+                                </p>
+                              </div>
+                              {unlocked && !redeemed ? (
+                                <button
+                                  onClick={() => requestMilestoneCode(m)}
+                                  disabled={codeLoading}
+                                  className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-black transition-all ${
+                                    showCode
+                                      ? 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                      : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                  } disabled:opacity-60`}
+                                >
+                                  {codeLoading ? '...' : showCode ? 'Ocultar' : 'Canjear'}
+                                </button>
+                              ) : null}
+                            </div>
+                            {showCode ? (
+                              <div className="border-t border-emerald-200 px-3 py-2.5 bg-white rounded-b-xl">
+                                <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700 mb-1">Código de canje</p>
+                                <p className="text-3xl font-black tracking-[0.25em] text-emerald-800">{codeEntry?.code}</p>
+                                <p className="text-[10px] text-emerald-600 font-semibold mt-1">Muestra este código al encargado del negocio</p>
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </>
             ) : (
               <p className="text-xs font-bold text-amber-700 mt-1">
                 No se pudo resolver el negocio del pase. Regresa a la app y abre el pase desde una tarjeta de negocio.
