@@ -417,10 +417,16 @@ export async function upsertGoogleLoyaltyObject(payload: Record<string, unknown>
     };
   }
 
+  const updatePayload = {
+    ...payload,
+  };
+  delete updatePayload.id;
+  delete updatePayload.classId;
+
   const updateResponse = await fetch(`${WALLET_OBJECT_URL}/${encodeURIComponent(objectId)}`, {
     method: 'PATCH',
     headers,
-    body: JSON.stringify(payload),
+    body: JSON.stringify(updatePayload),
   });
 
   return {

@@ -160,7 +160,13 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
     businessId: tenant.id,
   });
 
-  const dynamicStripUri = `${qrBaseUrl}/api/wallet/dynamic-strip?businessId=${encodeURIComponent(tenant.id)}&customerId=${encodeURIComponent(user.id)}`;
+  const dynamicStripParams = new URLSearchParams({
+    businessId: tenant.id,
+    customerId: user.id,
+    v: String(currentVisits),
+    goal: String(requiredVisits),
+  });
+  const dynamicStripUri = `${qrBaseUrl}/api/wallet/dynamic-strip?${dynamicStripParams.toString()}`;
 
   const objectId = getGoogleLoyaltyObjectId(issuerId, tenant.id, user.id);
 
@@ -192,7 +198,7 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
       alternateText: 'Visita puntoia.mx',
     },
     loyaltyPoints: {
-      label: 'Visitas',
+      label: `Sellos ${currentVisits}/${requiredVisits}`,
       balance: {
         int: membership?.currentVisits ?? 0,
       },
