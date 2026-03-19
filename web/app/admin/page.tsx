@@ -195,7 +195,12 @@ const handleLogin = async (e: React.FormEvent) => {
         loadReports(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''), targetMonth);
         loadTeam(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
         loadPushStatus(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
-        loadMilestones(data.tenant.id, data.user.id || '', String(data.tenantSessionToken || ''));
+        loadMilestones(
+          data.tenant.id,
+          data.user.id || '',
+          String(data.tenantSessionToken || ''),
+          data.tenant.requiredVisits ?? DEFAULT_REQUIRED_VISITS,
+        );
       }
     } else {
       notify('error', String(data.error || 'No se pudo iniciar sesión'));
@@ -283,25 +288,23 @@ const loadTeam = async (tid: string, currentTenantUserId = tenantUserId, current
 try { const res = await fetch(`/api/tenant/users?tenantId=${tid}&tenantUserId=${currentTenantUserId}&tenantSessionToken=${encodeURIComponent(currentTenantSessionToken)}`); const data = await res.json(); if(data.users) setTeam(data.users); } catch {}
 };
 
-  const loadMilestones = async (tid: string, currentTenantUserId = tenantUserId, currentTenantSessionToken = tenantSessionToken) => {
+  const loadMilestones = async (
+    tid: string,
+    currentTenantUserId = tenantUserId,
+    currentTenantSessionToken = tenantSessionToken,
+    requiredVisitsOverride?: number | string,
+  ) => {
   try {
     const res = await fetch(`/api/admin/milestones?tenantId=${tid}&tenantUserId=${currentTenantUserId}&tenantSessionToken=${encodeURIComponent(currentTenantSessionToken)}`);
     const data = await res.json();
     if (data.milestones) {
-      const req = sanitizeRequiredVisits(requiredVisits || DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS);
+      const req = sanitizeRequiredVisits(
+        requiredVisitsOverride ?? requiredVisits ?? DEFAULT_REQUIRED_VISITS,
+        DEFAULT_REQUIRED_VISITS,
+      );
       const { intermediateMilestones, finalMilestone } = normalizeMilestonesForEditor(data.milestones, req);
       if (finalMilestone?.emoji) setPrizeEmoji(finalMilestone.emoji);
-      setMilestones(
-        data.milestones
-          .filter((milestone: { visitTarget: number }) => milestone.visitTarget !== req)
-          .sort((left: { visitTarget: number }, right: { visitTarget: number }) => left.visitTarget - right.visitTarget)
-          .map((milestone: { id?: string; visitTarget: number; reward: string; emoji: string }, index: number) => ({
-            id: milestone.id,
-            visitTarget: intermediateMilestones[index]?.visitTarget ?? String(milestone.visitTarget),
-            reward: intermediateMilestones[index]?.reward ?? milestone.reward,
-            emoji: intermediateMilestones[index]?.emoji ?? milestone.emoji ?? '🎁',
-          })),
-      );
+      setMilestones(intermediateMilestones);
     }
   } catch {}
 };
@@ -343,17 +346,7 @@ const saveMilestones = async () => {
       const req = sanitizeRequiredVisits(requiredVisits || DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS);
       const { intermediateMilestones, finalMilestone } = normalizeMilestonesForEditor(data.milestones, req);
       if (finalMilestone?.emoji) setPrizeEmoji(finalMilestone.emoji);
-      setMilestones(
-        data.milestones
-          .filter((milestone: { visitTarget: number }) => milestone.visitTarget !== req)
-          .sort((left: { visitTarget: number }, right: { visitTarget: number }) => left.visitTarget - right.visitTarget)
-          .map((milestone: { id?: string; visitTarget: number; reward: string; emoji: string }, index: number) => ({
-            id: milestone.id,
-            visitTarget: intermediateMilestones[index]?.visitTarget ?? String(milestone.visitTarget),
-            reward: intermediateMilestones[index]?.reward ?? milestone.reward,
-            emoji: intermediateMilestones[index]?.emoji ?? milestone.emoji ?? '🎁',
-          })),
-      );
+      setMilestones(intermediateMilestones);
     }
     notify('success', 'Escalera de beneficios guardada correctamente.');
   } catch {
@@ -1312,7 +1305,7 @@ return (
                   {hasMilestone ? (
                     <span className="text-2xl md:text-3xl translate-y-px">{milestone.emoji || '🎁'}</span>
                   ) : isFinalNode ? (
-                    <span className="text-xl md:text-2xl translate-y-px">🏆</span>
+                    <span className="text-xl md:text-2xl translate-y-px">{prizeEmoji || '🏆'}</span>
                   ) : (
                     <div
                       className="rounded-full w-2/3 h-2/3 flex items-center justify-center text-sm md:text-base"
@@ -1342,7 +1335,7 @@ return (
                       }}
                       className="text-[10px] md:text-[11px] font-black leading-[1.05] uppercase rounded-full px-2 py-1"
                     >
-                      {hasMilestone ? milestone.reward : 'Premio Final'}
+                      {hasMilestone ? milestone.reward : (prizeName || 'Premio Final')}
                     </span>
                   </div>
                 )}
