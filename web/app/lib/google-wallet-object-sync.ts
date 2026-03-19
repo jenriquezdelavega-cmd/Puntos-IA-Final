@@ -10,7 +10,7 @@ import { prisma } from '@/app/lib/prisma';
 import { asTrimmedString } from '@/app/lib/request-validation';
 import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 
-const LOYALTY_OBJECT_SCHEMA_VERSION = 'v6';
+const LEGACY_SCHEMA_VERSIONS = ['v6', 'v5', 'v4', 'v3', 'v2', 'v1'] as const;
 
 function sanitizeIdPart(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9._]/g, '_').slice(0, 40);
@@ -38,8 +38,9 @@ function parseRgbToHex(input: string, fallback: string) {
 }
 
 function buildStampBubbles(currentVisits: number, requiredVisits: number) {
-  const safeRequired = Math.max(1, requiredVisits);
-  return Array.from({ length: safeRequired }, (_, index) => (index < currentVisits ? '●' : '○')).join(' ');
+  const total = Math.max(1, Math.min(20, Number(requiredVisits) || 10));
+  const done = Math.max(0, Math.min(total, Number(currentVisits) || 0));
+  return Array.from({ length: total }, (_, index) => (index < done ? '●' : '○')).join(' ');
 }
 
 function formatPeriodLabel(period: string) {
@@ -99,7 +100,13 @@ function resolveBusinessLogoUrl(params: {
 }
 
 export function getGoogleLoyaltyObjectId(issuerId: string, tenantId: string, userId: string) {
-  return `${issuerId}.${sanitizeIdPart(`${tenantId}_${userId}_${LOYALTY_OBJECT_SCHEMA_VERSION}`)}`;
+  return `${issuerId}.${sanitizeIdPart(`${tenantId}_${userId}`)}`;
+}
+
+function getLegacyGoogleLoyaltyObjectIds(issuerId: string, tenantId: string, userId: string) {
+  return LEGACY_SCHEMA_VERSIONS.map((version) => (
+    `${issuerId}.${sanitizeIdPart(`${tenantId}_${userId}_${version}`)}`
+  ));
 }
 
 export async function syncGoogleLoyaltyObjectForCustomer(params: {
@@ -162,7 +169,6 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
     classId,
     state: 'ACTIVE',
     accountName: user.name || 'Cliente Punto IA',
-    accountId: user.id,
     hexBackgroundColor: parseRgbToHex(walletStyle.backgroundColor, '#1F2937'),
     cardTitle: {
       defaultValue: {
@@ -209,16 +215,6 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
     ],
     textModulesData: [
       {
-        id: 'cliente',
-        header: 'Cliente',
-        body: user.name || 'Cliente Punto IA',
-      },
-      {
-        id: 'periodo',
-        header: 'Periodo',
-        body: formatPeriodLabel(tenant.rewardPeriod || membership?.periodType || 'OPEN'),
-      },
-      {
         id: 'meta-visitas',
         header: 'Meta',
         body: `${currentVisits}/${requiredVisits} visitas`,
@@ -243,6 +239,11 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
         header: '🎯 Sellos de visita',
         body: buildStampBubbles(currentVisits, requiredVisits),
       },
+      {
+        id: 'periodo',
+        header: 'Periodo',
+        body: formatPeriodLabel(tenant.rewardPeriod || membership?.periodType || 'OPEN'),
+      },
     ],
   };
 
@@ -259,10 +260,31 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
     console.warn('Google Wallet class sync warning (non-fatal):', classErr);
   }
 
-  const result = await upsertGoogleLoyaltyObject(loyaltyObject);
+  const legacyObjectIds = getLegacyGoogleLoyaltyObjectIds(issuerId, tenant.id, user.id);
+  const syncTargets = Array.from(new Set([objectId, ...legacyObjectIds]));
+
+  const primaryTargetId = syncTargets[0];
+  const result = await upsertGoogleLoyaltyObject({
+    ...loyaltyObject,
+    id: primaryTargetId,
+  });
   if (result.operation === 'failed') {
-    console.error('Google Wallet object upsert failed:', result.status, JSON.stringify(result.body));
+    console.error('Google Wallet object upsert failed:', primaryTargetId, result.status, JSON.stringify(result.body));
   }
+
+  const legacyTargets = syncTargets.slice(1);
+  await Promise.all(
+    legacyTargets.map(async (targetId) => {
+      const targetResult = await upsertGoogleLoyaltyObject({
+        ...loyaltyObject,
+        id: targetId,
+      });
+      if (targetResult.operation === 'failed') {
+        console.error('Google Wallet legacy upsert failed:', targetId, targetResult.status, JSON.stringify(targetResult.body));
+      }
+    }),
+  );
+
   return {
     ok: result.operation !== 'failed',
     objectId,

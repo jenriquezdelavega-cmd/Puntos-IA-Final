@@ -238,7 +238,7 @@ export function buildGoogleLoyaltyClassPayload(params?: {
             twoItems: {
               startItem: {
                 firstValue: {
-                  fields: [{ fieldPath: "object.textModulesData['cliente']" }],
+                  fields: [{ fieldPath: 'object.accountName' }],
                 },
               },
               endItem: {
@@ -267,6 +267,15 @@ export function buildGoogleLoyaltyClassPayload(params?: {
               item: {
                 firstValue: {
                   fields: [{ fieldPath: "object.textModulesData['premio']" }],
+                },
+              },
+            },
+          },
+          {
+            oneItem: {
+              item: {
+                firstValue: {
+                  fields: [{ fieldPath: "object.textModulesData['sellos']" }],
                 },
               },
             },
