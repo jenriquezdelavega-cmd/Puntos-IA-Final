@@ -128,6 +128,7 @@ export async function POST(request: Request) {
         tenantId: authorizedTenantId,
         origin: new URL(request.url).origin,
         reason: 'tenant-settings',
+        forceImmediate: true,
       });
     } catch (walletSyncError) {
       logApiError('/api/tenant/settings#wallet-sync', walletSyncError);

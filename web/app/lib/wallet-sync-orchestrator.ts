@@ -15,6 +15,9 @@ import {
   type WalletSyncReason,
 } from '@/app/lib/wallet-sync-config';
 
+const MAX_IMMEDIATE_APPLE_DEVICES = 250;
+const MAX_IMMEDIATE_GOOGLE_CUSTOMERS = 250;
+
 async function runWithConcurrency<T>(
   items: T[],
   concurrency: number,
@@ -32,6 +35,44 @@ async function runWithConcurrency<T>(
   }
 
   await Promise.all(Array.from({ length: Math.min(safeConcurrency, items.length || 1) }, () => consume()));
+}
+
+async function countAppleDevicesForTenant(params: {
+  prisma: PrismaClient;
+  tenantId: string;
+}) {
+  const passTypeIdentifier = asTrimmedString(process.env.APPLE_PASS_TYPE_ID);
+  if (!passTypeIdentifier) return 0;
+
+  try {
+    await ensureWalletRegistrationsTable(params.prisma);
+    const rows = await params.prisma.$queryRawUnsafe<Array<{ total: number }>>(
+      `SELECT COUNT(DISTINCT push_token)::int AS total
+       FROM apple_wallet_registrations
+       WHERE serial_number LIKE $1
+         AND pass_type_identifier = $2`,
+      `%-${params.tenantId}`,
+      passTypeIdentifier,
+    );
+    return Number(rows[0]?.total || 0);
+  } catch (error) {
+    logApiError('/api/wallet-sync#count-apple-devices', error);
+    return 0;
+  }
+}
+
+async function countGoogleCustomersForTenant(params: {
+  prisma: PrismaClient;
+  tenantId: string;
+}) {
+  try {
+    return await params.prisma.membership.count({
+      where: { tenantId: params.tenantId },
+    });
+  } catch (error) {
+    logApiError('/api/wallet-sync#count-google-customers', error);
+    return 0;
+  }
 }
 
 export async function refreshWalletsForTenant(params: {
@@ -178,14 +219,63 @@ export async function refreshWalletsForTenant(params: {
   }
 }
 
+async function shouldRunImmediateRefresh(params: {
+  prisma: PrismaClient;
+  tenantId: string;
+  reason: WalletSyncReason;
+}) {
+  const [appleDevices, googleCustomers] = await Promise.all([
+    countAppleDevicesForTenant(params),
+    countGoogleCustomersForTenant(params),
+  ]);
+
+  const immediate = appleDevices <= MAX_IMMEDIATE_APPLE_DEVICES && googleCustomers <= MAX_IMMEDIATE_GOOGLE_CUSTOMERS;
+
+  await appendWalletSyncAuditLog({
+    prisma: params.prisma,
+    tenantId: params.tenantId,
+    reason: params.reason,
+    channel: 'apple',
+    status: 'skipped',
+    message: immediate
+      ? `refresh inmediato forzado (${appleDevices} dispositivos Apple, ${googleCustomers} clientes Google)`
+      : `refresh forzado degradado a cola por volumen (${appleDevices} dispositivos Apple, ${googleCustomers} clientes Google)`,
+    metadata: {
+      immediate,
+      appleDevices,
+      googleCustomers,
+      appleThreshold: MAX_IMMEDIATE_APPLE_DEVICES,
+      googleThreshold: MAX_IMMEDIATE_GOOGLE_CUSTOMERS,
+    },
+  });
+
+  return { immediate, appleDevices, googleCustomers };
+}
+
 export async function requestWalletRefreshForTenant(params: {
   prisma: PrismaClient;
   tenantId: string;
   origin: string;
   reason: WalletSyncReason;
+  forceImmediate?: boolean;
 }) {
   const config = await readWalletSyncRuntimeConfig(params.prisma);
-  if (config.executionMode === 'immediate') {
+  let blockedByVolumeGuard = false;
+
+  if (params.forceImmediate) {
+    const decision = await shouldRunImmediateRefresh({
+      prisma: params.prisma,
+      tenantId: params.tenantId,
+      reason: params.reason,
+    });
+    if (decision.immediate) {
+      await refreshWalletsForTenant(params);
+      return { mode: 'immediate' as const };
+    }
+    blockedByVolumeGuard = true;
+  }
+
+  if (!blockedByVolumeGuard && config.executionMode === 'immediate') {
     await refreshWalletsForTenant(params);
     return { mode: 'immediate' as const };
   }
@@ -204,7 +294,9 @@ export async function requestWalletRefreshForTenant(params: {
     reason: params.reason,
     channel: 'apple',
     status: 'skipped',
-    message: `Wallet sync encolado (job ${jobId}) por modo queued`,
+    message: blockedByVolumeGuard
+      ? `Wallet sync encolado (job ${jobId}) por guardia de volumen`
+      : `Wallet sync encolado (job ${jobId}) por modo queued`,
   });
 
   return { mode: 'queued' as const, jobId };
