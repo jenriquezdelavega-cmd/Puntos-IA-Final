@@ -217,7 +217,7 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
       {
         id: 'meta-visitas',
         header: 'Visitas',
-        body: `${currentVisits}/${requiredVisits} visitas`,
+        body: `${currentVisits}/${requiredVisits}`,
       },
       {
         id: 'premio',
@@ -228,11 +228,6 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
         id: 'faltan',
         header: remainingVisits > 0 ? 'Faltan' : '¡Listo!',
         body: remainingVisits > 0 ? `${remainingVisits} visita${remainingVisits === 1 ? '' : 's'}` : 'Canjea tu premio',
-      },
-      {
-        id: 'coalicion',
-        header: 'Punto IA',
-        body: 'Coalición de PyMEs Hecho en México 🇲🇽',
       },
       {
         id: 'periodo',
