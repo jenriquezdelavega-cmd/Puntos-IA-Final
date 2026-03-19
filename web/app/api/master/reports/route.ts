@@ -84,7 +84,7 @@ export async function POST(req: Request) {
       const redemptions = await prisma.redemption.findMany({
         where: tenantId ? { tenantId } : undefined,
         include: {
-          tenant: { select: { id: true, name: true, slug: true } },
+          tenant: { select: { id: true, name: true, slug: true, prize: true } },
           user: { select: { id: true, name: true, phone: true, email: true } },
           loyaltyMilestone: { select: { reward: true, emoji: true } },
           coalitionRewardUnlock: { include: { reward: true } },
