@@ -417,11 +417,43 @@ export async function upsertGoogleLoyaltyObject(payload: Record<string, unknown>
     };
   }
 
+  const updatePayload = {
+    state: payload.state,
+    accountName: payload.accountName,
+    barcode: payload.barcode,
+    loyaltyPoints: payload.loyaltyPoints,
+    textModulesData: payload.textModulesData,
+    imageModulesData: payload.imageModulesData,
+    hexBackgroundColor: payload.hexBackgroundColor,
+    cardTitle: payload.cardTitle,
+    logo: payload.logo,
+  };
+
   const updateResponse = await fetch(`${WALLET_OBJECT_URL}/${encodeURIComponent(objectId)}`, {
     method: 'PATCH',
     headers,
-    body: JSON.stringify(payload),
+    body: JSON.stringify(updatePayload),
   });
+
+  if (!updateResponse.ok) {
+    const replacePayload = {
+      ...payload,
+    };
+    delete replacePayload.id;
+
+    const replaceResponse = await fetch(`${WALLET_OBJECT_URL}/${encodeURIComponent(objectId)}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(replacePayload),
+    });
+
+    return {
+      operation: replaceResponse.ok ? ('updated' as const) : ('failed' as const),
+      status: replaceResponse.status,
+      body: await parseGoogleWalletApiResponse(replaceResponse),
+      objectId,
+    };
+  }
 
   return {
     operation: updateResponse.ok ? ('updated' as const) : ('failed' as const),
