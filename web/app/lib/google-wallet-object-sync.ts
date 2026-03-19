@@ -216,7 +216,7 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
     textModulesData: [
       {
         id: 'meta-visitas',
-        header: 'Meta',
+        header: 'Visitas',
         body: `${currentVisits}/${requiredVisits} visitas`,
       },
       {

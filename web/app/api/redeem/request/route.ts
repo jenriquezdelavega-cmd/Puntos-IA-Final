@@ -272,19 +272,6 @@ export async function POST(request: Request) {
           objectId: googleSync.objectId,
           status: messageResult.status,
         });
-      } else if (googleSync.objectId) {
-        const messageResult = await addGoogleLoyaltyObjectMessage({
-          objectId: googleSync.objectId,
-          header: '🎁 Canje solicitado',
-          body: 'Tus sellos se reiniciaron. ¡Empieza tu siguiente recompensa!',
-          messageId: `redeem_${Date.now()}`,
-        });
-        logApiEvent('/api/redeem/request#google-sync', messageResult.ok ? 'message_sent' : 'message_failed', {
-          tenantId: normalizedTenantId,
-          userId: normalizedUserId,
-          objectId: googleSync.objectId,
-          status: messageResult.status,
-        });
       }
     } catch (googleError) {
       logApiError('/api/redeem/request#google-sync', googleError);
