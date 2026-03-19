@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   AlertCircle,
@@ -39,6 +39,7 @@ type MilestoneData = {
   visitTarget: number;
   reward: string;
   emoji: string;
+  redeemed?: boolean;
 };
 
 type Membership = {
@@ -51,6 +52,9 @@ type Membership = {
   logoData?: string;
   visits?: number;
   points?: number;
+  rewardCodeStatus?: 'READY_TO_GENERATE' | 'CODE_PENDING' | 'CODE_USED';
+  rewardCodeLabel?: string;
+  pendingRewardCode?: string | null;
   milestones?: MilestoneData[];
 };
 
@@ -213,10 +217,12 @@ export default function ClientesAppPage() {
   const [loadingRewards, setLoadingRewards] = useState(false);
   const [loadingChallenges, setLoadingChallenges] = useState(false);
   const [loadingTenants, setLoadingTenants] = useState(false);
+  const [loadingMemberships, setLoadingMemberships] = useState(false);
   const [syncingData, setSyncingData] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [dataWarnings, setDataWarnings] = useState<{
     history?: string;
+    memberships?: string;
     rewards?: string;
     challenges?: string;
     tenants?: string;
@@ -224,6 +230,7 @@ export default function ClientesAppPage() {
 
   const [redeemCode, setRedeemCode] = useState<{ code: string; business: string; reward?: string } | null>(null);
   const [milestoneCodeLoading, setMilestoneCodeLoading] = useState<Record<string, boolean>>({});
+  const membershipSyncInFlight = useRef<Promise<void> | null>(null);
 
   const activeMemberships = useMemo(() => user?.memberships || [], [user?.memberships]);
   const pointsTotal = useMemo(
@@ -289,6 +296,58 @@ export default function ClientesAppPage() {
       window.location.assign('/ingresar?tipo=cliente&modo=login');
     }
   }, []);
+
+  const syncMembershipSnapshot = useCallback(async () => {
+    if (!user?.id || !user?.sessionToken) return;
+    if (membershipSyncInFlight.current) {
+      await membershipSyncInFlight.current;
+      return;
+    }
+
+    membershipSyncInFlight.current = (async () => {
+      setLoadingMemberships(true);
+      try {
+        const response = await fetch('/api/user/memberships', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            sessionToken: user.sessionToken,
+          }),
+        });
+        const body = (await response.json()) as {
+          memberships?: Membership[];
+          message?: string;
+          error?: string;
+          code?: string;
+          warning?: string;
+        };
+        if (!response.ok) {
+          if (isUnauthorizedResponse(response, body)) {
+            handleSessionExpired();
+            return;
+          }
+          setDataWarnings((prev) => ({ ...prev, memberships: body?.message || body?.error || 'No se pudo actualizar estado de membresías' }));
+          return;
+        }
+        setUser((prev) => {
+          if (!prev) return prev;
+          const next = { ...prev, memberships: body.memberships || [] };
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('punto_user', JSON.stringify(next));
+          }
+          return next;
+        });
+        if (body.warning) {
+          setDataWarnings((prev) => ({ ...prev, memberships: body.warning }));
+        }
+      } finally {
+        setLoadingMemberships(false);
+        membershipSyncInFlight.current = null;
+      }
+    })();
+    await membershipSyncInFlight.current;
+  }, [handleSessionExpired, user?.id, user?.sessionToken]);
 
   const loadClientData = useCallback(async () => {
     if (!user?.id || !user?.sessionToken) return;
@@ -394,12 +453,12 @@ export default function ClientesAppPage() {
     };
 
     try {
-      await Promise.all([loadHistory(), loadRewards(), loadChallenges(), loadTenants()]);
+      await Promise.all([loadHistory(), syncMembershipSnapshot(), loadRewards(), loadChallenges(), loadTenants()]);
       setLastSyncAt(new Date());
     } finally {
       setSyncingData(false);
     }
-  }, [handleSessionExpired, user?.id, user?.sessionToken]);
+  }, [syncMembershipSnapshot, handleSessionExpired, user?.id, user?.sessionToken]);
 
   useEffect(() => {
     void loadClientData();
@@ -437,6 +496,7 @@ export default function ClientesAppPage() {
         ? `Ya tenías un código pendiente para ${membership.name || 'el negocio'}.`
         : `Código de canje generado para ${membership.name || 'el negocio'}.`,
     );
+    void syncMembershipSnapshot();
   };
 
   const handleMilestoneRedeem = async (membership: Membership, milestone: MilestoneData) => {
@@ -478,6 +538,7 @@ export default function ClientesAppPage() {
           ? `Ya tenías un código pendiente para ${milestone.reward}.`
           : `Código intermedio generado para ${milestone.reward}.`,
       );
+      void syncMembershipSnapshot();
     } finally {
       setMilestoneCodeLoading((prev) => ({ ...prev, [key]: false }));
     }
@@ -687,6 +748,11 @@ export default function ClientesAppPage() {
 
           {tab === 'puntos' ? (
             <section className="grid gap-5">
+              {loadingMemberships ? (
+                <article className="rounded-3xl border border-[#e9daf9] bg-white p-4">
+                  <p className="text-sm font-semibold text-[#5c4a82]">Actualizando estado de canjes…</p>
+                </article>
+              ) : null}
               {activeMemberships.length === 0 ? (
                 <article className="rounded-3xl border border-[#e9daf9] bg-white p-6">
                   <h3 className="text-xl font-black text-[#25174a]">Aún no tienes membresías activas</h3>
@@ -702,6 +768,8 @@ export default function ClientesAppPage() {
                   const currentPoints = Number(membership.points || 0);
                   const progress = Math.min(100, Math.round((currentVisits / requiredVisits) * 100));
                   const canRedeem = currentVisits >= requiredVisits;
+                  const hasPendingCode = membership.rewardCodeStatus === 'CODE_PENDING';
+                  const redeemDisabled = !canRedeem || hasPendingCode;
                   return (
                     <article key={membership.tenantId} className="rounded-3xl border border-[#e9daf9] bg-white p-5 shadow-[0_14px_34px_rgba(53,30,95,0.09)] md:p-6">
                       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -736,9 +804,16 @@ export default function ClientesAppPage() {
                           <p className="mt-2 text-xs font-semibold text-[#7b63a8]">
                             Te faltan {requiredVisits - currentVisits} visita(s) para canjear.
                           </p>
+                        ) : hasPendingCode ? (
+                          <p className="mt-2 text-xs font-semibold text-[#a34f27]">
+                            {membership.rewardCodeLabel || 'Ya tienes un código pendiente. Úsalo antes de generar otro.'}
+                          </p>
                         ) : (
                           <p className="mt-2 text-xs font-semibold text-[#2c7a4f]">Tu recompensa está lista. Puedes generar tu código de canje.</p>
                         )}
+                        {membership.rewardCodeStatus === 'CODE_USED' ? (
+                          <p className="mt-1 text-[11px] font-semibold text-[#5f4a89]">{membership.rewardCodeLabel || 'Tu último código ya fue canjeado.'}</p>
+                        ) : null}
                       </div>
 
                       {membership.milestones && membership.milestones.length > 0 ? (
@@ -749,23 +824,28 @@ export default function ClientesAppPage() {
                               const unlocked = currentVisits >= m.visitTarget;
                               const key = `${membership.tenantId}:${m.id}`;
                               const requestingMilestoneCode = Boolean(milestoneCodeLoading[key]);
+                              const redeemedMilestone = Boolean(m.redeemed);
                               return (
                                 <div
                                   key={m.id}
                                   className={`flex items-center gap-2.5 rounded-xl px-3 py-2 transition-all ${
-                                    unlocked
+                                    redeemedMilestone
+                                      ? 'bg-gray-50 border border-gray-100 opacity-70'
+                                      : unlocked
                                       ? 'bg-[#ecfff2] border border-[#c8f3d8]'
                                       : 'bg-white border border-[#efe1fd] opacity-60'
                                   }`}
                                 >
-                                  <span className="text-base">{unlocked ? '✅' : m.emoji}</span>
+                                  <span className="text-base">{redeemedMilestone ? '🏁' : unlocked ? '✅' : m.emoji}</span>
                                   <div className="flex-1 min-w-0">
-                                    <p className={`font-bold text-xs truncate ${unlocked ? 'text-[#11643a]' : 'text-[#5c4a82]'}`}>{m.reward}</p>
-                                    <p className={`text-[10px] font-semibold ${unlocked ? 'text-[#2c7a4f]' : 'text-[#9b88be]'}`}>
-                                      Visita {m.visitTarget}{unlocked ? ' · ¡Desbloqueado!' : ` · Faltan ${m.visitTarget - currentVisits} visita(s)`}
+                                    <p className={`font-bold text-xs truncate ${redeemedMilestone ? 'text-gray-400 line-through' : unlocked ? 'text-[#11643a]' : 'text-[#5c4a82]'}`}>{m.reward}</p>
+                                    <p className={`text-[10px] font-semibold ${redeemedMilestone ? 'text-gray-400' : unlocked ? 'text-[#2c7a4f]' : 'text-[#9b88be]'}`}>
+                                      {redeemedMilestone
+                                        ? 'Código ya canjeado'
+                                        : `Visita ${m.visitTarget}${unlocked ? ' · ¡Desbloqueado!' : ` · Faltan ${m.visitTarget - currentVisits} visita(s)`}`}
                                     </p>
                                   </div>
-                                  {unlocked ? (
+                                  {unlocked && !redeemedMilestone ? (
                                     <button
                                       type="button"
                                       onClick={() => handleMilestoneRedeem(membership, m)}
@@ -792,11 +872,24 @@ export default function ClientesAppPage() {
                         <button
                           type="button"
                           onClick={() => handleRedeem(membership)}
-                          disabled={!canRedeem}
+                          disabled={redeemDisabled}
                           className={`${buttonStyles('primary')} disabled:cursor-not-allowed disabled:opacity-60`}
                         >
-                          Canjear recompensa
+                          {hasPendingCode ? 'Código pendiente' : 'Canjear recompensa'}
                         </button>
+                        {hasPendingCode && membership.pendingRewardCode ? (
+                          <button
+                            type="button"
+                            onClick={() => setRedeemCode({
+                              code: membership.pendingRewardCode || '--------',
+                              business: membership.name || 'Negocio',
+                              reward: membership.prize || 'Recompensa principal',
+                            })}
+                            className={buttonStyles('tertiary')}
+                          >
+                            Ver código actual
+                          </button>
+                        ) : null}
                         {membership.instagram ? (
                           <a
                             href={membership.instagram.startsWith('http') ? membership.instagram : `https://instagram.com/${membership.instagram.replace('@', '')}`}
