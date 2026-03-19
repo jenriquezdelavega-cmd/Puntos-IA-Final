@@ -135,14 +135,7 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
     prisma.user.findUnique({ where: { id: params.userId }, select: { id: true, name: true } }),
     prisma.tenant.findUnique({
       where: { id: params.tenantId },
-      select: {
-        id: true,
-        name: true,
-        requiredVisits: true,
-        rewardPeriod: true,
-        prize: true,
-        logoData: true,
-        updatedAt: true,
+      include: {
         loyaltyMilestones: {
           orderBy: { visitTarget: 'asc' },
           select: {
@@ -179,7 +172,7 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
   const requiredVisits = tenant.requiredVisits ?? 10;
   const remainingVisits = Math.max(0, requiredVisits - currentVisits);
   const walletVersionSeed = JSON.stringify({
-    tenantUpdatedAt: tenant.updatedAt?.toISOString?.() || '',
+    tenantCreatedAt: tenant.createdAt?.toISOString?.() || '',
     currentVisits,
     requiredVisits,
     rewardPeriod: tenant.rewardPeriod || membership?.periodType || 'OPEN',
