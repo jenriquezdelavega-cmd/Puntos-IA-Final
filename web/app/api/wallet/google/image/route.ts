@@ -2,6 +2,7 @@ import { apiError, getRequestId } from '@/app/lib/api-response';
 import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 import { prisma } from '@/app/lib/prisma';
 import { asTrimmedString } from '@/app/lib/request-validation';
+import { isWalletAssetVersioningEnabled } from '@/app/lib/wallet-asset-versioning';
 
 export const runtime = 'nodejs';
 
@@ -46,6 +47,8 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const businessId = asTrimmedString(url.searchParams.get('businessId'));
     const kind = asTrimmedString(url.searchParams.get('kind'));
+    const version = asTrimmedString(url.searchParams.get('v'));
+    const versioningEnabled = isWalletAssetVersioningEnabled();
 
     if (!businessId || (kind !== 'logo' && kind !== 'strip')) {
       return apiError({
@@ -87,7 +90,9 @@ export async function GET(req: Request) {
       status: 200,
       headers: {
         'Content-Type': decoded.mimeType,
-        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+        'Cache-Control': versioningEnabled && version
+          ? 'public, max-age=31536000, immutable'
+          : 'no-store, max-age=0',
       },
     });
   } catch (error: unknown) {

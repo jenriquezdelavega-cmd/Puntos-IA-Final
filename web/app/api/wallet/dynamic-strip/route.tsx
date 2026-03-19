@@ -2,6 +2,7 @@ import { prisma } from '@/app/lib/prisma';
 import { asTrimmedString } from '@/app/lib/request-validation';
 import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
 import { generateDynamicStripResponse } from '@/app/lib/dynamic-strip';
+import { isWalletAssetVersioningEnabled } from '@/app/lib/wallet-asset-versioning';
 
 export const runtime = 'nodejs';
 
@@ -10,6 +11,8 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const customerId = asTrimmedString(searchParams.get('customerId'));
     const businessId = asTrimmedString(searchParams.get('businessId'));
+    const version = asTrimmedString(searchParams.get('rev'));
+    const versioningEnabled = isWalletAssetVersioningEnabled();
 
     if (!businessId) {
       return new Response('businessId requerido', { status: 400 });
@@ -42,7 +45,7 @@ export async function GET(req: Request) {
 
     const prizeEmoji = asTrimmedString(searchParams.get('prizeEmoji')) || '🏆';
 
-    return await generateDynamicStripResponse({
+    const response = await generateDynamicStripResponse({
       businessName: tenant.name || 'Punto IA',
       currentVisits,
       requiredVisits: tenant.requiredVisits ?? 10,
@@ -53,6 +56,13 @@ export async function GET(req: Request) {
       prizeEmoji,
       milestones: tenant.loyaltyMilestones || [],
     });
+
+    response.headers.set(
+      'Cache-Control',
+      versioningEnabled && version ? 'public, max-age=31536000, immutable' : 'no-store, max-age=0',
+    );
+
+    return response;
   } catch (e: unknown) {
     console.error('Error generating dynamic strip:', e);
     return new Response(`Failed to generate the image`, {

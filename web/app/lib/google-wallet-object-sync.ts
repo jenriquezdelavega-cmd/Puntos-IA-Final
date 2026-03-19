@@ -1,4 +1,5 @@
 import { generateCustomerToken } from '@/app/lib/customer-token';
+import { createHash } from 'node:crypto';
 import {
   ensureGoogleLoyaltyClassSynced,
   getGoogleWalletClassIdForTenant,
@@ -9,6 +10,7 @@ import {
 import { prisma } from '@/app/lib/prisma';
 import { asTrimmedString } from '@/app/lib/request-validation';
 import { defaultTenantWalletStyle, getTenantWalletStyle } from '@/app/lib/tenant-wallet-style';
+import { isWalletAssetVersioningEnabled } from '@/app/lib/wallet-asset-versioning';
 
 const LEGACY_SCHEMA_VERSIONS = ['v6', 'v5', 'v4', 'v3', 'v2', 'v1'] as const;
 
@@ -57,14 +59,27 @@ function asPublicHttpUrl(value: string | null | undefined) {
   }
 }
 
+function withCacheKey(url: string, cacheKey?: string) {
+  if (!cacheKey) return url;
+
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set('v', cacheKey);
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 function resolveGoogleWalletImageUrl(params: {
   imageValue: string | null | undefined;
   origin: string;
   businessId: string;
   kind: 'logo' | 'strip';
+  cacheKey?: string;
 }) {
   const directUrl = asPublicHttpUrl(params.imageValue);
-  if (directUrl) return directUrl;
+  if (directUrl) return withCacheKey(directUrl, params.cacheKey);
 
   const normalized = asTrimmedString(params.imageValue);
   if (!normalized) return '';
@@ -72,6 +87,9 @@ function resolveGoogleWalletImageUrl(params: {
   const imageUrl = new URL('/api/wallet/google/image', params.origin);
   imageUrl.searchParams.set('businessId', params.businessId);
   imageUrl.searchParams.set('kind', params.kind);
+  if (params.cacheKey) {
+    imageUrl.searchParams.set('v', params.cacheKey);
+  }
   return imageUrl.toString();
 }
 
@@ -79,12 +97,14 @@ function resolveBusinessLogoUrl(params: {
   logoValue: string | null | undefined;
   origin: string;
   businessId: string;
+  cacheKey?: string;
 }) {
   const logoFromBusiness = resolveGoogleWalletImageUrl({
     imageValue: params.logoValue,
     origin: params.origin,
     businessId: params.businessId,
     kind: 'logo',
+    cacheKey: params.cacheKey,
   });
 
   if (logoFromBusiness) return logoFromBusiness;
@@ -122,6 +142,16 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
         rewardPeriod: true,
         prize: true,
         logoData: true,
+        updatedAt: true,
+        loyaltyMilestones: {
+          orderBy: { visitTarget: 'asc' },
+          select: {
+            visitTarget: true,
+            reward: true,
+            emoji: true,
+            updatedAt: true,
+          },
+        },
       },
     }),
     prisma.membership.findUnique({
@@ -148,10 +178,28 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
   const currentVisits = membership?.currentVisits ?? 0;
   const requiredVisits = tenant.requiredVisits ?? 10;
   const remainingVisits = Math.max(0, requiredVisits - currentVisits);
+  const walletVersionSeed = JSON.stringify({
+    tenantUpdatedAt: tenant.updatedAt?.toISOString?.() || '',
+    currentVisits,
+    requiredVisits,
+    rewardPeriod: tenant.rewardPeriod || membership?.periodType || 'OPEN',
+    prize: tenant.prize || '',
+    walletStyle,
+    milestones: tenant.loyaltyMilestones.map((milestone) => ({
+      visitTarget: milestone.visitTarget,
+      reward: milestone.reward,
+      emoji: milestone.emoji,
+      updatedAt: milestone.updatedAt?.toISOString?.() || '',
+    })),
+  });
+  const walletVersion = createHash('sha1').update(walletVersionSeed).digest('hex').slice(0, 12);
+  const versioningEnabled = isWalletAssetVersioningEnabled();
+  const walletCacheKey = versioningEnabled ? walletVersion : undefined;
   const logoUri = resolveBusinessLogoUrl({
     logoValue: tenant.logoData,
     origin: qrBaseUrl,
     businessId: tenant.id,
+    cacheKey: walletCacheKey,
   });
 
   const dynamicStripParams = new URLSearchParams({
@@ -160,6 +208,9 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
     v: String(currentVisits),
     goal: String(requiredVisits),
   });
+  if (walletCacheKey) {
+    dynamicStripParams.set('rev', walletCacheKey);
+  }
   const dynamicStripUri = `${qrBaseUrl}/api/wallet/dynamic-strip?${dynamicStripParams.toString()}`;
 
   const objectId = getGoogleLoyaltyObjectId(issuerId, tenant.id, user.id);
