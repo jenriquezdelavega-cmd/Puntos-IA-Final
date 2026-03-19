@@ -230,6 +230,11 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
         body: remainingVisits > 0 ? `${remainingVisits} visita${remainingVisits === 1 ? '' : 's'}` : 'Canjea tu premio',
       },
       {
+        id: 'coalicion',
+        header: 'Punto IA',
+        body: 'Coalición de PyMEs Hecho en México 🇲🇽',
+      },
+      {
         id: 'periodo',
         header: 'Periodo',
         body: formatPeriodLabel(tenant.rewardPeriod || membership?.periodType || 'OPEN'),
