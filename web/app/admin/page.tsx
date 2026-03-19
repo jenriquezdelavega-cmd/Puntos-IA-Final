@@ -900,24 +900,24 @@ return (
         <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🎁</span>
         <div>
           <h2 className="text-lg font-black">Validar Premio</h2>
-          <p className="text-white/80 text-xs font-semibold">Ingresa el código de 4 dígitos que muestra el cliente</p>
+          <p className="text-white/80 text-xs font-semibold">Ingresa el código alfanumérico de 8 caracteres que muestra el cliente</p>
         </div>
       </div>
     </div>
     <div className="p-6">
       <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 mb-4">
         <input
-          className="w-full p-4 text-center text-4xl font-mono font-black tracking-[0.5em] uppercase bg-white border-2 border-gray-200 rounded-2xl outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-100 transition-all"
-          placeholder="0000"
-          maxLength={4}
+          className="w-full p-4 text-center text-3xl font-mono font-black tracking-[0.35em] uppercase bg-white border-2 border-gray-200 rounded-2xl outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-100 transition-all"
+          placeholder="A1B2C3D4"
+          maxLength={8}
           value={redeemCode}
-          onChange={e => setRedeemCode(e.target.value.replace(/\D/g, ''))}
-          inputMode="numeric"
+          onChange={e => setRedeemCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
+          inputMode="text"
         />
       </div>
       <button
         onClick={validateRedeem}
-        disabled={isValidatingRedeem || !redeemCode || redeemCode.length < 4}
+        disabled={isValidatingRedeem || redeemCode.length !== 8}
         className="w-full bg-gradient-to-r from-orange-500 to-pink-600 text-white font-black py-4 rounded-2xl shadow-md disabled:opacity-40 disabled:shadow-none transition-all text-sm"
       >
         {isValidatingRedeem ? 'Validando...' : 'Validar y Entregar Premio'}
@@ -932,7 +932,7 @@ return (
 
   <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
     <p className="text-xs text-gray-500 font-semibold text-center">
-      💡 El cliente genera su código de 4 dígitos desde la app cuando completa sus visitas. Pídele el código y valídalo aquí antes de entregar el premio.
+      💡 El cliente genera un código alfanumérico seguro de 8 caracteres desde la app. Pídele el código y valídalo aquí antes de entregar el premio.
     </p>
   </div>
 </div>

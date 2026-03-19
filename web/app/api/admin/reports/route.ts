@@ -281,6 +281,20 @@ export async function POST(request: Request) {
 
     // Métricas de Canjes (Redemptions)
     let redemptionsList: { name: string; count: number }[] = [];
+    let pendingMonth = 0;
+    let validatedMonth = 0;
+    let milestoneValidatedMonth = 0;
+    let coalitionValidatedMonth = 0;
+    let finalValidatedMonth = 0;
+    let redemptionActivity: Array<{
+      id: string;
+      code: string;
+      customer: string;
+      itemName: string;
+      channel: 'FINAL' | 'MILESTONE' | 'COALITION';
+      status: 'PENDING' | 'VALIDATED';
+      requestedAt: string;
+    }> = [];
     const redemptionsByItem = new Map<string, number>();
     
     try {
@@ -289,22 +303,48 @@ export async function POST(request: Request) {
           tenantId: access.tenantId,
           createdAt: { gte: monthStart, lt: nextMonthStart }
         },
-        include: { 
+        include: {
+          user: { select: { name: true, phone: true } },
+          loyaltyMilestone: { select: { reward: true, emoji: true, visitTarget: true } },
           coalitionRewardUnlock: {
             include: { reward: true }
           }
         },
         orderBy: { createdAt: 'desc' }
       });
-      
+
       redemptions.forEach(r => {
-        const itemName = r.coalitionRewardUnlock?.reward?.title || `Canje ${r.code}`;
+        const itemName = r.loyaltyMilestone
+          ? `${r.loyaltyMilestone.emoji} ${r.loyaltyMilestone.reward}`
+          : (r.coalitionRewardUnlock?.reward?.title || `Canje ${r.code}`);
+        const channel = r.coalitionRewardUnlockId ? 'COALITION' : (r.loyaltyMilestoneId ? 'MILESTONE' : 'FINAL');
+
+        if (!r.isUsed) pendingMonth += 1;
+        if (r.isUsed) {
+          validatedMonth += 1;
+          if (channel === 'COALITION') coalitionValidatedMonth += 1;
+          if (channel === 'MILESTONE') milestoneValidatedMonth += 1;
+          if (channel === 'FINAL') finalValidatedMonth += 1;
+        }
+
         redemptionsByItem.set(itemName, (redemptionsByItem.get(itemName) || 0) + 1);
+
+        redemptionActivity.push({
+          id: r.id,
+          code: r.code,
+          customer: r.user?.name || r.user?.phone || 'Cliente',
+          itemName,
+          channel,
+          status: r.isUsed ? 'VALIDATED' : 'PENDING',
+          requestedAt: r.createdAt.toISOString(),
+        });
       });
-      
+
       redemptionsList = Array.from(redemptionsByItem.entries())
         .map(([name, count]) => ({ name, count }))
         .sort((a, b) => b.count - a.count);
+
+      redemptionActivity = redemptionActivity.slice(0, 25);
     } catch (e) {
       console.error('Error fetching redemptions:', e);
     }
@@ -354,7 +394,15 @@ export async function POST(request: Request) {
         purchaseDataTracked: visits.some((visit) => visit.purchaseTracked),
         redemptions: {
           totalMonth: monthlyRedemptionsTotal,
+          pendingMonth,
+          validatedMonth,
+          validatedByType: {
+            final: finalValidatedMonth,
+            milestone: milestoneValidatedMonth,
+            coalition: coalitionValidatedMonth,
+          },
           items: redemptionsList,
+          activity: redemptionActivity,
         }
       },
     });

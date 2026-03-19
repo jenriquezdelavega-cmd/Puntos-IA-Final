@@ -4,6 +4,8 @@ import { prisma } from '@/app/lib/prisma';
 import { verifyUserSessionToken } from '@/app/lib/user-session-token';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
+import { generateUniqueRedemptionCode } from '@/app/lib/redemption-code';
+import { sendRedemptionRequestedEmail } from '@/app/lib/email';
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
@@ -120,8 +122,8 @@ export async function POST(request: Request) {
       });
     }
 
-    // Generate 4-digit code and create redemption linked to this milestone
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    // Generate robust 8-char code and create redemption linked to this milestone
+    const code = await generateUniqueRedemptionCode(tenantId);
 
     await prisma.redemption.create({
       data: {
@@ -140,6 +142,30 @@ export async function POST(request: Request) {
       visitTarget: milestone.visitTarget,
       code,
     });
+
+    try {
+      const [tenant, customer] = await Promise.all([
+        prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }),
+        prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true } }),
+      ]);
+      if (tenant?.name && customer?.email) {
+        const emailResult = await sendRedemptionRequestedEmail({
+          to: customer.email,
+          name: customer.name,
+          businessName: tenant.name,
+          code,
+        });
+        if (!emailResult.ok) {
+          logApiEvent('/api/redeem/milestone-request', 'milestone_redemption_email_failed', {
+            userId,
+            tenantId,
+            reason: emailResult.error || 'unknown',
+          });
+        }
+      }
+    } catch (emailError: unknown) {
+      logApiError('/api/redeem/milestone-request#email', emailError);
+    }
 
     return apiSuccess({
       requestId,

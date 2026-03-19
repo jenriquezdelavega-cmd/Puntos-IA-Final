@@ -92,7 +92,7 @@ export async function POST(req: Request) {
                 requiredVisits: true,
                 loyaltyMilestones: {
                   orderBy: { visitTarget: 'asc' },
-                  select: { visitTarget: true, reward: true, emoji: true },
+                  select: { id: true, visitTarget: true, reward: true, emoji: true },
                 },
               },
             },
