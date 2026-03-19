@@ -298,7 +298,10 @@ try { const res = await fetch(`/api/tenant/users?tenantId=${tid}&tenantUserId=${
     const res = await fetch(`/api/admin/milestones?tenantId=${tid}&tenantUserId=${currentTenantUserId}&tenantSessionToken=${encodeURIComponent(currentTenantSessionToken)}`);
     const data = await res.json();
     if (data.milestones) {
-      const req = sanitizeRequiredVisits(requiredVisitsOverride ?? requiredVisits || DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS);
+      const req = sanitizeRequiredVisits(
+        requiredVisitsOverride ?? requiredVisits ?? DEFAULT_REQUIRED_VISITS,
+        DEFAULT_REQUIRED_VISITS,
+      );
       const { intermediateMilestones, finalMilestone } = normalizeMilestonesForEditor(data.milestones, req);
       if (finalMilestone?.emoji) setPrizeEmoji(finalMilestone.emoji);
       setMilestones(intermediateMilestones);
