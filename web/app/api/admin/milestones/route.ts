@@ -115,6 +115,7 @@ export async function POST(request: Request) {
         tenantId: access.tenantId,
         origin: new URL(request.url).origin,
         reason: 'milestones',
+        forceImmediate: true,
       });
 
       logApiEvent('/api/admin/milestones#wallet-sync', 'refresh_requested', {
