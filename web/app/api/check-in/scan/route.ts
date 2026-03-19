@@ -305,6 +305,23 @@ export async function POST(request: Request) {
           tenantId: validCode.tenantId,
           userId,
           reason: googleSync.reason,
+          operation: googleSync.operation,
+          status: googleSync.status,
+        });
+      } else if (googleSync.objectId) {
+        const progress = `${updatedMembership.currentVisits}/${validCode.tenant.requiredVisits ?? 10}`;
+        const messageId = `checkin_${Date.now()}`;
+        const messageResult = await addGoogleLoyaltyObjectMessage({
+          objectId: googleSync.objectId,
+          header: '✅ Visita registrada',
+          body: `Llevas ${progress} sellos`,
+          messageId,
+        });
+        logApiEvent('/api/check-in/scan#google-sync', messageResult.ok ? 'message_sent' : 'message_failed', {
+          tenantId: validCode.tenantId,
+          userId,
+          objectId: googleSync.objectId,
+          status: messageResult.status,
         });
       } else if (googleSync.objectId) {
         const progress = `${updatedMembership.currentVisits}/${validCode.tenant.requiredVisits ?? 10}`;

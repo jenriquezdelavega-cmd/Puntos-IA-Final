@@ -293,6 +293,7 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
 
   return {
     ok: result.operation !== 'failed',
+    reason: result.operation === 'failed' ? ('upsert_failed' as const) : undefined,
     objectId,
     classId,
     operation: result.operation,
