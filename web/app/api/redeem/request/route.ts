@@ -8,6 +8,7 @@ import { verifyUserSessionToken } from '@/app/lib/user-session-token';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 import { syncGoogleLoyaltyObjectForCustomer } from '@/app/lib/google-wallet-object-sync';
+import { addGoogleLoyaltyObjectMessage } from '@/app/lib/google-wallet';
 import { sendRedemptionRequestedEmail } from '@/app/lib/email';
 const TZ = 'America/Monterrey';
 
@@ -255,6 +256,19 @@ export async function POST(request: Request) {
           tenantId: normalizedTenantId,
           userId: normalizedUserId,
           reason: googleSync.reason,
+        });
+      } else if (googleSync.objectId) {
+        const messageResult = await addGoogleLoyaltyObjectMessage({
+          objectId: googleSync.objectId,
+          header: '🎁 Canje solicitado',
+          body: 'Tus sellos se reiniciaron. ¡Empieza tu siguiente recompensa!',
+          messageId: `redeem_${Date.now()}`,
+        });
+        logApiEvent('/api/redeem/request#google-sync', messageResult.ok ? 'message_sent' : 'message_failed', {
+          tenantId: normalizedTenantId,
+          userId: normalizedUserId,
+          objectId: googleSync.objectId,
+          status: messageResult.status,
         });
       }
     } catch (googleError) {
