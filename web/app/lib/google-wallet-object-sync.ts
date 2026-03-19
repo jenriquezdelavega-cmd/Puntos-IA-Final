@@ -37,12 +37,6 @@ function parseRgbToHex(input: string, fallback: string) {
   return `#${channels.map((channel) => channel.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
 }
 
-function buildStampBubbles(currentVisits: number, requiredVisits: number) {
-  const total = Math.max(1, Math.min(20, Number(requiredVisits) || 10));
-  const done = Math.max(0, Math.min(total, Number(currentVisits) || 0));
-  return Array.from({ length: total }, (_, index) => (index < done ? '●' : '○')).join(' ');
-}
-
 function formatPeriodLabel(period: string) {
   const normalized = String(period || '').toUpperCase();
   if (normalized === 'WEEKLY') return 'Semanal';
@@ -239,11 +233,6 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
         id: 'coalicion',
         header: 'Punto IA',
         body: 'Coalición de PyMEs Hecho en México 🇲🇽',
-      },
-      {
-        id: 'sellos',
-        header: '🎯 Sellos de visita',
-        body: buildStampBubbles(currentVisits, requiredVisits),
       },
       {
         id: 'periodo',
