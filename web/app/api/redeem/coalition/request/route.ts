@@ -1,8 +1,11 @@
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
+import { logApiError, logApiEvent } from '@/app/lib/api-log';
 import { prisma } from '@/app/lib/prisma';
 import { verifyUserSessionToken } from '@/app/lib/user-session-token';
 import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
+import { generateUniqueRedemptionCode } from '@/app/lib/redemption-code';
+import { sendRedemptionRequestedEmail } from '@/app/lib/email';
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
@@ -94,7 +97,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    const code = await generateUniqueRedemptionCode(customerReward.reward.business.id);
 
     await prisma.$transaction([
       prisma.redemption.create({
@@ -111,6 +114,30 @@ export async function POST(request: Request) {
         data: { requestedAt: new Date() },
       }),
     ]);
+
+    try {
+      const customer = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, name: true },
+      });
+      if (customer?.email) {
+        const emailResult = await sendRedemptionRequestedEmail({
+          to: customer.email,
+          name: customer.name,
+          businessName: customerReward.reward.business.name,
+          code,
+        });
+        if (!emailResult.ok) {
+          logApiEvent('/api/redeem/coalition/request', 'coalition_redemption_email_failed', {
+            userId,
+            customerRewardId,
+            reason: emailResult.error || 'unknown',
+          });
+        }
+      }
+    } catch (emailError: unknown) {
+      logApiError('/api/redeem/coalition/request#email', emailError);
+    }
 
     return apiSuccess({
       requestId,

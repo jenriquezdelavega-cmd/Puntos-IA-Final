@@ -35,6 +35,7 @@ const BusinessMap = dynamic(() => import('../../components/BusinessMap'), {
 });
 
 type MilestoneData = {
+  id: string;
   visitTarget: number;
   reward: string;
   emoji: string;
@@ -221,7 +222,8 @@ export default function ClientesAppPage() {
     tenants?: string;
   }>({});
 
-  const [redeemCode, setRedeemCode] = useState<{ code: string; business: string } | null>(null);
+  const [redeemCode, setRedeemCode] = useState<{ code: string; business: string; reward?: string } | null>(null);
+  const [milestoneCodeLoading, setMilestoneCodeLoading] = useState<Record<string, boolean>>({});
 
   const activeMemberships = useMemo(() => user?.memberships || [], [user?.memberships]);
   const pointsTotal = useMemo(
@@ -418,7 +420,7 @@ export default function ClientesAppPage() {
       }),
     });
 
-    const body = (await response.json()) as { code?: string; message?: string; error?: string };
+    const body = (await response.json()) as { code?: string; message?: string; error?: string; alreadyPending?: boolean };
     if (!response.ok) {
       const message = body?.message || body?.error || 'No se pudo generar canje';
       if (isUnauthorizedResponse(response, body)) {
@@ -429,19 +431,56 @@ export default function ClientesAppPage() {
       return;
     }
 
-    setRedeemCode({ code: body.code || '----', business: membership.name || 'Negocio' });
-    setStatusMessage(`Código de canje generado para ${membership.name || 'el negocio'}.`);
-    setUser((prev) => {
-      if (!prev) return prev;
-      const updatedMemberships = (prev.memberships || []).map((item) =>
-        item.tenantId === membership.tenantId
-          ? { ...item, visits: 0, points: 0 }
-          : item,
+    setRedeemCode({ code: body.code || '--------', business: membership.name || 'Negocio', reward: membership.prize || 'Recompensa principal' });
+    setStatusMessage(
+      body.alreadyPending
+        ? `Ya tenías un código pendiente para ${membership.name || 'el negocio'}.`
+        : `Código de canje generado para ${membership.name || 'el negocio'}.`,
+    );
+  };
+
+  const handleMilestoneRedeem = async (membership: Membership, milestone: MilestoneData) => {
+    if (!user?.id || !user?.sessionToken) return;
+    const key = `${membership.tenantId}:${milestone.id}`;
+    setStatusMessage('');
+    setMilestoneCodeLoading((prev) => ({ ...prev, [key]: true }));
+
+    try {
+      const response = await fetch('/api/redeem/milestone-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          tenantId: membership.tenantId,
+          sessionToken: user.sessionToken,
+          milestoneId: milestone.id,
+        }),
+      });
+
+      const body = (await response.json()) as { code?: string; message?: string; error?: string; alreadyPending?: boolean };
+      if (!response.ok) {
+        const message = body?.message || body?.error || 'No se pudo generar canje intermedio';
+        if (isUnauthorizedResponse(response, body)) {
+          handleSessionExpired();
+          return;
+        }
+        setStatusMessage(message);
+        return;
+      }
+
+      setRedeemCode({
+        code: body.code || '--------',
+        business: membership.name || 'Negocio',
+        reward: `${milestone.emoji} ${milestone.reward}`,
+      });
+      setStatusMessage(
+        body.alreadyPending
+          ? `Ya tenías un código pendiente para ${milestone.reward}.`
+          : `Código intermedio generado para ${milestone.reward}.`,
       );
-      const updated = { ...prev, memberships: updatedMemberships };
-      localStorage.setItem('punto_user', JSON.stringify(updated));
-      return updated;
-    });
+    } finally {
+      setMilestoneCodeLoading((prev) => ({ ...prev, [key]: false }));
+    }
   };
 
   const saveProfile = async () => {
@@ -708,9 +747,11 @@ export default function ClientesAppPage() {
                           <div className="flex flex-col gap-1.5">
                             {membership.milestones.map((m) => {
                               const unlocked = currentVisits >= m.visitTarget;
+                              const key = `${membership.tenantId}:${m.id}`;
+                              const requestingMilestoneCode = Boolean(milestoneCodeLoading[key]);
                               return (
                                 <div
-                                  key={m.visitTarget}
+                                  key={m.id}
                                   className={`flex items-center gap-2.5 rounded-xl px-3 py-2 transition-all ${
                                     unlocked
                                       ? 'bg-[#ecfff2] border border-[#c8f3d8]'
@@ -724,6 +765,16 @@ export default function ClientesAppPage() {
                                       Visita {m.visitTarget}{unlocked ? ' · ¡Desbloqueado!' : ` · Faltan ${m.visitTarget - currentVisits} visita(s)`}
                                     </p>
                                   </div>
+                                  {unlocked ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMilestoneRedeem(membership, m)}
+                                      disabled={requestingMilestoneCode}
+                                      className={`${buttonStyles('secondary')} !px-2.5 !py-1.5 !text-[11px] disabled:opacity-60`}
+                                    >
+                                      {requestingMilestoneCode ? 'Generando...' : 'Generar código'}
+                                    </button>
+                                  ) : null}
                                 </div>
                               );
                             })}
@@ -1133,8 +1184,9 @@ export default function ClientesAppPage() {
           {redeemCode ? (
             <article className="rounded-3xl border border-[#f7d9cc] bg-[#fff8f4] p-6">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#c9654c]">Código de canje</p>
-              <p className="mt-2 text-3xl font-black tracking-[0.1em] text-[#2a184f]">{redeemCode.code}</p>
+              <p className="mt-2 text-3xl font-black tracking-[0.12em] text-[#2a184f]">{redeemCode.code}</p>
               <p className="mt-2 text-sm text-[#5c4a82]">Muestra este código en {redeemCode.business}.</p>
+              {redeemCode.reward ? <p className="mt-1 text-xs font-semibold text-[#8a5c4d]">Aplica a: {redeemCode.reward}</p> : null}
             </article>
           ) : null}
 

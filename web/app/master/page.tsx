@@ -412,13 +412,13 @@ export default function MasterPage() {
     await loadTenants();
   };
 
-  const downloadReport = async (report: 'prelaunch' | 'tenant-users', onlySelectedTenant = false) => {
+  const downloadReport = async (report: 'prelaunch' | 'tenant-users' | 'redemption-logs', onlySelectedTenant = false) => {
     const res = await fetch('/api/master/reports', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...withMasterAuth,
-        reportType: report,
+        report,
         tenantId: onlySelectedTenant ? selectedTenantId : undefined,
       }),
     });
@@ -631,6 +631,8 @@ export default function MasterPage() {
               <button onClick={() => downloadReport('tenant-users', false)} className="w-full rounded-lg bg-slate-700 py-2">Usuarios por negocio</button>
               <button onClick={() => downloadReport('prelaunch', false)} className="w-full rounded-lg bg-slate-700 py-2">Leads prelaunch</button>
               <button onClick={() => downloadReport('tenant-users', true)} disabled={!selectedTenantId} className="w-full rounded-lg bg-slate-700 py-2 disabled:opacity-40">Usuarios del negocio seleccionado</button>
+              <button onClick={() => downloadReport('redemption-logs', false)} className="w-full rounded-lg bg-slate-700 py-2">Logs de canje (global)</button>
+              <button onClick={() => downloadReport('redemption-logs', true)} disabled={!selectedTenantId} className="w-full rounded-lg bg-slate-700 py-2 disabled:opacity-40">Logs de canje del negocio</button>
             </article>
           </div>
 

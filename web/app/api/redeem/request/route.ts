@@ -10,6 +10,7 @@ import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } fro
 import { syncGoogleLoyaltyObjectForCustomer } from '@/app/lib/google-wallet-object-sync';
 import { addGoogleLoyaltyObjectMessage } from '@/app/lib/google-wallet';
 import { sendRedemptionRequestedEmail } from '@/app/lib/email';
+import { generateUniqueRedemptionCode } from '@/app/lib/redemption-code';
 const TZ = 'America/Monterrey';
 
 function tzParts(d: Date) {
@@ -173,17 +174,33 @@ export async function POST(request: Request) {
       });
     }
 
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    const existingPending = await prisma.redemption.findFirst({
+      where: {
+        userId: normalizedUserId,
+        tenantId: normalizedTenantId,
+        isUsed: false,
+        loyaltyMilestoneId: null,
+        coalitionRewardUnlockId: null,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
 
-    await prisma.$transaction([
-      prisma.redemption.create({
-        data: { code, userId: normalizedUserId, tenantId: normalizedTenantId, isUsed: false },
-      }),
-      prisma.membership.update({
-        where: { id: membership.id },
-        data: { currentVisits: 0 },
-      }),
-    ]);
+    if (existingPending) {
+      return apiSuccess({
+        requestId,
+        data: {
+          success: true,
+          code: existingPending.code,
+          alreadyPending: true,
+        },
+      });
+    }
+
+    const code = await generateUniqueRedemptionCode(normalizedTenantId);
+
+    await prisma.redemption.create({
+      data: { code, userId: normalizedUserId, tenantId: normalizedTenantId, isUsed: false },
+    });
 
     logApiEvent('/api/redeem/request', 'redemption_requested', {
       userId: normalizedUserId,

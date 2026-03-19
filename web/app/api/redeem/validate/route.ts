@@ -5,6 +5,7 @@ import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 import { sendRedemptionValidatedEmail } from '@/app/lib/email';
+import { isValidRedemptionCode, normalizeRedemptionCode } from '@/app/lib/redemption-code';
 
 function accessStatusToCode(status: number): ApiErrorCode {
   if (status === 400) return 'BAD_REQUEST';
@@ -33,6 +34,16 @@ export async function POST(request: Request) {
     }
 
     const { tenantId, tenantUserId, tenantSessionToken, code } = parsedBody.data;
+    const normalizedCode = normalizeRedemptionCode(code);
+
+    if (!isValidRedemptionCode(normalizedCode)) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Código inválido. Debe ser alfanumérico de 8 caracteres.',
+      });
+    }
 
     const rateLimit = checkRateLimit({
       key: buildRateLimitKey('redeem-validate', request, `${tenantId}:${tenantUserId}`),
@@ -61,7 +72,7 @@ export async function POST(request: Request) {
 
 
     const redemption = await prisma.redemption.findFirst({
-      where: { tenantId: access.tenantId, code, isUsed: false },
+      where: { tenantId: access.tenantId, code: normalizedCode, isUsed: false },
       include: {
         user: {
           select: {
@@ -84,12 +95,22 @@ export async function POST(request: Request) {
             visitTarget: true,
           },
         },
+        coalitionRewardUnlock: {
+          select: {
+            reward: {
+              select: {
+                title: true,
+                rewardValue: true,
+              },
+            },
+          },
+        },
       },
     });
 
 
     if (!redemption) {
-      logApiEvent('/api/redeem/validate', 'invalid_or_used_code', { tenantId: access.tenantId, code });
+      logApiEvent('/api/redeem/validate', 'invalid_or_used_code', { tenantId: access.tenantId, code: normalizedCode });
       return apiError({
         requestId,
         status: 404,
@@ -103,6 +124,17 @@ export async function POST(request: Request) {
         where: { id: redemption.id },
         data: { isUsed: true },
       }),
+      ...(!redemption.loyaltyMilestone && !redemption.coalitionRewardUnlockId
+        ? [
+            prisma.membership.updateMany({
+              where: {
+                tenantId: redemption.tenantId,
+                userId: redemption.userId,
+              },
+              data: { currentVisits: 0 },
+            }),
+          ]
+        : []),
       ...(redemption.coalitionRewardUnlockId
         ? [
             prisma.customerCoalitionReward.update({
@@ -115,16 +147,21 @@ export async function POST(request: Request) {
 
     logApiEvent('/api/redeem/validate', 'redemption_validated', {
       tenantId: access.tenantId,
-      code,
+      code: normalizedCode,
       redemptionId: redemption.id,
     });
 
     if (redemption.user.email) {
+      const rewardName = redemption.loyaltyMilestone
+        ? `${redemption.loyaltyMilestone.emoji} ${redemption.loyaltyMilestone.reward}`
+        : redemption.coalitionRewardUnlock?.reward
+          ? `${redemption.coalitionRewardUnlock.reward.title} · ${redemption.coalitionRewardUnlock.reward.rewardValue}`
+          : redemption.tenant.prize;
       const emailResult = await sendRedemptionValidatedEmail({
         to: redemption.user.email,
         name: redemption.user.name,
         businessName: redemption.tenant.name,
-        rewardName: redemption.tenant.prize,
+        rewardName,
       });
       if (!emailResult.ok) {
         logApiEvent('/api/redeem/validate', 'redeem_confirmation_email_failed', {

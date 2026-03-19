@@ -38,7 +38,23 @@ export type AdvancedReportView = {
   customerProfiles?: CustomerProfile[];
   redemptions?: {
     totalMonth: number;
+    pendingMonth?: number;
+    validatedMonth?: number;
+    validatedByType?: {
+      final?: number;
+      milestone?: number;
+      coalition?: number;
+    };
     items: { name: string; count: number }[];
+    activity?: Array<{
+      id: string;
+      code: string;
+      customer: string;
+      itemName: string;
+      channel: 'FINAL' | 'MILESTONE' | 'COALITION';
+      status: 'PENDING' | 'VALIDATED';
+      requestedAt: string;
+    }>;
   }
 };
 
@@ -242,6 +258,14 @@ export default function AdvancedDashboard(props: Props) {
                <p className="text-[10px] font-black uppercase tracking-wider text-orange-500">Canjes Totales (Mes)</p>
                <p className="mt-2 text-4xl font-black text-orange-600">{redemptions.totalMonth}</p>
              </article>
+             <article className="rounded-2xl border border-gray-100 bg-amber-50 p-5">
+               <p className="text-[10px] font-black uppercase tracking-wider text-amber-600">Pendientes (Mes)</p>
+               <p className="mt-2 text-4xl font-black text-amber-700">{Number(redemptions.pendingMonth || 0)}</p>
+             </article>
+             <article className="rounded-2xl border border-gray-100 bg-emerald-50 p-5">
+               <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600">Validados (Mes)</p>
+               <p className="mt-2 text-4xl font-black text-emerald-700">{Number(redemptions.validatedMonth || 0)}</p>
+             </article>
              <article className="col-span-2 rounded-2xl border border-gray-100 bg-gray-50 p-5">
                <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-3">Premios Favoritos</p>
                {redemptions.items.length === 0 ? (
@@ -256,6 +280,31 @@ export default function AdvancedDashboard(props: Props) {
                          </div>
                          <span className="text-sm font-black text-gray-500">{item.count} canje{item.count !== 1 && 's'}</span>
                       </div>
+                   ))}
+                 </div>
+               )}
+             </article>
+             <article className="rounded-2xl border border-gray-100 bg-sky-50 p-5">
+               <p className="text-[10px] font-black uppercase tracking-wider text-sky-600 mb-2">Validados por tipo</p>
+               <div className="space-y-1.5 text-xs font-semibold text-sky-900">
+                 <p>Final: <span className="font-black">{Number(redemptions.validatedByType?.final || 0)}</span></p>
+                 <p>Intermedio: <span className="font-black">{Number(redemptions.validatedByType?.milestone || 0)}</span></p>
+                 <p>Coalición: <span className="font-black">{Number(redemptions.validatedByType?.coalition || 0)}</span></p>
+               </div>
+             </article>
+             <article className="md:col-span-3 rounded-2xl border border-gray-100 bg-white p-5">
+               <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-3">Actividad reciente de canjes</p>
+               {(redemptions.activity || []).length === 0 ? (
+                 <p className="text-sm font-semibold text-gray-400">Sin actividad de canjes para el periodo.</p>
+               ) : (
+                 <div className="space-y-2">
+                   {(redemptions.activity || []).slice(0, 6).map((entry) => (
+                     <div key={entry.id} className="flex flex-col gap-1 rounded-xl border border-gray-100 bg-gray-50 p-3 text-xs md:flex-row md:items-center md:justify-between">
+                       <p className="font-semibold text-gray-700">{entry.customer} · {entry.itemName}</p>
+                       <p className="font-mono font-black text-gray-900">{entry.code}</p>
+                       <p className={`font-black ${entry.status === 'VALIDATED' ? 'text-emerald-700' : 'text-amber-700'}`}>{entry.status === 'VALIDATED' ? 'VALIDADO' : 'PENDIENTE'}</p>
+                       <p className="text-gray-500">{formatShortDate(entry.requestedAt)} · {entry.channel}</p>
+                     </div>
                    ))}
                  </div>
                )}

@@ -15,10 +15,11 @@ function csv(headers: string[], rows: Array<Array<unknown>>) {
   return [headers.map(esc).join(','), ...rows.map((r) => r.map(esc).join(','))].join('\n');
 }
 
-function parseReportType(value: unknown): 'prelaunch' | 'tenant-users' | null {
+function parseReportType(value: unknown): 'prelaunch' | 'tenant-users' | 'redemption-logs' | null {
   const raw = optionalString(value);
   if (!raw || raw === 'prelaunch') return 'prelaunch';
   if (raw === 'tenant-users') return 'tenant-users';
+  if (raw === 'redemption-logs') return 'redemption-logs';
   return null;
 }
 
@@ -73,6 +74,54 @@ export async function POST(req: Request) {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
           'Content-Disposition': `attachment; filename="preinscritos-negocios-${new Date().toISOString().slice(0, 10)}.csv"`,
+          'Cache-Control': 'no-store',
+          'x-request-id': requestId,
+        },
+      });
+    }
+
+    if (report === 'redemption-logs') {
+      const redemptions = await prisma.redemption.findMany({
+        where: tenantId ? { tenantId } : undefined,
+        include: {
+          tenant: { select: { id: true, name: true, slug: true } },
+          user: { select: { id: true, name: true, phone: true, email: true } },
+          loyaltyMilestone: { select: { reward: true, emoji: true } },
+          coalitionRewardUnlock: { include: { reward: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5000,
+      });
+
+      const content = csv(
+        ['requestedAt', 'status', 'channel', 'code', 'tenantId', 'tenantName', 'tenantSlug', 'userId', 'userName', 'userPhone', 'userEmail', 'rewardLabel'],
+        redemptions.map((r) => {
+          const channel = r.coalitionRewardUnlockId ? 'COALITION' : (r.loyaltyMilestoneId ? 'MILESTONE' : 'FINAL');
+          const rewardLabel = r.loyaltyMilestone
+            ? `${r.loyaltyMilestone.emoji} ${r.loyaltyMilestone.reward}`
+            : (r.coalitionRewardUnlock?.reward?.title || r.tenant.prize || 'Premio');
+          return [
+            r.createdAt.toISOString(),
+            r.isUsed ? 'VALIDATED' : 'PENDING',
+            channel,
+            r.code,
+            r.tenant.id,
+            r.tenant.name,
+            r.tenant.slug,
+            r.user.id,
+            r.user.name || '',
+            r.user.phone || '',
+            r.user.email || '',
+            rewardLabel,
+          ];
+        }),
+      );
+
+      return new NextResponse(content, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': `attachment; filename="redemption-logs-${new Date().toISOString().slice(0, 10)}.csv"`,
           'Cache-Control': 'no-store',
           'x-request-id': requestId,
         },
