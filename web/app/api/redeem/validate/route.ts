@@ -121,10 +121,18 @@ export async function POST(request: Request) {
       });
     }
 
+    const rewardSnapshot = getRedemptionRewardLabel({
+      tenantPrize: redemption.tenant.prize,
+      rewardSnapshot: redemption.rewardSnapshot,
+      code: redemption.code,
+      loyaltyMilestone: redemption.loyaltyMilestone,
+      coalitionRewardUnlock: redemption.coalitionRewardUnlock,
+    });
+
     await prisma.$transaction([
       prisma.redemption.update({
         where: { id: redemption.id },
-        data: { isUsed: true, usedAt: validationTimestamp },
+        data: { isUsed: true, usedAt: validationTimestamp, rewardSnapshot: rewardSnapshot || null },
       }),
       ...(!redemption.loyaltyMilestone && !redemption.coalitionRewardUnlockId
         ? [
@@ -154,18 +162,11 @@ export async function POST(request: Request) {
     });
 
     if (redemption.user.email) {
-      const rewardName = getRedemptionRewardLabel({
-        tenantPrize: redemption.tenant.prize,
-        rewardSnapshot: redemption.rewardSnapshot,
-        code: redemption.code,
-        loyaltyMilestone: redemption.loyaltyMilestone,
-        coalitionRewardUnlock: redemption.coalitionRewardUnlock,
-      });
       const emailResult = await sendRedemptionValidatedEmail({
         to: redemption.user.email,
         name: redemption.user.name,
         businessName: redemption.tenant.name,
-        rewardName,
+        rewardName: rewardSnapshot,
       });
       if (!emailResult.ok) {
         logApiEvent('/api/redeem/validate', 'redeem_confirmation_email_failed', {
@@ -181,13 +182,7 @@ export async function POST(request: Request) {
       data: {
         ok: true,
         user: redemption.user?.name || redemption.user?.phone || 'Usuario',
-        prize: getRedemptionRewardLabel({
-          tenantPrize: redemption.tenant.prize,
-          rewardSnapshot: redemption.rewardSnapshot,
-          code: redemption.code,
-          loyaltyMilestone: redemption.loyaltyMilestone,
-          coalitionRewardUnlock: redemption.coalitionRewardUnlock,
-        }),
+        prize: rewardSnapshot,
         isMilestone: Boolean(redemption.loyaltyMilestone),
         redemption: {
           id: redemption.id,
