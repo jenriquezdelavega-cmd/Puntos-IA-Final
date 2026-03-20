@@ -140,6 +140,7 @@ model Visit {
 model Redemption {
   id        String   @id @default(uuid())
   code      String
+  rewardSnapshot String? @map("reward_snapshot")
   isUsed    Boolean  @default(false)
   usedAt    DateTime?
   createdAt DateTime @default(now())

@@ -107,6 +107,9 @@ export async function POST(request: Request) {
           tenantId: customerReward.reward.business.id,
           isUsed: false,
           coalitionRewardUnlockId: customerReward.id,
+          rewardSnapshot: customerReward.reward.rewardValue
+            ? `${customerReward.reward.title} · ${customerReward.reward.rewardValue}`
+            : customerReward.reward.title,
         },
       }),
       prisma.customerCoalitionReward.update({

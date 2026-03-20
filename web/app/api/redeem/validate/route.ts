@@ -6,6 +6,7 @@ import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 import { sendRedemptionValidatedEmail } from '@/app/lib/email';
 import { isValidRedemptionCode, normalizeRedemptionCode } from '@/app/lib/redemption-code';
+import { getRedemptionRewardLabel } from '@/app/lib/redemption-display';
 
 function accessStatusToCode(status: number): ApiErrorCode {
   if (status === 400) return 'BAD_REQUEST';
@@ -153,11 +154,13 @@ export async function POST(request: Request) {
     });
 
     if (redemption.user.email) {
-      const rewardName = redemption.loyaltyMilestone
-        ? `${redemption.loyaltyMilestone.emoji} ${redemption.loyaltyMilestone.reward}`
-        : redemption.coalitionRewardUnlock?.reward
-          ? `${redemption.coalitionRewardUnlock.reward.title} · ${redemption.coalitionRewardUnlock.reward.rewardValue}`
-          : redemption.tenant.prize;
+      const rewardName = getRedemptionRewardLabel({
+        tenantPrize: redemption.tenant.prize,
+        rewardSnapshot: redemption.rewardSnapshot,
+        code: redemption.code,
+        loyaltyMilestone: redemption.loyaltyMilestone,
+        coalitionRewardUnlock: redemption.coalitionRewardUnlock,
+      });
       const emailResult = await sendRedemptionValidatedEmail({
         to: redemption.user.email,
         name: redemption.user.name,
@@ -178,9 +181,13 @@ export async function POST(request: Request) {
       data: {
         ok: true,
         user: redemption.user?.name || redemption.user?.phone || 'Usuario',
-        prize: redemption.loyaltyMilestone
-          ? `${redemption.loyaltyMilestone.emoji} ${redemption.loyaltyMilestone.reward} (hito visita ${redemption.loyaltyMilestone.visitTarget})`
-          : (redemption.tenant.prize ?? 'Premio'),
+        prize: getRedemptionRewardLabel({
+          tenantPrize: redemption.tenant.prize,
+          rewardSnapshot: redemption.rewardSnapshot,
+          code: redemption.code,
+          loyaltyMilestone: redemption.loyaltyMilestone,
+          coalitionRewardUnlock: redemption.coalitionRewardUnlock,
+        }),
         isMilestone: Boolean(redemption.loyaltyMilestone),
         redemption: {
           id: redemption.id,

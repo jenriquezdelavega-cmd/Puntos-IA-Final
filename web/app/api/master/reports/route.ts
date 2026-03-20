@@ -103,6 +103,7 @@ export async function POST(req: Request) {
           });
           const rewardLabel = getRedemptionRewardLabel({
             tenantPrize: r.tenant.prize,
+            rewardSnapshot: r.rewardSnapshot,
             code: r.code,
             loyaltyMilestone: r.loyaltyMilestone,
             coalitionRewardUnlock: r.coalitionRewardUnlock,
