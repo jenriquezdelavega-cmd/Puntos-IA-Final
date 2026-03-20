@@ -236,6 +236,7 @@ export default function MasterPage() {
         body: JSON.stringify({
           masterUsername: userOverride ?? masterUser,
           masterPassword: passOverride ?? masterPass,
+          masterOtp,
           coalitionOnly: coalitionOverride ?? coalitionOnly,
         }),
       });
@@ -304,7 +305,7 @@ export default function MasterPage() {
     setIsAuthenticating(false);
 
     if (!tenantsOk || !challengesOk || !walletOk) {
-      alert('Usuario o contraseña maestra incorrectos.');
+      alert('Credenciales master u OTP incorrectos.');
       return;
     }
 
