@@ -3,6 +3,7 @@ import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { apiError, apiSuccess, type ApiErrorCode, getRequestId } from '@/app/lib/api-response';
 import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
+import { getRedemptionChannel, getRedemptionRewardLabel } from '@/app/lib/redemption-display';
 
 function accessStatusToCode(status: number): ApiErrorCode {
   if (status === 400) return 'BAD_REQUEST';
@@ -304,6 +305,7 @@ export async function POST(request: Request) {
           createdAt: { gte: monthStart, lt: nextMonthStart }
         },
         include: {
+          tenant: { select: { prize: true } },
           user: { select: { name: true, phone: true } },
           loyaltyMilestone: { select: { reward: true, emoji: true, visitTarget: true } },
           coalitionRewardUnlock: {
@@ -314,10 +316,16 @@ export async function POST(request: Request) {
       });
 
       redemptions.forEach(r => {
-        const itemName = r.loyaltyMilestone
-          ? `${r.loyaltyMilestone.emoji} ${r.loyaltyMilestone.reward}`
-          : (r.coalitionRewardUnlock?.reward?.title || `Canje ${r.code}`);
-        const channel = r.coalitionRewardUnlockId ? 'COALITION' : (r.loyaltyMilestoneId ? 'MILESTONE' : 'FINAL');
+        const itemName = getRedemptionRewardLabel({
+          tenantPrize: r.tenant.prize,
+          code: r.code,
+          loyaltyMilestone: r.loyaltyMilestone,
+          coalitionRewardUnlock: r.coalitionRewardUnlock,
+        });
+        const channel = getRedemptionChannel({
+          loyaltyMilestoneId: r.loyaltyMilestoneId,
+          coalitionRewardUnlockId: r.coalitionRewardUnlockId,
+        });
 
         if (!r.isUsed) pendingMonth += 1;
         if (r.isUsed) {
