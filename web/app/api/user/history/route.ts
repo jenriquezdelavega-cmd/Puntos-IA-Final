@@ -5,6 +5,7 @@ import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
 import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
 import { getRedemptionRewardLabel } from '@/app/lib/redemption-display';
 
+const BUSINESS_TZ = 'America/Monterrey';
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
@@ -67,8 +68,17 @@ export async function POST(request: Request) {
         loyaltyMilestone: redemption.loyaltyMilestone,
         coalitionRewardUnlock: redemption.coalitionRewardUnlock,
       }),
-      date: new Date(redemption.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }),
-      time: new Date(redemption.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
+      date: new Date(redemption.createdAt).toLocaleDateString('es-MX', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        timeZone: BUSINESS_TZ,
+      }),
+      time: new Date(redemption.createdAt).toLocaleTimeString('es-MX', {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: BUSINESS_TZ,
+      }),
     }));
 
     return apiSuccess({ requestId, data: { history } });
