@@ -1,7 +1,14 @@
 import { prisma } from '@/app/lib/prisma';
 import { isValidMasterCredentials } from '@/app/lib/master-auth';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
-import { asTrimmedString, optionalString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import {
+  asTrimmedString,
+  buildPhoneLookupCandidates,
+  optionalString,
+  parseJsonObject,
+  parseWithSchema,
+  requiredString,
+} from '@/app/lib/request-validation';
 
 const SEEDED_NAMES = [
   'Carlos Perez',
@@ -27,6 +34,28 @@ function parseOptionalBoolean(value: unknown): boolean | undefined {
   return undefined;
 }
 
+function parseCleanupType(value: unknown): 'seeded' | 'orphan' | undefined {
+  const raw = asTrimmedString(value).toLowerCase();
+  if (!raw) return undefined;
+  if (raw === 'seeded' || raw === 'orphan') return raw;
+  return undefined;
+}
+
+function parsePhoneList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => asTrimmedString(item))
+      .filter((item) => item.length > 0);
+  }
+
+  const raw = asTrimmedString(value);
+  if (!raw) return [];
+  return raw
+    .split(/[,\s]+/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
 
@@ -41,6 +70,8 @@ export async function POST(request: Request) {
       masterPassword: requiredString,
       masterOtp: optionalString,
       dryRun: parseOptionalBoolean,
+      cleanupType: parseCleanupType,
+      keepPhones: parsePhoneList,
     });
     if (!parsedBody.ok) {
       return apiError({
@@ -51,17 +82,28 @@ export async function POST(request: Request) {
       });
     }
 
-    const { masterUsername, masterPassword, masterOtp, dryRun } = parsedBody.data;
+    const { masterUsername, masterPassword, masterOtp, dryRun, cleanupType, keepPhones } = parsedBody.data;
 
     if (!isValidMasterCredentials(masterUsername, masterPassword, masterOtp)) {
       return apiError({ requestId, status: 401, code: 'UNAUTHORIZED', message: 'No autorizado' });
     }
 
-    const seededUsers = await prisma.user.findMany({
+    const normalizedKeepPhones = new Set(
+      keepPhones
+        .flatMap((phone) => buildPhoneLookupCandidates(phone))
+        .map((phone) => asTrimmedString(phone)),
+    );
+    const mode = cleanupType ?? 'seeded';
+
+    const candidateUsers = await prisma.user.findMany({
       where: {
-        name: { in: [...SEEDED_NAMES] },
-        phone: { startsWith: '55' },
-        birthDate: new Date('1995-01-01T12:00:00Z'),
+        ...(mode === 'seeded'
+          ? {
+              name: { in: [...SEEDED_NAMES] },
+              phone: { startsWith: '55' },
+              birthDate: new Date('1995-01-01T12:00:00Z'),
+            }
+          : {}),
       },
       select: {
         id: true,
@@ -79,16 +121,17 @@ export async function POST(request: Request) {
         },
       },
       orderBy: { createdAt: 'desc' },
-      take: 1000,
+      take: mode === 'seeded' ? 1000 : 10000,
     });
 
-    const safeToDelete = seededUsers.filter(
+    const safeToDelete = candidateUsers.filter(
       (user) =>
         user._count.memberships === 0 &&
         user._count.redemptions === 0 &&
         user._count.passwordResetTokens === 0 &&
         user._count.challengeProgress === 0 &&
-        user._count.coalitionRewardUnlocks === 0,
+        user._count.coalitionRewardUnlocks === 0 &&
+        !normalizedKeepPhones.has(asTrimmedString(user.phone)),
     );
 
     if (dryRun !== false) {
@@ -96,8 +139,10 @@ export async function POST(request: Request) {
         requestId,
         data: {
           dryRun: true,
-          detected: seededUsers.length,
+          cleanupType: mode,
+          detected: candidateUsers.length,
           deletable: safeToDelete.length,
+          keptByPhone: candidateUsers.length - safeToDelete.length,
           users: safeToDelete,
           message: 'Simulación completada. Envía dryRun=false para ejecutar el borrado seguro.',
         },
@@ -110,8 +155,11 @@ export async function POST(request: Request) {
         requestId,
         data: {
           dryRun: false,
+          cleanupType: mode,
           deleted: 0,
-          message: 'No se encontraron usuarios semilla sin actividad para eliminar.',
+          message: mode === 'seeded'
+            ? 'No se encontraron usuarios semilla sin actividad para eliminar.'
+            : 'No se encontraron usuarios huérfanos sin actividad para eliminar.',
         },
       });
     }
@@ -124,10 +172,13 @@ export async function POST(request: Request) {
       requestId,
       data: {
         dryRun: false,
-        detected: seededUsers.length,
+        cleanupType: mode,
+        detected: candidateUsers.length,
         deletable: ids.length,
         deleted: result.count,
-        message: 'Usuarios semilla eliminados correctamente.',
+        message: mode === 'seeded'
+          ? 'Usuarios semilla eliminados correctamente.'
+          : 'Usuarios huérfanos eliminados correctamente.',
       },
     });
   } catch (error: unknown) {
