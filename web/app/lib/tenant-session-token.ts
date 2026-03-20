@@ -53,13 +53,18 @@ export function verifyTenantSessionToken(token: string): TenantSessionPayload {
     throw new Error('tenantSessionToken inválido');
   }
 
-  const parsed = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8')) as TenantSessionPayload;
+  let parsed: TenantSessionPayload;
+  try {
+    parsed = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8')) as TenantSessionPayload;
+  } catch {
+    throw new Error('tenantSessionToken inválido');
+  }
 
   if (!parsed?.tuid || !parsed?.tid || !parsed?.role || parsed?.v !== 1) {
     throw new Error('tenantSessionToken inválido');
   }
 
-  if (Math.floor(Date.now() / 1000) > parsed.exp) {
+  if (!Number.isFinite(parsed.exp) || Math.floor(Date.now() / 1000) > parsed.exp) {
     throw new Error('tenantSessionToken expirado');
   }
 

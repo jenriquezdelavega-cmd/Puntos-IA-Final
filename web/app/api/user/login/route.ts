@@ -45,6 +45,12 @@ export async function POST(req: Request) {
 
     const normalizedPhone = normalizePhone(phoneInput);
     const phoneCandidates = buildPhoneLookupCandidates(phoneInput);
+    const exactPhoneCandidates = Array.from(
+      new Set([
+        ...phoneCandidates,
+        ...(normalizedPhone ? [normalizedPhone] : []),
+      ]),
+    ).filter(Boolean);
 
     const rateLimit = checkRateLimit({
       key: buildRateLimitKey('user-login', req, normalizedPhone),
@@ -61,45 +67,41 @@ export async function POST(req: Request) {
       });
     }
 
-    const user = await prisma.user.findFirst({
+    let user = await prisma.user.findFirst({
       where: {
-        OR: [
-          {
-            phone: {
-              in: phoneCandidates,
-            },
-          },
-          ...(normalizedPhone
-            ? [
-                {
-                  phone: {
-                    endsWith: normalizedPhone,
-                  },
-                },
-              ]
-            : []),
-        ],
-      },
-      include: {
-        memberships: {
-          include: {
-            tenant: {
-              select: {
-                isActive: true,
-                name: true,
-                prize: true,
-                instagram: true,
-                requiredVisits: true,
-                loyaltyMilestones: {
-                  orderBy: { visitTarget: 'asc' },
-                  select: { id: true, visitTarget: true, reward: true, emoji: true },
-                },
-              },
-            },
-          },
+        phone: {
+          in: exactPhoneCandidates,
         },
       },
+      select: {
+        id: true,
+        phone: true,
+        password: true,
+        name: true,
+        email: true,
+        gender: true,
+        birthDate: true,
+      },
     });
+
+    if (!user && normalizedPhone) {
+      user = await prisma.user.findFirst({
+        where: {
+          phone: {
+            endsWith: normalizedPhone,
+          },
+        },
+        select: {
+          id: true,
+          phone: true,
+          password: true,
+          name: true,
+          email: true,
+          gender: true,
+          birthDate: true,
+        },
+      });
+    }
 
     if (!user) {
       return apiError({
@@ -154,9 +156,32 @@ export async function POST(req: Request) {
       }
     }
 
-    const memberships = user.memberships
-      .filter((membership) => membership?.tenant?.isActive !== false)
-      .map((membership) => {
+    const membershipsResult = await prisma.membership.findMany({
+      where: {
+        userId: user.id,
+        tenant: {
+          isActive: true,
+        },
+      },
+      select: {
+        tenantId: true,
+        currentVisits: true,
+        tenant: {
+          select: {
+            name: true,
+            prize: true,
+            instagram: true,
+            requiredVisits: true,
+            loyaltyMilestones: {
+              orderBy: { visitTarget: 'asc' },
+              select: { id: true, visitTarget: true, reward: true, emoji: true },
+            },
+          },
+        },
+      },
+    });
+
+    const memberships = membershipsResult.map((membership) => {
         const visits = Number(membership.currentVisits ?? 0);
         const points = visits * 10;
 

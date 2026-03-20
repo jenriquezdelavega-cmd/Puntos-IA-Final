@@ -49,23 +49,42 @@ export async function POST(request: Request) {
       });
     }
 
-    const memberships = await prisma.membership.findMany({
+    const groupedUsers = await prisma.user.groupBy({
+      by: ['gender'],
+      where: {
+        memberships: {
+          some: {
+            tenantId: access.tenantId,
+          },
+        },
+      },
+      _count: {
+        gender: true,
+      },
+    });
+
+    const totalMembershipsPromise = prisma.membership.count({
       where: { tenantId: access.tenantId },
-      include: { user: true },
     });
 
     const stats: Record<string, number> = { Hombre: 0, Mujer: 0 };
 
-    memberships.forEach((membership) => {
-      const gender = (membership.user.gender || '').toLowerCase();
-      if (['hombre', 'male', 'm'].includes(gender)) stats.Hombre++;
-      else if (['mujer', 'female', 'f'].includes(gender)) stats.Mujer++;
+    groupedUsers.forEach((group) => {
+      const gender = (group.gender || '').toLowerCase();
+      const count = Number(group._count.gender ?? 0);
+      if (['hombre', 'male', 'm'].includes(gender)) {
+        stats.Hombre += count;
+      } else if (['mujer', 'female', 'f'].includes(gender)) {
+        stats.Mujer += count;
+      }
     });
+
+    const total = await totalMembershipsPromise;
 
     return apiSuccess({
       requestId,
       data: {
-        total: memberships.length,
+        total,
         breakdown: [
           { gender: 'Hombre', _count: { gender: stats.Hombre } },
           { gender: 'Mujer', _count: { gender: stats.Mujer } },

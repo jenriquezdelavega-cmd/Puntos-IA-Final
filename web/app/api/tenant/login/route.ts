@@ -5,6 +5,7 @@ import { generateTenantSessionToken } from '@/app/lib/tenant-session-token';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
+import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
@@ -28,6 +29,20 @@ export async function POST(request: Request) {
     }
 
     const { username, password } = parsedBody.data;
+    const rateLimit = checkRateLimit({
+      key: buildRateLimitKey('tenant-login', request, username.toLowerCase()),
+      limit: 10,
+      windowMs: 60_000,
+    });
+    if (!rateLimit.allowed) {
+      return apiError({
+        requestId,
+        status: 429,
+        code: 'FORBIDDEN',
+        message: `Demasiados intentos. Intenta de nuevo en ${rateLimit.retryAfterSeconds}s`,
+        headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) },
+      });
+    }
 
     const user = await prisma.tenantUser.findUnique({
       where: { username },

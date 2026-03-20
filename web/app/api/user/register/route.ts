@@ -14,6 +14,7 @@ import {
 } from '@/app/lib/request-validation';
 import { sendWelcomeEmail } from '@/app/lib/email';
 import { logApiEvent } from '@/app/lib/api-log';
+import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -67,6 +68,21 @@ export async function POST(request: Request) {
 
     const normalizedPhone = normalizePhone(phone);
     const phoneCandidates = buildPhoneLookupCandidates(phone);
+    const rateLimit = checkRateLimit({
+      key: buildRateLimitKey('user-register', request, normalizedPhone || normalizedEmail),
+      limit: 15,
+      windowMs: 60_000,
+    });
+    if (!rateLimit.allowed) {
+      return apiError({
+        requestId,
+        status: 429,
+        code: 'FORBIDDEN',
+        message: `Demasiados intentos. Intenta de nuevo en ${rateLimit.retryAfterSeconds}s`,
+        headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) },
+      });
+    }
+
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
