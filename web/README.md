@@ -63,6 +63,39 @@ Define estas variables en Replit y Vercel para evitar diferencias entre ambiente
 - `DATABASE_URL`
 - `MASTER_USERNAME` (si no se define, usa fallback local de desarrollo)
 - `MASTER_PASSWORD` (si no se define, usa fallback local de desarrollo)
+- `MASTER_TOTP_SECRET` (opcional, pero recomendado para proteger endpoints master con Authenticator)
+
+### Configuración de OTP (Google/Microsoft Authenticator)
+
+El OTP de master **sí está implementado** en backend y se activa únicamente cuando existe `MASTER_TOTP_SECRET`.
+
+#### Dónde se configura
+
+- **Local (desarrollo):** en `web/.env` (puedes copiar de `web/.env.example`).
+- **Vercel (producción/preview):** en **Project Settings → Environment Variables** con la misma llave `MASTER_TOTP_SECRET`.
+- **No se configura en el cliente** ni en código frontend hardcodeado.
+
+> Regla simple: donde corre el backend de Next.js (local o Vercel), ahí debe existir la variable de entorno.
+
+#### Formato correcto del secret
+
+- Debe ser **Base32** (A-Z y 2-7), sin espacios.
+- Si el formato es inválido, la validación falla en servidor.
+- El código OTP esperado es de **6 dígitos** y ventana estándar de 30s (con tolerancia de ±1 paso).
+
+#### Cómo enlazar tu app Authenticator
+
+1. Genera un secret Base32 único para tu proyecto.
+2. Cárgalo en `MASTER_TOTP_SECRET` (local y/o Vercel).
+3. En Google/Microsoft Authenticator, agrega cuenta TOTP con ese mismo secret.
+4. En el panel master, captura `masterUsername`, `masterPassword` y `masterOtp` (6 dígitos).
+
+#### Diagnóstico rápido si “no jala”
+
+1. Verifica que `MASTER_TOTP_SECRET` esté definido en el ambiente donde pruebas.
+2. Confirma que no tengas espacios/comillas raras en el valor.
+3. Revisa hora del dispositivo (desfase de reloj rompe TOTP).
+4. Si en local funciona pero en Vercel no, casi siempre falta la variable en Vercel o está en otro Environment (Preview vs Production).
 
 ---
 
