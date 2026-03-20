@@ -1,7 +1,7 @@
 import { prisma } from '@/app/lib/prisma';
 import { isValidMasterCredentials } from '@/app/lib/master-auth';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
-import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import { asTrimmedString, optionalString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 
 function parseOptionalBoolean(value: unknown): boolean | undefined {
   if (typeof value === 'boolean') return value;
@@ -29,6 +29,7 @@ export async function POST(request: Request) {
     const parsedBody = parseWithSchema(body, {
       masterUsername: requiredString,
       masterPassword: requiredString,
+      masterOtp: optionalString,
       coalitionOnly: parseOptionalBoolean,
     });
     if (!parsedBody.ok) {
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
       });
     }
 
-    if (!isValidMasterCredentials(parsedBody.data.masterUsername, parsedBody.data.masterPassword)) {
+    if (!isValidMasterCredentials(parsedBody.data.masterUsername, parsedBody.data.masterPassword, parsedBody.data.masterOtp)) {
       return apiError({
         requestId,
         status: 401,

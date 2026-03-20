@@ -133,10 +133,11 @@ export default function MasterPage() {
   const [auth, setAuth] = useState(false);
   const [masterUser, setMasterUser] = useState('');
   const [masterPass, setMasterPass] = useState('');
+  const [masterOtp, setMasterOtp] = useState('');
   const [activeTab, setActiveTab] = useState<'negocios' | 'retos' | 'wallet'>('negocios');
 
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [coalitionOnly, setCoalitionOnly] = useState(true);
+  const [coalitionOnly, setCoalitionOnly] = useState(false);
   const [selectedTenantId, setSelectedTenantId] = useState('');
 
   const [tName, setTName] = useState('');
@@ -201,6 +202,7 @@ export default function MasterPage() {
   const withMasterAuth = {
     masterUsername: masterUser,
     masterPassword: masterPass,
+    masterOtp,
   };
 
   const postMasterJson = async (url: string, payload: Record<string, unknown>) => {
@@ -412,6 +414,21 @@ export default function MasterPage() {
     await loadTenants();
   };
 
+  const runCleanupTestUsers = async (dryRun: boolean) => {
+    const { response, data } = await postMasterJson('/api/master/cleanup-test-users', {
+      ...withMasterAuth,
+      dryRun,
+    });
+
+    if (!response.ok) {
+      setMsg(`❌ ${String(data.error ?? 'No se pudo depurar usuarios de prueba.')}`);
+      return;
+    }
+
+    const mode = dryRun ? 'Simulación' : 'Depuración';
+    setMsg(`✅ ${mode} completada. Detectados: ${String(data.detected ?? 0)} · Eliminables: ${String(data.deletable ?? 0)} · Eliminados: ${String(data.deleted ?? 0)}`);
+  };
+
   const downloadReport = async (report: 'prelaunch' | 'tenant-users' | 'redemption-logs', onlySelectedTenant = false) => {
     const res = await fetch('/api/master/reports', {
       method: 'POST',
@@ -568,6 +585,7 @@ export default function MasterPage() {
           <p className="text-sm text-slate-400">Acceso para administración global de negocios y retos.</p>
           <input className="w-full rounded-lg bg-slate-800 p-3" placeholder="Usuario master" value={masterUser} onChange={(e) => setMasterUser(e.target.value)} />
           <input className="w-full rounded-lg bg-slate-800 p-3" type="password" placeholder="Contraseña master" value={masterPass} onChange={(e) => setMasterPass(e.target.value)} />
+          <input className="w-full rounded-lg bg-slate-800 p-3" inputMode="numeric" pattern="[0-9]*" maxLength={6} placeholder="Código Authenticator (6 dígitos)" value={masterOtp} onChange={(e) => setMasterOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} />
           <button disabled={isAuthenticating} className="w-full rounded-lg bg-emerald-500 text-slate-950 font-semibold py-3 disabled:opacity-60">
             {isAuthenticating ? 'Validando...' : 'Entrar'}
           </button>
@@ -628,11 +646,16 @@ export default function MasterPage() {
                   await loadTenants(undefined, undefined, e.target.checked);
                 }} />
               </div>
-              <button onClick={() => downloadReport('tenant-users', false)} className="w-full rounded-lg bg-slate-700 py-2">Usuarios por negocio</button>
+              <button onClick={() => downloadReport('tenant-users', false)} className="w-full rounded-lg bg-slate-700 py-2">Clientes por negocio</button>
               <button onClick={() => downloadReport('prelaunch', false)} className="w-full rounded-lg bg-slate-700 py-2">Leads prelaunch</button>
-              <button onClick={() => downloadReport('tenant-users', true)} disabled={!selectedTenantId} className="w-full rounded-lg bg-slate-700 py-2 disabled:opacity-40">Usuarios del negocio seleccionado</button>
+              <button onClick={() => downloadReport('tenant-users', true)} disabled={!selectedTenantId} className="w-full rounded-lg bg-slate-700 py-2 disabled:opacity-40">Clientes del negocio seleccionado</button>
               <button onClick={() => downloadReport('redemption-logs', false)} className="w-full rounded-lg bg-slate-700 py-2">Logs de canje (global)</button>
               <button onClick={() => downloadReport('redemption-logs', true)} disabled={!selectedTenantId} className="w-full rounded-lg bg-slate-700 py-2 disabled:opacity-40">Logs de canje del negocio</button>
+              <div className="pt-2 border-t border-slate-700 space-y-2">
+                <p className="text-xs text-slate-400">Depuración segura de usuarios semilla (sin membresías/canjes).</p>
+                <button onClick={() => runCleanupTestUsers(true)} className="w-full rounded-lg bg-amber-600 py-2">Simular limpieza de usuarios falsos</button>
+                <button onClick={() => runCleanupTestUsers(false)} className="w-full rounded-lg bg-rose-700 py-2">Ejecutar limpieza de usuarios falsos</button>
+              </div>
             </article>
           </div>
 

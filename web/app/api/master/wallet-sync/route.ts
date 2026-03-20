@@ -52,7 +52,8 @@ export async function POST(request: Request) {
 
     const masterUsername = asTrimmedString(body.masterUsername);
     const masterPassword = asTrimmedString(body.masterPassword);
-    if (!isValidMasterCredentials(masterUsername, masterPassword)) {
+    const masterOtp = asTrimmedString(body.masterOtp);
+    if (!isValidMasterCredentials(masterUsername, masterPassword, masterOtp)) {
       return apiError({ requestId, status: 401, code: 'UNAUTHORIZED', message: 'No autorizado' });
     }
 
