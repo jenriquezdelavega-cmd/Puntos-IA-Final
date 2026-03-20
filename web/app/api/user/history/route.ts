@@ -3,6 +3,7 @@ import { verifyUserSessionToken } from '@/app/lib/user-session-token';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
 import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
+import { getRedemptionRewardLabel } from '@/app/lib/redemption-display';
 
 
 export async function POST(request: Request) {
@@ -43,6 +44,16 @@ export async function POST(request: Request) {
         tenant: {
           select: { name: true, prize: true },
         },
+        loyaltyMilestone: {
+          select: { reward: true, emoji: true },
+        },
+        coalitionRewardUnlock: {
+          include: {
+            reward: {
+              select: { title: true, rewardValue: true },
+            },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -50,7 +61,12 @@ export async function POST(request: Request) {
     const history = redemptions.map((redemption) => ({
       id: redemption.id,
       tenant: redemption.tenant.name,
-      prize: redemption.tenant.prize,
+      prize: getRedemptionRewardLabel({
+        tenantPrize: redemption.tenant.prize,
+        code: redemption.code,
+        loyaltyMilestone: redemption.loyaltyMilestone,
+        coalitionRewardUnlock: redemption.coalitionRewardUnlock,
+      }),
       date: new Date(redemption.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }),
       time: new Date(redemption.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
     }));

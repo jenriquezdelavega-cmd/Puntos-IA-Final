@@ -4,6 +4,7 @@ import { isValidMasterCredentials } from '@/app/lib/master-auth';
 import { listPrelaunchLeads } from '@/app/lib/prelaunch-leads';
 import { apiError, getRequestId } from '@/app/lib/api-response';
 import { optionalString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import { getRedemptionChannel, getRedemptionRewardLabel } from '@/app/lib/redemption-display';
 
 const esc = (v: unknown) => {
   const s = String(v ?? '');
@@ -96,10 +97,16 @@ export async function POST(req: Request) {
       const content = csv(
         ['requestedAt', 'status', 'channel', 'code', 'tenantId', 'tenantName', 'tenantSlug', 'userId', 'userName', 'userPhone', 'userEmail', 'rewardLabel'],
         redemptions.map((r) => {
-          const channel = r.coalitionRewardUnlockId ? 'COALITION' : (r.loyaltyMilestoneId ? 'MILESTONE' : 'FINAL');
-          const rewardLabel = r.loyaltyMilestone
-            ? `${r.loyaltyMilestone.emoji} ${r.loyaltyMilestone.reward}`
-            : (r.coalitionRewardUnlock?.reward?.title || r.tenant.prize || 'Premio');
+          const channel = getRedemptionChannel({
+            loyaltyMilestoneId: r.loyaltyMilestoneId,
+            coalitionRewardUnlockId: r.coalitionRewardUnlockId,
+          });
+          const rewardLabel = getRedemptionRewardLabel({
+            tenantPrize: r.tenant.prize,
+            code: r.code,
+            loyaltyMilestone: r.loyaltyMilestone,
+            coalitionRewardUnlock: r.coalitionRewardUnlock,
+          });
           return [
             r.createdAt.toISOString(),
             r.isUsed ? 'VALIDATED' : 'PENDING',
