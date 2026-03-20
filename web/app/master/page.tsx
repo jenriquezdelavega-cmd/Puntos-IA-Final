@@ -191,6 +191,7 @@ export default function MasterPage() {
   });
   const [isRunningWalletJobs, setIsRunningWalletJobs] = useState(false);
   const [isRunningMaintenance, setIsRunningMaintenance] = useState(false);
+  const [keepCustomerPhones, setKeepCustomerPhones] = useState('8121078577');
 
   const [msg, setMsg] = useState('');
 
@@ -415,10 +416,12 @@ export default function MasterPage() {
     await loadTenants();
   };
 
-  const runCleanupTestUsers = async (dryRun: boolean) => {
+  const runCleanupUsers = async (dryRun: boolean, cleanupType: 'seeded' | 'orphan') => {
     const { response, data } = await postMasterJson('/api/master/cleanup-test-users', {
       ...withMasterAuth,
       dryRun,
+      cleanupType,
+      keepPhones: keepCustomerPhones,
     });
 
     if (!response.ok) {
@@ -426,8 +429,11 @@ export default function MasterPage() {
       return;
     }
 
-    const mode = dryRun ? 'Simulación' : 'Depuración';
-    setMsg(`✅ ${mode} completada. Detectados: ${String(data.detected ?? 0)} · Eliminables: ${String(data.deletable ?? 0)} · Eliminados: ${String(data.deleted ?? 0)}`);
+    const runMode = dryRun ? 'Simulación' : 'Depuración';
+    const cleanupLabel = cleanupType === 'orphan' ? 'huérfanos' : 'semilla';
+    setMsg(
+      `✅ ${runMode} ${cleanupLabel} completada. Detectados: ${String(data.detected ?? 0)} · Eliminables: ${String(data.deletable ?? 0)} · Eliminados: ${String(data.deleted ?? 0)}`,
+    );
   };
 
   const downloadReport = async (report: 'prelaunch' | 'tenant-users' | 'redemption-logs', onlySelectedTenant = false) => {
@@ -654,8 +660,19 @@ export default function MasterPage() {
               <button onClick={() => downloadReport('redemption-logs', true)} disabled={!selectedTenantId} className="w-full rounded-lg bg-slate-700 py-2 disabled:opacity-40">Logs de canje del negocio</button>
               <div className="pt-2 border-t border-slate-700 space-y-2">
                 <p className="text-xs text-slate-400">Depuración segura de usuarios semilla (sin membresías/canjes).</p>
-                <button onClick={() => runCleanupTestUsers(true)} className="w-full rounded-lg bg-amber-600 py-2">Simular limpieza de usuarios falsos</button>
-                <button onClick={() => runCleanupTestUsers(false)} className="w-full rounded-lg bg-rose-700 py-2">Ejecutar limpieza de usuarios falsos</button>
+                <button onClick={() => runCleanupUsers(true, 'seeded')} className="w-full rounded-lg bg-amber-600 py-2">Simular limpieza de usuarios falsos</button>
+                <button onClick={() => runCleanupUsers(false, 'seeded')} className="w-full rounded-lg bg-rose-700 py-2">Ejecutar limpieza de usuarios falsos</button>
+              </div>
+              <div className="pt-2 border-t border-slate-700 space-y-2">
+                <p className="text-xs text-slate-400">Borrado de huérfanos: usuarios sin membresías, canjes ni actividad.</p>
+                <input
+                  className="w-full rounded-lg bg-slate-800 p-3 text-sm"
+                  placeholder="Teléfonos a conservar (separados por coma)"
+                  value={keepCustomerPhones}
+                  onChange={(e) => setKeepCustomerPhones(e.target.value)}
+                />
+                <button onClick={() => runCleanupUsers(true, 'orphan')} className="w-full rounded-lg bg-amber-600 py-2">Simular limpieza de huérfanos</button>
+                <button onClick={() => runCleanupUsers(false, 'orphan')} className="w-full rounded-lg bg-rose-700 py-2">Ejecutar limpieza de huérfanos</button>
               </div>
             </article>
           </div>
