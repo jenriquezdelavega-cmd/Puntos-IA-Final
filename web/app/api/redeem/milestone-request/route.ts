@@ -87,6 +87,13 @@ export async function POST(request: Request) {
     });
 
     if (existingRedemption) {
+      const milestoneSnapshot = `${milestone.emoji ? `${milestone.emoji} ` : ''}${milestone.reward}`.trim() || null;
+      if (!String(existingRedemption.rewardSnapshot ?? '').trim() && milestoneSnapshot) {
+        await prisma.redemption.update({
+          where: { id: existingRedemption.id },
+          data: { rewardSnapshot: milestoneSnapshot },
+        });
+      }
       // Already has a pending code — return it again so they can see it
       return apiSuccess({
         requestId,
@@ -100,15 +107,37 @@ export async function POST(request: Request) {
     }
 
     // Check if already redeemed (used code) since last counter reset
-    // For simplicity: only one redemption per milestone per visit cycle is allowed.
-    // We use totalVisits as a rough proxy — check if a used redemption was created after
-    // the milestone target was last crossed in this cycle (not perfect, but safe for MVP).
+    // One redemption per milestone per cycle. A cycle resets when the main reward
+    // (non-milestone, non-coalition) is validated.
+    const latestMainRewardRedemption = await prisma.redemption.findFirst({
+      where: {
+        userId,
+        tenantId,
+        isUsed: true,
+        loyaltyMilestoneId: null,
+        coalitionRewardUnlockId: null,
+      },
+      select: { usedAt: true, createdAt: true },
+      orderBy: [{ usedAt: 'desc' }, { createdAt: 'desc' }],
+    });
+    const cycleStartAt = latestMainRewardRedemption
+      ? (latestMainRewardRedemption.usedAt ?? latestMainRewardRedemption.createdAt)
+      : null;
+
     const alreadyUsed = await prisma.redemption.findFirst({
       where: {
         userId,
         tenantId,
         loyaltyMilestoneId: milestoneId,
         isUsed: true,
+        ...(cycleStartAt
+          ? {
+              OR: [
+                { usedAt: { gt: cycleStartAt } },
+                { usedAt: null, createdAt: { gt: cycleStartAt } },
+              ],
+            }
+          : {}),
       },
       orderBy: { createdAt: 'desc' },
     });

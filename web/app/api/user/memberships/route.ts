@@ -93,11 +93,6 @@ export async function POST(request: Request) {
     });
 
     const tenantIds = memberships.map((membership) => membership.tenantId);
-    const milestoneIdSet = new Set(
-      memberships.flatMap((membership) => membership.tenant.loyaltyMilestones.map((milestone) => milestone.id)),
-    );
-    const allMilestoneIds = [...milestoneIdSet];
-
     const [mainRedemptions, usedMilestoneRedemptions] = tenantIds.length
       ? await Promise.all([
           prisma.redemption.findMany({
@@ -111,20 +106,33 @@ export async function POST(request: Request) {
               tenantId: true,
               code: true,
               isUsed: true,
+              usedAt: true,
+              createdAt: true,
             },
             orderBy: { createdAt: 'desc' },
           }),
-          allMilestoneIds.length
-            ? prisma.redemption.findMany({
-                where: {
-                  userId,
-                  tenantId: { in: tenantIds },
-                  isUsed: true,
-                  loyaltyMilestoneId: { in: allMilestoneIds },
+          prisma.redemption.findMany({
+            where: {
+              userId,
+              tenantId: { in: tenantIds },
+              isUsed: true,
+              loyaltyMilestoneId: { not: null },
+            },
+            select: {
+              tenantId: true,
+              loyaltyMilestoneId: true,
+              rewardSnapshot: true,
+              usedAt: true,
+              createdAt: true,
+              loyaltyMilestone: {
+                select: {
+                  visitTarget: true,
+                  reward: true,
+                  emoji: true,
                 },
-                select: { loyaltyMilestoneId: true },
-              })
-            : Promise.resolve([]),
+              },
+            },
+          }),
         ])
       : [[], []];
 
@@ -135,11 +143,43 @@ export async function POST(request: Request) {
       mainRedemptionsByTenant.set(redemption.tenantId, list);
     });
 
-    const redeemedMilestoneIds = new Set<string>(
-      usedMilestoneRedemptions
-        .map((redemption) => redemption.loyaltyMilestoneId)
-        .filter((value): value is string => Boolean(value)),
-    );
+    const normalizeLabel = (label: string) => label.trim().toLowerCase();
+
+    const redeemedMilestoneIdsByTenant = new Map<string, Set<string>>();
+    const redeemedMilestoneTargetsByTenant = new Map<string, Set<number>>();
+    const redeemedMilestoneLabelsByTenant = new Map<string, Set<string>>();
+
+    usedMilestoneRedemptions.forEach((redemption) => {
+      const tenantId = redemption.tenantId;
+      const tenantMainRedemptions = mainRedemptionsByTenant.get(tenantId) || [];
+      const latestUsedMain = tenantMainRedemptions.find((item) => item.isUsed) || null;
+      const latestUsedMainAt = latestUsedMain ? (latestUsedMain.usedAt ?? latestUsedMain.createdAt) : null;
+      const milestoneUsedAt = redemption.usedAt ?? redemption.createdAt;
+
+      if (latestUsedMainAt && milestoneUsedAt <= latestUsedMainAt) {
+        return;
+      }
+
+      if (redemption.loyaltyMilestoneId) {
+        const ids = redeemedMilestoneIdsByTenant.get(tenantId) || new Set<string>();
+        ids.add(redemption.loyaltyMilestoneId);
+        redeemedMilestoneIdsByTenant.set(tenantId, ids);
+      }
+
+      const visitTarget = redemption.loyaltyMilestone?.visitTarget;
+      if (typeof visitTarget === 'number' && Number.isFinite(visitTarget)) {
+        const targets = redeemedMilestoneTargetsByTenant.get(tenantId) || new Set<number>();
+        targets.add(visitTarget);
+        redeemedMilestoneTargetsByTenant.set(tenantId, targets);
+      }
+
+      const snapshot = String(redemption.rewardSnapshot ?? '').trim();
+      if (snapshot) {
+        const labels = redeemedMilestoneLabelsByTenant.get(tenantId) || new Set<string>();
+        labels.add(normalizeLabel(snapshot));
+        redeemedMilestoneLabelsByTenant.set(tenantId, labels);
+      }
+    });
 
     const data: MembershipSnapshot[] = memberships
       .map((membership) => {
@@ -160,6 +200,10 @@ export async function POST(request: Request) {
           rewardCodeLabel = 'Tu último código ya fue canjeado';
         }
 
+        const redeemedIds = redeemedMilestoneIdsByTenant.get(membership.tenantId) || new Set<string>();
+        const redeemedTargets = redeemedMilestoneTargetsByTenant.get(membership.tenantId) || new Set<number>();
+        const redeemedLabels = redeemedMilestoneLabelsByTenant.get(membership.tenantId) || new Set<string>();
+
         return {
           tenantId: membership.tenantId,
           name: membership.tenant.name,
@@ -178,7 +222,10 @@ export async function POST(request: Request) {
             visitTarget: milestone.visitTarget,
             reward: milestone.reward,
             emoji: milestone.emoji,
-            redeemed: redeemedMilestoneIds.has(milestone.id),
+            redeemed:
+              redeemedIds.has(milestone.id) ||
+              redeemedTargets.has(milestone.visitTarget) ||
+              redeemedLabels.has(normalizeLabel(`${milestone.emoji ? `${milestone.emoji} ` : ''}${milestone.reward}`)),
           })),
         };
       });

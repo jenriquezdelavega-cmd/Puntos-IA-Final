@@ -56,31 +56,34 @@ export async function POST(request: Request) {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ usedAt: 'desc' }, { createdAt: 'desc' }],
     });
 
-    const history = redemptions.map((redemption) => ({
-      id: redemption.id,
-      tenant: redemption.tenant.name,
-      prize: getRedemptionRewardLabel({
-        tenantPrize: redemption.tenant.prize,
-        rewardSnapshot: redemption.rewardSnapshot,
-        code: redemption.code,
-        loyaltyMilestone: redemption.loyaltyMilestone,
-        coalitionRewardUnlock: redemption.coalitionRewardUnlock,
-      }),
-      date: new Date(redemption.createdAt).toLocaleDateString('es-MX', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        timeZone: BUSINESS_TZ,
-      }),
-      time: new Date(redemption.createdAt).toLocaleTimeString('es-MX', {
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: BUSINESS_TZ,
-      }),
-    }));
+    const history = redemptions.map((redemption) => {
+      const effectiveDate = redemption.usedAt ?? redemption.createdAt;
+      return {
+        id: redemption.id,
+        tenant: redemption.tenant.name,
+        prize: getRedemptionRewardLabel({
+          tenantPrize: redemption.tenant.prize,
+          rewardSnapshot: redemption.rewardSnapshot,
+          code: redemption.code,
+          loyaltyMilestone: redemption.loyaltyMilestone,
+          coalitionRewardUnlock: redemption.coalitionRewardUnlock,
+        }),
+        date: new Date(effectiveDate).toLocaleDateString('es-MX', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          timeZone: BUSINESS_TZ,
+        }),
+        time: new Date(effectiveDate).toLocaleTimeString('es-MX', {
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: BUSINESS_TZ,
+        }),
+      };
+    });
 
     return apiSuccess({ requestId, data: { history } });
   } catch (error: unknown) {

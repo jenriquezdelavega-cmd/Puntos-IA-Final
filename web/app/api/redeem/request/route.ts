@@ -225,6 +225,12 @@ export async function POST(request: Request) {
     });
 
     if (existingPending) {
+      if (!String(existingPending.rewardSnapshot ?? '').trim()) {
+        await prisma.redemption.update({
+          where: { id: existingPending.id },
+          data: { rewardSnapshot: String(tenant.prize ?? '').trim() || null },
+        });
+      }
       return apiSuccess({
         requestId,
         data: {
