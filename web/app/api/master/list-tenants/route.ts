@@ -1,7 +1,7 @@
 import { prisma } from '@/app/lib/prisma';
-import { isValidMasterCredentials } from '@/app/lib/master-auth';
+import { validateMasterCredentials } from '@/app/lib/master-auth';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
-import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import { asTrimmedString, optionalString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 
 function parseOptionalBoolean(value: unknown): boolean | undefined {
   if (typeof value === 'boolean') return value;
@@ -29,6 +29,7 @@ export async function POST(request: Request) {
     const parsedBody = parseWithSchema(body, {
       masterUsername: requiredString,
       masterPassword: requiredString,
+      masterOtp: optionalString,
       coalitionOnly: parseOptionalBoolean,
     });
     if (!parsedBody.ok) {
@@ -40,12 +41,28 @@ export async function POST(request: Request) {
       });
     }
 
-    if (!isValidMasterCredentials(parsedBody.data.masterUsername, parsedBody.data.masterPassword)) {
+    const authValidation = validateMasterCredentials(
+      parsedBody.data.masterUsername,
+      parsedBody.data.masterPassword,
+      parsedBody.data.masterOtp,
+    );
+    if (!authValidation.ok) {
+      const messageByReason = {
+        MISSING_USERNAME_OR_PASSWORD: 'Usuario y contraseña son obligatorios',
+        INVALID_USERNAME_OR_PASSWORD: 'Usuario o contraseña maestra incorrectos',
+        MISSING_OTP: 'Falta código de Authenticator (6 dígitos)',
+        INVALID_OTP: 'Código de Authenticator inválido',
+      } as const;
+
       return apiError({
         requestId,
         status: 401,
         code: 'UNAUTHORIZED',
-        message: 'No autorizado',
+        message: messageByReason[authValidation.reason],
+        details: {
+          totpRequired: authValidation.totpRequired,
+          reason: authValidation.reason,
+        },
       });
     }
 

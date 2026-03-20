@@ -1,7 +1,20 @@
-import { timingSafeEqual } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 const DEFAULT_MASTER_USERNAME = 'master_root_puntoia';
 const DEFAULT_MASTER_PASSWORD = 'G9v!2Qp#7Lm@4Xz%8Ta$1Nd';
+const TOTP_WINDOW_STEPS = 1;
+const TOTP_PERIOD_SECONDS = 30;
+const TOTP_DIGITS = 6;
+
+export type MasterAuthFailureReason =
+  | 'MISSING_USERNAME_OR_PASSWORD'
+  | 'INVALID_USERNAME_OR_PASSWORD'
+  | 'MISSING_OTP'
+  | 'INVALID_OTP';
+
+export type MasterAuthValidationResult =
+  | { ok: true; totpRequired: boolean }
+  | { ok: false; reason: MasterAuthFailureReason; totpRequired: boolean };
 
 function secureCompare(a: string, b: string): boolean {
   const aBuffer = Buffer.from(a);
@@ -24,20 +37,107 @@ function getExpectedMasterPassword(): string {
   return configured && configured.length > 0 ? configured : DEFAULT_MASTER_PASSWORD;
 }
 
+function getMasterTotpSecret(): string {
+  return (process.env.MASTER_TOTP_SECRET || '').replace(/\s+/g, '').toUpperCase();
+}
+
+function isTotpEnabled(): boolean {
+  return getMasterTotpSecret().length > 0;
+}
+
+function normalizeOtp(value: unknown): string {
+  return String(value || '').replace(/\s+/g, '');
+}
+
+function decodeBase32(secret: string): Buffer {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+
+  for (const char of secret.replace(/=+$/g, '')) {
+    const index = alphabet.indexOf(char);
+    if (index === -1) {
+      throw new Error('MASTER_TOTP_SECRET inválido: debe estar en Base32');
+    }
+    bits += index.toString(2).padStart(5, '0');
+  }
+
+  const bytes: number[] = [];
+  for (let i = 0; i + 8 <= bits.length; i += 8) {
+    bytes.push(Number.parseInt(bits.slice(i, i + 8), 2));
+  }
+
+  return Buffer.from(bytes);
+}
+
+function hotp(secret: Buffer, counter: number): string {
+  const counterBuffer = Buffer.alloc(8);
+  counterBuffer.writeBigInt64BE(BigInt(counter));
+  const digest = createHmac('sha1', secret).update(counterBuffer).digest();
+  const offset = digest[digest.length - 1] & 0x0f;
+  const binaryCode =
+    ((digest[offset] & 0x7f) << 24) |
+    ((digest[offset + 1] & 0xff) << 16) |
+    ((digest[offset + 2] & 0xff) << 8) |
+    (digest[offset + 3] & 0xff);
+  const otp = binaryCode % 10 ** TOTP_DIGITS;
+  return otp.toString().padStart(TOTP_DIGITS, '0');
+}
+
+function isValidTotpOtp(otpInput: unknown): boolean {
+  const provided = normalizeOtp(otpInput);
+  if (!/^\d{6}$/.test(provided)) return false;
+
+  const secret = decodeBase32(getMasterTotpSecret());
+  const nowCounter = Math.floor(Date.now() / 1000 / TOTP_PERIOD_SECONDS);
+
+  for (let step = -TOTP_WINDOW_STEPS; step <= TOTP_WINDOW_STEPS; step += 1) {
+    const expected = hotp(secret, nowCounter + step);
+    if (secureCompare(provided, expected)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export function isMasterPasswordConfigured(): boolean {
   return true;
 }
 
-export function isValidMasterCredentials(usernameInput: unknown, passwordInput: unknown): boolean {
+export function validateMasterCredentials(
+  usernameInput: unknown,
+  passwordInput: unknown,
+  otpInput?: unknown,
+): MasterAuthValidationResult {
   const providedUsername = String(usernameInput || '');
   const providedPassword = String(passwordInput || '');
+  const totpRequired = isTotpEnabled();
 
   if (providedUsername.length === 0 || providedPassword.length === 0) {
-    return false;
+    return { ok: false, reason: 'MISSING_USERNAME_OR_PASSWORD', totpRequired };
   }
 
   const expectedUsername = getExpectedMasterUsername();
   const expectedPassword = getExpectedMasterPassword();
+  const passwordOk = secureCompare(providedUsername, expectedUsername) && secureCompare(providedPassword, expectedPassword);
 
-  return secureCompare(providedUsername, expectedUsername) && secureCompare(providedPassword, expectedPassword);
+  if (!passwordOk) {
+    return { ok: false, reason: 'INVALID_USERNAME_OR_PASSWORD', totpRequired };
+  }
+  if (!totpRequired) {
+    return { ok: true, totpRequired };
+  }
+
+  const normalizedOtp = normalizeOtp(otpInput);
+  if (!/^\d{6}$/.test(normalizedOtp)) {
+    return { ok: false, reason: 'MISSING_OTP', totpRequired };
+  }
+
+  return isValidTotpOtp(normalizedOtp)
+    ? { ok: true, totpRequired }
+    : { ok: false, reason: 'INVALID_OTP', totpRequired };
+}
+
+export function isValidMasterCredentials(usernameInput: unknown, passwordInput: unknown, otpInput?: unknown): boolean {
+  return validateMasterCredentials(usernameInput, passwordInput, otpInput).ok;
 }
