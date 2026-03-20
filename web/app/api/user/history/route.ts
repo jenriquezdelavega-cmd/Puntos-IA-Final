@@ -64,6 +64,7 @@ export async function POST(request: Request) {
       tenant: redemption.tenant.name,
       prize: getRedemptionRewardLabel({
         tenantPrize: redemption.tenant.prize,
+        rewardSnapshot: redemption.rewardSnapshot,
         code: redemption.code,
         loyaltyMilestone: redemption.loyaltyMilestone,
         coalitionRewardUnlock: redemption.coalitionRewardUnlock,

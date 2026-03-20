@@ -318,6 +318,7 @@ export async function POST(request: Request) {
       redemptions.forEach(r => {
         const itemName = getRedemptionRewardLabel({
           tenantPrize: r.tenant.prize,
+          rewardSnapshot: r.rewardSnapshot,
           code: r.code,
           loyaltyMilestone: r.loyaltyMilestone,
           coalitionRewardUnlock: r.coalitionRewardUnlock,

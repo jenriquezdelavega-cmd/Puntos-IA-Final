@@ -14,6 +14,7 @@ type CoalitionUnlockLike = {
 
 type RedemptionDisplayInput = {
   tenantPrize?: string | null;
+  rewardSnapshot?: string | null;
   code?: string | null;
   loyaltyMilestone?: MilestoneLike;
   coalitionRewardUnlock?: CoalitionUnlockLike;
@@ -29,6 +30,9 @@ export function getRedemptionChannel(params: {
 }
 
 export function getRedemptionRewardLabel(input: RedemptionDisplayInput): string {
+  const rewardSnapshot = String(input.rewardSnapshot ?? '').trim();
+  if (rewardSnapshot) return rewardSnapshot;
+
   const milestoneReward = String(input.loyaltyMilestone?.reward ?? '').trim();
   if (milestoneReward) {
     const milestoneEmoji = String(input.loyaltyMilestone?.emoji ?? '').trim();

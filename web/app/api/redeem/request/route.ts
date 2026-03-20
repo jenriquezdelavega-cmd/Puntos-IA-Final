@@ -238,7 +238,13 @@ export async function POST(request: Request) {
     const code = await generateUniqueRedemptionCode(normalizedTenantId);
 
     await prisma.redemption.create({
-      data: { code, userId: normalizedUserId, tenantId: normalizedTenantId, isUsed: false },
+      data: {
+        code,
+        userId: normalizedUserId,
+        tenantId: normalizedTenantId,
+        isUsed: false,
+        rewardSnapshot: String(tenant.prize ?? '').trim() || null,
+      },
     });
 
     logApiEvent('/api/redeem/request', 'redemption_requested', {

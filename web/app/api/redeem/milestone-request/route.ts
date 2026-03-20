@@ -132,6 +132,7 @@ export async function POST(request: Request) {
         tenantId,
         isUsed: false,
         loyaltyMilestoneId: milestoneId,
+        rewardSnapshot: `${milestone.emoji ? `${milestone.emoji} ` : ''}${milestone.reward}`.trim() || null,
       },
     });
 
