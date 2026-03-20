@@ -69,6 +69,17 @@ function formatShortDate(value?: string | null) {
   return parsed.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
 }
 
+function formatChannel(channel: 'FINAL' | 'MILESTONE' | 'COALITION') {
+  if (channel === 'MILESTONE') return 'INTERMEDIO';
+  if (channel === 'COALITION') return 'COALICIÓN';
+  return 'FINAL';
+}
+
+function formatPercent(value: number, total: number) {
+  if (!total) return '0%';
+  return `${Math.round((value / total) * 100)}%`;
+}
+
 function renderComparisonBadge(current: number, previous: number) {
   if (!previous) return null;
   const pctDiff = Math.round(((current - previous) / previous) * 100);
@@ -81,6 +92,7 @@ function renderComparisonBadge(current: number, previous: number) {
 }
 
 function renderAreaChart(series: ReportPoint[], color: string, _fill?: string) {
+  const totalCount = series.reduce((sum, point) => sum + Number(point.count || 0), 0);
   return (
     <div className="mt-4 h-[180px] w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -109,7 +121,7 @@ function renderAreaChart(series: ReportPoint[], color: string, _fill?: string) {
           <Tooltip 
              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
              labelStyle={{ fontWeight: 'bold', color: '#374151' }}
-             formatter={(value: number) => [`${value}`, 'Visitas']} 
+             formatter={(value: number) => [`${value} (${formatPercent(Number(value), totalCount)})`, 'Visitas']} 
           />
           <Area type="monotone" dataKey="count" stroke={color} strokeWidth={2} fillOpacity={1} fill={`url(#gradient-${color})`} />
         </AreaChart>
@@ -142,6 +154,8 @@ export default function AdvancedDashboard(props: Props) {
   const clients = reportData?.customerProfiles || [];
   const genderData = reportData?.genderData || [];
   const ageData = reportData?.ageData || [];
+  const genderTotal = genderData.reduce((sum, item) => sum + Number(item.value || 0), 0);
+  const ageTotal = ageData.reduce((sum, item) => sum + Number(item.value || 0), 0);
   const totalClients = reportData?.clientsCsvData?.length || 0;
   const totalVisits = Number(reportData?.chartData?.reduce((sum, point) => sum + Number(point.count || 0), 0) || 0);
   const redemptions = reportData?.redemptions;
@@ -293,19 +307,34 @@ export default function AdvancedDashboard(props: Props) {
                </div>
              </article>
              <article className="md:col-span-3 rounded-2xl border border-gray-100 bg-white p-5">
-               <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-3">Actividad reciente de canjes</p>
+               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                 <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Actividad reciente de canjes</p>
+                 <p className="text-[11px] font-semibold text-gray-400">
+                   {(redemptions.activity || []).length > 12
+                     ? `Mostrando últimos 12 de ${(redemptions.activity || []).length}`
+                     : `${(redemptions.activity || []).length} registro${(redemptions.activity || []).length !== 1 ? 's' : ''}`}
+                 </p>
+               </div>
                {(redemptions.activity || []).length === 0 ? (
                  <p className="text-sm font-semibold text-gray-400">Sin actividad de canjes para el periodo.</p>
                ) : (
-                 <div className="space-y-2">
-                   {(redemptions.activity || []).slice(0, 6).map((entry) => (
-                     <div key={entry.id} className="flex flex-col gap-1 rounded-xl border border-gray-100 bg-gray-50 p-3 text-xs md:flex-row md:items-center md:justify-between">
-                       <p className="font-semibold text-gray-700">{entry.customer} · {entry.itemName}</p>
-                       <p className="font-mono font-black text-gray-900">{entry.code}</p>
-                       <p className={`font-black ${entry.status === 'VALIDATED' ? 'text-emerald-700' : 'text-amber-700'}`}>{entry.status === 'VALIDATED' ? 'VALIDADO' : 'PENDIENTE'}</p>
-                       <p className="text-gray-500">{formatShortDate(entry.requestedAt)} · {entry.channel}</p>
-                     </div>
-                   ))}
+                 <div className="overflow-hidden rounded-xl border border-gray-100">
+                   <div className="hidden border-b border-gray-100 bg-gray-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-gray-500 md:grid md:grid-cols-[minmax(0,1.6fr)_minmax(120px,0.65fr)_minmax(120px,0.6fr)_minmax(0,0.95fr)] md:items-center md:gap-3">
+                     <p>Cliente · premio</p>
+                     <p className="text-center">Código</p>
+                     <p className="text-center">Estado</p>
+                     <p className="text-right">Fecha · canal</p>
+                   </div>
+                   <div className="max-h-[360px] space-y-2 overflow-y-auto p-2">
+                     {(redemptions.activity || []).slice(0, 12).map((entry) => (
+                       <div key={entry.id} className="grid gap-1 rounded-xl border border-gray-100 bg-gray-50 p-3 text-xs md:grid-cols-[minmax(0,1.6fr)_minmax(120px,0.65fr)_minmax(120px,0.6fr)_minmax(0,0.95fr)] md:items-center md:gap-3">
+                         <p className="truncate font-semibold text-gray-700">{entry.customer} · {entry.itemName}</p>
+                         <p className="font-mono font-black text-gray-900 md:text-center">{entry.code}</p>
+                         <p className={`font-black md:text-center ${entry.status === 'VALIDATED' ? 'text-emerald-700' : 'text-amber-700'}`}>{entry.status === 'VALIDATED' ? 'VALIDADO' : 'PENDIENTE'}</p>
+                         <p className="text-gray-500 md:text-right">{formatShortDate(entry.requestedAt)} · {formatChannel(entry.channel)}</p>
+                       </div>
+                     ))}
+                   </div>
                  </div>
                )}
              </article>
@@ -323,7 +352,13 @@ export default function AdvancedDashboard(props: Props) {
                   <Pie data={genderData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
                     {genderData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color || '#6366f1'} />)}
                   </Pie>
-                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+                    formatter={(value: number, _name, item: { payload?: { label?: string } }) => [
+                      `${Number(value)} (${formatPercent(Number(value), genderTotal)})`,
+                      item?.payload?.label || 'Segmento',
+                    ]}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -350,7 +385,13 @@ export default function AdvancedDashboard(props: Props) {
                       return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
                     })}
                   </Pie>
-                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+                    formatter={(value: number, _name, item: { payload?: { label?: string } }) => [
+                      `${Number(value)} (${formatPercent(Number(value), ageTotal)})`,
+                      item?.payload?.label || 'Rango',
+                    ]}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             )}
