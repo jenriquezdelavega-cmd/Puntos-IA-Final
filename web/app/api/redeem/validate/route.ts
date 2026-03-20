@@ -17,6 +17,7 @@ function accessStatusToCode(status: number): ApiErrorCode {
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
+  const validationTimestamp = new Date();
 
   try {
     const body = await parseJsonObject(request);
@@ -122,7 +123,7 @@ export async function POST(request: Request) {
     await prisma.$transaction([
       prisma.redemption.update({
         where: { id: redemption.id },
-        data: { isUsed: true },
+        data: { isUsed: true, usedAt: validationTimestamp },
       }),
       ...(!redemption.loyaltyMilestone && !redemption.coalitionRewardUnlockId
         ? [
@@ -186,7 +187,7 @@ export async function POST(request: Request) {
           code: redemption.code,
           tenantId: redemption.tenantId,
           isUsed: true,
-          usedAt: new Date().toISOString(),
+          usedAt: validationTimestamp.toISOString(),
         },
       },
     });
