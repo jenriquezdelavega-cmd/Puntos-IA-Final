@@ -33,6 +33,17 @@ function periodKey(period: RewardPeriod, now = new Date()) {
   return `${y}-Y`;
 }
 
+function dayKeyInBusinessTz(d = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(d);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value || '';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
 
@@ -171,6 +182,34 @@ export async function POST(request: Request) {
         status: 400,
         code: 'BAD_REQUEST',
         message: `Te faltan ${requiredVisits - currentVisits} visita(s) para canjear`,
+      });
+    }
+
+    const todayBusinessDay = dayKeyInBusinessTz(now);
+    const alreadyRedeemedToday = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT r.id
+      FROM "Redemption" r
+      WHERE r."userId" = ${normalizedUserId}
+        AND r."tenantId" = ${normalizedTenantId}
+        AND r."isUsed" = TRUE
+        AND r."loyalty_milestone_id" IS NULL
+        AND r."coalition_reward_unlock_id" IS NULL
+        AND to_char((COALESCE(r."usedAt", r."createdAt") AT TIME ZONE ${TZ}), 'YYYY-MM-DD') = ${todayBusinessDay}
+      ORDER BY COALESCE(r."usedAt", r."createdAt") DESC
+      LIMIT 1
+    `;
+
+    if (alreadyRedeemedToday.length > 0) {
+      logApiEvent('/api/redeem/request', 'already_redeemed_today', {
+        userId: normalizedUserId,
+        tenantId: normalizedTenantId,
+        redemptionId: alreadyRedeemedToday[0]?.id || null,
+      });
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Este premio ya fue canjeado hoy. Intenta de nuevo mañana.',
       });
     }
 
