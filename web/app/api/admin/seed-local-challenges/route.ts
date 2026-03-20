@@ -1,7 +1,7 @@
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { isValidMasterCredentials } from '@/app/lib/master-auth';
 import { prisma } from '@/app/lib/prisma';
-import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
+import { asTrimmedString, optionalString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 
 function futureDate(days: number) {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
@@ -19,6 +19,7 @@ export async function POST(request: Request) {
     const parsedBody = parseWithSchema(body, {
       masterUsername: requiredString,
       masterPassword: requiredString,
+      masterOtp: optionalString,
     });
     if (!parsedBody.ok) {
       return apiError({
@@ -29,8 +30,8 @@ export async function POST(request: Request) {
       });
     }
 
-    const { masterUsername, masterPassword } = parsedBody.data;
-    if (!isValidMasterCredentials(masterUsername, masterPassword)) {
+    const { masterUsername, masterPassword, masterOtp } = parsedBody.data;
+    if (!isValidMasterCredentials(masterUsername, masterPassword, masterOtp)) {
       return apiError({ requestId, status: 401, code: 'UNAUTHORIZED', message: 'No autorizado' });
     }
 

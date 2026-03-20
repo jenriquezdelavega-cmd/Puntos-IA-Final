@@ -32,6 +32,7 @@ export async function POST(request: Request) {
     const parsedBody = parseWithSchema(body, {
       masterUsername: requiredString,
       masterPassword: requiredString,
+      masterOtp: optionalString,
       action: parseManageUserAction,
       userId: requiredString,
       data: parseUserData,
@@ -45,9 +46,9 @@ export async function POST(request: Request) {
       });
     }
 
-    const { masterUsername, masterPassword, action, userId, data } = parsedBody.data;
+    const { masterUsername, masterPassword, masterOtp, action, userId, data } = parsedBody.data;
 
-    if (!isValidMasterCredentials(masterUsername, masterPassword)) {
+    if (!isValidMasterCredentials(masterUsername, masterPassword, masterOtp)) {
       return apiError({
         requestId,
         status: 401,

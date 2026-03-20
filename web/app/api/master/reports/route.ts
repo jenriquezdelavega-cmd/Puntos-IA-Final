@@ -40,6 +40,7 @@ export async function POST(req: Request) {
     const parsedBody = parseWithSchema(body, {
       masterUsername: requiredString,
       masterPassword: requiredString,
+      masterOtp: optionalString,
       report: parseReportType,
       tenantId: optionalString,
     });
@@ -52,9 +53,9 @@ export async function POST(req: Request) {
       });
     }
 
-    const { masterUsername, masterPassword, report, tenantId } = parsedBody.data;
+    const { masterUsername, masterPassword, masterOtp, report, tenantId } = parsedBody.data;
 
-    if (!isValidMasterCredentials(masterUsername, masterPassword)) {
+    if (!isValidMasterCredentials(masterUsername, masterPassword, masterOtp)) {
       return apiError({
         requestId,
         status: 401,
