@@ -1,7 +1,7 @@
 // NOTE: metadata is exported from app/ingresar/layout.tsx since this is a 'use client' component.
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Building2, CircleUserRound, ShieldCheck } from 'lucide-react';
 import { PageShell } from '@/src/components/marketing/page-shell';
 import { SiteHeader } from '@/src/components/marketing/site-header';
@@ -54,6 +54,10 @@ function isValidBasicEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function normalizeOtpCode(value: string): string {
+  return value.replace(/\D/g, '').slice(0, 6);
+}
+
 const BIRTH_DATE_LIMITS = getBirthDateLimits();
 
 export default function IngresarPage() {
@@ -78,6 +82,10 @@ export default function IngresarPage() {
   const [registerVerificationPhone, setRegisterVerificationPhone] = useState('');
   const [registerVerificationCode, setRegisterVerificationCode] = useState('');
   const [registerVerificationLoading, setRegisterVerificationLoading] = useState(false);
+  const loginOtpAutoSubmittingRef = useRef(false);
+  const registerOtpAutoSubmittingRef = useRef(false);
+  const lastLoginOtpAttemptRef = useRef('');
+  const lastRegisterOtpAttemptRef = useRef('');
 
   const [customerMode, setCustomerMode] = useState<CustomerMode>('login');
   const { minBirthDate, maxBirthDate } = BIRTH_DATE_LIMITS;
@@ -114,6 +122,30 @@ export default function IngresarPage() {
       setLoginMessage('Tu correo ya estaba confirmado. Inicia sesión.');
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const codeFromUrl = normalizeOtpCode(params.get('otp') || params.get('code') || '');
+    if (!codeFromUrl) return;
+
+    let consumed = false;
+    if (phoneVerificationRequired) {
+      setVerificationCode(codeFromUrl);
+      consumed = true;
+    }
+    if (registerVerificationRequired) {
+      setRegisterVerificationCode(codeFromUrl);
+      consumed = true;
+    }
+
+    if (consumed) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('otp');
+      url.searchParams.delete('code');
+      window.history.replaceState({}, '', `${url.pathname}?${url.searchParams.toString()}`);
+    }
+  }, [phoneVerificationRequired, registerVerificationRequired]);
 
   const setModeInUrl = (mode: CustomerMode) => {
     if (typeof window === 'undefined') return;
@@ -287,17 +319,63 @@ export default function IngresarPage() {
 
       setRegisterVerificationRequired(false);
       setRegisterVerificationCode('');
+      setRegisterMessage('WhatsApp verificado. Iniciando sesión automáticamente...');
       setPhone(registerVerificationPhone);
-      setCustomerMode('login');
-      setModeInUrl('login');
-      setLoginMessage('Cuenta creada y WhatsApp verificado. Ya puedes iniciar sesión por primera vez.');
-      setRegisterMessage('');
+      setPassword(registerPassword);
+      const loginOk = await loginCustomer({ phone: registerVerificationPhone, password: registerPassword }, true);
+      if (!loginOk) {
+        setCustomerMode('login');
+        setModeInUrl('login');
+        setLoginMessage('Cuenta creada y WhatsApp verificado. Intenta iniciar sesión.');
+      }
     } catch {
       setRegisterMessage('No se pudo validar el código OTP. Intenta nuevamente.');
     } finally {
       setRegisterVerificationLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!phoneVerificationRequired) {
+      loginOtpAutoSubmittingRef.current = false;
+      lastLoginOtpAttemptRef.current = '';
+      return;
+    }
+    if (verificationLoading) return;
+    const normalizedCode = normalizeOtpCode(verificationCode);
+    if (normalizedCode.length !== 6) {
+      lastLoginOtpAttemptRef.current = '';
+      return;
+    }
+    if (loginOtpAutoSubmittingRef.current) return;
+    if (lastLoginOtpAttemptRef.current === normalizedCode) return;
+    lastLoginOtpAttemptRef.current = normalizedCode;
+    loginOtpAutoSubmittingRef.current = true;
+    void verifyPhoneCodeAndLogin().finally(() => {
+      loginOtpAutoSubmittingRef.current = false;
+    });
+  }, [phoneVerificationRequired, verificationCode, verificationLoading]);
+
+  useEffect(() => {
+    if (!registerVerificationRequired) {
+      registerOtpAutoSubmittingRef.current = false;
+      lastRegisterOtpAttemptRef.current = '';
+      return;
+    }
+    if (registerVerificationLoading) return;
+    const normalizedCode = normalizeOtpCode(registerVerificationCode);
+    if (normalizedCode.length !== 6) {
+      lastRegisterOtpAttemptRef.current = '';
+      return;
+    }
+    if (registerOtpAutoSubmittingRef.current) return;
+    if (lastRegisterOtpAttemptRef.current === normalizedCode) return;
+    lastRegisterOtpAttemptRef.current = normalizedCode;
+    registerOtpAutoSubmittingRef.current = true;
+    void verifyRegisterPhoneCode().finally(() => {
+      registerOtpAutoSubmittingRef.current = false;
+    });
+  }, [registerVerificationRequired, registerVerificationCode, registerVerificationLoading]);
 
   const onCustomerLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -471,10 +549,12 @@ export default function IngresarPage() {
                       </button>
                       <input
                         value={verificationCode}
-                        onChange={(event) => setVerificationCode(event.target.value)}
+                        onChange={(event) => setVerificationCode(normalizeOtpCode(event.target.value))}
                         className="flex-1 rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-[#7e4fd3] focus:outline-none"
                         placeholder="Código de 6 dígitos"
                         inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={6}
                       />
                       <button
                         type="button"
@@ -594,10 +674,12 @@ export default function IngresarPage() {
                       </button>
                       <input
                         value={registerVerificationCode}
-                        onChange={(event) => setRegisterVerificationCode(event.target.value)}
+                        onChange={(event) => setRegisterVerificationCode(normalizeOtpCode(event.target.value))}
                         className="flex-1 rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-[#7e4fd3] focus:outline-none"
                         placeholder="Código de 6 dígitos"
                         inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={6}
                       />
                       <button
                         type="button"
