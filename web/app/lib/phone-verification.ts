@@ -1,4 +1,4 @@
-import { createHash, randomInt } from 'node:crypto';
+import { createHash, randomInt, randomUUID } from 'node:crypto';
 import { asTrimmedString, normalizePhone } from '@/app/lib/request-validation';
 
 type SendOtpResult = {
@@ -15,9 +15,10 @@ function getInfobipWhatsappConfig() {
   const apiKey = readEnv('INFOBIP_API_KEY');
   const baseUrl = readEnv('INFOBIP_BASE_URL');
   const from = readEnv('INFOBIP_WHATSAPP_FROM');
-  const templateId = readEnv('INFOBIP_WHATSAPP_TEMPLATE_ID');
+  const templateName = readEnv('INFOBIP_WHATSAPP_TEMPLATE_NAME') || readEnv('INFOBIP_WHATSAPP_TEMPLATE_ID');
+  const language = readEnv('INFOBIP_WHATSAPP_LANGUAGE') || 'en';
 
-  if (!enabled || !apiKey || !baseUrl || !from || !templateId) {
+  if (!enabled || !apiKey || !baseUrl || !from || !templateName) {
     return null;
   }
 
@@ -26,7 +27,8 @@ function getInfobipWhatsappConfig() {
     apiKey,
     baseUrl: normalizedBase.replace(/\/$/, ''),
     from,
-    templateId,
+    templateName,
+    language,
   };
 }
 
@@ -80,20 +82,21 @@ export async function sendWhatsAppVerificationCode(phoneInput: string, code: str
   const to = toE164Phone(phoneInput);
   if (!to) return { ok: false, error: 'PHONE_INVALID' };
 
-  const response = await fetch(`${config.baseUrl}/whatsapp/1/message/template`, {
-    method: 'POST',
-    headers: {
-      Authorization: `App ${config.apiKey}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify({
+  const normalizedLanguage = asTrimmedString(config.language);
+  const baseLanguage = normalizedLanguage.split(/[-_]/)[0] || '';
+  const languageCandidates = Array.from(new Set([normalizedLanguage, baseLanguage, 'en'].filter(Boolean)));
+  let lastError = 'INFOBIP_HTTP_400';
+
+  for (const language of languageCandidates) {
+    const payload = {
       messages: [
         {
           from: config.from,
           to: to.replace('+', ''),
-          messageId: config.templateId,
+          messageId: randomUUID(),
           content: {
+            templateName: config.templateName,
+            language,
             templateData: {
               body: {
                 placeholders: [asTrimmedString(code)],
@@ -102,12 +105,34 @@ export async function sendWhatsAppVerificationCode(phoneInput: string, code: str
           },
         },
       ],
-    }),
-  });
+    };
 
-  if (!response.ok) {
-    return { ok: false, error: `INFOBIP_HTTP_${response.status}` };
+    const response = await fetch(`${config.baseUrl}/whatsapp/1/message/template`, {
+      method: 'POST',
+      headers: {
+        Authorization: `App ${config.apiKey}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      return { ok: true };
+    }
+
+    let bodyMessage = '';
+    try {
+      bodyMessage = await response.text();
+    } catch {
+      bodyMessage = '';
+    }
+
+    const compactBodyMessage = bodyMessage.replace(/\s+/g, ' ').trim().slice(0, 180);
+    lastError = compactBodyMessage
+      ? `INFOBIP_HTTP_${response.status}:${compactBodyMessage}`
+      : `INFOBIP_HTTP_${response.status}`;
   }
 
-  return { ok: true };
+  return { ok: false, error: lastError };
 }
