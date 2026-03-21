@@ -44,32 +44,77 @@ export async function POST(request: Request) {
       });
     }
 
-    const user = await prisma.tenantUser.findUnique({
-      where: { username },
-      select: {
-        id: true,
-        name: true,
-        role: true,
-        password: true,
-        tenant: {
+    const user = await (async () => {
+      try {
+        return await prisma.tenantUser.findUnique({
+          where: { username },
           select: {
             id: true,
-            isActive: true,
             name: true,
-            slug: true,
-            codePrefix: true,
-            prize: true,
-            instagram: true,
-            lat: true,
-            lng: true,
-            address: true,
-            requiredVisits: true,
-            rewardPeriod: true,
-            logoData: true,
+            email: true,
+            role: true,
+            password: true,
+            mustChangePassword: true,
+            tenant: {
+              select: {
+                id: true,
+                isActive: true,
+                name: true,
+                slug: true,
+                codePrefix: true,
+                prize: true,
+                instagram: true,
+                lat: true,
+                lng: true,
+                address: true,
+                requiredVisits: true,
+                rewardPeriod: true,
+                logoData: true,
+                ticketControlEnabled: true,
+              },
+            },
           },
-        },
-      },
-    });
+        });
+      } catch (error: unknown) {
+        if (!isMissingTableOrColumnError(error)) throw error;
+        const fallback = await prisma.tenantUser.findUnique({
+          where: { username },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            password: true,
+            mustChangePassword: true,
+            tenant: {
+              select: {
+                id: true,
+                isActive: true,
+                name: true,
+                slug: true,
+                codePrefix: true,
+                prize: true,
+                instagram: true,
+                lat: true,
+                lng: true,
+                address: true,
+                requiredVisits: true,
+                rewardPeriod: true,
+                logoData: true,
+              },
+            },
+          },
+        });
+        if (!fallback) return fallback;
+        return {
+          ...fallback,
+          tenant: {
+            ...fallback.tenant,
+            ticketControlEnabled: false,
+          },
+        };
+      }
+    })();
 
     if (!user || !verifyPassword(password, user.password)) {
       return apiError({
@@ -109,7 +154,12 @@ export async function POST(request: Request) {
       requestId,
       data: {
         success: true,
-        user: { id: user.id, name: user.name, role: normalizedRole },
+        user: {
+          id: user.id,
+          name: user.name,
+          role: normalizedRole,
+          mustChangePassword: Boolean(user.mustChangePassword),
+        },
         tenantSessionToken,
         tenant: {
           id: user.tenant.id,
@@ -131,6 +181,7 @@ export async function POST(request: Request) {
           coalitionOptIn: null,
           coalitionDiscountPercent: null,
           coalitionProduct: '',
+          ticketControlEnabled: Boolean(user.tenant.ticketControlEnabled),
         },
       },
     });

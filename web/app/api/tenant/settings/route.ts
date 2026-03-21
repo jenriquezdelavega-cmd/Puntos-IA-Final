@@ -39,6 +39,7 @@ export async function POST(request: Request) {
     const walletLabelColor = asTrimmedString(body.walletLabelColor);
     const walletStripImageData = asTrimmedString(body.walletStripImageData);
     const coalitionOptIn = typeof body.coalitionOptIn === 'boolean' ? body.coalitionOptIn : undefined;
+    const ticketControlEnabled = typeof body.ticketControlEnabled === 'boolean' ? body.ticketControlEnabled : undefined;
     const coalitionDiscountPercentRaw = body.coalitionDiscountPercent;
     const coalitionProduct = asTrimmedString(body.coalitionProduct);
 
@@ -107,6 +108,7 @@ export async function POST(request: Request) {
         ...(parsedRewardPeriod ? { rewardPeriod: parsedRewardPeriod } : {}),
         ...(logoData !== undefined && logoData !== null ? { logoData } : {}),
         ...(coalitionOptIn !== undefined ? { coalitionOptIn } : {}),
+        ...(ticketControlEnabled !== undefined ? { ticketControlEnabled } : {}),
         ...(parsedCoalitionDiscount !== undefined ? { coalitionDiscountPercent: parsedCoalitionDiscount } : {}),
         ...(coalitionProduct !== undefined && coalitionProduct !== null ? { coalitionProduct } : {}),
       },

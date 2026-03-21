@@ -65,6 +65,12 @@ function parsePurchaseAmount(value: unknown) {
   return Math.min(1000000, Math.max(0, Math.round(parsed * 100) / 100));
 }
 
+function parseTicketNumber(value: unknown) {
+  const normalized = asTrimmedString(value).replace(/\s+/g, '').toUpperCase();
+  if (!normalized) return '';
+  return normalized.slice(0, 40);
+}
+
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
 
@@ -91,23 +97,53 @@ export async function POST(request: Request) {
 
     const { userId, code, tenantUserId, tenantSessionToken } = parsedBody.data;
     const purchaseAmount = parsePurchaseAmount(body.purchaseAmount);
+    const rawTicketNumber = parseTicketNumber(body.ticketNumber);
 
     const dayUTC = dayKeyInBusinessTz();
 
-    const validCode = await prisma.dailyCode.findFirst({
-      where: { code, isActive: true, day: dayUTC },
-      include: {
-        tenant: {
-          select: {
-            id: true,
-            isActive: true,
-            name: true,
-            requiredVisits: true,
-            rewardPeriod: true,
+    const validCode = await (async () => {
+      try {
+        return await prisma.dailyCode.findFirst({
+          where: { code, isActive: true, day: dayUTC },
+          include: {
+            tenant: {
+              select: {
+                id: true,
+                isActive: true,
+                name: true,
+                requiredVisits: true,
+                rewardPeriod: true,
+                ticketControlEnabled: true,
+              },
+            },
           },
-        },
-      },
-    });
+        });
+      } catch (error: unknown) {
+        if (!isMissingTableOrColumnError(error)) throw error;
+        const fallback = await prisma.dailyCode.findFirst({
+          where: { code, isActive: true, day: dayUTC },
+          include: {
+            tenant: {
+              select: {
+                id: true,
+                isActive: true,
+                name: true,
+                requiredVisits: true,
+                rewardPeriod: true,
+              },
+            },
+          },
+        });
+        if (!fallback) return fallback;
+        return {
+          ...fallback,
+          tenant: {
+            ...fallback.tenant,
+            ticketControlEnabled: false,
+          },
+        };
+      }
+    })();
 
     if (!validCode) {
       logApiEvent('/api/check-in/scan', 'invalid_code', { userId });
@@ -191,6 +227,8 @@ export async function POST(request: Request) {
       });
     }
 
+    const ticketNumber = validCode.tenant.ticketControlEnabled ? rawTicketNumber : '';
+
     let updatedMembership;
     try {
       [, updatedMembership] = await prisma.$transaction([
@@ -201,6 +239,7 @@ export async function POST(request: Request) {
             tenantId: validCode.tenantId,
             visitDay,
             purchaseAmount,
+            ticketNumber: ticketNumber || null,
           },
           select: { id: true },
         }),
@@ -339,6 +378,7 @@ export async function POST(request: Request) {
         rewardPeriod: validCode.tenant.rewardPeriod,
         message: `¡Visita registrada en ${validCode.tenant.name}!`,
         purchaseAmount,
+        ticketNumber: ticketNumber || '',
       },
     });
 

@@ -48,7 +48,6 @@ export async function POST(request: Request) {
     const tenantUsers = await prisma.tenantUser.findMany({
       where: {
         email: { equals: email, mode: 'insensitive' },
-        role: 'ADMIN',
       },
     });
     let emailDelivery: 'sent' | 'not_configured' | 'failed' | 'accepted' = 'accepted';
