@@ -6,6 +6,11 @@ type SendOtpResult = {
   error?: string;
 };
 
+type SendOtpContext = {
+  name?: string | null;
+  placeholders?: Array<string | null | undefined>;
+};
+
 function readEnv(name: string) {
   return String(process.env[name] || '').trim();
 }
@@ -56,8 +61,8 @@ export function toE164Phone(phoneInput: string) {
     return `+${normalized}`;
   }
 
-  if (/^[0-9]{11,15}$/.test(normalized)) {
-    return `+${normalized}`;
+  if (/^[0-9]{11}$/.test(normalized) && normalized.startsWith('1')) {
+    return `+52${normalized.slice(1)}`;
   }
 
   return '';
@@ -75,7 +80,29 @@ export function isPhoneVerificationCodeMatch(code: string, codeHash: string) {
   return hashPhoneVerificationCode(code) === asTrimmedString(codeHash);
 }
 
-export async function sendWhatsAppVerificationCode(phoneInput: string, code: string): Promise<SendOtpResult> {
+function buildTemplatePlaceholders(code: string, context: SendOtpContext = {}) {
+  if (Array.isArray(context.placeholders) && context.placeholders.length > 0) {
+    return context.placeholders.map((value) => asTrimmedString(value));
+  }
+
+  const configuredOrder = readEnv('INFOBIP_WHATSAPP_TEMPLATE_PLACEHOLDERS');
+  if (!configuredOrder) return [asTrimmedString(code)];
+
+  const keys = configuredOrder
+    .split(',')
+    .map((part) => part.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (!keys.length) return [asTrimmedString(code)];
+
+  return keys.map((key) => {
+    if (key === 'code' || key === 'otp') return asTrimmedString(code);
+    if (key === 'name') return asTrimmedString(context.name);
+    return '';
+  });
+}
+
+export async function sendWhatsAppVerificationCode(phoneInput: string, code: string, context: SendOtpContext = {}): Promise<SendOtpResult> {
   const config = getInfobipWhatsappConfig();
   if (!config) return { ok: false, error: 'PHONE_VERIFICATION_NOT_CONFIGURED' };
 
@@ -85,6 +112,7 @@ export async function sendWhatsAppVerificationCode(phoneInput: string, code: str
   const normalizedLanguage = asTrimmedString(config.language);
   const baseLanguage = normalizedLanguage.split(/[-_]/)[0] || '';
   const languageCandidates = Array.from(new Set([normalizedLanguage, baseLanguage, 'en'].filter(Boolean)));
+  const placeholders = buildTemplatePlaceholders(code, context);
   let lastError = 'INFOBIP_HTTP_400';
 
   for (const language of languageCandidates) {
@@ -99,7 +127,7 @@ export async function sendWhatsAppVerificationCode(phoneInput: string, code: str
             language,
             templateData: {
               body: {
-                placeholders: [asTrimmedString(code)],
+                placeholders,
               },
             },
           },

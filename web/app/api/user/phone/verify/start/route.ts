@@ -54,7 +54,7 @@ export async function POST(request: Request) {
           ...(normalizedPhone ? [{ phone: { endsWith: normalizedPhone } }] : []),
         ],
       },
-      select: { id: true, phone: true },
+      select: { id: true, phone: true, name: true },
     });
 
     if (!user) {
@@ -74,7 +74,9 @@ export async function POST(request: Request) {
       },
     });
 
-    const result = await sendWhatsAppVerificationCode(user.phone, code);
+    const result = await sendWhatsAppVerificationCode(user.phone, code, {
+      name: user.name || '',
+    });
     if (!result.ok) {
       logApiEvent('/api/user/phone/verify/start', 'send_otp_failed', {
         userId: user.id,
