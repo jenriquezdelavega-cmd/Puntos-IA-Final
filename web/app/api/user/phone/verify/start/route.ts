@@ -1,6 +1,7 @@
 import { prisma } from '@/app/lib/prisma';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
+import { logApiEvent } from '@/app/lib/api-log';
 import { buildPhoneLookupCandidates, normalizePhone, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 import {
   generatePhoneVerificationCode,
@@ -75,7 +76,17 @@ export async function POST(request: Request) {
 
     const result = await sendWhatsAppVerificationCode(user.phone, code);
     if (!result.ok) {
-      return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'No fue posible enviar el código de verificación' });
+      logApiEvent('/api/user/phone/verify/start', 'send_otp_failed', {
+        userId: user.id,
+        phone: user.phone,
+        reason: result.error || 'unknown',
+      });
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: `No fue posible enviar el código de verificación (${result.error || 'OTP_SEND_FAILED'})`,
+      });
     }
 
     return apiSuccess({

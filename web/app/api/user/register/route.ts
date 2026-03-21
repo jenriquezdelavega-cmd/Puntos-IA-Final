@@ -16,6 +16,12 @@ import { sendEmailVerificationEmail } from '@/app/lib/email';
 import { logApiEvent } from '@/app/lib/api-log';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 import { generatePasswordResetToken, hashPasswordResetToken } from '@/app/lib/password-reset';
+import {
+  generatePhoneVerificationCode,
+  hashPhoneVerificationCode,
+  isPhoneVerificationEnabled,
+  sendWhatsAppVerificationCode,
+} from '@/app/lib/phone-verification';
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -223,6 +229,37 @@ export async function POST(request: Request) {
       logApiEvent('/api/user/register', 'verification_email_skipped', {
         userId: newUser.id,
       });
+    }
+
+    if (isPhoneVerificationEnabled()) {
+      const otpCode = generatePhoneVerificationCode();
+      const otpHash = hashPhoneVerificationCode(otpCode);
+
+      await prisma.phoneVerificationCode.deleteMany({ where: { userId: newUser.id, usedAt: null } });
+      await prisma.phoneVerificationCode.create({
+        data: {
+          userId: newUser.id,
+          codeHash: otpHash,
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        },
+      });
+
+      const otpResult = await sendWhatsAppVerificationCode(newUser.phone || normalizedPhone || phone, otpCode);
+      if (!otpResult.ok) {
+        logApiEvent('/api/user/register', 'verification_otp_failed', {
+          userId: newUser.id,
+          reason: otpResult.error || 'unknown',
+        });
+
+        await prisma.user.delete({ where: { id: newUser.id } });
+
+        return apiError({
+          requestId,
+          status: 400,
+          code: 'BAD_REQUEST',
+          message: `No pudimos enviar tu OTP de WhatsApp (${otpResult.error || 'OTP_SEND_FAILED'}). Intenta registrar tu cuenta nuevamente.`,
+        });
+      }
     }
 
     return apiSuccess({
