@@ -244,7 +244,9 @@ export async function POST(request: Request) {
         },
       });
 
-      const otpResult = await sendWhatsAppVerificationCode(newUser.phone || normalizedPhone || phone, otpCode);
+      const otpResult = await sendWhatsAppVerificationCode(newUser.phone || normalizedPhone || phone, otpCode, {
+        name: newUser.name || name,
+      });
       if (!otpResult.ok) {
         logApiEvent('/api/user/register', 'verification_otp_failed', {
           userId: newUser.id,
