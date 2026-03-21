@@ -142,6 +142,10 @@ export async function POST(request: Request) {
     }
 
     const normalizedRole = String(user.role || '').toUpperCase();
+    const ticketControlEnabled =
+      'ticketControlEnabled' in user.tenant
+        ? Boolean((user.tenant as { ticketControlEnabled?: boolean }).ticketControlEnabled)
+        : false;
     let walletStyle = defaultTenantWalletStyle(user.tenant.id);
     try {
       walletStyle = (await getTenantWalletStyle(user.tenant.id)) || walletStyle;
@@ -181,7 +185,7 @@ export async function POST(request: Request) {
           coalitionOptIn: null,
           coalitionDiscountPercent: null,
           coalitionProduct: '',
-          ticketControlEnabled: Boolean(user.tenant.ticketControlEnabled),
+          ticketControlEnabled,
         },
       },
     });

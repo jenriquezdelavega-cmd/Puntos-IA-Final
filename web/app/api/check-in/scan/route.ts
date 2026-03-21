@@ -227,7 +227,11 @@ export async function POST(request: Request) {
       });
     }
 
-    const ticketNumber = validCode.tenant.ticketControlEnabled ? rawTicketNumber : '';
+    const ticketControlEnabled =
+      'ticketControlEnabled' in validCode.tenant
+        ? Boolean((validCode.tenant as { ticketControlEnabled?: boolean }).ticketControlEnabled)
+        : false;
+    const ticketNumber = ticketControlEnabled ? rawTicketNumber : '';
 
     let updatedMembership;
     try {
