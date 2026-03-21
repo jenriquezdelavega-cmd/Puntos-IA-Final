@@ -119,6 +119,39 @@ export default function IngresarPage() {
     window.history.replaceState({}, '', `${url.pathname}?${url.searchParams.toString()}`);
   };
 
+  const requestPhoneOtp = async (phoneInput: string, silent = false): Promise<boolean> => {
+    const cleanPhone = phoneInput.trim();
+    if (!cleanPhone) {
+      if (!silent) setLoginMessage('Captura primero tu teléfono para verificarlo.');
+      return false;
+    }
+
+    const previousPhone = verificationPhone;
+    setVerificationPhone(cleanPhone);
+    setVerificationLoading(true);
+    try {
+      const response = await fetch('/api/user/phone/verify/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: cleanPhone }),
+      });
+      const body = (await response.json()) as ApiErrorResponse & { message?: string };
+      if (!response.ok) {
+        if (!silent) setLoginMessage(body?.message || 'No se pudo enviar el código OTP por WhatsApp.');
+        setVerificationPhone(previousPhone);
+        return false;
+      }
+      if (!silent) setLoginMessage(body?.message || 'Te enviamos un código OTP por WhatsApp.');
+      return true;
+    } catch {
+      if (!silent) setLoginMessage('No se pudo enviar el código OTP en este momento. Intenta nuevamente.');
+      setVerificationPhone(previousPhone);
+      return false;
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+
   const loginCustomer = async (payload: { phone: string; password?: string }, showError = true) => {
     try {
       const response = await fetch('/api/user/login', {
@@ -132,7 +165,11 @@ export default function IngresarPage() {
       if (!response.ok || !body || !('id' in body)) {
         if ((body as ApiErrorResponse)?.message?.includes('verificar tu teléfono')) {
           setPhoneVerificationRequired(true);
-          setVerificationPhone(payload.phone.trim());
+          const otpSent = await requestPhoneOtp(payload.phone, true);
+          if (!otpSent && showError) {
+            setLoginMessage('Necesitamos validar tu WhatsApp para iniciar sesión, pero no se pudo enviar el OTP.');
+            return false;
+          }
         } else {
           setPhoneVerificationRequired(false);
         }
@@ -160,28 +197,7 @@ export default function IngresarPage() {
   };
 
   const sendPhoneVerificationCode = async () => {
-    if (!verificationPhone) {
-      setLoginMessage('Captura primero tu teléfono para verificarlo.');
-      return;
-    }
-    setVerificationLoading(true);
-    try {
-      const response = await fetch('/api/user/phone/verify/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: verificationPhone }),
-      });
-      const body = (await response.json()) as ApiErrorResponse & { message?: string };
-      if (!response.ok) {
-        setLoginMessage(body?.message || 'No se pudo enviar el código de verificación.');
-        return;
-      }
-      setLoginMessage(body?.message || 'Te enviamos un código para verificar tu teléfono.');
-    } catch {
-      setLoginMessage('No se pudo enviar el código en este momento. Intenta nuevamente.');
-    } finally {
-      setVerificationLoading(false);
-    }
+    await requestPhoneOtp(verificationPhone);
   };
 
   const verifyPhoneCodeAndLogin = async () => {
@@ -264,11 +280,11 @@ export default function IngresarPage() {
       setCustomerMode('login');
       setModeInUrl('login');
       if (body?.emailStatus === 'not_configured') {
-        setLoginMessage('Cuenta creada, pero no se pudo enviar el correo de confirmación porque el servicio de email no está configurado.');
+        setLoginMessage('Cuenta creada. Tu primer login no depende del correo, pero ahora mismo no pudimos enviar el email de verificación.');
       } else if (body?.emailStatus === 'failed') {
-        setLoginMessage('Cuenta creada, pero el correo de confirmación falló. Regístrate de nuevo o contacta soporte.');
+        setLoginMessage('Cuenta creada. Tu primer login no depende del correo, aunque falló el envío del email de verificación.');
       } else {
-        setLoginMessage('Cuenta creada. Te enviamos un correo para confirmar tu cuenta antes de iniciar sesión.');
+        setLoginMessage('Cuenta creada. Te enviamos un correo de verificación, pero no es requisito para tu primer login.');
       }
     } catch {
       setRegisterMessage('No se pudo crear la cuenta en este momento. Intenta nuevamente.');
@@ -370,7 +386,7 @@ export default function IngresarPage() {
                 {phoneVerificationRequired && (
                   <div className="mt-2 rounded-lg border border-[#7e4fd3]/30 bg-[#7e4fd3]/10 p-4">
                     <p className="text-sm font-semibold text-[#dacbf0]">
-                      Verifica tu teléfono para continuar.
+                      Verifica tu WhatsApp con OTP para continuar.
                     </p>
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                       <button

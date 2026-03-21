@@ -117,15 +117,6 @@ export async function POST(req: Request) {
       });
     }
 
-    if (user.email && !user.emailVerifiedAt) {
-      return apiError({
-        requestId,
-        status: 403,
-        code: 'FORBIDDEN',
-        message: 'Debes confirmar tu correo antes de iniciar sesión. Revisa tu bandeja.',
-      });
-    }
-
     if (isPhoneVerificationRequired() && isPhoneVerificationEnabled() && !user.phoneVerifiedAt) {
       return apiError({
         requestId,
@@ -231,6 +222,7 @@ export async function POST(req: Request) {
         phone: user.phone,
         name: user.name ?? '',
         email: user.email ?? '',
+        emailVerificationPending: Boolean(user.email) && !user.emailVerifiedAt,
         gender: user.gender ?? '',
         birthDate: user.birthDate ?? null,
         memberships,
