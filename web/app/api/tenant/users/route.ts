@@ -2,6 +2,11 @@ import { prisma } from '@/app/lib/prisma';
 import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { apiError, apiSuccess, type ApiErrorCode, getRequestId } from '@/app/lib/api-response';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
+import { hashPassword } from '@/app/lib/password';
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
 
 function accessStatusToCode(status: number): ApiErrorCode {
   if (status === 400) return 'BAD_REQUEST';
@@ -56,7 +61,7 @@ export async function POST(request: Request) {
     const name = asTrimmedString(body.name);
     const username = asTrimmedString(body.username);
     const password = asTrimmedString(body.password);
-    const role = asTrimmedString(body.role);
+    const role = asTrimmedString(body.role).toUpperCase();
     const phone = asTrimmedString(body.phone);
     const email = asTrimmedString(body.email);
 
@@ -79,6 +84,38 @@ export async function POST(request: Request) {
         message: 'username requerido',
       });
     }
+    if (!password || password.length < 6) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'La contraseña debe tener al menos 6 caracteres',
+      });
+    }
+    if (!email || !isValidEmail(email.toLowerCase())) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Email inválido',
+      });
+    }
+    if (role && role !== 'ADMIN' && role !== 'STAFF') {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Rol inválido',
+      });
+    }
+    if (role === 'ADMIN') {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Solo se permite un administrador por negocio. Crea usuarios operativos (STAFF).',
+      });
+    }
 
     const tenant = await prisma.tenant.findUnique({ where: { id: access.tenantId } });
     if (!tenant) {
@@ -97,10 +134,10 @@ export async function POST(request: Request) {
       data: {
         tenantId: access.tenantId,
         name: name || '',
-        password: password || '',
-        role: role || 'STAFF',
+        password: hashPassword(password),
+        role: 'STAFF',
         phone: phone || '',
-        email: email || '',
+        email: email.toLowerCase(),
         username: fullUsername,
       },
     });
@@ -158,7 +195,7 @@ export async function DELETE(request: Request) {
       });
     }
 
-    const target = await prisma.tenantUser.findUnique({ where: { id: targetId }, select: { tenantId: true } });
+    const target = await prisma.tenantUser.findUnique({ where: { id: targetId }, select: { tenantId: true, role: true } });
     if (!target || target.tenantId !== access.tenantId) {
       return apiError({
         requestId,
@@ -166,6 +203,17 @@ export async function DELETE(request: Request) {
         code: 'FORBIDDEN',
         message: 'Usuario fuera de alcance',
       });
+    }
+    if (String(target.role || '').toUpperCase() === 'ADMIN') {
+      const adminCount = await prisma.tenantUser.count({ where: { tenantId: access.tenantId, role: 'ADMIN' } });
+      if (adminCount <= 1) {
+        return apiError({
+          requestId,
+          status: 400,
+          code: 'BAD_REQUEST',
+          message: 'No puedes eliminar el único administrador del negocio.',
+        });
+      }
     }
 
     await prisma.tenantUser.delete({ where: { id: targetId } });

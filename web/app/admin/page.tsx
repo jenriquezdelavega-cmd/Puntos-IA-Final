@@ -102,7 +102,7 @@ const playSuccessSound = () => {
 };
 
 const [team, setTeam] = useState<TeamMember[]>([]);
-const [newStaff, setNewStaff] = useState({ name: '', username: '', password: '', role: 'STAFF' });
+const [newStaff, setNewStaff] = useState({ name: '', email: '', username: '', password: '', role: 'STAFF' });
 const [lastScannedCustomerId, setLastScannedCustomerId] = useState('');
 const [visitPurchaseAmount, setVisitPurchaseAmount] = useState('');
 
@@ -357,7 +357,7 @@ const saveMilestones = async () => {
 };
 
 const createStaff = async () => {
-if(!newStaff.name || !newStaff.username || !newStaff.password) return notify('error', 'Faltan datos para crear empleado.');
+if(!newStaff.name || !newStaff.email || !newStaff.username || !newStaff.password) return notify('error', 'Faltan datos para crear empleado.');
 setIsCreatingStaff(true);
 try {
 const res = await fetch('/api/tenant/users', { 
@@ -366,7 +366,7 @@ body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken, ..
 });
 if(res.ok) { 
 notify('success', 'Empleado creado correctamente.');
-setNewStaff({ name: '', username: '', password: '', role: 'STAFF' }); 
+setNewStaff({ name: '', email: '', username: '', password: '', role: 'STAFF' }); 
 loadTeam(tenant.id, tenantUserId); 
 } else { const d = await res.json(); notify('error', String(d.error || 'No se pudo crear el empleado')); }
 } catch { notify('error', 'Ocurrió un error de conexión.'); }
@@ -657,7 +657,7 @@ const handleAdminScan = async (rawValue: string) => {
   }
 };
 
-if (!tenant) return <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4"><div className="bg-gray-800 p-8 rounded-2xl w-full max-w-sm shadow-2xl border border-gray-700"><div className="text-center mb-8"><h1 className="text-3xl font-black text-white tracking-tighter">punto<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500">IA</span></h1><p className="text-gray-400 text-sm mt-2">Acceso de Personal</p></div><form onSubmit={handleLogin} className="space-y-4"><input className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Usuario (Ej: PIZZA.juan)" value={username} onChange={e=>setUsername(e.target.value)} disabled={isLoggingIn} /><input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Contraseña" value={password} onChange={e=>setPassword(e.target.value)} disabled={isLoggingIn} /><button disabled={isLoggingIn} className="w-full bg-gradient-to-r from-orange-500 to-pink-600 font-bold py-4 rounded-xl text-white shadow-lg disabled:opacity-60">{isLoggingIn ? 'Ingresando...' : 'Iniciar Sesión'}</button></form></div></div>;
+if (!tenant) return <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4"><div className="bg-gray-800 p-8 rounded-2xl w-full max-w-sm shadow-2xl border border-gray-700"><div className="text-center mb-8"><h1 className="text-3xl font-black text-white tracking-tighter">punto<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500">IA</span></h1><p className="text-gray-400 text-sm mt-2">Acceso de Personal</p></div><form onSubmit={handleLogin} className="space-y-4"><input className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Usuario (Ej: PIZZA.juan)" value={username} onChange={e=>setUsername(e.target.value)} disabled={isLoggingIn} /><input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Contraseña" value={password} onChange={e=>setPassword(e.target.value)} disabled={isLoggingIn} /><button disabled={isLoggingIn} className="w-full bg-gradient-to-r from-orange-500 to-pink-600 font-bold py-4 rounded-xl text-white shadow-lg disabled:opacity-60">{isLoggingIn ? 'Ingresando...' : 'Iniciar Sesión'}</button></form><a href="/recuperar?scope=tenant" className="mt-4 block text-center text-sm font-semibold text-purple-300 hover:text-purple-200">¿Olvidaste tu contraseña?</a></div></div>;
 
 
 return (
@@ -720,22 +720,22 @@ return (
         <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">👥</span>
         <div>
           <h2 className="text-lg font-black">Agregar Personal</h2>
-          <p className="text-white/80 text-xs font-semibold">Crea cuentas para tu equipo operativo o administrativo</p>
+          <p className="text-white/80 text-xs font-semibold">Crea cuentas operativas para tu equipo (solo 1 admin por negocio)</p>
         </div>
       </div>
     </div>
     <div className="p-6 space-y-3">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <input className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-300 focus:bg-white transition text-sm font-semibold" placeholder="Nombre (ej: Pedro)" value={newStaff.name} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, name: e.target.value})} />
+        <input type="email" className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-300 focus:bg-white transition text-sm font-semibold" placeholder="Correo (obligatorio para recuperación)" value={newStaff.email} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, email: e.target.value})} />
         <div className="flex items-center bg-gray-50 rounded-xl px-3.5 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-300 focus-within:bg-white transition">
-          <span className="text-gray-400 font-mono text-xs font-bold mr-1 select-none shrink-0">{tenant.codePrefix || '???'}.</span>
-          <input className="bg-transparent w-full py-3.5 outline-none font-semibold text-gray-900 placeholder:text-gray-400 text-sm" placeholder="usuario" value={newStaff.username} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, username: e.target.value})} />
+          <span className="text-gray-500 font-mono text-xs font-black mr-1 select-none shrink-0">{tenant.codePrefix || 'PREFIJO'}.</span>
+          <input className="bg-transparent w-full py-3.5 outline-none font-semibold text-gray-900 placeholder:text-gray-400 text-sm" placeholder="usuario (se agrega el prefijo automáticamente)" value={newStaff.username} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, username: e.target.value})} />
         </div>
         <input type="password" className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-300 focus:bg-white transition text-sm font-semibold" placeholder="Contraseña" value={newStaff.password} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, password: e.target.value})} />
-        <select className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 focus:ring-2 focus:ring-purple-300 text-sm font-semibold" value={newStaff.role} onChange={e=>setNewStaff({...newStaff, role: e.target.value})} disabled={isCreatingStaff}>
-          <option value="STAFF">👤 Operativo (QR + Canje)</option>
-          <option value="ADMIN">👑 Administrador (Total)</option>
-        </select>
+        <div className="p-3.5 bg-gray-100 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold flex items-center">
+          👤 Operativo (QR + Canje)
+        </div>
       </div>
       <button onClick={createStaff} disabled={isCreatingStaff} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black py-3.5 rounded-xl shadow-md text-sm hover:shadow-lg transition-all disabled:opacity-60">{isCreatingStaff ? 'Creando...' : 'Agregar Empleado'}</button>
     </div>

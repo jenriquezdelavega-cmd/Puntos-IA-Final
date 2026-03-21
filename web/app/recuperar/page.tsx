@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 function RecuperarContent() {
   const searchParams = useSearchParams();
   const token = useMemo(() => String(searchParams.get('token') || '').trim(), [searchParams]);
+  const scope = useMemo(() => (String(searchParams.get('scope') || '').toLowerCase() === 'tenant' ? 'tenant' : 'user'), [searchParams]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,7 +17,8 @@ function RecuperarContent() {
     setMessage('');
     setLoading(true);
     try {
-      const res = await fetch('/api/user/password/forgot', {
+      const endpoint = scope === 'tenant' ? '/api/tenant/password/forgot' : '/api/user/password/forgot';
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -43,7 +45,8 @@ function RecuperarContent() {
     setMessage('');
     setLoading(true);
     try {
-      const res = await fetch('/api/user/password/reset', {
+      const endpoint = scope === 'tenant' ? '/api/tenant/password/reset' : '/api/user/password/reset';
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password }),
@@ -72,7 +75,11 @@ function RecuperarContent() {
         <h1 className="text-2xl font-black text-gray-900">Recuperar contraseña</h1>
         {!token ? (
           <>
-            <p className="text-sm text-gray-600">Ingresa tu correo y te enviamos un link para recuperar tu contraseña.</p>
+            <p className="text-sm text-gray-600">
+              {scope === 'tenant'
+                ? 'Ingresa el correo del administrador del negocio y te enviaremos un link para recuperar tu contraseña.'
+                : 'Ingresa tu correo y te enviamos un link para recuperar tu contraseña.'}
+            </p>
             <input
               type="email"
               className="w-full p-3 rounded-xl border border-gray-200"

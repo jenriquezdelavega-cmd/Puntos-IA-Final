@@ -59,6 +59,29 @@ export async function POST(request: Request) {
 
 
     if (action === 'DELETE') {
+      const existing = await prisma.tenantUser.findUnique({
+        where: { id: userId },
+        select: { tenantId: true, role: true },
+      });
+      if (!existing) {
+        return apiError({
+          requestId,
+          status: 404,
+          code: 'NOT_FOUND',
+          message: 'Usuario no encontrado',
+        });
+      }
+      if (String(existing.role || '').toUpperCase() === 'ADMIN') {
+        const adminCount = await prisma.tenantUser.count({ where: { tenantId: existing.tenantId, role: 'ADMIN' } });
+        if (adminCount <= 1) {
+          return apiError({
+            requestId,
+            status: 400,
+            code: 'BAD_REQUEST',
+            message: 'No se puede eliminar el único administrador del negocio',
+          });
+        }
+      }
       await prisma.tenantUser.delete({ where: { id: userId } });
       return apiSuccess({ requestId, data: { success: true } });
     }
@@ -71,13 +94,61 @@ export async function POST(request: Request) {
           ? nextPasswordRaw
           : hashPassword(nextPasswordRaw);
 
+      const existing = await prisma.tenantUser.findUnique({
+        where: { id: userId },
+        select: { tenantId: true, role: true },
+      });
+      if (!existing) {
+        return apiError({
+          requestId,
+          status: 404,
+          code: 'NOT_FOUND',
+          message: 'Usuario no encontrado',
+        });
+      }
+
+      const normalizedRole = optionalString(data.role)?.toUpperCase();
+      if (normalizedRole && normalizedRole !== 'ADMIN' && normalizedRole !== 'STAFF') {
+        return apiError({
+          requestId,
+          status: 400,
+          code: 'BAD_REQUEST',
+          message: 'Rol inválido',
+        });
+      }
+      if (normalizedRole === 'ADMIN') {
+        const otherAdmin = await prisma.tenantUser.findFirst({
+          where: { tenantId: existing.tenantId, role: 'ADMIN', id: { not: userId } },
+          select: { id: true },
+        });
+        if (otherAdmin) {
+          return apiError({
+            requestId,
+            status: 409,
+            code: 'CONFLICT',
+            message: 'Este negocio ya tiene un administrador asignado',
+          });
+        }
+      }
+      if (normalizedRole === 'STAFF' && String(existing.role || '').toUpperCase() === 'ADMIN') {
+        const adminCount = await prisma.tenantUser.count({ where: { tenantId: existing.tenantId, role: 'ADMIN' } });
+        if (adminCount <= 1) {
+          return apiError({
+            requestId,
+            status: 400,
+            code: 'BAD_REQUEST',
+            message: 'No se puede degradar al único administrador del negocio',
+          });
+        }
+      }
+
       const updated = await prisma.tenantUser.update({
         where: { id: userId },
         data: {
           name: optionalString(data.name) || undefined,
           username: optionalString(data.username) || undefined,
           password: nextPassword,
-          role: optionalString(data.role) || undefined,
+          role: normalizedRole || undefined,
           phone: optionalString(data.phone) || undefined,
           email: optionalString(data.email) || undefined,
         },
