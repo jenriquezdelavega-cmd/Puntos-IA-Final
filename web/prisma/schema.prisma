@@ -53,6 +53,21 @@ model TenantUser {
   tenantId       String
   tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   generatedCodes DailyCode[] @relation("DailyCodeGeneratedBy")
+  passwordResetTokens TenantUserPasswordResetToken[]
+}
+
+model TenantUserPasswordResetToken {
+  id           String     @id @default(uuid())
+  tenantUserId String     @map("tenant_user_id")
+  tenantUser   TenantUser @relation(fields: [tenantUserId], references: [id], onDelete: Cascade)
+  tokenHash    String     @unique @map("token_hash")
+  expiresAt    DateTime   @map("expires_at")
+  usedAt       DateTime?  @map("used_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  @@index([tenantUserId])
+  @@index([expiresAt])
+  @@map("tenant_user_password_reset_tokens")
 }
 
 model User {

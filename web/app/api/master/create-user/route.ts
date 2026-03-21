@@ -62,6 +62,30 @@ export async function POST(request: Request) {
 
     const prefix = tenant.codePrefix || tenant.slug.substring(0, 4).toUpperCase();
     const fullUsername = `${prefix}.${username}`;
+    const normalizedRole = asTrimmedString(role || 'STAFF').toUpperCase();
+
+    if (normalizedRole !== 'ADMIN' && normalizedRole !== 'STAFF') {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'Rol inválido',
+      });
+    }
+    if (normalizedRole === 'ADMIN') {
+      const existingAdmin = await prisma.tenantUser.findFirst({
+        where: { tenantId, role: 'ADMIN' },
+        select: { id: true },
+      });
+      if (existingAdmin) {
+        return apiError({
+          requestId,
+          status: 409,
+          code: 'CONFLICT',
+          message: 'Este negocio ya tiene un administrador asignado',
+        });
+      }
+    }
 
     const newUser = await prisma.tenantUser.create({
       data: {
@@ -69,7 +93,7 @@ export async function POST(request: Request) {
         phone: phone || '',
         email: email || '',
         password: hashPassword(password),
-        role: asTrimmedString(role || 'STAFF'),
+        role: normalizedRole,
         username: fullUsername,
         tenant: { connect: { id: tenantId } },
       },
