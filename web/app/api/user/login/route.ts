@@ -11,6 +11,7 @@ import {
   parseWithSchema,
   requiredString,
 } from '@/app/lib/request-validation';
+import { isPhoneVerificationEnabled, isPhoneVerificationRequired } from '@/app/lib/phone-verification';
 
 
 export async function POST(req: Request) {
@@ -79,6 +80,8 @@ export async function POST(req: Request) {
         password: true,
         name: true,
         email: true,
+        emailVerifiedAt: true,
+        phoneVerifiedAt: true,
         gender: true,
         birthDate: true,
       },
@@ -97,6 +100,8 @@ export async function POST(req: Request) {
           password: true,
           name: true,
           email: true,
+          emailVerifiedAt: true,
+          phoneVerifiedAt: true,
           gender: true,
           birthDate: true,
         },
@@ -109,6 +114,24 @@ export async function POST(req: Request) {
         status: 401,
         code: 'UNAUTHORIZED',
         message: 'Usuario no existe',
+      });
+    }
+
+    if (user.email && !user.emailVerifiedAt) {
+      return apiError({
+        requestId,
+        status: 403,
+        code: 'FORBIDDEN',
+        message: 'Debes confirmar tu correo antes de iniciar sesión. Revisa tu bandeja.',
+      });
+    }
+
+    if (isPhoneVerificationRequired() && isPhoneVerificationEnabled() && !user.phoneVerifiedAt) {
+      return apiError({
+        requestId,
+        status: 403,
+        code: 'FORBIDDEN',
+        message: 'Debes verificar tu teléfono con código antes de iniciar sesión.',
       });
     }
 
