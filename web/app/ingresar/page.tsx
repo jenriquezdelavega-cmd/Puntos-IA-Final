@@ -350,15 +350,11 @@ export default function IngresarPage() {
       setPassword(registerPassword);
       setRegisterVerificationRequired(true);
       setRegisterVerificationPhone(cleanPhone);
-      const otpSent = await requestRegisterPhoneOtp(cleanPhone, true);
-      if (!otpSent) {
-        setRegisterMessage('Cuenta creada, pero no pudimos enviar el OTP de WhatsApp. Reintenta para completar tu primer acceso.');
-        return;
-      }
+      setRegisterVerificationCode('');
       if (body?.emailStatus === 'not_configured') {
-        setRegisterMessage('Cuenta creada. Te enviamos OTP por WhatsApp para tu primer acceso. Ahora mismo el email de verificación no está disponible.');
+        setRegisterMessage('Cuenta creada. Ya te enviamos OTP por WhatsApp para tu primer acceso. Ahora mismo el email de verificación no está disponible.');
       } else if (body?.emailStatus === 'failed') {
-        setRegisterMessage('Cuenta creada. Te enviamos OTP por WhatsApp para tu primer acceso. El email de verificación falló, pero puedes continuar.');
+        setRegisterMessage('Cuenta creada. Ya te enviamos OTP por WhatsApp para tu primer acceso. El email de verificación falló, pero puedes continuar.');
       } else {
         setRegisterMessage('Cuenta creada. Ingresa el OTP de WhatsApp para habilitar tu primer acceso.');
       }
