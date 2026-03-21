@@ -61,8 +61,8 @@ export function toE164Phone(phoneInput: string) {
     return `+${normalized}`;
   }
 
-  if (/^[0-9]{11,15}$/.test(normalized)) {
-    return `+${normalized}`;
+  if (/^[0-9]{11}$/.test(normalized) && normalized.startsWith('1')) {
+    return `+52${normalized.slice(1)}`;
   }
 
   return '';
