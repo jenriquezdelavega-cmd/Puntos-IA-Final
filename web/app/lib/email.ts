@@ -393,6 +393,36 @@ export async function sendWelcomeEmail(params: { to: string; name?: string | nul
   return sendTransactionalEmail({ to: params.to, subject, text, html });
 }
 
+export async function sendEmailVerificationEmail(params: { to: string; name?: string | null; verifyUrl: string }) {
+  const displayName = params.name?.trim() || 'cliente';
+  const subject = 'Confirma tu correo para activar tu cuenta en Punto IA';
+  const text = [
+    `Hola ${displayName},`,
+    '',
+    'Gracias por crear tu cuenta en Punto IA.',
+    'Para activarla, confirma tu correo haciendo clic en este enlace:',
+    params.verifyUrl,
+    '',
+    'Este enlace expira en 24 horas.',
+  ].join('\n');
+
+  const html = renderBrandedEmailTemplate({
+    preheader: 'Confirma tu correo y activa tu cuenta',
+    title: 'Confirma tu correo',
+    greeting: `Hola ${displayName},`,
+    paragraphs: [
+      'Gracias por crear tu cuenta en Punto IA.',
+      'Para activar tu cuenta, confirma tu correo con el botón de abajo.',
+      'Este enlace expira en 24 horas.',
+    ],
+    ctaLabel: 'Confirmar mi correo',
+    ctaUrl: params.verifyUrl,
+    helperText: 'Si no creaste esta cuenta, puedes ignorar este mensaje.',
+  });
+
+  return sendTransactionalEmail({ to: params.to, subject, text, html });
+}
+
 export async function sendRedemptionRequestedEmail(params: {
   to: string;
   name?: string | null;
