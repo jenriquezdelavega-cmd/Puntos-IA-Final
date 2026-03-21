@@ -26,6 +26,7 @@ type UserLoginResponse = {
 
 type ApiErrorResponse = {
   ok?: false;
+  code?: string;
   message?: string;
   error?: string;
   emailStatus?: 'sent' | 'not_configured' | 'failed';
@@ -33,11 +34,37 @@ type ApiErrorResponse = {
 
 type CustomerMode = 'login' | 'registro';
 
+function toIsoDate(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
+
+function getBirthDateLimits() {
+  const today = new Date();
+  const max = new Date(today);
+  max.setUTCFullYear(max.getUTCFullYear() - 5);
+  const min = new Date(today);
+  min.setUTCFullYear(min.getUTCFullYear() - 100);
+  return {
+    minBirthDate: toIsoDate(min),
+    maxBirthDate: toIsoDate(max),
+  };
+}
+
+function isValidBasicEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+const BIRTH_DATE_LIMITS = getBirthDateLimits();
+
 export default function IngresarPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [loginMessage, setLoginMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [phoneVerificationRequired, setPhoneVerificationRequired] = useState(false);
+  const [verificationPhone, setVerificationPhone] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationLoading, setVerificationLoading] = useState(false);
 
   const [registerName, setRegisterName] = useState('');
   const [registerPhone, setRegisterPhone] = useState('');
@@ -49,14 +76,39 @@ export default function IngresarPage() {
   const [registerLoading, setRegisterLoading] = useState(false);
 
   const [customerMode, setCustomerMode] = useState<CustomerMode>('login');
+  const { minBirthDate, maxBirthDate } = BIRTH_DATE_LIMITS;
+  const cleanRegisterEmail = registerEmail.trim().toLowerCase();
+  const isBirthDateInRange = Boolean(registerBirthDate) && registerBirthDate >= minBirthDate && registerBirthDate <= maxBirthDate;
+  const canSubmitRegister = Boolean(
+    registerName.trim() &&
+      registerPassword &&
+      registerGender &&
+      registerPhone.trim() &&
+      isValidBasicEmail(cleanRegisterEmail) &&
+      isBirthDateInRange,
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const modo = params.get('modo');
+    const emailVerification = params.get('emailVerification');
 
     if (modo === 'registro') setCustomerMode('registro');
     if (modo === 'login') setCustomerMode('login');
+    if (emailVerification === 'ok') {
+      setCustomerMode('login');
+      setLoginMessage('¡Correo confirmado! Ya puedes iniciar sesión.');
+    } else if (emailVerification === 'expired') {
+      setCustomerMode('login');
+      setLoginMessage('El enlace de confirmación expiró. Regístrate nuevamente para recibir uno nuevo.');
+    } else if (emailVerification === 'invalid') {
+      setCustomerMode('login');
+      setLoginMessage('El enlace de confirmación no es válido.');
+    } else if (emailVerification === 'already') {
+      setCustomerMode('login');
+      setLoginMessage('Tu correo ya estaba confirmado. Inicia sesión.');
+    }
   }, []);
 
   const setModeInUrl = (mode: CustomerMode) => {
@@ -78,6 +130,12 @@ export default function IngresarPage() {
       const body = (await response.json()) as (UserLoginResponse & { ok?: true; message?: string; error?: string }) | ApiErrorResponse;
 
       if (!response.ok || !body || !('id' in body)) {
+        if ((body as ApiErrorResponse)?.message?.includes('verificar tu teléfono')) {
+          setPhoneVerificationRequired(true);
+          setVerificationPhone(payload.phone.trim());
+        } else {
+          setPhoneVerificationRequired(false);
+        }
         if (showError) {
           setLoginMessage(body?.message || body?.error || 'No se pudo iniciar sesión. Verifica tus datos.');
         }
@@ -85,6 +143,8 @@ export default function IngresarPage() {
       }
 
       localStorage.setItem('punto_user', JSON.stringify(body));
+      setPhoneVerificationRequired(false);
+      setVerificationCode('');
       const preferredBusiness = body.memberships?.[0]?.tenantId;
       const destination = preferredBusiness
         ? `/clientes/app?business_id=${encodeURIComponent(preferredBusiness)}`
@@ -96,6 +156,59 @@ export default function IngresarPage() {
         setLoginMessage('No se pudo conectar con el servidor. Intenta nuevamente.');
       }
       return false;
+    }
+  };
+
+  const sendPhoneVerificationCode = async () => {
+    if (!verificationPhone) {
+      setLoginMessage('Captura primero tu teléfono para verificarlo.');
+      return;
+    }
+    setVerificationLoading(true);
+    try {
+      const response = await fetch('/api/user/phone/verify/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: verificationPhone }),
+      });
+      const body = (await response.json()) as ApiErrorResponse & { message?: string };
+      if (!response.ok) {
+        setLoginMessage(body?.message || 'No se pudo enviar el código de verificación.');
+        return;
+      }
+      setLoginMessage(body?.message || 'Te enviamos un código para verificar tu teléfono.');
+    } catch {
+      setLoginMessage('No se pudo enviar el código en este momento. Intenta nuevamente.');
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+
+  const verifyPhoneCodeAndLogin = async () => {
+    if (!verificationPhone || !verificationCode.trim()) {
+      setLoginMessage('Captura el código de verificación para continuar.');
+      return;
+    }
+
+    setVerificationLoading(true);
+    try {
+      const response = await fetch('/api/user/phone/verify/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: verificationPhone, code: verificationCode.trim() }),
+      });
+      const body = (await response.json()) as ApiErrorResponse;
+      if (!response.ok) {
+        setLoginMessage(body?.message || 'Código inválido o expirado.');
+        return;
+      }
+
+      setLoginMessage('Teléfono verificado. Iniciando sesión...');
+      await loginCustomer({ phone: verificationPhone, password }, true);
+    } catch {
+      setLoginMessage('No se pudo validar el código. Intenta nuevamente.');
+    } finally {
+      setVerificationLoading(false);
     }
   };
 
@@ -114,6 +227,18 @@ export default function IngresarPage() {
     event.preventDefault();
     setRegisterLoading(true);
     setRegisterMessage('');
+    const cleanPhone = registerPhone.trim();
+    const cleanEmail = cleanRegisterEmail;
+    if (!isValidBasicEmail(cleanEmail)) {
+      setRegisterMessage('Ingresa un correo válido (ejemplo@dominio.com).');
+      setRegisterLoading(false);
+      return;
+    }
+    if (registerBirthDate < minBirthDate || registerBirthDate > maxBirthDate) {
+      setRegisterMessage('La edad permitida para registro es entre 5 y 100 años.');
+      setRegisterLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/user/register', {
@@ -121,9 +246,9 @@ export default function IngresarPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: registerName.trim(),
-          phone: registerPhone.trim(),
+          phone: cleanPhone,
           password: registerPassword,
-          email: registerEmail.trim(),
+          email: cleanEmail,
           gender: registerGender,
           birthDate: registerBirthDate,
         }),
@@ -134,24 +259,16 @@ export default function IngresarPage() {
         setRegisterMessage(body?.message || body?.error || 'No se pudo crear la cuenta. Revisa tus datos.');
         return;
       }
-
-      const autoLoginOk = await loginCustomer(
-        { phone: registerPhone.trim(), password: registerPassword },
-        false,
-      );
-
-      if (!autoLoginOk) {
-        setPhone(registerPhone.trim());
-        setPassword(registerPassword);
-        setCustomerMode('login');
-        setModeInUrl('login');
-        if (body?.emailStatus === 'not_configured') {
-          setRegisterMessage('Cuenta creada. El correo de confirmación no se envió porque el servicio de email no está configurado.');
-        } else if (body?.emailStatus === 'failed') {
-          setRegisterMessage('Cuenta creada. El correo de confirmación falló. Intenta más tarde o contacta soporte.');
-        } else {
-          setRegisterMessage('Cuenta creada y correo de confirmación enviado. Ahora inicia sesión para continuar.');
-        }
+      setPhone(cleanPhone);
+      setPassword(registerPassword);
+      setCustomerMode('login');
+      setModeInUrl('login');
+      if (body?.emailStatus === 'not_configured') {
+        setLoginMessage('Cuenta creada, pero no se pudo enviar el correo de confirmación porque el servicio de email no está configurado.');
+      } else if (body?.emailStatus === 'failed') {
+        setLoginMessage('Cuenta creada, pero el correo de confirmación falló. Regístrate de nuevo o contacta soporte.');
+      } else {
+        setLoginMessage('Cuenta creada. Te enviamos un correo para confirmar tu cuenta antes de iniciar sesión.');
       }
     } catch {
       setRegisterMessage('No se pudo crear la cuenta en este momento. Intenta nuevamente.');
@@ -223,6 +340,7 @@ export default function IngresarPage() {
                     onChange={(event) => setPhone(event.target.value)}
                     className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none transition-colors"
                     placeholder="Ejemplo: 5512345678"
+                    autoComplete="tel"
                     required
                   />
                 </div>
@@ -238,6 +356,7 @@ export default function IngresarPage() {
                     onChange={(event) => setPassword(event.target.value)}
                     className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none transition-colors"
                     placeholder="Escribe tu contraseña"
+                    autoComplete="current-password"
                     required
                   />
                 </div>
@@ -246,6 +365,39 @@ export default function IngresarPage() {
                   <p className="mt-2 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200">
                     {loginMessage}
                   </p>
+                )}
+
+                {phoneVerificationRequired && (
+                  <div className="mt-2 rounded-lg border border-[#7e4fd3]/30 bg-[#7e4fd3]/10 p-4">
+                    <p className="text-sm font-semibold text-[#dacbf0]">
+                      Verifica tu teléfono para continuar.
+                    </p>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                      <button
+                        type="button"
+                        onClick={sendPhoneVerificationCode}
+                        className="rounded-lg bg-[#7e4fd3] px-4 py-2 text-sm font-bold text-white hover:bg-[#6c40bb] disabled:opacity-60"
+                        disabled={verificationLoading}
+                      >
+                        Enviar código
+                      </button>
+                      <input
+                        value={verificationCode}
+                        onChange={(event) => setVerificationCode(event.target.value)}
+                        className="flex-1 rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white focus:border-[#7e4fd3] focus:outline-none"
+                        placeholder="Código de 6 dígitos"
+                        inputMode="numeric"
+                      />
+                      <button
+                        type="button"
+                        onClick={verifyPhoneCodeAndLogin}
+                        className="rounded-lg border border-[#7e4fd3] px-4 py-2 text-sm font-bold text-[#dacbf0] hover:bg-[#7e4fd3]/20 disabled:opacity-60"
+                        disabled={verificationLoading}
+                      >
+                        Validar código
+                      </button>
+                    </div>
+                  </div>
                 )}
 
                 <button type="submit" className={`mt-2 w-full py-3.5 px-6 rounded-xl font-bold bg-[#7e4fd3] text-white hover:bg-[#6c40bb] shadow-lg shadow-purple-500/25 transition-all ${loading ? 'opacity-70 cursor-wait' : ''}`} disabled={loading}>
@@ -262,6 +414,7 @@ export default function IngresarPage() {
                     onChange={(event) => setRegisterName(event.target.value)}
                     className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none"
                     placeholder="¿Cómo te llamas?"
+                    autoComplete="name"
                     required
                   />
                 </div>
@@ -272,7 +425,8 @@ export default function IngresarPage() {
                     value={registerPhone}
                     onChange={(event) => setRegisterPhone(event.target.value)}
                     className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none"
-                    placeholder="10 dígitos"
+                    placeholder="Tu WhatsApp"
+                    autoComplete="tel-national"
                     required
                   />
                 </div>
@@ -282,9 +436,10 @@ export default function IngresarPage() {
                     id="register-email"
                     type="email"
                     value={registerEmail}
-                    onChange={(event) => setRegisterEmail(event.target.value)}
+                    onChange={(event) => setRegisterEmail(event.target.value.trimStart())}
                     className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none"
                     placeholder="correo@ejemplo.com"
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -311,6 +466,8 @@ export default function IngresarPage() {
                     value={registerBirthDate}
                     onChange={(event) => setRegisterBirthDate(event.target.value)}
                     className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none sm:[color-scheme:dark]"
+                    min={minBirthDate}
+                    max={maxBirthDate}
                     required
                   />
                 </div>
@@ -324,6 +481,7 @@ export default function IngresarPage() {
                     className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none"
                     placeholder="Min. 6 caracteres"
                     minLength={6}
+                    autoComplete="new-password"
                     required
                   />
                 </div>
@@ -334,7 +492,7 @@ export default function IngresarPage() {
                   </p>
                 )}
 
-                <button type="submit" className={`sm:col-span-2 mt-2 w-full py-3.5 px-6 rounded-xl font-bold bg-[#7e4fd3] text-white hover:bg-[#6c40bb] shadow-lg shadow-purple-500/25 transition-all ${registerLoading ? 'opacity-70 cursor-wait' : ''}`} disabled={registerLoading}>
+                <button type="submit" className={`sm:col-span-2 mt-2 w-full py-3.5 px-6 rounded-xl font-bold bg-[#7e4fd3] text-white hover:bg-[#6c40bb] shadow-lg shadow-purple-500/25 transition-all ${registerLoading ? 'opacity-70 cursor-wait' : ''}`} disabled={registerLoading || !canSubmitRegister}>
                   {registerLoading ? 'Generando Pase...' : 'Generar mi Wallet Pass'}
                 </button>
               </form>
