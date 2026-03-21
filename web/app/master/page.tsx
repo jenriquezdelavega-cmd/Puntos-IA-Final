@@ -191,6 +191,7 @@ export default function MasterPage() {
   });
   const [isRunningWalletJobs, setIsRunningWalletJobs] = useState(false);
   const [isRunningMaintenance, setIsRunningMaintenance] = useState(false);
+  const [isPurgingCustomers, setIsPurgingCustomers] = useState(false);
   const [keepCustomerPhones, setKeepCustomerPhones] = useState('8121078577');
 
   const [msg, setMsg] = useState('');
@@ -436,6 +437,35 @@ export default function MasterPage() {
     );
   };
 
+  const purgeGlobalCustomers = async () => {
+    const confirmation = window.prompt('⚠️ Acción irreversible.\nEscribe BORRAR_CLIENTES_GLOBAL para confirmar.');
+    if (confirmation !== 'BORRAR_CLIENTES_GLOBAL') {
+      setMsg('⚠️ Borrado global cancelado por confirmación inválida.');
+      return;
+    }
+
+    setIsPurgingCustomers(true);
+    try {
+      const { response, data } = await postMasterJson('/api/master/purge-customers', {
+        ...withMasterAuth,
+        confirmationKey: confirmation,
+        dryRun: false,
+      });
+
+      if (!response.ok) {
+        setMsg(`❌ ${String(data.error ?? 'No se pudo borrar la base global de clientes.')}`);
+        return;
+      }
+
+      const deleted = (data.deleted as Record<string, number> | undefined) ?? {};
+      setMsg(
+        `✅ Base global de clientes borrada. Usuarios: ${String(deleted.users ?? 0)} · Membresías: ${String(deleted.memberships ?? 0)} · Visitas: ${String(deleted.visits ?? 0)} · Canjes: ${String(deleted.redemptions ?? 0)}.`,
+      );
+    } finally {
+      setIsPurgingCustomers(false);
+    }
+  };
+
   const downloadReport = async (report: 'prelaunch' | 'tenant-users' | 'redemption-logs', onlySelectedTenant = false) => {
     const res = await fetch('/api/master/reports', {
       method: 'POST',
@@ -673,6 +703,16 @@ export default function MasterPage() {
                 />
                 <button onClick={() => runCleanupUsers(true, 'orphan')} className="w-full rounded-lg bg-amber-600 py-2">Simular limpieza de huérfanos</button>
                 <button onClick={() => runCleanupUsers(false, 'orphan')} className="w-full rounded-lg bg-rose-700 py-2">Ejecutar limpieza de huérfanos</button>
+              </div>
+              <div className="pt-2 border-t border-rose-800 space-y-2">
+                <p className="text-xs text-rose-300">Temporal (master): borra TODA la base global de clientes de todos los negocios.</p>
+                <button
+                  onClick={purgeGlobalCustomers}
+                  disabled={isPurgingCustomers}
+                  className="w-full rounded-lg bg-rose-800 py-2 font-semibold disabled:opacity-50"
+                >
+                  {isPurgingCustomers ? 'Borrando base global...' : 'Borrar base global de clientes'}
+                </button>
               </div>
             </article>
           </div>
