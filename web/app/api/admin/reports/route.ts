@@ -19,6 +19,7 @@ type VisitRow = {
   visitDay: string;
   userId: string;
   purchaseAmount: number;
+  ticketNumber: string;
   purchaseTracked: boolean;
 };
 
@@ -93,6 +94,7 @@ export async function POST(request: Request) {
             visitedAt: true,
             visitDay: true,
             purchaseAmount: true,
+            ticketNumber: true,
             membership: { select: { userId: true } },
           },
         });
@@ -102,6 +104,7 @@ export async function POST(request: Request) {
           visitDay: visit.visitDay,
           userId: String(visit.membership.userId || ''),
           purchaseAmount: Number(visit.purchaseAmount || 0),
+          ticketNumber: String(visit.ticketNumber || ''),
           purchaseTracked: true,
         }));
       } catch (error: unknown) {
@@ -122,6 +125,7 @@ export async function POST(request: Request) {
           visitDay: visit.visitDay,
           userId: String(visit.membership.userId || ''),
           purchaseAmount: 0,
+          ticketNumber: '',
           purchaseTracked: false,
         }));
       }
@@ -254,6 +258,7 @@ export async function POST(request: Request) {
       Dia: visit.visitDay || visit.visitedAt.toISOString().split('T')[0],
       ClienteId: visit.userId,
       MontoCompra: Number(visit.purchaseAmount || 0).toFixed(2),
+      Ticket: visit.ticketNumber || '',
     }));
 
     const customerProfiles = memberships.map((membership) => {

@@ -3,6 +3,8 @@ import { requireTenantRoleAccess } from '@/app/lib/tenant-admin-auth';
 import { apiError, apiSuccess, type ApiErrorCode, getRequestId } from '@/app/lib/api-response';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
 import { hashPassword } from '@/app/lib/password';
+import { sendTenantAccountCreatedEmail } from '@/app/lib/email';
+import { logApiEvent } from '@/app/lib/api-log';
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -14,6 +16,16 @@ function accessStatusToCode(status: number): ApiErrorCode {
   if (status === 403) return 'FORBIDDEN';
   if (status === 404) return 'NOT_FOUND';
   return 'INTERNAL_ERROR';
+}
+
+function generateTemporaryPassword(length = 10) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+  const randomValues = crypto.getRandomValues(new Uint32Array(length));
+  let output = '';
+  for (let index = 0; index < length; index += 1) {
+    output += chars[randomValues[index] % chars.length];
+  }
+  return output;
 }
 
 export async function GET(request: Request) {
@@ -60,7 +72,6 @@ export async function POST(request: Request) {
     const tenantSessionToken = asTrimmedString(body.tenantSessionToken);
     const name = asTrimmedString(body.name);
     const username = asTrimmedString(body.username);
-    const password = asTrimmedString(body.password);
     const role = asTrimmedString(body.role).toUpperCase();
     const phone = asTrimmedString(body.phone);
     const email = asTrimmedString(body.email);
@@ -82,14 +93,6 @@ export async function POST(request: Request) {
         status: 400,
         code: 'BAD_REQUEST',
         message: 'username requerido',
-      });
-    }
-    if (!password || password.length < 6) {
-      return apiError({
-        requestId,
-        status: 400,
-        code: 'BAD_REQUEST',
-        message: 'La contraseña debe tener al menos 6 caracteres',
       });
     }
     if (!email || !isValidEmail(email.toLowerCase())) {
@@ -129,12 +132,14 @@ export async function POST(request: Request) {
 
     const prefix = tenant.codePrefix || tenant.slug.substring(0, 4).toUpperCase();
     const fullUsername = `${prefix}.${normalizedUsername}`;
+    const temporaryPassword = generateTemporaryPassword();
 
     const newUser = await prisma.tenantUser.create({
       data: {
         tenantId: access.tenantId,
         name: name || '',
-        password: hashPassword(password),
+        password: hashPassword(temporaryPassword),
+        mustChangePassword: true,
         role: 'STAFF',
         phone: phone || '',
         email: email.toLowerCase(),
@@ -142,7 +147,36 @@ export async function POST(request: Request) {
       },
     });
 
-    return apiSuccess({ requestId, data: { success: true, user: newUser } });
+    const configuredBaseUrl = String(process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || '').trim();
+    const fallbackBaseUrl = new URL(request.url).origin;
+    const baseUrl = (configuredBaseUrl || fallbackBaseUrl).replace(/\/$/, '');
+    const loginUrl = `${baseUrl}/ingresar?tipo=negocio&modo=login`;
+
+    const emailResult = await sendTenantAccountCreatedEmail({
+      to: newUser.email,
+      name: newUser.name,
+      businessName: tenant.name,
+      username: fullUsername,
+      temporaryPassword,
+      loginUrl,
+    });
+    if (!emailResult.ok || emailResult.skipped) {
+      logApiEvent('/api/tenant/users', 'tenant_user_welcome_email_unavailable', {
+        tenantId: access.tenantId,
+        tenantUserId: newUser.id,
+        reason: emailResult.error || (emailResult.skipped ? 'not_configured' : 'unknown'),
+      });
+    }
+
+    return apiSuccess({
+      requestId,
+      data: {
+        success: true,
+        user: newUser,
+        temporaryPassword,
+        emailDelivery: emailResult.ok ? (emailResult.skipped ? 'not_configured' : 'sent') : 'failed',
+      },
+    });
   } catch (error: unknown) {
     if (error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === 'P2002') {
       return apiError({
@@ -192,6 +226,14 @@ export async function DELETE(request: Request) {
         status: 400,
         code: 'BAD_REQUEST',
         message: 'ID requerido',
+      });
+    }
+    if (targetId === access.userId) {
+      return apiError({
+        requestId,
+        status: 400,
+        code: 'BAD_REQUEST',
+        message: 'No puedes eliminar tu propia cuenta de administrador.',
       });
     }
 

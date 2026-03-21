@@ -326,6 +326,45 @@ export async function sendPasswordResetSuccessEmail(params: { to: string; name?:
   return sendTransactionalEmail({ to: params.to, subject, text, html });
 }
 
+export async function sendTenantAccountCreatedEmail(params: {
+  to: string;
+  name?: string | null;
+  businessName: string;
+  username: string;
+  temporaryPassword: string;
+  loginUrl: string;
+}) {
+  const displayName = params.name?.trim() || 'equipo';
+  const subject = `Tu cuenta operativa de ${params.businessName} está lista`;
+  const text = [
+    `Hola ${displayName},`,
+    '',
+    `Se creó tu cuenta operativa en ${params.businessName}.`,
+    `Usuario: ${params.username}`,
+    `Contraseña temporal: ${params.temporaryPassword}`,
+    '',
+    'Por seguridad debes cambiar tu contraseña en tu primer inicio de sesión.',
+    `Ingresa aquí: ${params.loginUrl}`,
+  ].join('\n');
+
+  const html = renderBrandedEmailTemplate({
+    preheader: 'Tu cuenta operativa fue creada',
+    title: 'Cuenta operativa creada',
+    greeting: `Hola ${displayName},`,
+    paragraphs: [
+      `Se creó tu cuenta operativa en ${params.businessName}.`,
+      `Usuario: ${params.username}`,
+      `Contraseña temporal: ${params.temporaryPassword}`,
+      'Por seguridad debes cambiar tu contraseña en tu primer inicio de sesión.',
+    ],
+    ctaLabel: 'Iniciar sesión',
+    ctaUrl: params.loginUrl,
+    helperText: 'No compartas esta contraseña temporal. Cámbiala apenas ingreses.',
+  });
+
+  return sendTransactionalEmail({ to: params.to, subject, text, html });
+}
+
 export async function sendWelcomeEmail(params: { to: string; name?: string | null }) {
   const displayName = params.name?.trim() || 'cliente';
   const subject = 'Tu cuenta de Punto IA ya está lista';

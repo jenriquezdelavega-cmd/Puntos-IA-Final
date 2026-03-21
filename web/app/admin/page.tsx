@@ -36,6 +36,7 @@ type TenantView = {
   coalitionOptIn?: boolean;
   coalitionDiscountPercent?: number;
   coalitionProduct?: string;
+  ticketControlEnabled?: boolean;
 };
 
 type MilestoneRow = { id?: string; visitTarget: string; reward: string; emoji: string };
@@ -72,6 +73,7 @@ const [instagram, setInstagram] = useState('');
 const [coalitionOptIn, setCoalitionOptIn] = useState(false);
 const [coalitionDiscountPercent, setCoalitionDiscountPercent] = useState('10');
 const [coalitionProduct, setCoalitionProduct] = useState('');
+const [ticketControlEnabled, setTicketControlEnabled] = useState(false);
 const [addressSearch, setAddressSearch] = useState('');
 const [isSearching, setIsSearching] = useState(false);
 const [coords, setCoords] = useState<[number, number]>([19.4326, -99.1332]);
@@ -102,9 +104,10 @@ const playSuccessSound = () => {
 };
 
 const [team, setTeam] = useState<TeamMember[]>([]);
-const [newStaff, setNewStaff] = useState({ name: '', email: '', username: '', password: '', role: 'STAFF' });
+const [newStaff, setNewStaff] = useState({ name: '', email: '', username: '', role: 'STAFF' });
 const [lastScannedCustomerId, setLastScannedCustomerId] = useState('');
 const [visitPurchaseAmount, setVisitPurchaseAmount] = useState('');
+const [visitTicketNumber, setVisitTicketNumber] = useState('');
 
 const [pushMessage, setPushMessage] = useState('');
 const [pushLoading, setPushLoading] = useState(false);
@@ -129,6 +132,11 @@ const [isCreatingStaff, setIsCreatingStaff] = useState(false);
 const [isSavingSettings, setIsSavingSettings] = useState(false);
 const [isValidatingRedeem, setIsValidatingRedeem] = useState(false);
 const [isRefreshingReports, setIsRefreshingReports] = useState(false);
+const [mustChangePassword, setMustChangePassword] = useState(false);
+const [currentPasswordInput, setCurrentPasswordInput] = useState('');
+const [newPasswordInput, setNewPasswordInput] = useState('');
+const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+const [isChangingPassword, setIsChangingPassword] = useState(false);
 
 const navItems: NavItem[] = [
   { key: 'dashboard', icon: '📊', label: 'Dashboard', adminOnly: true },
@@ -171,11 +179,16 @@ const handleLogin = async (e: React.FormEvent) => {
       setUserRole(data.user.role);
       setTenantUserId(data.user.id || '');
       setTenantSessionToken(String(data.tenantSessionToken || ''));
+      setMustChangePassword(Boolean(data?.user?.mustChangePassword));
+      setCurrentPasswordInput(password);
+      setNewPasswordInput('');
+      setConfirmPasswordInput('');
       setPrizeName(data.tenant.prize || '');
       setInstagram(data.tenant.instagram || '');
       setCoalitionOptIn(Boolean(data.tenant.coalitionOptIn));
       setCoalitionDiscountPercent(String(data.tenant.coalitionDiscountPercent ?? 10));
       setCoalitionProduct(String(data.tenant.coalitionProduct ?? ''));
+      setTicketControlEnabled(Boolean(data.tenant.ticketControlEnabled));
       setRequiredVisits(String(sanitizeRequiredVisits(data.tenant.requiredVisits ?? DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS)));
       setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
       setLogoData(String(data.tenant.logoData ?? ''));
@@ -357,16 +370,24 @@ const saveMilestones = async () => {
 };
 
 const createStaff = async () => {
-if(!newStaff.name || !newStaff.email || !newStaff.username || !newStaff.password) return notify('error', 'Faltan datos para crear empleado.');
+if(!newStaff.name || !newStaff.email || !newStaff.username) return notify('error', 'Faltan datos para crear empleado.');
 setIsCreatingStaff(true);
 try {
 const res = await fetch('/api/tenant/users', { 
 method: 'POST', headers: {'Content-Type': 'application/json'}, 
 body: JSON.stringify({ tenantId: tenant.id, tenantUserId, tenantSessionToken, ...newStaff }) 
 });
-if(res.ok) { 
-notify('success', 'Empleado creado correctamente.');
-setNewStaff({ name: '', email: '', username: '', password: '', role: 'STAFF' }); 
+if(res.ok) {
+const data = await res.json();
+const emailStatus = String(data?.emailDelivery || 'not_configured');
+const emailMsg =
+  emailStatus === 'sent'
+    ? 'Se envió correo de creación de cuenta.'
+    : emailStatus === 'failed'
+      ? 'No se pudo enviar correo automáticamente.'
+      : 'SMTP no configurado: comparte la contraseña temporal manualmente.';
+notify('success', `Empleado creado. Contraseña temporal: ${String(data?.temporaryPassword || 'N/D')}. ${emailMsg}`);
+setNewStaff({ name: '', email: '', username: '', role: 'STAFF' });
 loadTeam(tenant.id, tenantUserId); 
 } else { const d = await res.json(); notify('error', String(d.error || 'No se pudo crear el empleado')); }
 } catch { notify('error', 'Ocurrió un error de conexión.'); }
@@ -376,6 +397,48 @@ setIsCreatingStaff(false);
 const deleteStaff = async (id: string) => {
 if(!confirm("¿Eliminar empleado?")) return;
 try { await fetch('/api/tenant/users', { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id, tenantId: tenant.id, tenantUserId, tenantSessionToken }) }); loadTeam(tenant.id, tenantUserId); } catch {}
+};
+
+const changeOwnPassword = async () => {
+  if (!tenant?.id) return;
+  if (!currentPasswordInput || !newPasswordInput || !confirmPasswordInput) {
+    notify('error', 'Completa todos los campos de contraseña.');
+    return;
+  }
+  if (newPasswordInput !== confirmPasswordInput) {
+    notify('error', 'La confirmación de contraseña no coincide.');
+    return;
+  }
+
+  setIsChangingPassword(true);
+  try {
+    const res = await fetch('/api/tenant/password/change', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenantId: tenant.id,
+        tenantUserId,
+        tenantSessionToken,
+        currentPassword: currentPasswordInput,
+        newPassword: newPasswordInput,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      notify('error', String(data.error || 'No se pudo cambiar la contraseña'));
+      return;
+    }
+    setPassword(newPasswordInput);
+    setMustChangePassword(false);
+    setCurrentPasswordInput('');
+    setNewPasswordInput('');
+    setConfirmPasswordInput('');
+    notify('success', 'Contraseña actualizada. Ya puedes usar el panel normalmente.');
+  } catch {
+    notify('error', 'Error de conexión al cambiar la contraseña.');
+  } finally {
+    setIsChangingPassword(false);
+  }
 };
 
 const searchLocation = async () => {
@@ -451,6 +514,7 @@ const saveSettings = async () => {
         coalitionOptIn,
         coalitionDiscountPercent,
         coalitionProduct,
+        ticketControlEnabled,
         walletBackgroundColor: walletBackgroundColor || undefined,
         walletForegroundColor: walletForegroundColor || undefined,
         walletLabelColor: walletLabelColor || undefined,
@@ -473,6 +537,7 @@ const saveSettings = async () => {
       setCoalitionOptIn(Boolean(data.tenant.coalitionOptIn));
       setCoalitionDiscountPercent(String(data.tenant.coalitionDiscountPercent ?? 10));
       setCoalitionProduct(String(data.tenant.coalitionProduct ?? ''));
+      setTicketControlEnabled(Boolean(data.tenant.ticketControlEnabled));
       setRequiredVisits(String(sanitizeRequiredVisits(data.tenant.requiredVisits ?? DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS)));
       setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
       setWalletBackgroundColor(String(data.tenant.walletBackgroundColor ?? walletBackgroundColor));
@@ -631,18 +696,28 @@ const handleAdminScan = async (rawValue: string) => {
     const res = await fetch('/api/check-in/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: customerId, code: todayCode, tenantUserId, tenantSessionToken, purchaseAmount: visitPurchaseAmount }),
+      body: JSON.stringify({
+        userId: customerId,
+        code: todayCode,
+        tenantUserId,
+        tenantSessionToken,
+        purchaseAmount: visitPurchaseAmount,
+        ticketNumber: ticketControlEnabled ? visitTicketNumber : '',
+      }),
     });
 
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error || 'No se pudo registrar visita');
 
     const amount = Number(data.purchaseAmount || 0);
+    const ticket = String(data.ticketNumber || '').trim();
     const amountBadge = amount > 0 ? ` · Compra: $${amount.toFixed(2)}` : '';
-    setScannerMsg(`✅ ${data.message || 'Visita registrada'} (${data.visits}/${data.requiredVisits})${amountBadge}`);
-    setMsg(`✅ ${data.message || 'Visita registrada'} (${data.visits}/${data.requiredVisits})${amountBadge}`);
+    const ticketBadge = ticket ? ` · Ticket: ${ticket}` : '';
+    setScannerMsg(`✅ ${data.message || 'Visita registrada'} (${data.visits}/${data.requiredVisits})${amountBadge}${ticketBadge}`);
+    setMsg(`✅ ${data.message || 'Visita registrada'} (${data.visits}/${data.requiredVisits})${amountBadge}${ticketBadge}`);
     setLastScannedCustomerId(customerId);
     setVisitPurchaseAmount('');
+    setVisitTicketNumber('');
     playSuccessSound();
     setScannerSuccessFlash(true);
     setTimeout(() => setScannerSuccessFlash(false), 800);
@@ -658,6 +733,27 @@ const handleAdminScan = async (rawValue: string) => {
 };
 
 if (!tenant) return <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4"><div className="bg-gray-800 p-8 rounded-2xl w-full max-w-sm shadow-2xl border border-gray-700"><div className="text-center mb-8"><h1 className="text-3xl font-black text-white tracking-tighter">punto<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500">IA</span></h1><p className="text-gray-400 text-sm mt-2">Acceso de Personal</p></div><form onSubmit={handleLogin} className="space-y-4"><input className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Usuario (Ej: PIZZA.juan)" value={username} onChange={e=>setUsername(e.target.value)} disabled={isLoggingIn} /><input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Contraseña" value={password} onChange={e=>setPassword(e.target.value)} disabled={isLoggingIn} /><button disabled={isLoggingIn} className="w-full bg-gradient-to-r from-orange-500 to-pink-600 font-bold py-4 rounded-xl text-white shadow-lg disabled:opacity-60">{isLoggingIn ? 'Ingresando...' : 'Iniciar Sesión'}</button></form><a href="/recuperar?scope=tenant" className="mt-4 block text-center text-sm font-semibold text-purple-300 hover:text-purple-200">¿Olvidaste tu contraseña?</a></div></div>;
+
+if (mustChangePassword) {
+  return (
+    <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4">
+      <div className="bg-gray-800 p-8 rounded-2xl w-full max-w-md shadow-2xl border border-gray-700">
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-black text-white tracking-tighter">punto<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500">IA</span></h1>
+          <p className="text-gray-300 text-sm mt-2 font-semibold">Actualiza tu contraseña temporal para continuar</p>
+        </div>
+        <div className="space-y-3">
+          <input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Contraseña actual" value={currentPasswordInput} onChange={(e)=>setCurrentPasswordInput(e.target.value)} disabled={isChangingPassword} />
+          <input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Nueva contraseña (mín. 6)" value={newPasswordInput} onChange={(e)=>setNewPasswordInput(e.target.value)} disabled={isChangingPassword} />
+          <input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Confirmar nueva contraseña" value={confirmPasswordInput} onChange={(e)=>setConfirmPasswordInput(e.target.value)} disabled={isChangingPassword} />
+          <button onClick={changeOwnPassword} disabled={isChangingPassword} className="w-full bg-gradient-to-r from-orange-500 to-pink-600 font-bold py-4 rounded-xl text-white shadow-lg disabled:opacity-60">
+            {isChangingPassword ? 'Guardando...' : 'Guardar nueva contraseña'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 
 return (
@@ -732,9 +828,11 @@ return (
           <span className="text-gray-500 font-mono text-xs font-black mr-1 select-none shrink-0">{tenant.codePrefix || 'PREFIJO'}.</span>
           <input className="bg-transparent w-full py-3.5 outline-none font-semibold text-gray-900 placeholder:text-gray-400 text-sm" placeholder="usuario (se agrega el prefijo automáticamente)" value={newStaff.username} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, username: e.target.value})} />
         </div>
-        <input type="password" className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-300 focus:bg-white transition text-sm font-semibold" placeholder="Contraseña" value={newStaff.password} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, password: e.target.value})} />
-        <div className="p-3.5 bg-gray-100 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold flex items-center">
-          👤 Operativo (QR + Canje)
+        <div className="p-3.5 bg-gray-100 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold flex items-center md:col-span-2">
+          🔐 Se generará contraseña temporal; el operador deberá cambiarla en su primer ingreso.
+        </div>
+        <div className="p-3.5 bg-gray-100 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold flex items-center md:col-span-2">
+          👤 Operativo (QR + Canje) · Recibirá correo de alta.
         </div>
       </div>
       <button onClick={createStaff} disabled={isCreatingStaff} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black py-3.5 rounded-xl shadow-md text-sm hover:shadow-lg transition-all disabled:opacity-60">{isCreatingStaff ? 'Creando...' : 'Agregar Empleado'}</button>
@@ -880,6 +978,17 @@ return (
       />
       <span className="text-[11px] font-bold text-gray-500">Se guarda con esta visita (ej: 129.90)</span>
     </div>
+    {ticketControlEnabled ? (
+      <div className="mt-2 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-center shrink-0 relative z-20">
+        <input
+          value={visitTicketNumber}
+          onChange={(e) => setVisitTicketNumber(e.target.value.toUpperCase().replace(/\s+/g, '').slice(0, 40))}
+          placeholder="# de ticket (opcional)"
+          className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700"
+        />
+        <span className="text-[11px] font-bold text-gray-500">Úsalo si tu negocio desea control por folio</span>
+      </div>
+    ) : null}
     <p className="mt-2 text-xs font-semibold text-gray-500 text-center">Centra el código QR del cliente en el recuadro</p>
     {scannerMsg ? (
       <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className={`mt-4 p-4 rounded-xl text-center text-sm font-black shadow-lg ${scannerMsg.includes('❌') ? 'bg-red-100 text-red-700' : 'bg-emerald-500 text-white'}`}>
@@ -1105,6 +1214,30 @@ return (
     </div>
   </div>
 </div>
+  </div>
+</div>
+
+<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+  <div className="px-6 py-4 border-b border-gray-100">
+    <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">🧾 Control de ticket</h3>
+    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Activa este campo para capturar folio/ticket en cada visita escaneada</p>
+  </div>
+  <div className="p-6">
+    <label className="flex items-center justify-between gap-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
+      <div>
+        <p className="text-sm font-black text-gray-800">Solicitar # de ticket al escanear</p>
+        <p className="text-[11px] text-gray-500 font-semibold mt-0.5">Si está apagado, el escáner no mostrará ni guardará ticket.</p>
+      </div>
+      <input
+        type="checkbox"
+        checked={ticketControlEnabled}
+        onChange={(e) => {
+          setTicketControlEnabled(e.target.checked);
+          if (!e.target.checked) setVisitTicketNumber('');
+        }}
+        className="h-5 w-5 accent-gray-900"
+      />
+    </label>
   </div>
 </div>
 

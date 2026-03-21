@@ -75,6 +75,7 @@ export async function POST(request: Request) {
           visitDay: true,
           visitedAt: true,
           purchaseAmount: true,
+          ticketNumber: true,
         },
         orderBy: { visitedAt: 'desc' },
       });
@@ -100,6 +101,7 @@ export async function POST(request: Request) {
         ...visit,
         visitedAt: visit.visitedAt.toISOString(),
         purchaseAmount: Number(visit.purchaseAmount || 0),
+        ticketNumber: String(visit.ticketNumber || ''),
       }));
     } catch (error: unknown) {
       if (!isMissingTableOrColumnError(error)) throw error;
@@ -108,6 +110,7 @@ export async function POST(request: Request) {
         ...visit,
         visitedAt: visit.visitedAt.toISOString(),
         purchaseAmount: 0,
+        ticketNumber: '',
       }));
     }
 

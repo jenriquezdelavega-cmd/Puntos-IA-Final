@@ -29,6 +29,7 @@ model Tenant {
   coalitionOptIn Boolean @default(false) @map("coalition_opt_in")
   coalitionDiscountPercent Int @default(0) @map("coalition_discount_percent")
   coalitionProduct String @default("") @map("coalition_product")
+  ticketControlEnabled Boolean @default(false) @map("ticket_control_enabled")
 
   createdAt DateTime @default(now())
 
@@ -49,6 +50,8 @@ model TenantUser {
   email          String
   username       String      @unique
   password       String
+  mustChangePassword Boolean @default(false) @map("must_change_password")
+  passwordChangedAt DateTime? @map("password_changed_at")
   role           String
   tenantId       String
   tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -138,6 +141,7 @@ model Visit {
   id             String   @id @default(uuid())
   visitedAt      DateTime @default(now())
   purchaseAmount Float    @default(0) @map("purchase_amount")
+  ticketNumber   String?  @map("ticket_number")
 
   // para evitar múltiples scans en el mismo día por negocio
   visitDay String // YYYY-MM-DD

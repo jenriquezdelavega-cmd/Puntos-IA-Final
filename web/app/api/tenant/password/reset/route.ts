@@ -40,14 +40,14 @@ export async function POST(request: Request) {
     if (!resetToken || resetToken.usedAt || resetToken.expiresAt <= now) {
       return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'Token inválido o expirado' });
     }
-    if (String(resetToken.tenantUser.role || '').toUpperCase() !== 'ADMIN') {
-      return apiError({ requestId, status: 403, code: 'FORBIDDEN', message: 'Solo administradores pueden restablecer contraseña por este flujo' });
-    }
-
     await prisma.$transaction([
       prisma.tenantUser.update({
         where: { id: resetToken.tenantUserId },
-        data: { password: hashPassword(password) },
+        data: {
+          password: hashPassword(password),
+          mustChangePassword: false,
+          passwordChangedAt: now,
+        },
       }),
       prisma.tenantUserPasswordResetToken.update({
         where: { id: resetToken.id },
