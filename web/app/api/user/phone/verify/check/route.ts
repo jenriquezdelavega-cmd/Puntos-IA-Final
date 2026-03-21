@@ -9,7 +9,7 @@ export async function POST(request: Request) {
 
   try {
     if (!isPhoneVerificationEnabled()) {
-      return apiError({ requestId, status: 503, code: 'SERVICE_UNAVAILABLE', message: 'Verificación de teléfono no disponible por el momento' });
+      return apiError({ requestId, status: 503, code: 'INTERNAL_ERROR', message: 'Verificación de teléfono no disponible por el momento' });
     }
 
     const body = await parseJsonObject(request);
