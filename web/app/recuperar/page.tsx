@@ -7,6 +7,8 @@ function RecuperarContent() {
   const searchParams = useSearchParams();
   const token = useMemo(() => String(searchParams.get('token') || '').trim(), [searchParams]);
   const scope = useMemo(() => (String(searchParams.get('scope') || '').toLowerCase() === 'tenant' ? 'tenant' : 'user'), [searchParams]);
+  const loginHref = scope === 'tenant' ? '/admin' : '/ingresar?tipo=cliente&modo=login';
+  const loginLabel = scope === 'tenant' ? 'Volver al login de operadores' : 'Volver al login de clientes';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -90,6 +92,9 @@ function RecuperarContent() {
             <button onClick={requestReset} disabled={loading} className="w-full rounded-xl bg-pink-600 text-white font-bold py-3 disabled:opacity-60">
               {loading ? 'Enviando...' : 'Enviar link de recuperación'}
             </button>
+            <a href={loginHref} className="block w-full rounded-xl border border-pink-200 text-center text-sm font-bold py-3 text-pink-700 hover:bg-pink-50 transition-colors">
+              {loginLabel}
+            </a>
           </>
         ) : (
           <>
@@ -104,6 +109,9 @@ function RecuperarContent() {
             <button onClick={submitNewPassword} disabled={loading} className="w-full rounded-xl bg-pink-600 text-white font-bold py-3 disabled:opacity-60">
               {loading ? 'Guardando...' : 'Guardar nueva contraseña'}
             </button>
+            <a href={loginHref} className="block w-full rounded-xl border border-pink-200 text-center text-sm font-bold py-3 text-pink-700 hover:bg-pink-50 transition-colors">
+              {loginLabel}
+            </a>
           </>
         )}
         {message ? <p className="text-sm font-semibold text-gray-700">{message}</p> : null}
