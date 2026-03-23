@@ -77,6 +77,13 @@ function displayDateToIso(value: string): string {
   return `${year}-${month}-${day}`;
 }
 
+function getApiErrorMessage(body: unknown, fallback: string): string {
+  if (!body || typeof body !== 'object') return fallback;
+  if ('message' in body && typeof body.message === 'string' && body.message.trim()) return body.message;
+  if ('error' in body && typeof body.error === 'string' && body.error.trim()) return body.error;
+  return fallback;
+}
+
 const BIRTH_DATE_LIMITS = getBirthDateLimits();
 
 export default function IngresarPage() {
@@ -218,7 +225,7 @@ export default function IngresarPage() {
 
       const body = (await response.json()) as (UserLoginResponse & { ok?: true; emailStatus?: ApiErrorResponse['emailStatus'] }) | ApiErrorResponse;
       if (!response.ok) {
-        setRegisterMessage(body?.message || body?.error || 'No se pudo crear la cuenta. Revisa tus datos.');
+        setRegisterMessage(getApiErrorMessage(body, 'No se pudo crear la cuenta. Revisa tus datos.'));
         return;
       }
       setPhone(cleanPhone);
