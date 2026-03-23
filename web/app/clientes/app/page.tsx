@@ -167,6 +167,13 @@ function displayDateToIso(value: string): string {
   return `${year}-${month}-${day}`;
 }
 
+function formatBirthDateInput(value: string): string {
+  const digitsOnly = value.replace(/\D/g, '').slice(0, 8);
+  if (digitsOnly.length <= 2) return digitsOnly;
+  if (digitsOnly.length <= 4) return `${digitsOnly.slice(0, 2)}/${digitsOnly.slice(2)}`;
+  return `${digitsOnly.slice(0, 2)}/${digitsOnly.slice(2, 4)}/${digitsOnly.slice(4)}`;
+}
+
 function challengeTypeLabel(challengeType: ChallengeItem['challengeType']) {
   return challengeType === 'DISTINCT_BUSINESSES' ? 'Negocios distintos' : 'Visitas acumuladas';
 }
@@ -1255,7 +1262,7 @@ export default function ClientesAppPage() {
                       type="text"
                       inputMode="numeric"
                       value={isoDateToDisplay(profileBirthDate)}
-                      onChange={(event) => setProfileBirthDate(event.target.value)}
+                      onChange={(event) => setProfileBirthDate(formatBirthDateInput(event.target.value))}
                       placeholder="DD/MM/AAAA"
                       className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-3 py-2.5 text-sm text-[#2e1e54] focus:border-[#9f7bd3] focus:outline-none md:max-w-xs"
                     />
