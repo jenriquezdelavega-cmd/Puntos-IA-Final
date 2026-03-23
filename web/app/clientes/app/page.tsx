@@ -153,6 +153,20 @@ function formatDateLabel(value: string | Date | null | undefined) {
   return parsed.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+function isoDateToDisplay(value: string): string {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return value;
+  return `${match[3]}/${match[2]}/${match[1]}`;
+}
+
+function displayDateToIso(value: string): string {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return '';
+  const [, day, month, year] = match;
+  return `${year}-${month}-${day}`;
+}
+
 function challengeTypeLabel(challengeType: ChallengeItem['challengeType']) {
   return challengeType === 'DISTINCT_BUSINESSES' ? 'Negocios distintos' : 'Visitas acumuladas';
 }
@@ -559,6 +573,11 @@ export default function ClientesAppPage() {
 
   const saveProfile = async () => {
     if (!user?.id || !user?.sessionToken) return;
+    const normalizedBirthDate = profileBirthDate ? displayDateToIso(profileBirthDate) : '';
+    if (profileBirthDate && !normalizedBirthDate) {
+      setStatusMessage('La fecha de nacimiento debe estar en formato DD/MM/AAAA.');
+      return;
+    }
     setSavingProfile(true);
     setStatusMessage('');
     try {
@@ -572,7 +591,7 @@ export default function ClientesAppPage() {
           phone: profilePhone,
           email: profileEmail,
           gender: profileGender,
-          birthDate: profileBirthDate || undefined,
+          birthDate: normalizedBirthDate || undefined,
         }),
       });
 
@@ -596,7 +615,7 @@ export default function ClientesAppPage() {
           phone: profilePhone,
           email: profileEmail,
           gender: profileGender,
-          birthDate: profileBirthDate || null,
+          birthDate: normalizedBirthDate || null,
         };
         localStorage.setItem('punto_user', JSON.stringify(updated));
         return updated;
@@ -1233,9 +1252,11 @@ export default function ClientesAppPage() {
                     <label htmlFor="birthDate" className="text-xs font-bold uppercase tracking-[0.14em] text-[#7e67a8]">Fecha de nacimiento</label>
                     <input
                       id="birthDate"
-                      type="date"
-                      value={profileBirthDate}
+                      type="text"
+                      inputMode="numeric"
+                      value={isoDateToDisplay(profileBirthDate)}
                       onChange={(event) => setProfileBirthDate(event.target.value)}
+                      placeholder="DD/MM/AAAA"
                       className="rounded-xl border border-[#ddcdf4] bg-[#fffafe] px-3 py-2.5 text-sm text-[#2e1e54] focus:border-[#9f7bd3] focus:outline-none md:max-w-xs"
                     />
                   </div>
