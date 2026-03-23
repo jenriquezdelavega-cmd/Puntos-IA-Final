@@ -69,11 +69,10 @@ function isoDateToDisplay(value: string): string {
 }
 
 function displayDateToIso(value: string): string {
-  const normalized = value.replace(/[^\d]/g, '');
-  if (normalized.length !== 8) return value;
-  const day = normalized.slice(0, 2);
-  const month = normalized.slice(2, 4);
-  const year = normalized.slice(4, 8);
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return '';
+  const [, day, month, year] = match;
   return `${year}-${month}-${day}`;
 }
 
@@ -104,7 +103,8 @@ export default function IngresarPage() {
   const [customerMode, setCustomerMode] = useState<CustomerMode>('login');
   const { minBirthDate, maxBirthDate } = BIRTH_DATE_LIMITS;
   const cleanRegisterEmail = registerEmail.trim().toLowerCase();
-  const isBirthDateInRange = Boolean(registerBirthDate) && registerBirthDate >= minBirthDate && registerBirthDate <= maxBirthDate;
+  const registerBirthDateIso = displayDateToIso(registerBirthDate);
+  const isBirthDateInRange = Boolean(registerBirthDateIso) && registerBirthDateIso >= minBirthDate && registerBirthDateIso <= maxBirthDate;
   const canSubmitRegister = Boolean(
     registerName.trim() &&
       registerPassword &&
@@ -203,7 +203,12 @@ export default function IngresarPage() {
       setRegisterLoading(false);
       return;
     }
-    if (registerBirthDate < minBirthDate || registerBirthDate > maxBirthDate) {
+    if (!registerBirthDateIso) {
+      setRegisterMessage('Usa formato de fecha DD/MM/AAAA.');
+      setRegisterLoading(false);
+      return;
+    }
+    if (registerBirthDateIso < minBirthDate || registerBirthDateIso > maxBirthDate) {
       setRegisterMessage('La edad permitida para registro es entre 5 y 100 años.');
       setRegisterLoading(false);
       return;
@@ -219,7 +224,7 @@ export default function IngresarPage() {
           password: registerPassword,
           email: cleanEmail,
           gender: registerGender,
-          birthDate: registerBirthDate,
+          birthDate: registerBirthDateIso,
         }),
       });
 
@@ -406,12 +411,8 @@ export default function IngresarPage() {
                     id="register-birth-date"
                     type="text"
                     inputMode="numeric"
-                    pattern="^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/(19|20)\\d{2}$"
                     value={isoDateToDisplay(registerBirthDate)}
-                    onChange={(event) => {
-                      const next = displayDateToIso(event.target.value);
-                      setRegisterBirthDate(next);
-                    }}
+                    onChange={(event) => setRegisterBirthDate(event.target.value)}
                     className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none sm:[color-scheme:dark]"
                     placeholder="DD/MM/AAAA"
                     required

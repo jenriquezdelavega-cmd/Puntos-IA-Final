@@ -160,11 +160,10 @@ function isoDateToDisplay(value: string): string {
 }
 
 function displayDateToIso(value: string): string {
-  const normalized = value.replace(/[^\d]/g, '');
-  if (normalized.length !== 8) return value;
-  const day = normalized.slice(0, 2);
-  const month = normalized.slice(2, 4);
-  const year = normalized.slice(4, 8);
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return '';
+  const [, day, month, year] = match;
   return `${year}-${month}-${day}`;
 }
 
@@ -575,6 +574,10 @@ export default function ClientesAppPage() {
   const saveProfile = async () => {
     if (!user?.id || !user?.sessionToken) return;
     const normalizedBirthDate = profileBirthDate ? displayDateToIso(profileBirthDate) : '';
+    if (profileBirthDate && !normalizedBirthDate) {
+      setStatusMessage('La fecha de nacimiento debe estar en formato DD/MM/AAAA.');
+      return;
+    }
     setSavingProfile(true);
     setStatusMessage('');
     try {
@@ -1251,7 +1254,6 @@ export default function ClientesAppPage() {
                       id="birthDate"
                       type="text"
                       inputMode="numeric"
-                      pattern="^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/(19|20)\\d{2}$"
                       value={isoDateToDisplay(profileBirthDate)}
                       onChange={(event) => setProfileBirthDate(event.target.value)}
                       placeholder="DD/MM/AAAA"
