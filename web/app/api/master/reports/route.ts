@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { isValidMasterCredentials } from '@/app/lib/master-auth';
 import { listPrelaunchLeads } from '@/app/lib/prelaunch-leads';
+import { consumeRateLimit, getClientIp } from '@/app/lib/request-rate-limit';
 import { apiError, getRequestId } from '@/app/lib/api-response';
 import { optionalString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 import { getRedemptionChannel, getRedemptionRewardLabel } from '@/app/lib/redemption-display';
@@ -16,18 +17,31 @@ function csv(headers: string[], rows: Array<Array<unknown>>) {
   return [headers.map(esc).join(','), ...rows.map((r) => r.map(esc).join(','))].join('\n');
 }
 
-function parseReportType(value: unknown): 'prelaunch' | 'tenant-users' | 'redemption-logs' | null {
+function parseReportType(value: unknown): 'prelaunch' | 'tenant-users' | 'redemption-logs' | 'users-without-membership' | null {
   const raw = optionalString(value);
   if (!raw || raw === 'prelaunch') return 'prelaunch';
   if (raw === 'tenant-users') return 'tenant-users';
   if (raw === 'redemption-logs') return 'redemption-logs';
+  if (raw === 'users-without-membership') return 'users-without-membership';
   return null;
 }
 
 export async function POST(req: Request) {
   const requestId = getRequestId(req);
+  const clientIp = getClientIp(req);
 
   try {
+    const rateLimit = consumeRateLimit(`master:reports:${clientIp}`, 40, 60_000);
+    if (!rateLimit.allowed) {
+      return apiError({
+        requestId,
+        status: 429,
+        code: 'TOO_MANY_REQUESTS',
+        message: `Demasiadas solicitudes. Intenta de nuevo en ${String(rateLimit.retryAfterSeconds)}s.`,
+        headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) },
+      });
+    }
+
     const body = await parseJsonObject(req);
     if (!body) {
       return apiError({
@@ -131,6 +145,33 @@ export async function POST(req: Request) {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
           'Content-Disposition': `attachment; filename="redemption-logs-${new Date().toISOString().slice(0, 10)}.csv"`,
+          'Cache-Control': 'no-store',
+          'x-request-id': requestId,
+        },
+      });
+    }
+
+    if (report === 'users-without-membership') {
+      const users = await prisma.user.findMany({
+        where: {
+          memberships: {
+            none: {},
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10000,
+      });
+
+      const content = csv(
+        ['userId', 'name', 'phone', 'email', 'createdAt'],
+        users.map((u) => [u.id, u.name || '', u.phone || '', u.email || '', u.createdAt.toISOString()]),
+      );
+
+      return new NextResponse(content, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': `attachment; filename="usuarios-sin-pase-activo-${new Date().toISOString().slice(0, 10)}.csv"`,
           'Cache-Control': 'no-store',
           'x-request-id': requestId,
         },
