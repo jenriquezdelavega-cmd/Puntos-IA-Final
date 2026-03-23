@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 interface TenantUser {
   id: string;
@@ -138,6 +138,7 @@ export default function MasterPage() {
 
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [coalitionOnly, setCoalitionOnly] = useState(false);
+  const [coalitionChallengesEnabled, setCoalitionChallengesEnabled] = useState(true);
   const [selectedTenantId, setSelectedTenantId] = useState('');
 
   const [tName, setTName] = useState('');
@@ -192,7 +193,6 @@ export default function MasterPage() {
   const [isRunningWalletJobs, setIsRunningWalletJobs] = useState(false);
   const [isRunningMaintenance, setIsRunningMaintenance] = useState(false);
   const [isPurgingCustomers, setIsPurgingCustomers] = useState(false);
-  const [keepCustomerPhones, setKeepCustomerPhones] = useState('8121078577');
 
   const [msg, setMsg] = useState('');
 
@@ -206,6 +206,17 @@ export default function MasterPage() {
     masterPassword: masterPass,
     masterOtp,
   };
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem('master:coalition-challenges-enabled');
+    if (saved === '0') {
+      setCoalitionChallengesEnabled(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem('master:coalition-challenges-enabled', coalitionChallengesEnabled ? '1' : '0');
+  }, [coalitionChallengesEnabled]);
 
   const postMasterJson = async (url: string, payload: Record<string, unknown>) => {
     const response = await fetch(url, {
@@ -417,26 +428,6 @@ export default function MasterPage() {
     await loadTenants();
   };
 
-  const runCleanupUsers = async (dryRun: boolean, cleanupType: 'seeded' | 'orphan') => {
-    const { response, data } = await postMasterJson('/api/master/cleanup-test-users', {
-      ...withMasterAuth,
-      dryRun,
-      cleanupType,
-      keepPhones: keepCustomerPhones,
-    });
-
-    if (!response.ok) {
-      setMsg(`❌ ${String(data.error ?? 'No se pudo depurar usuarios de prueba.')}`);
-      return;
-    }
-
-    const runMode = dryRun ? 'Simulación' : 'Depuración';
-    const cleanupLabel = cleanupType === 'orphan' ? 'huérfanos' : 'semilla';
-    setMsg(
-      `✅ ${runMode} ${cleanupLabel} completada. Detectados: ${String(data.detected ?? 0)} · Eliminables: ${String(data.deletable ?? 0)} · Eliminados: ${String(data.deleted ?? 0)}`,
-    );
-  };
-
   const purgeGlobalCustomers = async () => {
     const confirmation = window.prompt('⚠️ Acción irreversible.\nEscribe BORRAR_CLIENTES_GLOBAL para confirmar.');
     if (confirmation !== 'BORRAR_CLIENTES_GLOBAL') {
@@ -466,7 +457,7 @@ export default function MasterPage() {
     }
   };
 
-  const downloadReport = async (report: 'prelaunch' | 'tenant-users' | 'redemption-logs', onlySelectedTenant = false) => {
+  const downloadReport = async (report: 'prelaunch' | 'tenant-users' | 'redemption-logs' | 'users-without-membership', onlySelectedTenant = false) => {
     const res = await fetch('/api/master/reports', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -492,6 +483,11 @@ export default function MasterPage() {
   };
 
   const submitChallenge = async () => {
+    if (!coalitionChallengesEnabled) {
+      setMsg('⚠️ Los retos de coalición están inhabilitados.');
+      return;
+    }
+
     const action = editingChallengeId ? 'UPDATE' : 'CREATE';
     setIsSavingChallenge(true);
 
@@ -518,6 +514,11 @@ export default function MasterPage() {
   };
 
   const removeChallenge = async (challengeId: string) => {
+    if (!coalitionChallengesEnabled) {
+      setMsg('⚠️ Los retos de coalición están inhabilitados.');
+      return;
+    }
+
     if (!confirm('¿Eliminar reto de red?')) return;
 
     const { response, data } = await postMasterJson('/api/master/manage-challenges', {
@@ -536,6 +537,11 @@ export default function MasterPage() {
   };
 
   const startEditingChallenge = (challenge: Challenge) => {
+    if (!coalitionChallengesEnabled) {
+      setMsg('⚠️ Los retos de coalición están inhabilitados.');
+      return;
+    }
+
     setEditingChallengeId(challenge.id);
     setChallengeForm({
       title: challenge.title,
@@ -684,25 +690,19 @@ export default function MasterPage() {
                 }} />
               </div>
               <button onClick={() => downloadReport('tenant-users', false)} className="w-full rounded-lg bg-slate-700 py-2">Clientes por negocio</button>
+              <button onClick={() => downloadReport('users-without-membership', false)} className="w-full rounded-lg bg-slate-700 py-2">Clientes registrados sin pase activo</button>
               <button onClick={() => downloadReport('prelaunch', false)} className="w-full rounded-lg bg-slate-700 py-2">Leads prelaunch</button>
               <button onClick={() => downloadReport('tenant-users', true)} disabled={!selectedTenantId} className="w-full rounded-lg bg-slate-700 py-2 disabled:opacity-40">Clientes del negocio seleccionado</button>
               <button onClick={() => downloadReport('redemption-logs', false)} className="w-full rounded-lg bg-slate-700 py-2">Logs de canje (global)</button>
               <button onClick={() => downloadReport('redemption-logs', true)} disabled={!selectedTenantId} className="w-full rounded-lg bg-slate-700 py-2 disabled:opacity-40">Logs de canje del negocio</button>
               <div className="pt-2 border-t border-slate-700 space-y-2">
-                <p className="text-xs text-slate-400">Depuración segura de usuarios semilla (sin membresías/canjes).</p>
-                <button onClick={() => runCleanupUsers(true, 'seeded')} className="w-full rounded-lg bg-amber-600 py-2">Simular limpieza de usuarios falsos</button>
-                <button onClick={() => runCleanupUsers(false, 'seeded')} className="w-full rounded-lg bg-rose-700 py-2">Ejecutar limpieza de usuarios falsos</button>
-              </div>
-              <div className="pt-2 border-t border-slate-700 space-y-2">
-                <p className="text-xs text-slate-400">Borrado de huérfanos: usuarios sin membresías, canjes ni actividad.</p>
-                <input
-                  className="w-full rounded-lg bg-slate-800 p-3 text-sm"
-                  placeholder="Teléfonos a conservar (separados por coma)"
-                  value={keepCustomerPhones}
-                  onChange={(e) => setKeepCustomerPhones(e.target.value)}
-                />
-                <button onClick={() => runCleanupUsers(true, 'orphan')} className="w-full rounded-lg bg-amber-600 py-2">Simular limpieza de huérfanos</button>
-                <button onClick={() => runCleanupUsers(false, 'orphan')} className="w-full rounded-lg bg-rose-700 py-2">Ejecutar limpieza de huérfanos</button>
+                <p className="text-xs text-slate-400">Control de retos de coalición.</p>
+                <button
+                  onClick={() => setCoalitionChallengesEnabled((prev) => !prev)}
+                  className={`w-full rounded-lg py-2 font-semibold ${coalitionChallengesEnabled ? 'bg-emerald-600 text-slate-950' : 'bg-slate-700 text-slate-100'}`}
+                >
+                  {coalitionChallengesEnabled ? 'Inhabilitar retos de coalición' : 'Habilitar retos de coalición'}
+                </button>
               </div>
               <div className="pt-2 border-t border-rose-800 space-y-2">
                 <p className="text-xs text-rose-300">Temporal (master): borra TODA la base global de clientes de todos los negocios.</p>
@@ -729,7 +729,11 @@ export default function MasterPage() {
                       <p className="text-xs text-slate-400 mt-1">{tenant.coalitionOptIn ? `Coalición ${tenant.coalitionDiscountPercent ?? 0}% en ${tenant.coalitionProduct || 'producto'}` : 'Sin coalición activa'}</p>
                     </button>
                     <div className="flex gap-2">
-                      <button onClick={() => setEditingTenant(tenant)} className="text-xs px-2 py-1 rounded bg-amber-500 text-slate-950">Editar</button>
+                      {coalitionChallengesEnabled ? (
+                        <button onClick={() => setEditingTenant(tenant)} className="text-xs px-2 py-1 rounded bg-amber-500 text-slate-950">Editar</button>
+                      ) : (
+                        <span className="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300">Próximamente</span>
+                      )}
                       <button onClick={() => deleteTenant(tenant.id, tenant.name)} className="text-xs px-2 py-1 rounded bg-rose-600">Eliminar</button>
                     </div>
                   </div>
@@ -755,6 +759,11 @@ export default function MasterPage() {
       ) : activeTab === 'retos' ? (
         <section className="grid xl:grid-cols-[460px_minmax(0,1fr)] gap-5">
           <article className="rounded-2xl border border-slate-700 bg-slate-900 p-4 space-y-3">
+            {!coalitionChallengesEnabled ? (
+              <p className="rounded-lg border border-amber-500/40 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+                Retos de coalición inhabilitados. Esta sección está temporalmente en modo lectura.
+              </p>
+            ) : null}
             <div className="grid grid-cols-3 gap-2 text-xs">
               <div className="rounded-lg bg-slate-800 p-2">
                 <p className="text-slate-400">Retos</p>
@@ -791,7 +800,7 @@ export default function MasterPage() {
               Reto activo
             </label>
             <div className="flex gap-2">
-              <button onClick={submitChallenge} disabled={isSavingChallenge || challengeForm.title.trim().length < 3 || challengeForm.description.trim().length < 10} className="flex-1 rounded-lg bg-emerald-500 text-slate-950 py-2 font-semibold disabled:opacity-60">
+              <button onClick={submitChallenge} disabled={!coalitionChallengesEnabled || isSavingChallenge || challengeForm.title.trim().length < 3 || challengeForm.description.trim().length < 10} className="flex-1 rounded-lg bg-emerald-500 text-slate-950 py-2 font-semibold disabled:opacity-60">
                 {isSavingChallenge ? 'Guardando...' : editingChallengeId ? 'Guardar cambios' : 'Crear reto'}
               </button>
               {editingChallengeId ? (
@@ -821,8 +830,8 @@ export default function MasterPage() {
                     <span className={`text-xs px-2 py-1 rounded ${challenge.active ? 'bg-emerald-900 text-emerald-300' : 'bg-slate-700 text-slate-300'}`}>{challenge.active ? 'Activo' : 'Inactivo'}</span>
                   </div>
                   <div className="mt-3 flex gap-2">
-                    <button onClick={() => startEditingChallenge(challenge)} className="text-xs px-2 py-1 rounded bg-amber-500 text-slate-950">Editar</button>
-                    <button onClick={() => removeChallenge(challenge.id)} className="text-xs px-2 py-1 rounded bg-rose-600">Eliminar</button>
+                    <button disabled={!coalitionChallengesEnabled} onClick={() => startEditingChallenge(challenge)} className="text-xs px-2 py-1 rounded bg-amber-500 text-slate-950 disabled:opacity-50">Editar</button>
+                    <button disabled={!coalitionChallengesEnabled} onClick={() => removeChallenge(challenge.id)} className="text-xs px-2 py-1 rounded bg-rose-600 disabled:opacity-50">Eliminar</button>
                   </div>
                 </article>
               ))}

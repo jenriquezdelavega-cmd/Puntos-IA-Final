@@ -30,9 +30,6 @@ function getSessionSecret(): string {
     return crypto.createHash('sha256').update(fromDatabaseUrl).digest('hex');
   }
 
-  const fromMasterPassword = String(process.env.MASTER_PASSWORD || '').trim();
-  if (fromMasterPassword) return fromMasterPassword;
-
   throw new Error('USER_SESSION_SECRET o QR_TOKEN_SECRET requerido');
 }
 

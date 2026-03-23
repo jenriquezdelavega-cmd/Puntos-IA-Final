@@ -1,5 +1,6 @@
 import { prisma } from '@/app/lib/prisma';
 import { isValidMasterCredentials } from '@/app/lib/master-auth';
+import { consumeRateLimit, getClientIp } from '@/app/lib/request-rate-limit';
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { asTrimmedString, optionalString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 
@@ -14,8 +15,20 @@ function parseOptionalBoolean(value: unknown): boolean | undefined {
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
+  const clientIp = getClientIp(request);
 
   try {
+    const rateLimit = consumeRateLimit(`master:list-tenants:${clientIp}`, 20, 60_000);
+    if (!rateLimit.allowed) {
+      return apiError({
+        requestId,
+        status: 429,
+        code: 'TOO_MANY_REQUESTS',
+        message: `Demasiadas solicitudes. Intenta de nuevo en ${String(rateLimit.retryAfterSeconds)}s.`,
+        headers: { 'Retry-After': String(rateLimit.retryAfterSeconds) },
+      });
+    }
+
     const body = await parseJsonObject(request);
     if (!body) {
       return apiError({

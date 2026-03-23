@@ -1,7 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 
-const DEFAULT_MASTER_USERNAME = 'master_root_puntoia';
-const DEFAULT_MASTER_PASSWORD = 'G9v!2Qp#7Lm@4Xz%8Ta$1Nd';
 const TOTP_WINDOW_STEPS = 1;
 const TOTP_PERIOD_SECONDS = 30;
 const TOTP_DIGITS = 6;
@@ -19,12 +17,12 @@ function secureCompare(a: string, b: string): boolean {
 
 function getExpectedMasterUsername(): string {
   const configured = process.env.MASTER_USERNAME?.trim();
-  return configured && configured.length > 0 ? configured : DEFAULT_MASTER_USERNAME;
+  return configured && configured.length > 0 ? configured : '';
 }
 
 function getExpectedMasterPassword(): string {
   const configured = process.env.MASTER_PASSWORD?.trim();
-  return configured && configured.length > 0 ? configured : DEFAULT_MASTER_PASSWORD;
+  return configured && configured.length > 0 ? configured : '';
 }
 
 function getMasterTotpSecret(): string {
@@ -91,10 +89,14 @@ function isValidTotpOtp(otpInput: unknown): boolean {
 }
 
 export function isMasterPasswordConfigured(): boolean {
-  return true;
+  return getExpectedMasterUsername().length > 0 && getExpectedMasterPassword().length > 0;
 }
 
 export function isValidMasterCredentials(usernameInput: unknown, passwordInput: unknown, otpInput?: unknown): boolean {
+  if (!isMasterPasswordConfigured()) {
+    return false;
+  }
+
   const providedUsername = String(usernameInput || '');
   const providedPassword = String(passwordInput || '');
 
