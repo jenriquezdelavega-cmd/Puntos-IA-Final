@@ -15,6 +15,9 @@ export const metadata: Metadata = {
   metadataBase,
   title: "Punto IA | Loyalty para negocios",
   description: "Punto IA: coalición de PyMEs unidas para premiar tu lealtad. Check-ins, puntos y recompensas en tus negocios favoritos.",
+  other: {
+    "facebook-domain-verification": "5ivihz6ahclk9burj9t7fbfjn5voe3",
+  },
   icons: {
     icon: [{ url: "/puntoia.svg", type: "image/svg+xml" }],
     shortcut: "/puntoia.svg",
