@@ -11,7 +11,6 @@ import {
   parseWithSchema,
   requiredString,
 } from '@/app/lib/request-validation';
-import { isPhoneVerificationEnabled, isPhoneVerificationRequired } from '@/app/lib/phone-verification';
 
 
 export async function POST(req: Request) {
@@ -117,15 +116,6 @@ export async function POST(req: Request) {
       });
     }
 
-    if (isPhoneVerificationRequired() && isPhoneVerificationEnabled() && !user.phoneVerifiedAt) {
-      return apiError({
-        requestId,
-        status: 403,
-        code: 'FORBIDDEN',
-        message: 'Debes verificar tu teléfono con código antes de iniciar sesión.',
-      });
-    }
-
     if (normalizedPhone && user.phone !== normalizedPhone) {
       // Best effort: keep canonical phone format moving forward.
       const existingCanonical = await prisma.user.findUnique({
@@ -222,6 +212,9 @@ export async function POST(req: Request) {
         phone: user.phone,
         name: user.name ?? '',
         email: user.email ?? '',
+        emailVerified: Boolean(user.emailVerifiedAt),
+        phoneOtpVerified: Boolean(user.phoneVerifiedAt),
+        phoneOtpVerificationEnabled: false,
         emailVerificationPending: Boolean(user.email) && !user.emailVerifiedAt,
         gender: user.gender ?? '',
         birthDate: user.birthDate ?? null,
