@@ -76,6 +76,13 @@ function displayDateToIso(value: string): string {
   return `${year}-${month}-${day}`;
 }
 
+function formatBirthDateInput(value: string): string {
+  const digitsOnly = value.replace(/\D/g, '').slice(0, 8);
+  if (digitsOnly.length <= 2) return digitsOnly;
+  if (digitsOnly.length <= 4) return `${digitsOnly.slice(0, 2)}/${digitsOnly.slice(2)}`;
+  return `${digitsOnly.slice(0, 2)}/${digitsOnly.slice(2, 4)}/${digitsOnly.slice(4)}`;
+}
+
 function getApiErrorMessage(body: unknown, fallback: string): string {
   if (!body || typeof body !== 'object') return fallback;
   if ('message' in body && typeof body.message === 'string' && body.message.trim()) return body.message;
@@ -412,7 +419,7 @@ export default function IngresarPage() {
                     type="text"
                     inputMode="numeric"
                     value={isoDateToDisplay(registerBirthDate)}
-                    onChange={(event) => setRegisterBirthDate(event.target.value)}
+                    onChange={(event) => setRegisterBirthDate(formatBirthDateInput(event.target.value))}
                     className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none sm:[color-scheme:dark]"
                     placeholder="DD/MM/AAAA"
                     required
