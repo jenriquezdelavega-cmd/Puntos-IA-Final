@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Building2, CircleUserRound, ShieldCheck } from 'lucide-react';
 import { PageShell } from '@/src/components/marketing/page-shell';
 import { SiteHeader } from '@/src/components/marketing/site-header';
@@ -61,9 +62,32 @@ function isValidBasicEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function isoDateToDisplay(value: string): string {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return value;
+  return `${match[3]}/${match[2]}/${match[1]}`;
+}
+
+function displayDateToIso(value: string): string {
+  const normalized = value.replace(/[^\d]/g, '');
+  if (normalized.length !== 8) return value;
+  const day = normalized.slice(0, 2);
+  const month = normalized.slice(2, 4);
+  const year = normalized.slice(4, 8);
+  return `${year}-${month}-${day}`;
+}
+
+function getApiErrorMessage(body: unknown, fallback: string): string {
+  if (!body || typeof body !== 'object') return fallback;
+  if ('message' in body && typeof body.message === 'string' && body.message.trim()) return body.message;
+  if ('error' in body && typeof body.error === 'string' && body.error.trim()) return body.error;
+  return fallback;
+}
+
 const BIRTH_DATE_LIMITS = getBirthDateLimits();
 
 export default function IngresarPage() {
+  const router = useRouter();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [loginMessage, setLoginMessage] = useState('');
@@ -113,6 +137,10 @@ export default function IngresarPage() {
     }
   }, []);
 
+  useEffect(() => {
+    router.prefetch('/clientes/app');
+  }, [router]);
+
   const setModeInUrl = (mode: CustomerMode) => {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
@@ -143,7 +171,7 @@ export default function IngresarPage() {
       const destination = preferredBusiness
         ? `/clientes/app?business_id=${encodeURIComponent(preferredBusiness)}`
         : '/clientes/app';
-      window.location.assign(destination);
+      router.push(destination);
       return true;
     } catch {
       if (showError) {
@@ -195,25 +223,27 @@ export default function IngresarPage() {
         }),
       });
 
-      const body = (await response.json()) as ApiErrorResponse;
+      const body = (await response.json()) as (UserLoginResponse & { ok?: true; emailStatus?: ApiErrorResponse['emailStatus'] }) | ApiErrorResponse;
       if (!response.ok) {
-        setRegisterMessage(body?.message || body?.error || 'No se pudo crear la cuenta. Revisa tus datos.');
+        setRegisterMessage(getApiErrorMessage(body, 'No se pudo crear la cuenta. Revisa tus datos.'));
         return;
       }
       setPhone(cleanPhone);
       setPassword(registerPassword);
-      const loginOk = await loginCustomer({ phone: cleanPhone, password: registerPassword }, false);
+      if ('id' in body) {
+        localStorage.setItem('punto_user', JSON.stringify(body));
+        const preferredBusiness = body.memberships?.[0]?.tenantId;
+        const destination = preferredBusiness
+          ? `/clientes/app?business_id=${encodeURIComponent(preferredBusiness)}`
+          : '/clientes/app';
+        router.push(destination);
+      }
       if (body?.emailStatus === 'not_configured') {
         setRegisterMessage('Cuenta creada, pero el email de verificación no está configurado en este momento.');
       } else if (body?.emailStatus === 'failed') {
         setRegisterMessage('Cuenta creada. No pudimos enviar el email de verificación, pero ya puedes iniciar sesión.');
       } else {
         setRegisterMessage('Cuenta creada. Te enviamos un email para verificar tu cuenta.');
-      }
-      if (!loginOk) {
-        setCustomerMode('login');
-        setModeInUrl('login');
-        setLoginMessage('Cuenta creada. Inicia sesión con tu teléfono y contraseña.');
       }
     } catch {
       setRegisterMessage('No se pudo crear la cuenta en este momento. Intenta nuevamente.');
@@ -374,12 +404,16 @@ export default function IngresarPage() {
                   <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="register-birth-date">Cumpleaños</label>
                   <input
                     id="register-birth-date"
-                    type="date"
-                    value={registerBirthDate}
-                    onChange={(event) => setRegisterBirthDate(event.target.value)}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/(19|20)\\d{2}$"
+                    value={isoDateToDisplay(registerBirthDate)}
+                    onChange={(event) => {
+                      const next = displayDateToIso(event.target.value);
+                      setRegisterBirthDate(next);
+                    }}
                     className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none sm:[color-scheme:dark]"
-                    min={minBirthDate}
-                    max={maxBirthDate}
+                    placeholder="DD/MM/AAAA"
                     required
                   />
                 </div>

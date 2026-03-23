@@ -16,6 +16,7 @@ import { sendEmailVerificationEmail } from '@/app/lib/email';
 import { logApiEvent } from '@/app/lib/api-log';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 import { generatePasswordResetToken, hashPasswordResetToken } from '@/app/lib/password-reset';
+import { generateUserSessionToken } from '@/app/lib/user-session-token';
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -230,6 +231,16 @@ export async function POST(request: Request) {
       data: {
         id: newUser.id,
         name: newUser.name,
+        phone: newUser.phone,
+        email: newUser.email,
+        emailVerified: false,
+        phoneOtpVerified: false,
+        phoneOtpVerificationEnabled: false,
+        emailVerificationPending: Boolean(newUser.email),
+        gender: newUser.gender,
+        birthDate: newUser.birthDate,
+        memberships: [],
+        sessionToken: generateUserSessionToken({ uid: newUser.id, phone: newUser.phone }),
         emailStatus,
       },
     });
