@@ -63,6 +63,10 @@ type StoredUser = {
   phone: string;
   name?: string;
   email?: string;
+  emailVerified?: boolean;
+  emailVerificationPending?: boolean;
+  phoneOtpVerified?: boolean;
+  phoneOtpVerificationEnabled?: boolean;
   gender?: string;
   birthDate?: string | null;
   memberships?: Membership[];
@@ -233,6 +237,15 @@ export default function ClientesAppPage() {
   const membershipSyncInFlight = useRef<Promise<void> | null>(null);
 
   const activeMemberships = useMemo(() => user?.memberships || [], [user?.memberships]);
+  const emailContactVerified = useMemo(
+    () => Boolean(user?.email) && (Boolean(user?.emailVerified) || !user?.emailVerificationPending),
+    [user?.email, user?.emailVerificationPending, user?.emailVerified],
+  );
+  const whatsappOtpVerificationEnabled = useMemo(
+    () => Boolean(user?.phoneOtpVerificationEnabled),
+    [user?.phoneOtpVerificationEnabled],
+  );
+  const whatsappOtpVerified = useMemo(() => Boolean(user?.phoneOtpVerified), [user?.phoneOtpVerified]);
   const pointsTotal = useMemo(
     () => activeMemberships.reduce((sum, membership) => sum + Number(membership.points || 0), 0),
     [activeMemberships],
@@ -1261,6 +1274,29 @@ export default function ClientesAppPage() {
                       <dd className="font-black text-[#28184f]">{profileEmail || '-'}</dd>
                     </div>
                   </dl>
+                </div>
+                <div className="mt-4 rounded-2xl border border-[#ecdffb] bg-white p-4">
+                  <p className="text-xs font-black uppercase tracking-[0.12em] text-[#7d61ab]">Estado de verificación</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-black uppercase tracking-[0.1em] ${
+                        emailContactVerified ? 'border-[#c8f3d8] bg-[#ecfff2] text-[#11643a]' : 'border-[#f7dccb] bg-[#fff3ec] text-[#a34f27]'
+                      }`}
+                    >
+                      Email {emailContactVerified ? 'verificado' : 'pendiente'}
+                    </span>
+                    <span
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-black uppercase tracking-[0.1em] ${
+                        whatsappOtpVerificationEnabled
+                          ? whatsappOtpVerified
+                            ? 'border-[#c8f3d8] bg-[#ecfff2] text-[#11643a]'
+                            : 'border-[#f7dccb] bg-[#fff3ec] text-[#a34f27]'
+                          : 'border-[#e8d6fb] bg-[#f9f1ff] text-[#5f3f8f]'
+                      }`}
+                    >
+                      WhatsApp OTP {whatsappOtpVerificationEnabled ? (whatsappOtpVerified ? 'verificado' : 'pendiente') : 'deshabilitado'}
+                    </span>
+                  </div>
                 </div>
                 <div className="mt-4 rounded-2xl border border-[#efe3fc] bg-white p-4">
                   <p className="text-sm font-semibold text-[#533c82]">
