@@ -458,15 +458,31 @@ export default function MasterPage() {
   };
 
   const downloadReport = async (report: 'prelaunch' | 'tenant-users' | 'redemption-logs' | 'users-without-membership', onlySelectedTenant = false) => {
-    const res = await fetch('/api/master/reports', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...withMasterAuth,
-        report,
-        tenantId: onlySelectedTenant ? selectedTenantId : undefined,
-      }),
-    });
+    const requestDownload = async (otpOverride?: string) =>
+      fetch('/api/master/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...withMasterAuth,
+          masterOtp: otpOverride ?? withMasterAuth.masterOtp,
+          report,
+          tenantId: onlySelectedTenant ? selectedTenantId : undefined,
+        }),
+      });
+
+    let res = await requestDownload();
+    if (res.status === 401) {
+      const refreshedOtp = window.prompt('El OTP master expiró o es inválido. Ingresa un nuevo código de 6 dígitos para descargar el reporte:');
+      const sanitizedOtp = (refreshedOtp || '').replace(/\D/g, '').slice(0, 6);
+
+      if (!sanitizedOtp) {
+        setMsg('⚠️ Descarga cancelada: se requiere un OTP válido.');
+        return;
+      }
+
+      setMasterOtp(sanitizedOtp);
+      res = await requestDownload(sanitizedOtp);
+    }
 
     if (!res.ok) {
       setMsg('❌ No se pudo descargar el reporte.');
