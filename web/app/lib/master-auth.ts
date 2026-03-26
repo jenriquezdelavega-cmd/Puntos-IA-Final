@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 
-const TOTP_WINDOW_STEPS = 1;
+const DEFAULT_TOTP_WINDOW_STEPS = 4;
 const TOTP_PERIOD_SECONDS = 30;
 const TOTP_DIGITS = 6;
 
@@ -31,6 +31,14 @@ function getMasterTotpSecret(): string {
 
 function isTotpEnabled(): boolean {
   return getMasterTotpSecret().length > 0;
+}
+
+function getTotpWindowSteps(): number {
+  const configured = Number.parseInt((process.env.MASTER_TOTP_WINDOW_STEPS || '').trim(), 10);
+  if (Number.isFinite(configured) && configured >= 0 && configured <= 10) {
+    return configured;
+  }
+  return DEFAULT_TOTP_WINDOW_STEPS;
 }
 
 function normalizeOtp(value: unknown): string {
@@ -77,8 +85,9 @@ function isValidTotpOtp(otpInput: unknown): boolean {
 
   const secret = decodeBase32(getMasterTotpSecret());
   const nowCounter = Math.floor(Date.now() / 1000 / TOTP_PERIOD_SECONDS);
+  const windowSteps = getTotpWindowSteps();
 
-  for (let step = -TOTP_WINDOW_STEPS; step <= TOTP_WINDOW_STEPS; step += 1) {
+  for (let step = -windowSteps; step <= windowSteps; step += 1) {
     const expected = hotp(secret, nowCounter + step);
     if (secureCompare(provided, expected)) {
       return true;

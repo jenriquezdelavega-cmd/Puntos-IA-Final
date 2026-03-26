@@ -81,7 +81,9 @@ El OTP de master **sí está implementado** en backend y se activa únicamente c
 
 - Debe ser **Base32** (A-Z y 2-7), sin espacios.
 - Si el formato es inválido, la validación falla en servidor.
-- El código OTP esperado es de **6 dígitos** y ventana estándar de 30s (con tolerancia de ±1 paso).
+- El código OTP esperado es de **6 dígitos** y periodo estándar de 30s.
+- La tolerancia por defecto es de **±4 pasos** (hasta ~2.5 minutos hacia atrás/adelante) para evitar falsos 401 por desfase leve o expiración inmediata al guardar.
+- Puedes ajustar la tolerancia con `MASTER_TOTP_WINDOW_STEPS` (entero de `0` a `10`).
 
 #### Cómo enlazar tu app Authenticator
 
