@@ -114,7 +114,7 @@ export const marketingContent = {
     hero: {
       eyebrow: 'LEALTAD PARA PyMEs',
       title: 'Compite como gigante. Crece como local.',
-      description: 'La plataforma de lealtad para PyMEs que quieren más recompra, más frecuencia y una operación simple.',
+      description: 'Activa un programa de lealtad con Wallet, gamificación y pases personalizados con la identidad de tu negocio para aumentar la frecuencia de compra y hacer que tus clientes regresen más seguido.',
       chips: ['Wallet Pass Integrado', 'Red de Coalición', 'Dashboard en Tiempo Real'],
       primaryCta: { label: 'Agendar demo', href: marketingRoutes.businessDemo } satisfies Cta,
       secondaryCta: { label: 'Empezar ahora', href: marketingRoutes.precios } satisfies Cta,
@@ -132,33 +132,40 @@ export const marketingContent = {
       description: 'Herramientas diseñadas para que el dueño de negocio tome el control de sus ventas recurrentes.',
       items: [
         {
-          title: 'Atrae clientes desde una red de negocios',
-          description: 'Únete a las PyMEs visionarias. Los retos interconectados envían a clientes leales de otros comercios directamente a tu puerta.',
+          title: 'Wallet listo para usar',
+          description: 'Tus clientes guardan su pase en Apple Wallet o Google Wallet y lo usan fácilmente en cada visita.',
           colSpan: 2,
           rowSpan: 1,
-          icon: <Network strokeWidth={1.5} />,
-          highlight: true,
+          icon: <WalletCards strokeWidth={1.5} />,
         },
         {
-          title: 'Recupera clientes que dejaron de volver',
-          description: 'Trae de vuelta a clientes inactivos con recordatorios automáticos y notificaciones a su celular.',
+          title: 'Gamificación que impulsa consumo',
+          description: 'Activa retos, metas y recompensas para motivar a tus clientes a volver y también consumir en negocios aliados de la red.',
           colSpan: 1,
           rowSpan: 1,
-          icon: <BellRing strokeWidth={1.5} />,
+          highlight: true,
+          icon: <Target strokeWidth={1.5} />,
         },
         {
-          title: 'Entiende quién regresa y quién no',
-          description: 'Visualiza reportes de visita claros en tu panel de inteligencia comercial en vivo.',
+          title: 'Pases con tu identidad de marca',
+          description: 'Personaliza los pases con el nombre, colores e identidad visual de tu negocio para dar una experiencia más profesional y consistente.',
+          colSpan: 1,
+          rowSpan: 1,
+          icon: <Smartphone strokeWidth={1.5} />,
+        },
+        {
+          title: 'Escaneo rápido en caja',
+          description: 'El cliente muestra su pase y el sistema registra la visita en segundos, sin frenar la operación.',
+          colSpan: 1,
+          rowSpan: 1,
+          icon: <ScanFace strokeWidth={1.5} />,
+        },
+        {
+          title: 'Métricas para entender la recompra',
+          description: 'Mide visitas, frecuencia y participación para saber qué acciones realmente hacen volver al cliente.',
           colSpan: 1,
           rowSpan: 1,
           icon: <LineChart strokeWidth={1.5} />,
-        },
-        {
-          title: 'Cobra y registra puntos en segundos',
-          description: 'Lectura de pases rapidísima en caja sin necesidad de hardware especializado.',
-          colSpan: 2,
-          rowSpan: 1,
-          icon: <ScanFace strokeWidth={1.5} />,
         }
       ]
     },
@@ -172,20 +179,20 @@ export const marketingContent = {
           imageSrc: '/images/negocios/case-cafe.jpg',
         },
         {
-          title: 'Paso 2: Escanea al momento del pago',
-          description: 'Tu cliente muestra su pase y el sistema registra la visita en segundos.',
+          title: 'Paso 2: Activa tu pase personalizado',
+          description: 'Tus clientes guardan un pase con la identidad de tu negocio en Apple Wallet o Google Wallet y lo usan fácilmente en cada visita.',
           imageSrc: '/images/negocios/case-barber.jpg',
         },
         {
-          title: 'Paso 3: Activa recordatorios automáticos',
-          description: 'Cuando un cliente deja de volver, Punto IA te ayuda a recuperarlo.',
+          title: 'Paso 3: Impulsa la recompra',
+          description: 'Con escaneo rápido, métricas y dinámicas de gamificación, conviertes visitas en clientes frecuentes.',
           imageSrc: '/images/negocios/case-boutique.jpg',
         }
       ]
     },
     cta: {
       title: 'Haz que más clientes vuelvan a tu negocio',
-      description: 'Agenda una demo y conoce cómo Punto IA puede ayudarte a aumentar recompra y retención.',
+      description: 'Agenda una demo y descubre cómo Punto IA puede ayudarte a aumentar recompra, frecuencia y retención con Wallet y pases personalizados.',
       primary: { label: 'Agendar demo', href: marketingRoutes.businessDemo } satisfies Cta,
       secondary: { label: 'Hablar con ventas', href: marketingRoutes.contactSales } satisfies Cta,
     },
