@@ -14,7 +14,7 @@ import { addGoogleLoyaltyObjectMessage, getGoogleWalletIssuerId } from '@/app/li
 import { getGoogleLoyaltyObjectId, syncGoogleLoyaltyObjectForCustomer } from '@/app/lib/google-wallet-object-sync';
 import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
 
-const MAX_PUSHES_PER_WEEK = 2;
+const MAX_PUSHES_PER_DAY = 1;
 const APPLE_PUSH_BATCH_SIZE = 20;
 const GOOGLE_PUSH_BATCH_SIZE = 8;
 
@@ -57,13 +57,10 @@ function accessStatusToCode(status: number): ApiErrorCode {
   return 'INTERNAL_ERROR';
 }
 
-function startOfWeek() {
+function startOfDay() {
   const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(now.setDate(diff));
-  monday.setHours(0, 0, 0, 0);
-  return monday;
+  now.setHours(0, 0, 0, 0);
+  return now;
 }
 
 async function processInBatches<T>(
@@ -156,18 +153,18 @@ export async function POST(request: Request) {
 
     const passTypeIdentifier = asTrimmedString(process.env.APPLE_PASS_TYPE_ID);
 
-    const weekStart = startOfWeek();
+    const dayStart = startOfDay();
     await ensureTenantPushLogTable();
-    const pushesThisWeek = await prisma.tenantPushLog.count({
-      where: { tenantId: access.tenantId, sentAt: { gte: weekStart } },
+    const pushesToday = await prisma.tenantPushLog.count({
+      where: { tenantId: access.tenantId, sentAt: { gte: dayStart } },
     });
 
-    if (pushesThisWeek >= MAX_PUSHES_PER_WEEK) {
+    if (pushesToday >= MAX_PUSHES_PER_DAY) {
       return apiError({
         requestId,
         status: 429,
         code: 'FORBIDDEN',
-        message: `Ya enviaste ${MAX_PUSHES_PER_WEEK} notificaciones esta semana. Podrás enviar más el próximo lunes.`,
+        message: `Ya enviaste 1 notificación el día de hoy. Podrás enviar más el día de mañana.`,
         details: { remaining: 0 },
       });
     }
@@ -312,7 +309,7 @@ export async function POST(request: Request) {
       data: { tenantId: access.tenantId, message: trimmedMessage, devices: sent },
     });
 
-    const remaining = MAX_PUSHES_PER_WEEK - pushesThisWeek - 1;
+    const remaining = MAX_PUSHES_PER_DAY - pushesToday - 1;
     const totalDelivered = sent + googleSent;
     const deliveryState = totalDelivered > 0 ? 'delivered' : 'no_delivery';
 
@@ -403,10 +400,10 @@ export async function GET(request: Request) {
       });
     }
 
-    const weekStart = startOfWeek();
+    const dayStart = startOfDay();
     await ensureTenantPushLogTable();
-    const pushesThisWeek = await prisma.tenantPushLog.count({
-      where: { tenantId: access.tenantId, sentAt: { gte: weekStart } },
+    const pushesToday = await prisma.tenantPushLog.count({
+      where: { tenantId: access.tenantId, sentAt: { gte: dayStart } },
     });
 
     const recentPushes = await prisma.tenantPushLog.findMany({
@@ -436,8 +433,8 @@ export async function GET(request: Request) {
     return apiSuccess({
       requestId,
       data: {
-        remaining: MAX_PUSHES_PER_WEEK - pushesThisWeek,
-        maxPerWeek: MAX_PUSHES_PER_WEEK,
+        remaining: MAX_PUSHES_PER_DAY - pushesToday,
+        maxPerDay: MAX_PUSHES_PER_DAY,
         recent: recentPushes,
         coverage: {
           appleRegisteredDevices,

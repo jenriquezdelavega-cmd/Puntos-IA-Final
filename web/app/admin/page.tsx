@@ -1062,9 +1062,9 @@ return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3 border border-gray-100">
         <div>
-          <p className="text-xs font-black text-gray-500 uppercase tracking-wider">Envíos esta semana</p>
+          <p className="text-xs font-black text-gray-500 uppercase tracking-wider">Envíos del día</p>
           <p className="text-2xl font-black text-gray-900 mt-0.5">
-            {pushRemaining != null ? `${2 - pushRemaining}/2` : '—'}
+            {pushRemaining != null ? `${1 - pushRemaining}/1` : '—'}
           </p>
         </div>
         <div className="text-right">
@@ -1101,7 +1101,7 @@ return (
         disabled={pushLoading || !pushMessage.trim() || pushRemaining === 0}
         className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-black py-3.5 rounded-xl shadow-md disabled:opacity-40 disabled:shadow-none transition-all text-sm"
       >
-        {pushLoading ? 'Enviando...' : pushRemaining === 0 ? 'Límite semanal alcanzado' : '📢 Enviar Notificación'}
+        {pushLoading ? 'Enviando...' : pushRemaining === 0 ? 'Límite diario alcanzado' : '📢 Enviar Notificación'}
       </button>
 
       {pushResult && (
@@ -1143,7 +1143,7 @@ return (
 
   <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
     <p className="text-xs text-gray-500 font-semibold text-center">
-      💡 La notificación aparece en la pantalla de bloqueo de tus clientes que tienen el pase en Apple Wallet. Máximo 2 envíos por semana.
+      💡 La notificación aparece en la pantalla de bloqueo de tus clientes que tienen el pase en Apple Wallet. Máximo 1 envío por día.
     </p>
   </div>
 </div>
@@ -1313,12 +1313,15 @@ return (
   </div>
 </div>
 
-<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden relative opacity-70">
   <div className="px-6 py-4 border-b border-gray-100">
     <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">🤝 Red Punto IA</h3>
     <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Participación en campañas y promociones de la coalición</p>
   </div>
-  <div className="p-6">
+  <div className="p-6 pointer-events-none relative">
+    <div className="absolute inset-0 bg-white/40 z-10 flex items-center justify-center backdrop-blur-[1px]">
+      <span className="bg-indigo-600 text-white font-black text-xs px-3 py-1.5 rounded-full shadow-lg">🚀 Próximamente</span>
+    </div>
     <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 space-y-3">
       <p className="text-xs font-black text-indigo-700">🤝 Promo de Coalición (captación de nuevos clientes)</p>
       <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
