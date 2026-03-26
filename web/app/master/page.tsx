@@ -143,6 +143,7 @@ export default function MasterPage() {
 
   const [tName, setTName] = useState('');
   const [tSlug, setTSlug] = useState('');
+  const [tEmail, setTEmail] = useState('');
   const [uName, setUName] = useState('');
   const [uPhone, setUPhone] = useState('');
   const [uUser, setUUser] = useState('');
@@ -330,16 +331,17 @@ export default function MasterPage() {
     const res = await fetch('/api/master/create-tenant', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...withMasterAuth, name: tName, slug: tSlug }),
+      body: JSON.stringify({ ...withMasterAuth, name: tName, slug: tSlug, adminEmail: tEmail }),
     });
     const data = await res.json();
     if (!res.ok) {
       setMsg(`❌ ${data.error}`);
       return;
     }
-    setMsg(`✅ Negocio creado: ${data.tenant.name}`);
+    setMsg(`✅ Negocio creado: ${data.tenant.name} y correo enviado.`);
     setTName('');
     setTSlug('');
+    setTEmail('');
     await loadTenants();
   };
 
@@ -677,7 +679,8 @@ export default function MasterPage() {
               <h2 className="font-semibold">Crear negocio</h2>
               <input className="w-full rounded-lg bg-slate-800 p-3" placeholder="Nombre comercial" value={tName} onChange={(e) => setTName(e.target.value)} />
               <input className="w-full rounded-lg bg-slate-800 p-3" placeholder="Slug" value={tSlug} onChange={(e) => setTSlug(e.target.value)} />
-              <button onClick={createTenant} className="w-full rounded-lg bg-emerald-500 text-slate-950 py-2 font-semibold">Crear</button>
+              <input className="w-full rounded-lg bg-slate-800 p-3" type="email" placeholder="Correo del administrador" value={tEmail} onChange={(e) => setTEmail(e.target.value)} />
+              <button onClick={createTenant} className="w-full rounded-lg bg-emerald-500 text-slate-950 py-2 font-semibold">Crear y Notificar</button>
             </article>
 
             <article className="rounded-2xl border border-slate-700 bg-slate-900 p-4 space-y-3">

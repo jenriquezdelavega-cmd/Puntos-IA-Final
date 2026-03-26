@@ -148,6 +148,22 @@ export default function IngresarPage() {
     router.prefetch('/clientes/app');
   }, [router]);
 
+  const getCustomerDestination = (body: UserLoginResponse) => {
+    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    const onboardingBusinessId = params.get('business_id');
+    const flow = params.get('flow');
+
+    const targetBusiness = onboardingBusinessId || body.memberships?.[0]?.tenantId;
+    let destination = targetBusiness
+      ? `/clientes/app?business_id=${encodeURIComponent(targetBusiness)}`
+      : '/clientes/app';
+
+    if (flow) {
+      destination += (destination.includes('?') ? '&' : '?') + `flow=${encodeURIComponent(flow)}`;
+    }
+    return destination;
+  };
+
   const setModeInUrl = (mode: CustomerMode) => {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
@@ -174,11 +190,7 @@ export default function IngresarPage() {
       }
 
       localStorage.setItem('punto_user', JSON.stringify(body));
-      const preferredBusiness = body.memberships?.[0]?.tenantId;
-      const destination = preferredBusiness
-        ? `/clientes/app?business_id=${encodeURIComponent(preferredBusiness)}`
-        : '/clientes/app';
-      router.push(destination);
+      router.push(getCustomerDestination(body as UserLoginResponse));
       return true;
     } catch {
       if (showError) {
@@ -244,11 +256,7 @@ export default function IngresarPage() {
       setPassword(registerPassword);
       if ('id' in body) {
         localStorage.setItem('punto_user', JSON.stringify(body));
-        const preferredBusiness = body.memberships?.[0]?.tenantId;
-        const destination = preferredBusiness
-          ? `/clientes/app?business_id=${encodeURIComponent(preferredBusiness)}`
-          : '/clientes/app';
-        router.push(destination);
+        router.push(getCustomerDestination(body as UserLoginResponse));
       }
       if (body?.emailStatus === 'not_configured') {
         setRegisterMessage('Cuenta creada, pero el email de verificación no está configurado en este momento.');
