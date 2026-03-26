@@ -498,6 +498,37 @@ export default function ClientesAppPage() {
     void loadClientData();
   }, [loadClientData]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined' || !user?.id || !user?.sessionToken) return;
+    const params = new URLSearchParams(window.location.search);
+    const onboardingBusinessId = params.get('business_id');
+    const flow = params.get('flow');
+
+    if (onboardingBusinessId && flow === 'create-pass') {
+      const autoJoin = async () => {
+        try {
+          const res = await fetch('/api/user/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: user.id,
+              sessionToken: user.sessionToken,
+              tenantId: onboardingBusinessId,
+            }),
+          });
+          if (res.ok) {
+            window.history.replaceState({}, '', window.location.pathname);
+            await syncMembershipSnapshot();
+            openBusinessPass({ id: onboardingBusinessId });
+          }
+        } catch {
+          // Fallo silencioso si no se puede unir automáticamente
+        }
+      };
+      void autoJoin();
+    }
+  }, [user?.id, user?.sessionToken, syncMembershipSnapshot]);
+
   const handleRedeem = async (membership: Membership) => {
     if (!user?.id || !user?.sessionToken) return;
     setStatusMessage('');

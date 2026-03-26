@@ -640,7 +640,8 @@ const validateRedeem = async () => {
   }
 };
 
-const onboardingQrValue = tenant?.id ? `${baseUrl || (typeof window !== 'undefined' ? window.location.origin : '')}/?clientes=1&business_id=${encodeURIComponent(String(tenant.id))}&flow=create-pass&auth=welcome` : '';
+// Genera un QR que lleva al cliente directo a la página de ingreso con los parámetros para unirse automáticamente
+const onboardingQrValue = tenant?.id ? `${baseUrl || (typeof window !== 'undefined' ? window.location.origin : '')}/ingresar?tipo=cliente&modo=register&business_id=${encodeURIComponent(String(tenant.id))}&flow=create-pass&auth=welcome` : '';
 
 const printOnboardingQr = () => {
   if (typeof window === 'undefined') return;
