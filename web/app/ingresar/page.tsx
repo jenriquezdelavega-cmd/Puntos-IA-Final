@@ -268,22 +268,20 @@ export default function IngresarPage() {
   return (
     <PageShell variant="dark">
       <SiteHeader navItems={NAV_ITEMS} dark />
-      <main className="relative flex-grow flex items-center justify-center py-20 px-6 sm:px-12 overflow-hidden">
+      <main className="relative flex-grow flex items-center justify-center py-10 px-6 sm:px-12 overflow-hidden">
 
         <div className="relative z-10 w-full max-w-5xl mx-auto grid gap-6 lg:gap-8 lg:grid-cols-[minmax(0,1fr),350px]">
           {/* Tarjeta de Clientes */}
-          <article className="rounded-[2.5rem] border border-white/10 bg-[#160b2b]/80 p-8 shadow-2xl backdrop-blur-xl md:p-10">
+          <article className="rounded-[2.5rem] border border-white/10 bg-[#160b2b]/80 p-6 shadow-2xl backdrop-blur-xl md:p-8">
             <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-[#dacbf0]">
               <CircleUserRound className="h-4 w-4" />
               Portal de Clientes
             </p>
-            <h2 className="mt-4 text-3xl font-black text-white md:text-4xl">
-              {customerMode === 'login' ? 'Bienvenido de vuelta.' : 'Desbloquea tus beneficios.'}
+            <h2 className="mt-2 text-2xl font-black text-white md:text-3xl">
+              Accede a tus recompensas
             </h2>
-            <p className="mt-3 text-[#a593c2]">
-              {customerMode === 'login'
-                ? 'Ingresa tus datos para ver tus recompensas.'
-                : 'Activa tu Wallet Pass y empieza a ganar retos.'}
+            <p className="mt-2 text-sm text-[#a593c2]">
+              Inicia sesión con tu número de WhatsApp para ver tu pase, beneficios y avances.
             </p>
 
             <div className="mt-8 flex rounded-xl border border-white/10 bg-white/5 p-1">
@@ -454,7 +452,7 @@ export default function IngresarPage() {
           </article>
 
           {/* Tarjeta de Negocios */}
-          <article className="rounded-[2.5rem] border border-white/10 bg-[#1e1333] p-8 md:p-10 flex flex-col justify-between relative overflow-hidden">
+          <article className="rounded-[2.5rem] border border-white/10 bg-[#1e1333] p-6 md:p-8 flex flex-col justify-between relative overflow-hidden">
              
             <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
               <Building2 className="w-48 h-48 rotate-12" />
@@ -465,21 +463,15 @@ export default function IngresarPage() {
                 <Building2 className="h-4 w-4" />
                 Negocios
               </p>
-              <h2 className="mt-4 text-2xl font-black text-white">¿Eres dueño o equipo?</h2>
-              <p className="mt-3 text-sm leading-relaxed text-[#a593c2]">
-                Ingresa al punto de venta o panel administrativo para escanear pases y ver métricas.
+              <h2 className="mt-2 text-2xl font-black text-white">Acceso para negocios y staff</h2>
+              <p className="mt-2 text-sm leading-relaxed text-[#a593c2]">
+                Entra a tu panel para escanear pases, revisar métricas y administrar tu operación.
               </p>
             </div>
 
             <div className="mt-8 relative z-10">
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 mb-6">
-                <p className="inline-flex items-center gap-2 text-xs font-semibold text-amber-200">
-                  <ShieldCheck className="h-4 w-4" />
-                  Conexión segura (Staff / Admin).
-                </p>
-              </div>
               <a href="/admin" className="block w-full text-center py-3.5 px-6 rounded-xl font-bold bg-white/10 text-white border border-white/10 hover:bg-white/20 transition-all">
-                Ir a mi Operación
+                Entrar al panel
               </a>
             </div>
           </article>

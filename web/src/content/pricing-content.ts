@@ -1,11 +1,11 @@
 export const pricingContent = {
   title: 'Precios simples y sin ataduras',
-  description: 'Comienza gratis durante 15 días. Cancela en cualquier momento. Construido para potenciar las ventas de tu PyME.',
+  description: 'Empieza en días, no en meses. Prueba Punto IA durante 15 días y descubre cómo una experiencia de lealtad simple puede ayudarte a generar más recompra.',
   trialCallout: '👉 15 días gratis para nuevos aliados',
   tiers: [
     {
       name: 'Starter',
-      description: 'Ideal para cafeterías, barberías y locales probando la retención móvil.',
+      description: 'Ideal para negocios que quieren empezar a premiar visitas y medir recompra sin complicarse.',
       price: {
         monthly: '$490',
         annual: '$390',
@@ -21,8 +21,8 @@ export const pricingContent = {
       highlight: false,
     },
     {
-      name: 'Pro (Coalición)',
-      description: 'Acércale tráfico nuevo a tu negocio participando en los retos de la red Punto IA.',
+      name: 'Pro + Red de Coalición',
+      description: 'Para negocios que quieren atraer tráfico adicional, activar recompensas más dinámicas y aprovechar la red de coalición Punto IA.',
       price: {
         monthly: '$890',
         annual: '$690',
@@ -31,8 +31,8 @@ export const pricingContent = {
         'Hasta 3 Sucursales',
         'Escaneos ilimitados',
         'Acceso a la Red de Coalición',
-        'Métricas de Tráfico Cruzado',
-        'Notificaciones Push (Automáticas)',
+        'Métricas de visitas desde la red',
+        'Recordatorios automáticos a clientes',
       ],
       cta: 'Comenzar 15 días gratis',
       href: '/ingresar?tipo=negocio&modo=registro&plan=pro',
@@ -41,7 +41,7 @@ export const pricingContent = {
     },
     {
       name: 'Corporativo',
-      description: 'Para franquicias y negocios con múltiples unidades buscando control total y marca blanca.',
+      description: 'Para franquicias y grupos con múltiples sucursales que necesitan control centralizado, marca blanca e integraciones avanzadas.',
       price: {
         monthly: 'A medida',
         annual: 'A medida',

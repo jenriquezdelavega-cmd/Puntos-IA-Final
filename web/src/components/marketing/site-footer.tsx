@@ -1,9 +1,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { marketingRoutes } from '@/src/config/marketing-routes';
 
 type NavItem = { label: string; href: string };
 
 export function SiteFooter({ navItems }: { navItems: readonly NavItem[] }) {
+  // We ignore navItems as the prompt specified exactly the links to show.
   return (
     <footer className="border-t border-[#eadcf8] bg-[#fffaf4]">
       <div className="mx-auto grid w-full max-w-7xl gap-8 px-6 py-10 md:grid-cols-[1.3fr,1fr,1fr]">
@@ -12,20 +14,28 @@ export function SiteFooter({ navItems }: { navItems: readonly NavItem[] }) {
             <Image src="/logo.png" alt="Punto IA" width={190} height={72} className="h-8 w-auto object-contain" />
           </span>
           <p className="mt-4 max-w-md text-sm leading-relaxed text-[#4f3b79]">
-            Plataforma de lealtad para PyMEs en México: más recompra para el negocio y experiencia simple para el cliente.
+            Lealtad digital para PyMEs en México. Más recompra para tu negocio, una experiencia simple para tu cliente.
           </p>
         </div>
 
         <div>
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#785ea3]">Navegación</p>
           <ul className="mt-3 space-y-2 text-sm text-[#4f3b79]">
-            {navItems.map((item) => (
-              <li key={item.href}>
-                <Link href={item.href} className="hover:text-[#241548]">
-                  {item.label}
-                </Link>
-              </li>
-            ))}
+            <li>
+              <Link href={marketingRoutes.businessDemo} className="hover:text-[#241548]">
+                Agendar demo
+              </Link>
+            </li>
+            <li>
+              <Link href={marketingRoutes.precios} className="hover:text-[#241548]">
+                Precios
+              </Link>
+            </li>
+            <li>
+              <Link href={marketingRoutes.login} className="hover:text-[#241548]">
+                Entrar
+              </Link>
+            </li>
           </ul>
         </div>
 
@@ -42,7 +52,6 @@ export function SiteFooter({ navItems }: { navItems: readonly NavItem[] }) {
                 Términos y privacidad
               </Link>
             </li>
-            <li>Implementación típica: 3 a 7 días hábiles.</li>
           </ul>
         </div>
       </div>
