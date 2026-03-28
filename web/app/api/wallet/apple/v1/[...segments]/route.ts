@@ -32,8 +32,22 @@ function verifyOrBypassAuth(req: Request, serialNumber: string): boolean {
   return ua.startsWith('passd/');
 }
 
+const UUID_PATTERN = '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}';
+
 function splitSerialLegacy(serialNumber: string) {
   const value = asTrimmedString(serialNumber);
+  if (!value) return null;
+
+  // UUID + UUID serials are common in production (userId-tenantId).
+  // Splitting by the last "-" corrupts both ids, so parse explicitly first.
+  const uuidPair = value.match(new RegExp(`^(${UUID_PATTERN})-(${UUID_PATTERN})$`));
+  if (uuidPair) {
+    return {
+      customerId: asTrimmedString(uuidPair[1]),
+      businessId: asTrimmedString(uuidPair[2]),
+    };
+  }
+
   const idx = value.lastIndexOf('-');
   if (idx <= 0 || idx >= value.length - 1) return null;
   return {
