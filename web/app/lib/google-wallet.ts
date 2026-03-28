@@ -204,6 +204,7 @@ export function buildGoogleLoyaltyClassPayload(params?: {
   issuerName?: string;
   programName?: string;
   logoUri?: string;
+  programColor?: string;
 }) {
   const classId = params?.classId || getGoogleWalletClassId();
   const issuerName = params?.issuerName || 'Punto IA';
@@ -307,6 +308,7 @@ export function buildGoogleLoyaltyClassPayload(params?: {
           },
         }
       : {}),
+    ...(params?.programColor ? { hexBackgroundColor: params.programColor } : {}),
   };
 }
 
@@ -314,6 +316,7 @@ function buildGoogleLoyaltyClassPatchPayload(params?: {
   issuerName?: string;
   programName?: string;
   logoUri?: string;
+  programColor?: string;
 }) {
   const fullPayload = buildGoogleLoyaltyClassPayload(params);
 
@@ -324,6 +327,7 @@ function buildGoogleLoyaltyClassPatchPayload(params?: {
     textModulesData: fullPayload.textModulesData,
     classTemplateInfo: fullPayload.classTemplateInfo,
     ...(fullPayload.programLogo ? { programLogo: fullPayload.programLogo } : {}),
+    ...(fullPayload.hexBackgroundColor ? { hexBackgroundColor: fullPayload.hexBackgroundColor } : {}),
   };
 }
 
@@ -332,6 +336,7 @@ export async function upsertGoogleLoyaltyClass(params?: {
   issuerName?: string;
   programName?: string;
   logoUri?: string;
+  programColor?: string;
 }) {
   const accessToken = await getGoogleServiceAccountAccessToken(['https://www.googleapis.com/auth/wallet_object.issuer']);
   const payload = buildGoogleLoyaltyClassPayload(params);
@@ -523,6 +528,7 @@ export function ensureGoogleLoyaltyClassSynced(options?: {
   issuerName?: string;
   programName?: string;
   logoUri?: string;
+  programColor?: string;
 }) {
   const classId = options?.classId || getGoogleWalletClassId();
   if (!classId) return Promise.resolve();
