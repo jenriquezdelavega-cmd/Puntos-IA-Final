@@ -397,7 +397,7 @@ const saveMilestones = async () => {
 
     // Forzar una sincronización final después de persistir hitos para que Apple y Google
     // reflejen la misma versión del programa aunque haya dos guardados consecutivos.
-    const refreshRes = await fetch('/api/tenant/settings', {
+    const refreshRes = await fetch('/api/admin/wallet-refresh', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -174,7 +174,6 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
   const logoFingerprint = createHash('sha1').update(asTrimmedString(tenant.logoData) || '').digest('hex').slice(0, 12);
   const walletVersionSeed = JSON.stringify({
     tenantCreatedAt: tenant.createdAt?.toISOString?.() || '',
-    tenantUpdatedAt: tenant.updatedAt?.toISOString?.() || '',
     logoFingerprint,
     currentVisits,
     requiredVisits,
