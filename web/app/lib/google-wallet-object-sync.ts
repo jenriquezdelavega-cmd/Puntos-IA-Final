@@ -195,11 +195,15 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
     cacheKey: walletCacheKey,
   });
 
+  const finalMilestone = tenant.loyaltyMilestones.find((milestone) => milestone.visitTarget === requiredVisits);
+  const finalPrizeEmoji = asTrimmedString(finalMilestone?.emoji) || '🏆';
+
   const dynamicStripParams = new URLSearchParams({
     businessId: tenant.id,
     customerId: user.id,
     v: String(currentVisits),
     goal: String(requiredVisits),
+    prizeEmoji: finalPrizeEmoji,
   });
   if (walletCacheKey) {
     dynamicStripParams.set('rev', walletCacheKey);

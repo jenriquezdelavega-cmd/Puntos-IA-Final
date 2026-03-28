@@ -1378,7 +1378,24 @@ return (
           <div className="space-y-4">
             <div>
               <label className="text-xs font-black text-gray-800 block mb-1">Premio Final (Al llegar a la meta)</label>
-              <input className="w-full p-3.5 bg-gray-50 rounded-xl font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-500 focus:bg-white outline-none transition-all text-sm placeholder:text-gray-400" value={prizeName} onChange={e => setPrizeName(e.target.value)} placeholder="Ej: Café gratis, 2x1, Descuento 20%" />
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={prizeEmoji}
+                  onChange={e => setPrizeEmoji(e.target.value)}
+                  className="w-12 h-[46px] text-center bg-gray-50 border border-gray-200 rounded-xl text-xl font-bold outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
+                  maxLength={4}
+                  placeholder="🏆"
+                  aria-label="Emoji del premio final"
+                />
+                <input
+                  className="flex-1 p-3.5 bg-gray-50 rounded-xl font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-500 focus:bg-white outline-none transition-all text-sm placeholder:text-gray-400"
+                  value={prizeName}
+                  onChange={e => setPrizeName(e.target.value)}
+                  placeholder="Ej: Café gratis, 2x1, Descuento 20%"
+                />
+              </div>
+              <p className="text-[10px] text-gray-500 font-semibold mt-1.5 leading-relaxed">Puedes elegir el emoji del premio final igual que en la escalera de beneficios.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
