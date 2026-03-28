@@ -149,6 +149,9 @@ export default function MasterPage() {
   const [uUser, setUUser] = useState('');
   const [uPass, setUPass] = useState('');
   const [uRole, setURole] = useState('ADMIN');
+  const [showAdminPasswords, setShowAdminPasswords] = useState(false);
+  const [revealedAdminPasswords, setRevealedAdminPasswords] = useState<Record<string, string>>({});
+  const [resettingAdminPasswords, setResettingAdminPasswords] = useState<Record<string, boolean>>({});
 
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
   const [editingUser, setEditingUser] = useState<TenantUser | null>(null);
@@ -430,6 +433,38 @@ export default function MasterPage() {
     });
     setMsg('✅ Usuario eliminado.');
     await loadTenants();
+  };
+
+  const generateTemporaryAdminPassword = () => {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    return Array.from({ length: 12 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+  };
+
+  const resetAdminPassword = async (userId: string, userName: string) => {
+    if (!confirm(`¿Resetear contraseña de ${userName}?\nSe generará una contraseña temporal nueva.`)) return;
+    const temporaryPassword = generateTemporaryAdminPassword();
+    setResettingAdminPasswords((prev) => ({ ...prev, [userId]: true }));
+
+    try {
+      const { response, data } = await postMasterJson('/api/master/manage-user', {
+        ...withMasterAuth,
+        action: 'UPDATE',
+        userId,
+        data: { password: temporaryPassword },
+      });
+
+      if (!response.ok) {
+        setMsg(`❌ ${String(data.error || 'No se pudo resetear la contraseña del admin')}`);
+        return;
+      }
+
+      setRevealedAdminPasswords((prev) => ({ ...prev, [userId]: temporaryPassword }));
+      setShowAdminPasswords(true);
+      setMsg(`✅ Contraseña temporal generada para ${userName}.`);
+      await loadTenants();
+    } finally {
+      setResettingAdminPasswords((prev) => ({ ...prev, [userId]: false }));
+    }
   };
 
   const purgeGlobalCustomers = async () => {
@@ -739,7 +774,15 @@ export default function MasterPage() {
           </div>
 
           <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4 space-y-3">
-            <h2 className="font-semibold">Negocios ({tenants.length})</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-semibold">Negocios ({tenants.length})</h2>
+              <button
+                onClick={() => setShowAdminPasswords((prev) => !prev)}
+                className={`text-xs px-3 py-1 rounded ${showAdminPasswords ? 'bg-amber-500 text-slate-950' : 'bg-slate-700 text-slate-200'}`}
+              >
+                {showAdminPasswords ? 'Ocultar contraseñas admin' : 'Ver contraseñas admin'}
+              </button>
+            </div>
             <div className="space-y-3 max-h-[70vh] overflow-auto pr-1">
               {tenants.map((tenant) => (
                 <article key={tenant.id} className={`rounded-xl border p-4 ${selectedTenantId === tenant.id ? 'border-emerald-500 bg-slate-800' : 'border-slate-700 bg-slate-900'}`}>
@@ -764,8 +807,28 @@ export default function MasterPage() {
                         <div>
                           <p className="text-sm font-medium">{user.name}</p>
                           <p className="text-xs text-slate-400">{user.username} · {user.role}</p>
+                          {showAdminPasswords && String(user.role || '').toUpperCase() === 'ADMIN' ? (
+                            <p className="text-xs text-amber-300 break-all mt-1">
+                              Contraseña para login:{' '}
+                              {revealedAdminPasswords[user.id]
+                                ? revealedAdminPasswords[user.id]
+                                : user.password && !user.password.startsWith('scrypt$')
+                                  ? user.password
+                                  : 'No visible (está protegida). Usa “Reset password” para generar una temporal.'}
+                            </p>
+                          ) : null}
                         </div>
                         <div className="flex gap-2">
+                          {String(user.role || '').toUpperCase() === 'ADMIN' ? (
+                            <button
+                              className="text-xs px-2 py-1 rounded bg-amber-600 text-slate-950 disabled:opacity-60"
+                              disabled={Boolean(resettingAdminPasswords[user.id])}
+                              onClick={() => resetAdminPassword(user.id, user.name || user.username)}
+                              title="Generar contraseña temporal usable para login"
+                            >
+                              {resettingAdminPasswords[user.id] ? '...' : 'Reset password'}
+                            </button>
+                          ) : null}
                           <button className="text-xs text-slate-300" onClick={() => setEditingUser(user)}>✏️</button>
                           <button className="text-xs text-rose-300" onClick={() => deleteUser(user.id)}>🗑️</button>
                         </div>

@@ -1427,6 +1427,17 @@ return (
             <p className="text-[11px] text-gray-500 font-semibold mb-4 leading-relaxed max-w-xl">
               Premia a tus clientes en visitas clave antes de que lleguen a la meta final para mantener su motivación alta (ej. ganar un descuento intermedio en la visita 4 y la 8).
             </p>
+            <p className="text-[11px] text-gray-500 font-semibold mb-3">
+              ¿Buscas emojis para tus beneficios? Consulta la lista aquí:{' '}
+              <a
+                href="https://es.piliapp.com/emoji/list/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-pink-600 hover:text-pink-700 underline underline-offset-2"
+              >
+                es.piliapp.com/emoji/list
+              </a>
+            </p>
             
             <div className="space-y-3 bg-gray-50/50 p-4 rounded-2xl border border-gray-100 shadow-inner">
               {milestones.length === 0 && (
