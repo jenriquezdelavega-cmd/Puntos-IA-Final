@@ -23,25 +23,28 @@ export async function POST(request: Request) {
     if (!body) {
       return apiError({ requestId, status: 400, code: 'BAD_REQUEST', message: 'JSON inválido' });
     }
+    const hasOwn = (key: string) => Object.prototype.hasOwnProperty.call(body, key);
+    const optionalTrimmedField = (key: string) => (hasOwn(key) ? asTrimmedString(body[key]) : undefined);
+
     const tenantId = asTrimmedString(body.tenantId);
     const tenantUserId = asTrimmedString(body.tenantUserId);
     const tenantSessionToken = asTrimmedString(body.tenantSessionToken);
-    const prize = asTrimmedString(body.prize);
-    const requiredVisits = body.requiredVisits;
-    const rewardPeriod = asTrimmedString(body.rewardPeriod);
-    const lat = body.lat;
-    const lng = body.lng;
-    const address = asTrimmedString(body.address);
-    const instagram = asTrimmedString(body.instagram);
-    const logoData = asTrimmedString(body.logoData);
-    const walletBackgroundColor = asTrimmedString(body.walletBackgroundColor);
-    const walletForegroundColor = asTrimmedString(body.walletForegroundColor);
-    const walletLabelColor = asTrimmedString(body.walletLabelColor);
-    const walletStripImageData = asTrimmedString(body.walletStripImageData);
-    const coalitionOptIn = typeof body.coalitionOptIn === 'boolean' ? body.coalitionOptIn : undefined;
-    const ticketControlEnabled = typeof body.ticketControlEnabled === 'boolean' ? body.ticketControlEnabled : undefined;
-    const coalitionDiscountPercentRaw = body.coalitionDiscountPercent;
-    const coalitionProduct = asTrimmedString(body.coalitionProduct);
+    const prize = optionalTrimmedField('prize');
+    const requiredVisits = hasOwn('requiredVisits') ? body.requiredVisits : undefined;
+    const rewardPeriod = optionalTrimmedField('rewardPeriod');
+    const lat = hasOwn('lat') ? body.lat : undefined;
+    const lng = hasOwn('lng') ? body.lng : undefined;
+    const address = optionalTrimmedField('address');
+    const instagram = optionalTrimmedField('instagram');
+    const logoData = optionalTrimmedField('logoData');
+    const walletBackgroundColor = optionalTrimmedField('walletBackgroundColor');
+    const walletForegroundColor = optionalTrimmedField('walletForegroundColor');
+    const walletLabelColor = optionalTrimmedField('walletLabelColor');
+    const walletStripImageData = hasOwn('walletStripImageData') ? asTrimmedString(body.walletStripImageData) : undefined;
+    const coalitionOptIn = hasOwn('coalitionOptIn') && typeof body.coalitionOptIn === 'boolean' ? body.coalitionOptIn : undefined;
+    const ticketControlEnabled = hasOwn('ticketControlEnabled') && typeof body.ticketControlEnabled === 'boolean' ? body.ticketControlEnabled : undefined;
+    const coalitionDiscountPercentRaw = hasOwn('coalitionDiscountPercent') ? body.coalitionDiscountPercent : undefined;
+    const coalitionProduct = optionalTrimmedField('coalitionProduct');
 
     const access = await requireTenantRoleAccess({ tenantId, tenantUserId, tenantSessionToken, allowedRoles: ['ADMIN'] });
     if (!access.ok) {

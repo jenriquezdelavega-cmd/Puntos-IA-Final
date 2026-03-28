@@ -526,30 +526,43 @@ setIsSearching(false);
   reader.readAsDataURL(file);
   });
 
-const saveSettings = async () => {
+type SettingsSaveScope = 'location' | 'design' | 'operation' | 'all';
+
+const saveSettings = async (scope: SettingsSaveScope = 'all') => {
   setIsSavingSettings(true);
   try {
+    const settingsPayload: Record<string, unknown> = {
+      tenantId: tenant.id,
+      tenantUserId,
+      tenantSessionToken,
+    };
+
+    if (scope === 'all' || scope === 'design') {
+      settingsPayload.logoData = logoData;
+      settingsPayload.walletBackgroundColor = walletBackgroundColor || undefined;
+      settingsPayload.walletForegroundColor = walletForegroundColor || undefined;
+      settingsPayload.walletLabelColor = walletLabelColor || undefined;
+      settingsPayload.walletStripImageData = walletStripImageData;
+    }
+
+    if (scope === 'all' || scope === 'location') {
+      settingsPayload.lat = coords[0];
+      settingsPayload.lng = coords[1];
+      settingsPayload.address = addressSearch;
+      settingsPayload.instagram = instagram;
+    }
+
+    if (scope === 'all' || scope === 'operation') {
+      settingsPayload.coalitionOptIn = coalitionOptIn;
+      settingsPayload.coalitionDiscountPercent = coalitionDiscountPercent;
+      settingsPayload.coalitionProduct = coalitionProduct;
+      settingsPayload.ticketControlEnabled = ticketControlEnabled;
+    }
+
     const res = await fetch('/api/tenant/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        tenantId: tenant.id,
-        tenantUserId,
-        tenantSessionToken,
-        logoData, // ✅ AHORA SÍ SE ENVÍA
-        lat: coords[0],
-        lng: coords[1],
-        address: addressSearch,
-        instagram: instagram,
-        coalitionOptIn,
-        coalitionDiscountPercent,
-        coalitionProduct,
-        ticketControlEnabled,
-        walletBackgroundColor: walletBackgroundColor || undefined,
-        walletForegroundColor: walletForegroundColor || undefined,
-        walletLabelColor: walletLabelColor || undefined,
-        walletStripImageData: walletStripImageData,
-      }),
+      body: JSON.stringify(settingsPayload),
     });
 
     const data = await res.json();
@@ -577,7 +590,16 @@ const saveSettings = async () => {
 
     }
 
-    notify('success', 'Configuración guardada correctamente.');
+    const scopeLabel =
+      scope === 'location'
+        ? 'Ubicación e identidad'
+        : scope === 'design'
+          ? 'Diseño del pase'
+          : scope === 'operation'
+            ? 'Operación'
+            : 'Configuración';
+
+    notify('success', `${scopeLabel} guardada correctamente.`);
   } catch {
     notify('error', 'Ocurrió un error de conexión.');
   } finally {
@@ -1687,6 +1709,9 @@ return (
               </div>
             </div>
           </div>
+          <button onClick={() => saveSettings('design')} disabled={isSavingSettings} className="w-full bg-gray-900/5 text-gray-800 border border-gray-200 hover:bg-gray-900/10 font-black py-2.5 rounded-xl transition text-xs mt-1 flex justify-center items-center gap-2">
+            {isSavingSettings ? 'Guardando...' : '💾 Guardar Diseño del Pase'}
+          </button>
         </div>
       </div>
 
@@ -1723,7 +1748,7 @@ return (
             <div className="flex-1 mt-2 min-h-[160px] rounded-xl overflow-hidden border border-gray-200 relative z-0 shadow-inner">
                <AdminMap coords={coords} setCoords={setCoords} />
             </div>
-            <button onClick={saveSettings} disabled={isSavingSettings} className="w-full bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 font-black py-2.5 rounded-xl transition text-xs mt-1 flex justify-center items-center gap-2">
+            <button onClick={() => saveSettings('location')} disabled={isSavingSettings} className="w-full bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 font-black py-2.5 rounded-xl transition text-xs mt-1 flex justify-center items-center gap-2">
               {isSavingSettings ? 'Guardando...' : '💾 Guardar Ubicación'}
             </button>
           </div>
@@ -1753,6 +1778,11 @@ return (
             <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform shadow-sm ${ticketControlEnabled ? 'translate-x-5' : 'translate-x-0'}`}></div>
           </div>
         </label>
+        <div className="px-6 pb-6">
+          <button onClick={() => saveSettings('operation')} disabled={isSavingSettings} className="w-full bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-black py-2.5 rounded-xl transition text-xs mt-1 flex justify-center items-center gap-2">
+            {isSavingSettings ? 'Guardando...' : '💾 Guardar Operación'}
+          </button>
+        </div>
       </div>
 
       {/* BLOQUE 5: Red Punto IA (Disabled/Próximamente) */}
@@ -1914,14 +1944,14 @@ return (
       <div className="hidden sm:block flex-1 mr-4">
         <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Estado</p>
         <p className="text-sm font-bold text-gray-900 truncate">
-          {isSavingSettings ? 'Aplicando cambios globales...' : (uiNotice?.type === 'success' ? '✅ Ajustes guardados correctamente' : 'Listo para guardar')}
+          {isSavingSettings ? 'Guardando cambios...' : (uiNotice?.type === 'success' ? '✅ Ajustes guardados correctamente' : 'Listo para guardar')}
         </p>
       </div>
-      <button onClick={saveSettings} disabled={isSavingSettings} className="w-full sm:w-auto bg-gray-900 text-white px-8 py-3.5 rounded-xl font-black shadow-lg hover:shadow-xl hover:-translate-y-0.5 hover:bg-black transition-all text-sm disabled:opacity-60 disabled:hover:translate-y-0 flex justify-center items-center gap-2">
+      <button onClick={() => saveSettings('all')} disabled={isSavingSettings} className="w-full sm:w-auto bg-gray-900 text-white px-8 py-3.5 rounded-xl font-black shadow-lg hover:shadow-xl hover:-translate-y-0.5 hover:bg-black transition-all text-sm disabled:opacity-60 disabled:hover:translate-y-0 flex justify-center items-center gap-2">
         {isSavingSettings ? (
           <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Guardando...</>
         ) : (
-          '💾 Guardar Diseño / Ubicación / Operación'
+          '💾 Guardar Todo (Diseño / Ubicación / Operación)'
         )}
       </button>
     </div>
