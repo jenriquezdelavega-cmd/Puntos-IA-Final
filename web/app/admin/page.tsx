@@ -394,6 +394,24 @@ const saveMilestones = async () => {
       if (finalMilestone?.emoji) setPrizeEmoji(finalMilestone.emoji);
       setMilestones(intermediateMilestones);
     }
+
+    // Forzar una sincronización final después de persistir hitos para que Apple y Google
+    // reflejen la misma versión del programa aunque haya dos guardados consecutivos.
+    const refreshRes = await fetch('/api/tenant/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenantId: tenant.id,
+        tenantUserId,
+        tenantSessionToken,
+      }),
+    });
+    if (!refreshRes.ok) {
+      const refreshData = await refreshRes.json().catch(() => ({}));
+      notify('error', String(refreshData?.error || 'Se guardó el programa, pero no se pudo refrescar Wallet.'));
+      return;
+    }
+
     notify('success', 'Escalera de beneficios guardada correctamente.');
   } catch {
     notify('error', 'Error de conexión al guardar la escalera.');
