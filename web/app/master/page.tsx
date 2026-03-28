@@ -311,16 +311,18 @@ export default function MasterPage() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsAuthenticating(true);
-    const [tenantsOk, challengesOk, walletOk] = await Promise.all([
-      loadTenants(masterUser, masterPass, coalitionOnly),
-      loadChallenges(),
-      loadWalletSync(),
-    ]);
-    setIsAuthenticating(false);
-
-    if (!tenantsOk || !challengesOk || !walletOk) {
+    const tenantsOk = await loadTenants(masterUser, masterPass, coalitionOnly);
+    if (!tenantsOk) {
+      setIsAuthenticating(false);
       alert('Credenciales master u OTP incorrectos.');
       return;
+    }
+
+    const [challengesOk, walletOk] = await Promise.all([loadChallenges(), loadWalletSync()]);
+    setIsAuthenticating(false);
+
+    if (!challengesOk || !walletOk) {
+      setMsg('⚠️ Sesión iniciada. Algunos módulos no cargaron; revisa logs del servidor o intenta recargar.');
     }
 
     setAuth(true);
