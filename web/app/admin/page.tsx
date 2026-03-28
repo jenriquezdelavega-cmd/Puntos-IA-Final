@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useRef, useState } from 'react';
 import QRCode from 'react-qr-code';
 import dynamic from 'next/dynamic';
@@ -1330,7 +1330,7 @@ return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <label className="text-xs font-black text-gray-800 mb-1 block">Logotipo del pase</label>
-              <p className="text-[10px] text-gray-500 font-semibold mb-3">Recomendado: PNG fondo transparente, formato cuadrado.</p>
+              <p className="text-[10px] text-gray-500 font-semibold mb-3">El ícono visible en Apple y Google. Usa PNG transparente cuadrado.</p>
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-[0.8rem] bg-white shadow-inner border border-gray-200 overflow-hidden flex items-center justify-center shrink-0 p-1">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1396,7 +1396,7 @@ return (
           
           <div className="pt-6 border-t border-gray-100">
             <label className="text-xs font-black text-gray-800 mb-1 block">Banner Principal (Strip)</label>
-            <p className="text-[10px] text-gray-500 font-semibold mb-3">La imagen transversal en Apple Wallet. Relación 2.5 : 1 (ideal 1242x492px).</p>
+            <p className="text-[10px] text-gray-500 font-semibold mb-3">La imagen transversal en el pase. Relación 2.5 : 1 (ideal 1242x492px).</p>
             <div className="flex flex-col sm:flex-row gap-4">
               {walletStripImageData ? (
                 <div className="w-full sm:w-56 h-20 rounded-xl overflow-hidden shadow-inner border border-gray-200 shrink-0">
@@ -1462,13 +1462,16 @@ return (
           </div>
           <div className="p-4 space-y-3 flex-1 flex flex-col">
             <div className="flex gap-2 relative">
-              <input className="flex-1 p-2.5 pl-10 bg-gray-50 rounded-xl text-gray-800 text-sm border border-gray-200 outline-none focus:ring-2 focus:ring-blue-100 font-semibold transition-all" placeholder="Buscar calles, ciudad..." value={addressSearch} onChange={(e) => setAddressSearch(e.target.value)} />
+              <input className="flex-1 p-2.5 pl-10 bg-gray-50 rounded-xl text-gray-800 text-sm border border-gray-200 outline-none focus:ring-2 focus:ring-blue-100 font-semibold transition-all" placeholder="Escribir dirección: calle número ciudad y cp" value={addressSearch} onChange={(e) => setAddressSearch(e.target.value)} />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</div>
               <button onClick={searchLocation} disabled={isSearching} className="bg-blue-600 text-white px-4 rounded-xl font-black shadow-sm hover:shadow hover:bg-blue-700 disabled:opacity-50 shrink-0 text-xs uppercase tracking-wider transition-all" aria-label="Buscar" title="Localizar">{isSearching ? '...' : 'Buscar'}</button>
             </div>
             <div className="flex-1 mt-2 min-h-[160px] rounded-xl overflow-hidden border border-gray-200 relative z-0 shadow-inner">
                <AdminMap coords={coords} setCoords={setCoords} />
             </div>
+            <button onClick={saveSettings} disabled={isSavingSettings} className="w-full bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 font-black py-2.5 rounded-xl transition text-xs mt-1 flex justify-center items-center gap-2">
+              {isSavingSettings ? 'Guardando...' : '💾 Guardar Ubicación'}
+            </button>
           </div>
         </div>
       </div>
@@ -1540,10 +1543,11 @@ return (
             style={{
               backgroundColor: walletBackgroundColor || '#1F2937',
               backgroundImage: walletStripImageData
-                ? `linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.75) 100%), url("${walletStripImageData}")`
-                : 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.4))',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
+                ? `url("${walletStripImageData}")`
+                : undefined,
+              backgroundSize: '100% 120px',
+              backgroundPosition: 'top',
+              backgroundRepeat: 'no-repeat',
               boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)'
             }}
           >
@@ -1555,9 +1559,9 @@ return (
               <QRCode value="DEMO_PUNTOIA" size={36} fgColor="#fff" bgColor="transparent" />
             </div>
             
-            <div className="mt-14 w-full text-left">
-              <h5 className="text-white/80 font-black text-[9px] uppercase tracking-widest leading-none drop-shadow-md">{tenant.name}</h5>
-              <h4 className="text-white text-lg font-black mt-1 leading-tight drop-shadow-md">Tarjeta de Cliente Frecuente</h4>
+            <div className="mt-14 w-full text-left relative z-20">
+              <h5 className="font-black text-[9px] uppercase tracking-widest leading-none drop-shadow-md" style={{ color: walletForegroundColor || '#FFFFFF', opacity: 0.8 }}>{tenant.name}</h5>
+              <h4 className="text-lg font-black mt-1 leading-tight drop-shadow-md" style={{ color: walletForegroundColor || '#FFFFFF' }}>Tarjeta de Cliente Frecuente</h4>
             </div>
 
             <div className="mt-8 grid grid-cols-5 justify-items-center items-start w-full gap-y-6 gap-x-1">
@@ -1620,7 +1624,7 @@ return (
               })}
             </div>
             
-            <div className="mt-8 text-[10px] font-black tracking-widest uppercase text-white/90 drop-shadow-md">
+            <div className="mt-8 text-[10px] font-black tracking-widest uppercase drop-shadow-md relative z-20" style={{ color: walletForegroundColor || '#FFFFFF', opacity: 0.9 }}>
               {tenant.name} · Pase de Ejemplo
             </div>
           </div>
@@ -1642,7 +1646,7 @@ return (
            </li>
            <li className="text-xs text-amber-900/80 font-bold leading-relaxed flex items-start gap-2.5">
              <div className="w-5 h-5 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center shrink-0 mt-0.5 text-[10px]">3</div>
-             <span>Si cambias la meta o los premios, los usuarios lo verán reflejado mágicamente en unos minutos gracias a las push ocultas.</span>
+             <span>Los cambios pueden tardar hasta 5 minutos en reflejarse en Google Wallet por caché.</span>
            </li>
          </ul>
        </div>
@@ -1653,9 +1657,11 @@ return (
   {/* FIXED BOTTOM ACTION BAR */}
   <div className="fixed bottom-0 left-0 md:left-64 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-gray-200 shadow-[0_-20px_40px_rgba(0,0,0,0.06)] z-40">
     <div className="w-full max-w-5xl mx-auto flex justify-between items-center sm:px-6">
-      <div className="hidden sm:block">
+      <div className="hidden sm:block flex-1 mr-4">
         <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Estado</p>
-        <p className="text-sm font-bold text-gray-900">{isSavingSettings ? 'Aplicando cambios globales...' : 'Modificaciones sin guardar'}</p>
+        <p className="text-sm font-bold text-gray-900 truncate">
+          {isSavingSettings ? 'Aplicando cambios globales...' : (uiNotice?.type === 'success' ? '✅ Ajustes guardados correctamente' : 'Listo para guardar')}
+        </p>
       </div>
       <button onClick={saveSettings} disabled={isSavingSettings} className="w-full sm:w-auto bg-gray-900 text-white px-8 py-3.5 rounded-xl font-black shadow-lg hover:shadow-xl hover:-translate-y-0.5 hover:bg-black transition-all text-sm disabled:opacity-60 disabled:hover:translate-y-0 flex justify-center items-center gap-2">
         {isSavingSettings ? (
