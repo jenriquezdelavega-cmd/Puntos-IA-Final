@@ -816,119 +816,188 @@ return (
 )}
 
 {tab === 'team' && userRole === 'ADMIN' && (
-<div className="max-w-2xl mx-auto space-y-4 animate-fadeIn">
-  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-5 text-white">
-      <div className="flex items-center gap-3">
-        <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">👥</span>
-        <div>
-          <h2 className="text-lg font-black">Agregar Personal</h2>
-          <p className="text-white/80 text-xs font-semibold">Crea cuentas operativas para tu equipo (solo 1 admin por negocio)</p>
-        </div>
-      </div>
-    </div>
-    <div className="p-6 space-y-3">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <input className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-300 focus:bg-white transition text-sm font-semibold" placeholder="Nombre (ej: Pedro)" value={newStaff.name} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, name: e.target.value})} />
-        <input type="email" className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-300 focus:bg-white transition text-sm font-semibold" placeholder="Correo (obligatorio para recuperación)" value={newStaff.email} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, email: e.target.value})} />
-        <div className="flex items-center bg-gray-50 rounded-xl px-3.5 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-300 focus-within:bg-white transition">
-          <span className="text-gray-500 font-mono text-xs font-black mr-1 select-none shrink-0">{tenant.codePrefix || 'PREFIJO'}.</span>
-          <input className="bg-transparent w-full py-3.5 outline-none font-semibold text-gray-900 placeholder:text-gray-400 text-sm" placeholder="usuario (se agrega el prefijo automáticamente)" value={newStaff.username} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, username: e.target.value})} />
-        </div>
-        <div className="p-3.5 bg-gray-100 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold flex items-center md:col-span-2">
-          🔐 Se generará contraseña temporal; el operador deberá cambiarla en su primer ingreso.
-        </div>
-        <div className="p-3.5 bg-gray-100 rounded-xl border border-gray-200 text-gray-600 text-sm font-semibold flex items-center md:col-span-2">
-          👤 Operativo (QR + Canje) · Recibirá correo de alta.
-        </div>
-      </div>
-      <button onClick={createStaff} disabled={isCreatingStaff} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black py-3.5 rounded-xl shadow-md text-sm hover:shadow-lg transition-all disabled:opacity-60">{isCreatingStaff ? 'Creando...' : 'Agregar Empleado'}</button>
-    </div>
+<div className="max-w-5xl mx-auto animate-fadeIn">
+  <div className="mb-6">
+    <h2 className="text-2xl font-black text-gray-900">Gestión de Personal</h2>
+    <p className="text-gray-500 font-semibold mt-1 text-sm">Administra los operadores que pueden registrar visitas y canjear premios</p>
   </div>
-
-  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <h2 className="text-sm font-black text-gray-800">Mi Equipo</h2>
-        <span className="bg-gray-100 text-gray-500 text-[10px] font-black px-2 py-0.5 rounded-full">{team.length}</span>
-      </div>
-    </div>
-    <div className="divide-y divide-gray-50">
-      {team.length > 0 ? team.map((u: TeamMember) => (
-        <div key={u.id} className="px-6 py-4 flex items-center justify-between gap-3 hover:bg-gray-50/50 transition">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0 ${u.role === 'ADMIN' ? 'bg-gradient-to-br from-purple-500 to-pink-500' : 'bg-gradient-to-br from-sky-500 to-blue-600'}`}>
-              {u.name?.charAt(0)?.toUpperCase() || '?'}
-            </div>
-            <div className="min-w-0">
-              <h3 className="font-bold text-gray-900 text-sm truncate">{u.name}</h3>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="font-mono text-[11px] text-gray-400 font-semibold truncate">{u.username}</span>
-                <span className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>{u.role === 'ADMIN' ? 'Admin' : 'Staff'}</span>
-              </div>
+  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div className="lg:col-span-7 space-y-4">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-5 text-white">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">👥</span>
+            <div>
+              <h2 className="text-lg font-black">Agregar Personal</h2>
+              <p className="text-white/80 text-xs font-semibold">Crea cuentas operativas para tu equipo (solo 1 admin por negocio)</p>
             </div>
           </div>
-          <button onClick={() => deleteStaff(String(u.id))} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition shrink-0" title="Eliminar">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-          </button>
         </div>
-      )) : (
-        <div className="px-6 py-10 text-center">
-          <p className="text-gray-300 text-3xl mb-2">👥</p>
-          <p className="text-gray-400 text-sm font-semibold">Sin empleados registrados</p>
+        <div className="p-6 space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-300 focus:bg-white transition text-sm font-semibold" placeholder="Nombre (ej: Pedro)" value={newStaff.name} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, name: e.target.value})} />
+            <input type="email" className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-300 focus:bg-white transition text-sm font-semibold" placeholder="Correo (obligatorio para recuperación)" value={newStaff.email} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, email: e.target.value})} />
+            <div className="flex items-center bg-gray-50 rounded-xl px-3.5 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-300 focus-within:bg-white transition">
+              <span className="text-gray-500 font-mono text-xs font-black mr-1 select-none shrink-0">{tenant.codePrefix || 'PREFIJO'}.</span>
+              <input className="bg-transparent w-full py-3.5 outline-none font-semibold text-gray-900 placeholder:text-gray-400 text-sm" placeholder="usuario" value={newStaff.username} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, username: e.target.value})} />
+            </div>
+            <div className="p-3.5 bg-blue-50 rounded-xl border border-blue-100 text-blue-700 text-xs font-bold flex items-center gap-2">
+              🔐 Se generará contraseña temporal; el operador deberá cambiarla al primer ingreso.
+            </div>
+          </div>
+          <button onClick={createStaff} disabled={isCreatingStaff} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black py-3.5 rounded-xl shadow-md text-sm hover:shadow-lg transition-all disabled:opacity-60">{isCreatingStaff ? 'Creando...' : '+ Agregar Empleado'}</button>
         </div>
-      )}
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-black text-gray-800">Mi Equipo</h2>
+            <span className="bg-gray-100 text-gray-500 text-[10px] font-black px-2 py-0.5 rounded-full">{team.length}</span>
+          </div>
+        </div>
+        <div className="divide-y divide-gray-50">
+          {team.length > 0 ? team.map((u: TeamMember) => (
+            <div key={u.id} className="px-6 py-4 flex items-center justify-between gap-3 hover:bg-gray-50/50 transition">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0 ${u.role === 'ADMIN' ? 'bg-gradient-to-br from-purple-500 to-pink-500' : 'bg-gradient-to-br from-sky-500 to-blue-600'}`}>
+                  {u.name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-bold text-gray-900 text-sm truncate">{u.name}</h3>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="font-mono text-[11px] text-gray-400 font-semibold truncate">{u.username}</span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>{u.role === 'ADMIN' ? 'Admin' : 'Staff'}</span>
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => deleteStaff(String(u.id))} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition shrink-0" title="Eliminar">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              </button>
+            </div>
+          )) : (
+            <div className="px-6 py-10 text-center">
+              <p className="text-gray-300 text-3xl mb-2">👥</p>
+              <p className="text-gray-400 text-sm font-semibold">Sin empleados registrados</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+
+    <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-8 self-start">
+      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl border border-indigo-100 p-6 shadow-sm">
+        <h4 className="text-indigo-800 text-sm font-black flex items-center gap-2 mb-4">
+          <span className="text-lg">💡</span> Roles del equipo
+        </h4>
+        <ul className="space-y-3 text-xs text-indigo-900/80 font-bold">
+          <li className="flex items-start gap-2.5 p-3 bg-purple-100/60 rounded-xl">
+            <span className="text-purple-600 text-base mt-0.5">👑</span>
+            <div><strong>Admin:</strong> Acceso total. Configura el programa, ve reportes, gestiona staff y envía notificaciones.</div>
+          </li>
+          <li className="flex items-start gap-2.5 p-3 bg-blue-100/60 rounded-xl">
+            <span className="text-blue-600 text-base mt-0.5">👤</span>
+            <div><strong>Operador (Staff):</strong> Solo puede escanear pases de clientes y canjear premios. Sin acceso a configuración ni reportes.</div>
+          </li>
+        </ul>
+      </div>
+      <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
+        <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">⚠️ Buenas prácticas</p>
+        <ul className="space-y-2 text-xs text-gray-600 font-semibold">
+          <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">●</span> Asigna una cuenta única por operador para rastrear actividad.</li>
+          <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">●</span> Elimina al operador cuando deje de trabajar contigo para proteger tu programa.</li>
+          <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">●</span> El correo de alta llega automáticamente al crear la cuenta.</li>
+        </ul>
+      </div>
     </div>
   </div>
 </div>
 )}
 
 {tab === 'qr' && (
-<div className="max-w-lg mx-auto space-y-4 animate-fadeIn">
-  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden print:shadow-none print:border-gray-300">
-    <div className="bg-gradient-to-r from-[#111827] via-[#1f2937] to-[#111827] p-5 text-white print:bg-none print:text-gray-900 print:border-b print:border-gray-300">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.2em] font-black text-pink-200 print:text-pink-700">Punto IA</p>
-          <h2 className="text-lg font-black">QR para crear pase</h2>
-          <p className="text-gray-300 text-xs font-semibold mt-0.5 print:text-gray-600">Tus clientes escanean, se registran/inician sesión y descargan su pase en Apple o Google Wallet.</p>
-        </div>
-        <button onClick={printOnboardingQr} className="bg-white/10 border border-white/20 px-4 py-2 rounded-xl text-sm font-bold hover:bg-white/20 transition shrink-0 print:hidden">
-          🖨️ Imprimir
-        </button>
-      </div>
-    </div>
-    <div className="p-6 flex flex-col items-center gap-5">
-      <div className="w-full rounded-3xl border-2 border-dashed border-pink-200 bg-gradient-to-br from-pink-50 via-white to-orange-50 p-5 text-center">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-pink-600">Escanea y activa tu pase</p>
-        <p className="mt-1 text-xs text-gray-600 font-semibold">1) Crea tu cuenta · 2) Abre tu pase · 3) Guárdalo en tu wallet</p>
-        <div className="mt-4 bg-white p-4 rounded-2xl shadow-inner border border-gray-100 inline-flex">
-          {onboardingQrValue ? <QRCode value={onboardingQrValue} size={220} /> : <div className="h-[220px] w-[220px] bg-gray-50 rounded-xl flex flex-col items-center justify-center text-gray-300"><span className="text-5xl mb-2">📷</span><span className="text-xs font-bold">Cargando QR…</span></div>}
-        </div>
-        <p className="mt-4 text-[11px] text-gray-500 font-semibold">Programa de lealtad digital powered by <span className="font-black text-pink-600">Punto IA</span>.</p>
-      </div>
-    </div>
+<div className="max-w-5xl mx-auto animate-fadeIn">
+  <div className="mb-6">
+    <h2 className="text-2xl font-black text-gray-900">Registro de Visitas</h2>
+    <p className="text-gray-500 font-semibold mt-1 text-sm">Escanea pases o compártelos con clientes nuevos</p>
   </div>
+  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div className="lg:col-span-7 space-y-4">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden print:shadow-none print:border-gray-300">
+        <div className="bg-gradient-to-r from-[#111827] via-[#1f2937] to-[#111827] p-5 text-white print:bg-none print:text-gray-900 print:border-b print:border-gray-300">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.2em] font-black text-pink-200 print:text-pink-700">Punto IA</p>
+              <h2 className="text-lg font-black">QR para crear pase</h2>
+              <p className="text-gray-300 text-xs font-semibold mt-0.5 print:text-gray-600">Tus clientes escanean, se registran e instalan su pase en Apple o Google Wallet.</p>
+            </div>
+            <button onClick={printOnboardingQr} className="bg-white/10 border border-white/20 px-4 py-2 rounded-xl text-sm font-bold hover:bg-white/20 transition shrink-0 print:hidden">
+              🖶️ Imprimir
+            </button>
+          </div>
+        </div>
+        <div className="p-6 flex flex-col items-center gap-5">
+          <div className="w-full rounded-3xl border-2 border-dashed border-pink-200 bg-gradient-to-br from-pink-50 via-white to-orange-50 p-5 text-center">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-pink-600">Escanea y activa tu pase</p>
+            <p className="mt-1 text-xs text-gray-600 font-semibold">1) Crea tu cuenta · 2) Abre tu pase · 3) Guárdalo en Apple o Google Wallet</p>
+            <div className="mt-4 bg-white p-4 rounded-2xl shadow-inner border border-gray-100 inline-flex">
+              {onboardingQrValue ? <QRCode value={onboardingQrValue} size={220} /> : <div className="h-[220px] w-[220px] bg-gray-50 rounded-xl flex flex-col items-center justify-center text-gray-300"><span className="text-5xl mb-2">📷</span><span className="text-xs font-bold">Cargando QR…</span></div>}
+            </div>
+            <p className="mt-4 text-[11px] text-gray-500 font-semibold">Programa de lealtad digital powered by <span className="font-black text-pink-600">Punto IA</span>.</p>
+          </div>
+        </div>
+      </div>
 
-  <div className="bg-white rounded-3xl shadow-sm border border-emerald-100 overflow-hidden">
-    <div className="bg-emerald-50 p-5 border-b border-emerald-100">
-      <div className="flex items-center gap-3">
-        <span className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-xl">📱</span>
-        <div>
-          <h3 className="text-sm font-black text-emerald-800">Escanear pase de cliente</h3>
-          <p className="text-[11px] text-emerald-600 font-semibold">Escanea el QR del Apple Wallet del cliente para registrar su visita</p>
+      <div className="bg-white rounded-3xl shadow-sm border border-emerald-100 overflow-hidden">
+        <div className="bg-emerald-50 p-5 border-b border-emerald-100">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-xl">📱</span>
+            <div>
+              <h3 className="text-sm font-black text-emerald-800">Registrar Visita (Escanear pase)</h3>
+              <p className="text-[11px] text-emerald-600 font-semibold">Escanea el QR del pase Apple/Google del cliente para registrar su visita</p>
+            </div>
+          </div>
+        </div>
+        <div className="p-5">
+          <button
+            onClick={() => { setScannerOpen(true); setScannerMsg('Apunta al QR del pase del cliente'); }}
+            className="w-full px-4 py-4 rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-md hover:bg-emerald-700 transition flex items-center justify-center gap-2"
+          >
+            <span className="text-lg">📷</span> Abrir Cámara
+          </button>
+          {scannerMsg && <p className="mt-3 text-sm font-bold text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-100">{scannerMsg}</p>}
+          {lastScannedCustomerId && <p className="mt-2 text-[11px] font-mono text-gray-400">Último cliente: {lastScannedCustomerId.slice(0, 8)}...</p>}
         </div>
       </div>
     </div>
-    <div className="p-5">
-      <button
-        onClick={() => { setScannerOpen(true); setScannerMsg('Apunta al QR del pase del cliente'); }}
-        className="w-full px-4 py-4 rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-md hover:bg-emerald-700 transition flex items-center justify-center gap-2"
-      >
-        <span className="text-lg">📷</span> Abrir Cámara
-      </button>
-      {scannerMsg && <p className="mt-3 text-sm font-bold text-gray-700 bg-gray-50 p-3 rounded-xl border border-gray-100">{scannerMsg}</p>}
-      {lastScannedCustomerId && <p className="mt-2 text-[11px] font-mono text-gray-400">Último cliente: {lastScannedCustomerId.slice(0, 8)}...</p>}
+
+    <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-8 self-start">
+      <div className="bg-gradient-to-br from-sky-50 to-blue-50 rounded-3xl border border-blue-100 p-6 shadow-sm">
+        <h4 className="text-blue-800 text-sm font-black flex items-center gap-2 mb-4">
+          <span className="text-lg">💡</span> ¿Cómo funciona?
+        </h4>
+        <ol className="space-y-4">
+          <li className="text-xs text-blue-900/80 font-bold leading-relaxed flex items-start gap-2.5">
+            <div className="w-6 h-6 rounded-full bg-blue-200 text-blue-800 flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-black">1</div>
+            <span><strong>Imprime o muestra</strong> el QR de onboarding en tu establecimiento. Los clientes lo escanean con su cámara.</span>
+          </li>
+          <li className="text-xs text-blue-900/80 font-bold leading-relaxed flex items-start gap-2.5">
+            <div className="w-6 h-6 rounded-full bg-blue-200 text-blue-800 flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-black">2</div>
+            <span>El cliente crea su cuenta y descarga su pase digital en <strong>Apple o Google Wallet</strong>.</span>
+          </li>
+          <li className="text-xs text-blue-900/80 font-bold leading-relaxed flex items-start gap-2.5">
+            <div className="w-6 h-6 rounded-full bg-blue-200 text-blue-800 flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-black">3</div>
+            <span>En cada visita, el operador <strong>escanea el QR del pase</strong> del cliente para registrar la visita instantáneamente.</span>
+          </li>
+        </ol>
+      </div>
+      <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
+        <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">⚠️ Importante</p>
+        <ul className="space-y-2 text-xs text-gray-600 font-semibold">
+          <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">●</span> El QR de onboarding lleva al cliente a crear su cuenta. Es diferente al QR del pase.</li>
+          <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">●</span> Solo escanea el QR del <strong>pase del cliente</strong> para registrar visitas, no el QR de onboarding.</li>
+          <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">●</span> Los pases se actualizan automáticamente después de cada visita registrada.</li>
+        </ul>
+      </div>
     </div>
   </div>
 </div>
@@ -1009,149 +1078,214 @@ return (
 
 
 {tab === 'redeem' && (
-<div className="max-w-md mx-auto space-y-4 animate-fadeIn">
-  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-    <div className="bg-gradient-to-r from-orange-500 to-pink-600 p-5 text-white">
-      <div className="flex items-center gap-3">
-        <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🎁</span>
-        <div>
-          <h2 className="text-lg font-black">Validar Premio</h2>
-          <p className="text-white/80 text-xs font-semibold">Ingresa el código alfanumérico de 8 caracteres que muestra el cliente</p>
-        </div>
-      </div>
-    </div>
-    <div className="p-6">
-      <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 mb-4">
-        <input
-          className="w-full p-4 text-center text-3xl font-mono font-black tracking-[0.35em] uppercase bg-white border-2 border-gray-200 rounded-2xl outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-100 transition-all"
-          placeholder="A1B2C3D4"
-          maxLength={8}
-          value={redeemCode}
-          onChange={e => setRedeemCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
-          inputMode="text"
-        />
-      </div>
-      <button
-        onClick={validateRedeem}
-        disabled={isValidatingRedeem || redeemCode.length !== 8}
-        className="w-full bg-gradient-to-r from-orange-500 to-pink-600 text-white font-black py-4 rounded-2xl shadow-md disabled:opacity-40 disabled:shadow-none transition-all text-sm"
-      >
-        {isValidatingRedeem ? 'Validando...' : 'Validar y Entregar Premio'}
-      </button>
-      {msg && (
-        <div className={`mt-4 p-4 rounded-2xl text-center font-bold text-sm border ${msg.includes('ENTREGAR') ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : msg.includes('❌') || msg.includes('Error') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
-          {msg}
-        </div>
-      )}
-    </div>
+<div className="max-w-5xl mx-auto animate-fadeIn">
+  <div className="mb-6">
+    <h2 className="text-2xl font-black text-gray-900">Canjear Premio</h2>
+    <p className="text-gray-500 font-semibold mt-1 text-sm">Valida el código del cliente antes de entregar el premio</p>
   </div>
+  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div className="lg:col-span-7">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-orange-500 to-pink-600 p-5 text-white">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🎁</span>
+            <div>
+              <h2 className="text-lg font-black">Validar Premio</h2>
+              <p className="text-white/80 text-xs font-semibold">Ingresa el código alfanumérico de 8 caracteres que muestra el cliente</p>
+            </div>
+          </div>
+        </div>
+        <div className="p-6">
+          <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 mb-4">
+            <input
+              className="w-full p-4 text-center text-3xl font-mono font-black tracking-[0.35em] uppercase bg-white border-2 border-gray-200 rounded-2xl outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-100 transition-all"
+              placeholder="A1B2C3D4"
+              maxLength={8}
+              value={redeemCode}
+              onChange={e => setRedeemCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
+              inputMode="text"
+            />
+          </div>
+          <button
+            onClick={validateRedeem}
+            disabled={isValidatingRedeem || redeemCode.length !== 8}
+            className="w-full bg-gradient-to-r from-orange-500 to-pink-600 text-white font-black py-4 rounded-2xl shadow-md disabled:opacity-40 disabled:shadow-none transition-all text-sm"
+          >
+            {isValidatingRedeem ? 'Validando...' : 'Validar y Entregar Premio'}
+          </button>
+          {msg && (
+            <div className={`mt-4 p-4 rounded-2xl text-center font-bold text-sm border ${msg.includes('ENTREGAR') ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : msg.includes('❌') || msg.includes('Error') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+              {msg}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
 
-  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-    <p className="text-xs text-gray-500 font-semibold text-center">
-      💡 El cliente genera un código alfanumérico seguro de 8 caracteres desde la app. Pídele el código y valídalo aquí antes de entregar el premio.
-    </p>
+    <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-8 self-start">
+      <div className="bg-gradient-to-br from-orange-50 to-pink-50 rounded-3xl border border-orange-100 p-6 shadow-sm">
+        <h4 className="text-orange-800 text-sm font-black flex items-center gap-2 mb-4">
+          <span className="text-lg">💡</span> ¿Cómo funciona el canje?
+        </h4>
+        <ol className="space-y-3 text-xs text-orange-900/80 font-bold">
+          <li className="flex items-start gap-2.5">
+            <div className="w-6 h-6 rounded-full bg-orange-200 text-orange-800 flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-black">1</div>
+            <span>El cliente llega a la meta de visitas y ve el botón de canje en su app.</span>
+          </li>
+          <li className="flex items-start gap-2.5">
+            <div className="w-6 h-6 rounded-full bg-orange-200 text-orange-800 flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-black">2</div>
+            <span>El cliente genera un código único de <strong>8 caracteres</strong> desde la app.</span>
+          </li>
+          <li className="flex items-start gap-2.5">
+            <div className="w-6 h-6 rounded-full bg-orange-200 text-orange-800 flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-black">3</div>
+            <span>Tú escribes ese código aquí y validas. <strong>Entrega el premio solo si dice “ENTREGAR”.</strong></span>
+          </li>
+        </ol>
+      </div>
+      <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
+        <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">⚠️ Importante</p>
+        <ul className="space-y-2 text-xs text-gray-600 font-semibold">
+          <li className="flex items-start gap-2"><span className="text-red-500 mt-0.5">●</span> Solo entrega el premio si el sistema confirma con verde.</li>
+          <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">●</span> Los códigos son de un solo uso y expiran después de validarse.</li>
+          <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">●</span> El cliente puede ver el historial de sus canjes en la app.</li>
+        </ul>
+      </div>
+    </div>
   </div>
 </div>
 )}
 
 {tab === 'push' && userRole === 'ADMIN' && (
-<div className="max-w-lg mx-auto space-y-4 animate-fadeIn">
-  <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-    <div className="bg-gradient-to-r from-violet-600 to-purple-600 p-5 text-white">
-      <div className="flex items-center gap-3">
-        <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">📢</span>
-        <div>
-          <h2 className="text-lg font-black">Enviar Notificación</h2>
-          <p className="text-white/80 text-xs font-semibold">Se envía a todos los clientes con pase instalado</p>
-        </div>
-      </div>
-    </div>
-    <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3 border border-gray-100">
-        <div>
-          <p className="text-xs font-black text-gray-500 uppercase tracking-wider">Envíos del día</p>
-          <p className="text-2xl font-black text-gray-900 mt-0.5">
-            {pushRemaining != null ? `${1 - pushRemaining}/1` : '—'}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-xs font-black text-gray-500 uppercase tracking-wider">Disponibles</p>
-          <p className={`text-2xl font-black mt-0.5 ${pushRemaining === 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-            {pushRemaining != null ? pushRemaining : '—'}
-          </p>
-        </div>
-      </div>
-      {pushCoverage ? (
-        <div className="grid grid-cols-2 gap-2 rounded-xl border border-gray-100 bg-gray-50 p-3 text-xs font-semibold text-gray-600">
-          <p>Clientes con membresía: <span className="font-black text-gray-800">{pushCoverage.customerMemberships}</span></p>
-          <p>Apple registrados: <span className="font-black text-gray-800">{pushCoverage.appleRegisteredDevices}</span></p>
-          <p>Apple config: <span className={`font-black ${pushCoverage.appleConfigured ? 'text-emerald-600' : 'text-red-500'}`}>{pushCoverage.appleConfigured ? 'OK' : 'Falta'}</span></p>
-          <p>Google config: <span className={`font-black ${pushCoverage.googleConfigured ? 'text-emerald-600' : 'text-red-500'}`}>{pushCoverage.googleConfigured ? 'OK' : 'Falta'}</span></p>
-        </div>
-      ) : null}
-
-      <div>
-        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Mensaje de notificación</label>
-        <textarea
-          className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-purple-300 outline-none transition-all text-sm resize-none placeholder:text-gray-400"
-          rows={3}
-          maxLength={200}
-          placeholder="Ej: ¡Hoy 2x1 en café! Ven y acumula puntos dobles"
-          value={pushMessage}
-          onChange={(e) => setPushMessage(e.target.value)}
-        />
-        <p className="text-[10px] text-gray-400 font-semibold mt-1 ml-1 text-right">{pushMessage.length}/200</p>
-      </div>
-
-      <button
-        onClick={sendPush}
-        disabled={pushLoading || !pushMessage.trim() || pushRemaining === 0}
-        className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-black py-3.5 rounded-xl shadow-md disabled:opacity-40 disabled:shadow-none transition-all text-sm"
-      >
-        {pushLoading ? 'Enviando...' : pushRemaining === 0 ? 'Límite diario alcanzado' : '📢 Enviar Notificación'}
-      </button>
-
-      {pushResult && (
-        <div className={`p-3 rounded-xl text-center font-bold text-sm border ${pushResult.startsWith('✅') ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : pushResult.startsWith('⚠️') ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-          {pushResult}
-        </div>
-      )}
-      {pushDiagnostics ? (
-        <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 text-[11px] font-semibold text-gray-600">
-          <p>Apple → enviados: <span className="font-black text-gray-800">{pushDiagnostics.apple?.sent || 0}</span> · fallidos: <span className="font-black text-gray-800">{pushDiagnostics.apple?.failed || 0}</span> · objetivo: <span className="font-black text-gray-800">{pushDiagnostics.apple?.targetedDevices || 0}</span></p>
-          <p className="mt-1">Google → enviados: <span className="font-black text-gray-800">{pushDiagnostics.google?.sent || 0}</span> · fallidos: <span className="font-black text-gray-800">{pushDiagnostics.google?.failed || 0}</span></p>
-        </div>
-      ) : null}
-    </div>
+<div className="max-w-5xl mx-auto animate-fadeIn">
+  <div className="mb-6">
+    <h2 className="text-2xl font-black text-gray-900">Notificaciones Push</h2>
+    <p className="text-gray-500 font-semibold mt-1 text-sm">Envía mensajes directamente a los pases instalados de tus clientes</p>
   </div>
-
-  {pushHistory.length > 0 && (
-    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100">
-        <h3 className="text-sm font-black text-gray-800">Historial de envíos</h3>
-      </div>
-      <div className="divide-y divide-gray-50">
-        {pushHistory.map((p, i) => (
-          <div key={i} className="px-6 py-3 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-800 truncate">{p.message}</p>
-              <p className="text-[10px] text-gray-400 font-semibold mt-0.5">
-                {new Date(p.sentAt).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div className="lg:col-span-7 space-y-4">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-violet-600 to-purple-600 p-5 text-white">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">📢</span>
+            <div>
+              <h2 className="text-lg font-black">Enviar Notificación</h2>
+              <p className="text-white/80 text-xs font-semibold">Se envía a todos los clientes con pase instalado</p>
+            </div>
+          </div>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3 border border-gray-100">
+            <div>
+              <p className="text-xs font-black text-gray-500 uppercase tracking-wider">Envíos del día</p>
+              <p className="text-2xl font-black text-gray-900 mt-0.5">
+                {pushRemaining != null ? `${1 - pushRemaining}/1` : '—'}
               </p>
             </div>
-            <span className="text-[10px] font-black text-gray-400 bg-gray-50 px-2 py-1 rounded-lg shrink-0">
-              {p.devices} dispositivo{p.devices === 1 ? '' : 's'}
-            </span>
+            <div className="text-right">
+              <p className="text-xs font-black text-gray-500 uppercase tracking-wider">Disponibles</p>
+              <p className={`text-2xl font-black mt-0.5 ${pushRemaining === 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                {pushRemaining != null ? pushRemaining : '—'}
+              </p>
+            </div>
           </div>
-        ))}
+          {pushCoverage ? (
+            <div className="grid grid-cols-2 gap-2 rounded-xl border border-gray-100 bg-gray-50 p-3 text-xs font-semibold text-gray-600">
+              <p>Clientes con membresía: <span className="font-black text-gray-800">{pushCoverage.customerMemberships}</span></p>
+              <p>Apple registrados: <span className="font-black text-gray-800">{pushCoverage.appleRegisteredDevices}</span></p>
+              <p>Apple config: <span className={`font-black ${pushCoverage.appleConfigured ? 'text-emerald-600' : 'text-red-500'}`}>{pushCoverage.appleConfigured ? 'OK' : 'Falta'}</span></p>
+              <p>Google config: <span className={`font-black ${pushCoverage.googleConfigured ? 'text-emerald-600' : 'text-red-500'}`}>{pushCoverage.googleConfigured ? 'OK' : 'Falta'}</span></p>
+            </div>
+          ) : null}
+          <div>
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Mensaje de notificación</label>
+            <textarea
+              className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-purple-300 outline-none transition-all text-sm resize-none placeholder:text-gray-400"
+              rows={3}
+              maxLength={200}
+              placeholder="Ej: ¡Hoy 2x1 en café! Ven y acumula puntos dobles"
+              value={pushMessage}
+              onChange={(e) => setPushMessage(e.target.value)}
+            />
+            <p className="text-[10px] text-gray-400 font-semibold mt-1 ml-1 text-right">{pushMessage.length}/200</p>
+          </div>
+          <button
+            onClick={sendPush}
+            disabled={pushLoading || !pushMessage.trim() || pushRemaining === 0}
+            className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-black py-3.5 rounded-xl shadow-md disabled:opacity-40 disabled:shadow-none transition-all text-sm"
+          >
+            {pushLoading ? 'Enviando...' : pushRemaining === 0 ? 'Límite diario alcanzado' : '📢 Enviar Notificación'}
+          </button>
+          {pushResult && (
+            <div className={`p-3 rounded-xl text-center font-bold text-sm border ${pushResult.startsWith('✅') ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : pushResult.startsWith('⚠️') ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+              {pushResult}
+            </div>
+          )}
+          {pushDiagnostics ? (
+            <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 text-[11px] font-semibold text-gray-600">
+              <p>Apple → enviados: <span className="font-black text-gray-800">{pushDiagnostics.apple?.sent || 0}</span> · fallidos: <span className="font-black text-gray-800">{pushDiagnostics.apple?.failed || 0}</span> · objetivo: <span className="font-black text-gray-800">{pushDiagnostics.apple?.targetedDevices || 0}</span></p>
+              <p className="mt-1">Google → enviados: <span className="font-black text-gray-800">{pushDiagnostics.google?.sent || 0}</span> · fallidos: <span className="font-black text-gray-800">{pushDiagnostics.google?.failed || 0}</span></p>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {pushHistory.length > 0 && (
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h3 className="text-sm font-black text-gray-800">Historial de envíos</h3>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {pushHistory.map((p, i) => (
+              <div key={i} className="px-6 py-3 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">{p.message}</p>
+                  <p className="text-[10px] text-gray-400 font-semibold mt-0.5">
+                    {new Date(p.sentAt).toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                <span className="text-[10px] font-black text-gray-400 bg-gray-50 px-2 py-1 rounded-lg shrink-0">
+                  {p.devices} dispositivo{p.devices === 1 ? '' : 's'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+
+    <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-8 self-start">
+      <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-3xl border border-violet-100 p-6 shadow-sm">
+        <h4 className="text-violet-800 text-sm font-black flex items-center gap-2 mb-4">
+          <span className="text-lg">💡</span> Cómo usar las notificaciones
+        </h4>
+        <ul className="space-y-3 text-xs text-violet-900/80 font-bold">
+          <li className="flex items-start gap-2.5">
+            <span className="text-violet-500 text-base mt-0.5">✅</span>
+            <span><strong>Avisos de promoción:</strong> “¡Hoy 2x1 en café! Validó hasta las 8pm”</span>
+          </li>
+          <li className="flex items-start gap-2.5">
+            <span className="text-violet-500 text-base mt-0.5">✅</span>
+            <span><strong>Recordatorios:</strong> “Te faltan 2 visitas para tu premio”</span>
+          </li>
+          <li className="flex items-start gap-2.5">
+            <span className="text-violet-500 text-base mt-0.5">✅</span>
+            <span><strong>Eventos especiales:</strong> “¡Cumpleaños del negocio! Doble sellos este sábado”</span>
+          </li>
+          <li className="flex items-start gap-2.5">
+            <span className="text-red-400 text-base mt-0.5">❌</span>
+            <span>No uses las notificaciones para mensajes irrelevantes: la tasa de desinstalación subirá.</span>
+          </li>
+        </ul>
+      </div>
+      <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
+        <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">⚠️ Límites</p>
+        <ul className="space-y-2 text-xs text-gray-600 font-semibold">
+          <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">●</span> <strong>Máximo 1 notificación por día.</strong> El contador se reinicia a medianoche (hora MX).</li>
+          <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">●</span> Solo llega a clientes con el pase instalado en Apple o Google Wallet.</li>
+          <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">●</span> Apple Wallet muestra la notificación en la pantalla de bloqueo instantáneamente.</li>
+        </ul>
       </div>
     </div>
-  )}
-
-  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-    <p className="text-xs text-gray-500 font-semibold text-center">
-      💡 La notificación aparece en la pantalla de bloqueo de tus clientes que tienen el pase en Apple Wallet. Máximo 1 envío por día.
-    </p>
   </div>
 </div>
 )}

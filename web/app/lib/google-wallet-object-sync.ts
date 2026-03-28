@@ -289,6 +289,7 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
       issuerName: tenant.name || 'Negocio afiliado',
       programName: GOOGLE_WALLET_PROGRAM_NAME_HIDDEN,
       logoUri: logoUri || undefined,
+      programColor: parseRgbToHex(walletStyle.backgroundColor, '#1F2937'),
     });
   } catch (classErr) {
     console.warn('Google Wallet class sync warning (non-fatal):', classErr);
