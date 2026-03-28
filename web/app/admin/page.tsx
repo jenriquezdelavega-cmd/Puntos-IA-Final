@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useRef, useState } from 'react';
 import QRCode from 'react-qr-code';
 import dynamic from 'next/dynamic';
@@ -781,11 +781,17 @@ return (
 
 <div className="flex-1 p-6 md:p-8 overflow-y-auto pb-32 md:pb-0">
 {uiNotice ? (
-  <div className={`mb-5 rounded-2xl border p-3 text-sm font-semibold flex items-center justify-between gap-3 ${uiNotice.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : uiNotice.type === 'error' ? 'border-red-200 bg-red-50 text-red-800' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
-    <span>{uiNotice.text}</span>
-    <button onClick={() => setUiNotice(null)} className="text-xs font-black opacity-70 hover:opacity-100">Cerrar</button>
+  <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md animate-fadeIn drop-shadow-2xl">
+    <div className={`rounded-xl border p-4 text-sm font-semibold flex items-center justify-between gap-4 shadow-lg ${uiNotice.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : uiNotice.type === 'error' ? 'border-red-200 bg-red-50 text-red-800' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
+      <span className="flex items-center gap-2">
+        <span className="text-lg">{uiNotice.type === 'success' ? '✅' : uiNotice.type === 'error' ? '❌' : 'ℹ️'}</span>
+        {uiNotice.text}
+      </span>
+      <button onClick={() => setUiNotice(null)} className="text-xs font-black opacity-70 hover:opacity-100 bg-black/5 hover:bg-black/10 px-3 py-1.5 rounded-lg transition-colors shrink-0">Cerrar</button>
+    </div>
   </div>
 ) : null}
+
 {tab === 'dashboard' && userRole === 'ADMIN' && (
 <AdvancedDashboard
   tenantName={String(tenant.name || 'Negocio')}
@@ -1151,429 +1157,518 @@ return (
 )}
 
 {tab === 'settings' && userRole === 'ADMIN' && (
-<div className="max-w-lg mx-auto space-y-4 animate-fadeIn">
-
-<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-  <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-5 text-white">
-    <div className="flex items-center gap-3">
-      <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🏪</span>
-      <div>
-        <h2 className="text-lg font-black">Perfil del Negocio</h2>
-        <p className="text-white/80 text-xs font-semibold">Datos básicos e identidad de tu marca</p>
-      </div>
-    </div>
-  </div>
-  <div className="p-6 space-y-4">
-    <div>
-      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Nombre del Negocio</label>
-      <input className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 text-gray-500 font-bold border border-gray-100 cursor-not-allowed text-sm" value={tenant.name} readOnly />
-    </div>
-    <div>
-      <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">📸 Instagram</label>
-      <input className="w-full p-3.5 bg-pink-50 rounded-xl mt-1 font-semibold text-pink-600 border border-pink-100 focus:bg-white focus:ring-2 focus:ring-pink-300 outline-none transition-all text-sm" value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="@tu_negocio" />
-    </div>
-<div>
-  <label className="text-xs font-bold text-gray-400 uppercase ml-1">Logo del negocio</label>
-  <div className="mt-2 flex items-center gap-3">
-    <div className="w-14 h-14 rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden grid place-items-center">
-      {logoData ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={logoData} alt="Logo" className="w-full h-full object-cover" />
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src="/icono.png" alt="Ícono Punto IA" className="w-full h-full object-cover" />
-      )}
-    </div>
-    <div className="flex-1">
-      <input
-        type="file"
-        accept="image/png"
-        className="w-full p-4 bg-gray-50 rounded-2xl font-medium text-gray-800 border border-transparent focus:bg-white focus:border-gray-200 outline-none transition-all"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          if (file.size > 200 * 1024) {
-            notify('error', 'Imagen inválida o muy pesada. Usa PNG (máx ~400KB) para wallet.')
-
-            return;
-          }
-          const reader = new FileReader();
-          reader.onload = () => setLogoData(String(reader.result || ""));
-          reader.readAsDataURL(file);
-        }}
-      />
-      <div className="mt-2 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setLogoData('')}
-          className="px-4 py-2 rounded-xl font-bold text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
-        >
-          Quitar
-        </button>
-        <span className="text-[11px] text-gray-400 font-semibold">Se guarda como imagen pequeña (MVP).</span>
-      </div>
-    </div>
-  </div>
-</div>
-  </div>
-</div>
-
-<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-  <div className="px-6 py-4 border-b border-gray-100">
-    <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">🧾 Control de ticket</h3>
-    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Activa este campo para capturar folio/ticket en cada visita escaneada</p>
-  </div>
-  <div className="p-6">
-    <label className="flex items-center justify-between gap-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
-      <div>
-        <p className="text-sm font-black text-gray-800">Solicitar # de ticket al escanear</p>
-        <p className="text-[11px] text-gray-500 font-semibold mt-0.5">Si está apagado, el escáner no mostrará ni guardará ticket.</p>
-      </div>
-      <input
-        type="checkbox"
-        checked={ticketControlEnabled}
-        onChange={(e) => {
-          setTicketControlEnabled(e.target.checked);
-          if (!e.target.checked) setVisitTicketNumber('');
-        }}
-        className="h-5 w-5 accent-gray-900"
-      />
-    </label>
-  </div>
-</div>
-
-<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-  <div className="px-6 py-4 border-b border-gray-100">
-    <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">📱 Personalización Apple Wallet</h3>
-    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Colores e imagen del pase digital de tus clientes</p>
-  </div>
-  <div className="p-6 space-y-4">
-  <div className="space-y-3">
-    <p className="text-xs font-black text-gray-500 uppercase tracking-wide">Personalización Apple Wallet</p>
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <label className="text-xs font-semibold text-gray-600">Fondo
-        <input type="color" className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white" value={walletBackgroundColor} onChange={e => setWalletBackgroundColor(e.target.value)} />
-      </label>
-      <label className="text-xs font-semibold text-gray-600">Texto
-        <input type="color" className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white" value={walletForegroundColor} onChange={e => setWalletForegroundColor(e.target.value)} />
-      </label>
-      <label className="text-xs font-semibold text-gray-600">Etiquetas
-        <input type="color" className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white" value={walletLabelColor} onChange={e => setWalletLabelColor(e.target.value)} />
-      </label>
-    </div>
-  <div>
-    <label className="text-xs font-semibold text-gray-600">Imagen cabecera del pase (strip)</label>
-    <input
-      type="file"
-      accept="image/png,image/jpeg,image/jpg,image/webp"
-      className="w-full p-3 bg-white rounded-xl mt-1 text-sm font-medium text-gray-800 border border-gray-200"
-      onChange={async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        if (file.size > 2 * 1024 * 1024) {
-          notify('error', 'Imagen muy pesada. Usa una imagen menor a 2MB para convertirla a strip.')
-          return;
-        }
-        try {
-          const pngDataUrl = await toPngStripDataUrl(file);
-          setWalletStripImageData(pngDataUrl);
-        } catch (error) {
-          notify('error', error instanceof Error ? error.message : 'No se pudo procesar la imagen para Wallet.')
-        }
-      }}
-    />
-    <div className="mt-2 flex items-center gap-2">
-      <button type="button" onClick={() => setWalletStripImageData(null)} className="px-3 py-1 rounded-lg text-xs font-bold bg-gray-200 text-gray-700">Quitar imagen</button>
-      <span className="text-[11px] text-gray-500 font-semibold">
-        Puedes subir PNG/JPG/WEBP. Se convierte automático a PNG strip 1242x492 (2.5:1).
-      </span>
-    </div>
-    {walletStripImageData ? (
-      <div className="mt-3 rounded-xl overflow-hidden border border-gray-200 bg-white">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={walletStripImageData} alt="Preview strip wallet" className="w-full h-24 object-cover" />
-      </div>
-    ) : null}
+<div className="max-w-5xl mx-auto animate-fadeIn pb-24">
+  <div className="mb-8">
+    <h2 className="text-3xl font-black text-gray-900 tracking-tight">Configuración de tu Programa</h2>
+    <p className="text-gray-500 font-semibold mt-2 text-sm max-w-2xl">
+      Personaliza las recompensas, el diseño de tus pases y la información de tu negocio.
+      Los cambios se reflejarán automáticamente en las wallets de tus clientes al sincronizarse.
+    </p>
   </div>
 
-  </div>
-  </div>
-</div>
+  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+    <div className="lg:col-span-7 xl:col-span-8 space-y-6">
 
-<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-  <div className="px-6 py-4 border-b border-gray-100">
-    <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">📍 Ubicación</h3>
-    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Aparece en el mapa de negocios aliados</p>
-  </div>
-  <div className="p-6 space-y-3">
-    <div className="flex gap-2">
-      <input className="flex-1 p-3 bg-gray-50 rounded-xl text-gray-800 text-sm border border-gray-200 outline-none focus:ring-2 focus:ring-blue-200 font-semibold" placeholder="Buscar dirección..." value={addressSearch} onChange={(e) => setAddressSearch(e.target.value)} />
-      <button onClick={searchLocation} disabled={isSearching} className="bg-blue-600 text-white px-4 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 shrink-0 text-sm" aria-label="Buscar">{isSearching ? '...' : '🔍'}</button>
-    </div>
-    <div className="h-[280px] w-full rounded-2xl overflow-hidden border border-gray-200 z-0 relative"><AdminMap coords={coords} setCoords={setCoords} /></div>
-  </div>
-</div>
-
-<div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden relative opacity-70">
-  <div className="px-6 py-4 border-b border-gray-100">
-    <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">🤝 Red Punto IA</h3>
-    <p className="text-[11px] text-gray-400 font-semibold mt-0.5">Participación en campañas y promociones de la coalición</p>
-  </div>
-  <div className="p-6 pointer-events-none relative">
-    <div className="absolute inset-0 bg-white/40 z-10 flex items-center justify-center backdrop-blur-[1px]">
-      <span className="bg-indigo-600 text-white font-black text-xs px-3 py-1.5 rounded-full shadow-lg">🚀 Próximamente</span>
-    </div>
-    <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 space-y-3">
-      <p className="text-xs font-black text-indigo-700">🤝 Promo de Coalición (captación de nuevos clientes)</p>
-      <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-        <input type="checkbox" checked={coalitionOptIn} onChange={e => setCoalitionOptIn(e.target.checked)} />
-        Quiero participar en retos de coalición
-      </label>
-      <div>
-        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Descuento mínimo ofrecido (%)</label>
-        <input
-          type="number"
-          min="10"
-          disabled={!coalitionOptIn}
-          className="w-full p-3.5 bg-white rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-indigo-300 outline-none transition-all text-sm disabled:opacity-60"
-          value={coalitionDiscountPercent}
-          onChange={e => setCoalitionDiscountPercent(e.target.value)}
-        />
-        <p className="text-[11px] text-gray-500 font-semibold mt-1.5 ml-1">Para activar esta promo debes ofrecer al menos 10% de descuento.</p>
-      </div>
-      <div>
-        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Producto participante</label>
-        <input
-          disabled={!coalitionOptIn}
-          className="w-full p-3.5 bg-white rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-indigo-300 outline-none transition-all text-sm disabled:opacity-60"
-          value={coalitionProduct}
-          onChange={e => setCoalitionProduct(e.target.value)}
-          placeholder="Ej: Corte clásico, Combo ejecutivo, Latte 12oz"
-        />
-      </div>
-    </div>
-  </div>
-</div>
-
-<div className="bg-white rounded-3xl shadow-sm border border-yellow-100 overflow-hidden">
-  <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-5 text-white">
-    <div className="flex items-center gap-3">
-      <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🎯</span>
-      <div>
-        <h3 className="text-sm font-black">Programa Lealtad y Premios</h3>
-        <p className="text-white/80 text-xs font-semibold">Configura metas, premio final y beneficios intermedios</p>
-      </div>
-    </div>
-  </div>
-  <div className="p-5 space-y-6">
-    <div className="space-y-4">
-      <h4 className="text-xs font-black text-amber-700 uppercase tracking-wider border-b border-amber-100 pb-2">Reglas del Programa Base</h4>
-      <div>
-        <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">🎁 Premio al Completar Visitas</label>
-        <input className="w-full p-3.5 bg-white rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm placeholder:text-gray-400" value={prizeName} onChange={e => setPrizeName(e.target.value)} placeholder="Ej: Café gratis, 2x1, Descuento 20%" />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Visitas para ganar premio</label>
-          <input
-            type="number"
-            min="1"
-            max={String(MAX_REQUIRED_VISITS)}
-            className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
-            value={requiredVisits}
-            onChange={e => {
-              const nextValue = e.target.value;
-              if (!nextValue) {
-                setRequiredVisits('');
-                return;
-              }
-              setRequiredVisits(String(sanitizeRequiredVisits(nextValue, DEFAULT_REQUIRED_VISITS)));
-            }}
-            onBlur={() => setRequiredVisits(String(sanitizeRequiredVisits(requiredVisits || DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS)))}
-          />
-          <p className="text-[11px] text-gray-400 font-semibold mt-1.5 ml-1">Meta del pase: {normalizedRequiredVisits} visitas. M&aacute;ximo {MAX_REQUIRED_VISITS}.</p>
+      {/* BLOQUE 1: Programa de Lealtad (Core) */}
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-5 text-white">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">🎁</span>
+            <div>
+              <h3 className="text-lg font-black tracking-tight">Programa de Recompensas</h3>
+              <p className="text-white/90 text-xs font-semibold">Define la meta y los premios para fidelizar clientes</p>
+            </div>
+          </div>
         </div>
-        <div>
-          <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider ml-1">Vigencia del contador</label>
-          <select className="w-full p-3.5 bg-gray-50 rounded-xl mt-1 font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm" value={rewardPeriod} onChange={e => setRewardPeriod(e.target.value)}>
-            <option value="OPEN">♾️ Sin caducidad</option>
-            <option value="MONTHLY">📅 Mensual</option>
-            <option value="QUARTERLY">📊 Trimestral</option>
-            <option value="SEMESTER">📆 Semestral</option>
-            <option value="ANNUAL">🗓️ Anual</option>
-          </select>
-        </div>
-      </div>
-    </div>
-    
-    <div className="space-y-3 pt-4 border-t border-amber-100">
-      <h4 className="text-xs font-black text-amber-700 uppercase tracking-wider mb-2">🪜 Escalera de Beneficios (Opcional)</h4>
-      <p className="text-[11px] text-gray-400 font-semibold -mt-2 mb-3">Premia a tus clientes en visitas intermedias específicas (ej: visita 3, 7, 10).</p>
-      <p className="text-xs font-black text-amber-700 uppercase tracking-wider">Vista Previa del Pase (Wallet)</p>
-      <div 
-        className="w-full rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center p-6 relative py-10"
-        style={{
-          backgroundColor: walletBackgroundColor || '#1F2937',
-          backgroundImage: walletStripImageData
-            ? `linear-gradient(rgba(0,0,0,0.16), rgba(0,0,0,0.34)), url("${walletStripImageData}")`
-            : undefined,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      >
-        <div className="grid grid-cols-5 justify-items-center items-start w-full gap-x-2 gap-y-5 md:gap-x-4 md:gap-y-6">
-          {Array.from({ length: normalizedRequiredVisits }, (_, i) => {
-            const visitIndex = i + 1;
-            const isAchieved = visitIndex <= Math.floor(normalizedRequiredVisits * 0.4);
-            const milestone = milestones.find(m => Number(m.visitTarget) === visitIndex);
-            const hasMilestone = !!milestone;
-            const isFinalNode = visitIndex === normalizedRequiredVisits;
+        <div className="p-6 space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-black text-gray-800 block mb-1">Premio Final (Al llegar a la meta)</label>
+              <input className="w-full p-3.5 bg-gray-50 rounded-xl font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-500 focus:bg-white outline-none transition-all text-sm placeholder:text-gray-400" value={prizeName} onChange={e => setPrizeName(e.target.value)} placeholder="Ej: Café gratis, 2x1, Descuento 20%" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-black text-gray-800 block mb-1">🏆 Visitas requeridas</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    max={String(MAX_REQUIRED_VISITS)}
+                    className="w-full p-3.5 pr-16 bg-gray-50 rounded-xl font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm"
+                    value={requiredVisits}
+                    onChange={e => {
+                      const nextValue = e.target.value;
+                      if (!nextValue) {
+                        setRequiredVisits('');
+                        return;
+                      }
+                      setRequiredVisits(String(sanitizeRequiredVisits(nextValue, DEFAULT_REQUIRED_VISITS)));
+                    }}
+                    onBlur={() => setRequiredVisits(String(sanitizeRequiredVisits(requiredVisits || DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS)))}
+                  />
+                  <div className="absolute right-0 bottom-0 pointer-events-none pb-2 pt-2 pr-4 flex items-center justify-center h-full text-xs font-bold text-gray-400">
+                    visitas
+                  </div>
+                </div>
+                <p className="text-[10px] text-gray-500 font-semibold mt-1.5 leading-relaxed">Recomendamos la meta entre 6 y 10 visitas p/retención ideal.</p>
+              </div>
+              <div>
+                <label className="text-xs font-black text-gray-800 block mb-1">⏳ Vigencia del pase</label>
+                <select className="w-full p-3.5 bg-gray-50 rounded-xl font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none transition-all text-sm" value={rewardPeriod} onChange={e => setRewardPeriod(e.target.value)}>
+                  <option value="OPEN">♾️ Sin caducidad</option>
+                  <option value="MONTHLY">📅 Mensual</option>
+                  <option value="QUARTERLY">📊 Trimestral</option>
+                  <option value="SEMESTER">📆 Semestral</option>
+                  <option value="ANNUAL">🗓️ Anual</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          
+          <div className="pt-5 border-t border-gray-100">
+            <h4 className="text-sm font-black text-gray-800 flex justify-between items-center mb-1">
+              Escalera de Beneficios
+              <span className="bg-amber-100 text-amber-700 text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">Opcional</span>
+            </h4>
+            <p className="text-[11px] text-gray-500 font-semibold mb-4 leading-relaxed max-w-xl">
+              Premia a tus clientes en visitas clave antes de que lleguen a la meta final para mantener su motivación alta (ej. ganar un descuento intermedio en la visita 4 y la 8).
+            </p>
             
-            return (
-              <div key={visitIndex} className="flex flex-col items-center justify-center z-[2] relative">
-                <div 
-                  className={`flex items-center justify-center rounded-full border-[3px] shadow-sm transition-all overflow-hidden w-12 h-12 md:w-16 md:h-16`}
-                  style={{
-                    backgroundColor: isAchieved ? (walletLabelColor || '#3B82F6') : 'rgba(255,255,255,0.78)',
-                    borderColor: 'rgba(255,255,255,0.92)',
-                    boxShadow: isAchieved ? `0 0 18px ${walletLabelColor || '#3B82F6'}` : '0 10px 22px rgba(0,0,0,0.26)',
-                  }}
-                >
-                  {hasMilestone ? (
-                    <span className="text-2xl md:text-3xl translate-y-px">{milestone.emoji || '🎁'}</span>
-                  ) : isFinalNode ? (
-                    <span className="text-xl md:text-2xl translate-y-px">{prizeEmoji || '🏆'}</span>
-                  ) : (
-                    <div
-                      className="rounded-full w-2/3 h-2/3 flex items-center justify-center text-sm md:text-base"
-                      style={{
-                        background: isAchieved
-                          ? 'linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.14) 100%)'
-                          : 'linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(30,41,59,0.78) 100%)',
-                        color: '#FFFFFF',
-                        fontWeight: 900,
-                        textShadow: '0 2px 8px rgba(0,0,0,0.62)',
-                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.32), 0 6px 14px rgba(0,0,0,0.26)',
-                        border: `2px solid ${isAchieved ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.3)'}`,
+            <div className="space-y-3 bg-gray-50/50 p-4 rounded-2xl border border-gray-100 shadow-inner">
+              {milestones.length === 0 && (
+                <p className="text-xs text-gray-400 font-semibold text-center py-3">Sin beneficios intermedios. Tus clientes solo ganarán el premio final.</p>
+              )}
+              {milestones.map((m, idx) => (
+                <div key={idx} className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={m.emoji}
+                    onChange={e => setMilestones(prev => prev.map((row, i) => i === idx ? { ...row, emoji: e.target.value } : row))}
+                    className="w-12 h-10 text-center bg-white border border-gray-200 rounded-xl text-lg font-bold outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-300 transition-all shadow-sm"
+                    maxLength={4}
+                    placeholder="🎁"
+                  />
+                  <div className="flex h-10 items-center bg-white border border-gray-200 rounded-xl px-2 focus-within:ring-2 focus-within:ring-amber-300 focus-within:border-amber-300 transition shadow-sm">
+                    <span className="text-[10px] uppercase font-black text-gray-400 shrink-0 select-none">Visita</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={m.visitTarget}
+                      onChange={e => setMilestones(prev => prev.map((row, i) => i === idx ? { ...row, visitTarget: e.target.value } : row))}
+                      className="w-10 bg-transparent p-1 text-sm font-black text-center text-gray-900 outline-none"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={m.reward}
+                    onChange={e => setMilestones(prev => prev.map((row, i) => i === idx ? { ...row, reward: e.target.value } : row))}
+                    className="flex-1 min-w-[120px] h-10 px-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-300 transition-all shadow-sm"
+                    placeholder="Ej: Topping gratis"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMilestones(prev => prev.filter((_, i) => i !== idx))}
+                    className="shrink-0 w-10 h-10 flex items-center justify-center rounded-xl text-gray-400 bg-white border border-gray-200 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition shadow-sm"
+                    title="Eliminar beneficio intermedio"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+
+              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200 select-none">
+                <input
+                  type="text"
+                  value={prizeEmoji}
+                  onChange={e => setPrizeEmoji(e.target.value)}
+                  className="w-12 h-10 text-center bg-amber-100 border border-amber-300 rounded-xl text-xl font-bold outline-none focus:ring-2 focus:ring-amber-400 transition-all"
+                  maxLength={4}
+                />
+                <div className="flex h-10 items-center bg-amber-50 border border-amber-200 rounded-xl px-2 opacity-80 cursor-not-allowed">
+                  <span className="text-[10px] uppercase font-black text-amber-700 shrink-0">Meta</span>
+                  <div className="w-10 p-1 text-sm font-black text-center text-amber-900">{normalizedRequiredVisits}</div>
+                </div>
+                <div className="flex-1 h-10 px-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center text-sm font-bold text-amber-800 opacity-80 overflow-hidden text-ellipsis whitespace-nowrap cursor-not-allowed">
+                  {prizeName || 'Premio Final'}
+                </div>
+                <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-amber-100 text-amber-600 text-[10px] font-black border border-amber-200 cursor-not-allowed" title="Premio Meto">
+                  FIN
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMilestones(prev => [...prev, { visitTarget: '', reward: '', emoji: '🎁' }])}
+                className="w-full mt-3 py-3 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50/50 text-amber-700 font-black text-xs uppercase tracking-wider hover:bg-amber-100 hover:border-amber-400 transition-all"
+              >
+                + Agregar beneficio intermedio
+              </button>
+            </div>
+            
+            <button
+              onClick={saveMilestones}
+              disabled={isSavingMilestones}
+              className="mt-4 w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black py-3 rounded-xl shadow-md disabled:opacity-60 text-sm transition-all flex justify-center items-center gap-2"
+            >
+              {isSavingMilestones ? 'Guardando...' : '🪜 Aplicar Configuración de Lealtad'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* BLOQUE 2: Identidad y Pase Wallet */}
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-5 text-white">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-xl">🎨</span>
+            <div>
+              <h3 className="text-lg font-black tracking-tight">Diseño del Pase (Wallet)</h3>
+              <p className="text-white/80 text-xs font-semibold">Personaliza cómo lucirá tu marca en su smartphone</p>
+            </div>
+          </div>
+        </div>
+        <div className="p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <label className="text-xs font-black text-gray-800 mb-1 block">Logotipo del pase</label>
+              <p className="text-[10px] text-gray-500 font-semibold mb-3">Recomendado: PNG fondo transparente, formato cuadrado.</p>
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-[0.8rem] bg-white shadow-inner border border-gray-200 overflow-hidden flex items-center justify-center shrink-0 p-1">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={logoData || '/icono.png'} alt="Logo" className="max-w-[100%] max-h-[100%] object-contain" />
+                </div>
+                <div className="flex-1">
+                  <label className="flex items-center justify-center bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-black text-xs py-2.5 px-3 rounded-xl cursor-pointer transition-colors shadow-sm w-full">
+                    <span>Elegir archivo</span>
+                    <input
+                      type="file"
+                      accept="image/png"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 200 * 1024) {
+                          notify('error', 'Imagen demasiado pesada. Usa PNG (máx 200KB).');
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = () => setLogoData(String(reader.result || ""));
+                        reader.readAsDataURL(file);
                       }}
-                    >
-                       {visitIndex}
-                    </div>
+                    />
+                  </label>
+                  {logoData && (
+                    <button type="button" onClick={() => setLogoData('')} className="mt-2 text-[10px] font-black uppercase tracking-wider text-red-500 hover:text-red-700 transition block text-center w-full">
+                      Quitar logo
+                     </button>
                   )}
                 </div>
-                {(hasMilestone || isFinalNode) && (
-                  <div className="absolute -bottom-6 text-center w-24 md:w-28 flex flex-col items-center">
-                    <span
-                      style={{
-                        color: '#FFFFFF',
-                        textShadow: '0 2px 6px rgba(0,0,0,0.6)',
-                        backgroundColor: 'rgba(17,24,39,0.34)',
-                        boxShadow: '0 4px 10px rgba(0,0,0,0.18)',
-                      }}
-                      className="text-[10px] md:text-[11px] font-black leading-[1.05] uppercase rounded-full px-2 py-1"
-                    >
-                      {hasMilestone ? milestone.reward : (prizeName || 'Premio Final')}
-                    </span>
+              </div>
+            </div>
+            
+            <div>
+              <label className="text-xs font-black text-gray-800 mb-1 block">Esquema de Colores</label>
+              <p className="text-[10px] text-gray-500 font-semibold mb-3">Sincroniza con los colores de tu marca física.</p>
+              <div className="space-y-3">
+                <label className="flex items-center justify-between text-xs font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors p-2.5 rounded-xl border border-gray-200 cursor-pointer">
+                  Fondo del Pase
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] font-black opacity-50 uppercase">{walletBackgroundColor}</span>
+                    <input type="color" className="w-8 h-8 rounded-md shrink-0 cursor-pointer border-0 bg-transparent p-0 shadow-sm" style={{ backgroundColor: walletBackgroundColor }} value={walletBackgroundColor} onChange={e => setWalletBackgroundColor(e.target.value)} />
                   </div>
+                </label>
+                <label className="flex items-center justify-between text-xs font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors p-2.5 rounded-xl border border-gray-200 cursor-pointer">
+                  Textos
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] font-black opacity-50 uppercase">{walletForegroundColor}</span>
+                    <input type="color" className="w-8 h-8 rounded-md shrink-0 cursor-pointer border-0 bg-transparent p-0 shadow-sm" style={{ backgroundColor: walletForegroundColor }} value={walletForegroundColor} onChange={e => setWalletForegroundColor(e.target.value)} />
+                  </div>
+                </label>
+                <label className="flex items-center justify-between text-xs font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors p-2.5 rounded-xl border border-gray-200 cursor-pointer">
+                  Acentos (Etiquetas)
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] font-black opacity-50 uppercase">{walletLabelColor}</span>
+                    <input type="color" className="w-8 h-8 rounded-md shrink-0 cursor-pointer border-0 bg-transparent p-0 shadow-sm" style={{ backgroundColor: walletLabelColor }} value={walletLabelColor} onChange={e => setWalletLabelColor(e.target.value)} />
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <div className="pt-6 border-t border-gray-100">
+            <label className="text-xs font-black text-gray-800 mb-1 block">Banner Principal (Strip)</label>
+            <p className="text-[10px] text-gray-500 font-semibold mb-3">La imagen transversal en Apple Wallet. Relación 2.5 : 1 (ideal 1242x492px).</p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              {walletStripImageData ? (
+                <div className="w-full sm:w-56 h-20 rounded-xl overflow-hidden shadow-inner border border-gray-200 shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={walletStripImageData} alt="Strip preview" className="w-full h-full object-cover" />
+                </div>
+              ) : null}
+              <div className="flex-1 flex flex-col justify-center gap-2">
+                 <label className="flex items-center justify-center bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 font-black text-xs py-2.5 px-3 rounded-xl cursor-pointer transition-colors shadow-sm w-full h-full min-h-[50px]">
+                  <span>Subir banner (JPG/PNG)</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 2 * 1024 * 1024) {
+                        notify('error', 'Imagen pesada. Ideal menos de 2MB.');
+                        return;
+                      }
+                      try {
+                        const pngDataUrl = await toPngStripDataUrl(file);
+                        setWalletStripImageData(pngDataUrl);
+                      } catch (error) {
+                         notify('error', error instanceof Error ? error.message : 'Error procesando strip.');
+                      }
+                    }}
+                  />
+                </label>
+                {walletStripImageData && (
+                  <button type="button" onClick={() => setWalletStripImageData(null)} className="text-[10px] font-black uppercase tracking-wider text-red-500 hover:text-red-700 transition self-start pt-1">Remover banner</button>
                 )}
               </div>
-            );
-          })}
-        </div>
-        <div className="mt-8 text-[10px] md:text-xs font-semibold tracking-wider uppercase" style={{ color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
-          {tenant.name} · Progreso de Ejemplo
+            </div>
+          </div>
         </div>
       </div>
-      <p className="text-[10px] text-gray-400 font-semibold text-center">Así se verá tu escalera gráfica en el Apple Wallet y Google Wallet de tus clientes.</p>
+
+      {/* BLOQUE 3: Perfil y Ubicación */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+          <div className="p-5 border-b border-gray-50">
+            <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">🏪 Identidad Básica</h3>
+            <p className="text-[11px] text-gray-500 font-semibold mt-0.5">Cómo te ven tus clientes</p>
+          </div>
+          <div className="p-5 space-y-4 flex-1">
+            <div>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider block mb-1">Nombre Oficial</label>
+              <input className="w-full p-3 bg-gray-50 rounded-xl text-gray-500 font-bold border border-gray-100 cursor-not-allowed text-sm" value={tenant.name} readOnly disabled title="Contactar a soporte para cambiar nombre" />
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider block mb-1">📸 Instagram</label>
+              <input className="w-full p-3 bg-gray-50 rounded-xl font-semibold text-gray-900 border border-gray-200 focus:bg-pink-50 focus:border-pink-300 focus:ring-2 focus:ring-pink-100 outline-none transition-all text-sm" value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="@tu_negocio" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+          <div className="p-5 border-b border-gray-50">
+            <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">📍 Ubicación Física</h3>
+            <p className="text-[11px] text-gray-500 font-semibold mt-0.5">Para ubicarte en el mapa de comercios</p>
+          </div>
+          <div className="p-4 space-y-3 flex-1 flex flex-col">
+            <div className="flex gap-2 relative">
+              <input className="flex-1 p-2.5 pl-10 bg-gray-50 rounded-xl text-gray-800 text-sm border border-gray-200 outline-none focus:ring-2 focus:ring-blue-100 font-semibold transition-all" placeholder="Buscar calles, ciudad..." value={addressSearch} onChange={(e) => setAddressSearch(e.target.value)} />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</div>
+              <button onClick={searchLocation} disabled={isSearching} className="bg-blue-600 text-white px-4 rounded-xl font-black shadow-sm hover:shadow hover:bg-blue-700 disabled:opacity-50 shrink-0 text-xs uppercase tracking-wider transition-all" aria-label="Buscar" title="Localizar">{isSearching ? '...' : 'Buscar'}</button>
+            </div>
+            <div className="flex-1 mt-2 min-h-[160px] rounded-xl overflow-hidden border border-gray-200 relative z-0 shadow-inner">
+               <AdminMap coords={coords} setCoords={setCoords} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* BLOQUE 4: Controles Operativos */}
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <label className="flex items-start md:items-center justify-between gap-6 p-6 cursor-pointer hover:bg-gray-50 transition-colors">
+          <div>
+            <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">🧾 Auditoría de Tickets (Opcional)</h3>
+            <p className="text-[11px] text-gray-500 font-semibold mt-1">
+              Si se activa, el operador debe capturar el folio del ticket de compra obligatoriamente al escanear un pase. Útil para conciliar lealtad vs POS.
+            </p>
+          </div>
+          <div className="shrink-0 mt-1 md:mt-0 relative">
+            <input
+              type="checkbox"
+              checked={ticketControlEnabled}
+              onChange={(e) => {
+                setTicketControlEnabled(e.target.checked);
+                if (!e.target.checked) setVisitTicketNumber('');
+              }}
+              className="peer sr-only"
+            />
+            <div className={`w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-emerald-500 transition-colors shadow-inner`}></div>
+            <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform shadow-sm ${ticketControlEnabled ? 'translate-x-5' : 'translate-x-0'}`}></div>
+          </div>
+        </label>
+      </div>
+
+      {/* BLOQUE 5: Red Punto IA (Disabled/Próximamente) */}
+      <div className="bg-white rounded-3xl shadow-sm border border-indigo-50/50 overflow-hidden relative group">
+        <div className="absolute inset-0 z-20 pointer-events-none group-hover:bg-indigo-50/10 transition-colors flex items-center justify-center backdrop-blur-[1px]">
+          <span className="bg-white text-indigo-900 border border-indigo-100 font-black text-[10px] uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg">🚀 Integración Próximamente</span>
+        </div>
+        <div className="px-6 py-4 border-b border-gray-50 pointer-events-none opacity-40 grayscale">
+          <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">🤝 Promo Únete a la Red (Coalición)</h3>
+        </div>
+        <div className="p-6 pointer-events-none opacity-40 grayscale bg-gray-50/50">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Descuento Ofrecido (%)</label>
+              <input type="number" value={coalitionDiscountPercent} disabled className="w-full p-3 bg-white rounded-xl mt-1 text-sm border border-gray-200" />
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Producto gancho</label>
+              <input type="text" value={coalitionProduct} disabled className="w-full p-3 bg-white rounded-xl mt-1 text-sm border border-gray-200" />
+            </div>
+          </div>
+        </div>
+      </div>
+      
     </div>
 
-    <div className="space-y-3 pt-2 border-t border-amber-100">
-    {milestones.length === 0 && (
-      <p className="text-xs text-gray-400 font-semibold text-center py-2">Sin hitos configurados. Agrega el primero abajo.</p>
-    )}
-    {milestones.map((m, idx) => (
-      <div key={idx} className="flex items-center gap-2">
-        <input
-          type="text"
-          value={m.emoji}
-          onChange={e => setMilestones(prev => prev.map((row, i) => i === idx ? { ...row, emoji: e.target.value } : row))}
-          className="w-12 text-center p-2 bg-amber-50 border border-amber-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-amber-300"
-          maxLength={4}
-          placeholder="🎁"
-        />
-        <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-2 focus-within:ring-2 focus-within:ring-amber-300 focus-within:bg-white transition">
-          <span className="text-xs font-black text-gray-400 shrink-0">Visita</span>
-          <input
-            type="number"
-            min="1"
-            value={m.visitTarget}
-            onChange={e => setMilestones(prev => prev.map((row, i) => i === idx ? { ...row, visitTarget: e.target.value } : row))}
-            className="w-14 bg-transparent p-2 text-sm font-black text-gray-900 outline-none"
-          />
-        </div>
-        <input
-          type="text"
-          value={m.reward}
-          onChange={e => setMilestones(prev => prev.map((row, i) => i === idx ? { ...row, reward: e.target.value } : row))}
-          className="flex-1 p-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-amber-300 focus:bg-amber-50 transition"
-          placeholder="Ej: Agua, Postre, Tacos"
-        />
-        <button
-          type="button"
-          onClick={() => setMilestones(prev => prev.filter((_, i) => i !== idx))}
-          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 transition"
-          title="Eliminar hito"
-        >
-          ✕
-        </button>
-      </div>
-    ))}
+    {/* RIGHT COLUMN: PREVIEWS & HELPERS */}
+    <div className="lg:col-span-5 xl:col-span-4 mt-8 lg:mt-0 lg:sticky lg:top-8 self-start space-y-6 z-10">
+       
+       <div className="bg-[#1C1C1E] rounded-[2rem] shadow-2xl overflow-hidden p-[1px] relative border border-gray-800/80">
+         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl pointer-events-none"></div>
+         
+         <div className="bg-[#1C1C1E] rounded-[calc(2rem-1px)] p-6 z-10 relative">
+           <h4 className="text-white text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2">
+             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
+             Previsualización
+           </h4>
+           <p className="text-gray-400 text-[11px] font-semibold mb-6">El diseño que verán tus clientes</p>
+           
+           <div 
+            className="w-full rounded-[20px] overflow-hidden shadow-2xl flex flex-col items-center p-5 relative py-10 transition-all duration-300"
+            style={{
+              backgroundColor: walletBackgroundColor || '#1F2937',
+              backgroundImage: walletStripImageData
+                ? `linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.75) 100%), url("${walletStripImageData}")`
+                : 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.4))',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)'
+            }}
+          >
+            <div className="w-12 h-12 rounded-full border-2 border-white/20 bg-white/95 shadow-lg overflow-hidden absolute top-4 left-4 z-10 p-[2px] backdrop-blur-[2px]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+               <img src={logoData || '/icono.png'} alt="Logo" className="w-full h-full object-contain rounded-full" />
+            </div>
+            <div className="absolute top-5 right-4 bg-white/10 p-1.5 rounded-lg backdrop-blur-sm shadow-sm border border-white/10">
+              <QRCode value="DEMO_PUNTOIA" size={36} fgColor="#fff" bgColor="transparent" />
+            </div>
+            
+            <div className="mt-14 w-full text-left">
+              <h5 className="text-white/80 font-black text-[9px] uppercase tracking-widest leading-none drop-shadow-md">{tenant.name}</h5>
+              <h4 className="text-white text-lg font-black mt-1 leading-tight drop-shadow-md">Tarjeta de Cliente Frecuente</h4>
+            </div>
 
-    <div className="flex items-center gap-2 mt-2 select-none">
-      <input
-        type="text"
-        value={prizeEmoji}
-        onChange={e => setPrizeEmoji(e.target.value)}
-        className="w-12 text-center p-2 bg-amber-200 border border-amber-300 rounded-xl text-sm font-bold text-amber-800 outline-none focus:ring-2 focus:ring-amber-400"
-        maxLength={4}
-        title="Emoji del premio final"
-      />
-      <div className="flex items-center bg-gray-100 border border-gray-300 rounded-xl px-2">
-        <span className="text-xs font-black text-gray-500 shrink-0">Visita</span>
-        <div className="w-14 bg-transparent p-2 text-sm font-black text-gray-900 text-center">
-          {normalizedRequiredVisits}
-        </div>
-      </div>
-      <div className="flex-1 p-2.5 bg-gray-50 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 truncate" title={prizeName || 'Premio Final'}>
-        {prizeName || 'Premio Final'}
-      </div>
-      <div className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400" title="Premio final (guarda la escalera para actualizar el emoji)">
-        🔒
-      </div>
+            <div className="mt-8 grid grid-cols-5 justify-items-center items-start w-full gap-y-6 gap-x-1">
+              {Array.from({ length: normalizedRequiredVisits }, (_, i) => {
+                const visitIndex = i + 1;
+                const isAchieved = visitIndex <= Math.floor(normalizedRequiredVisits * 0.4);
+                const milestone = milestones.find(m => Number(m.visitTarget) === visitIndex);
+                const hasMilestone = !!milestone;
+                const isFinalNode = visitIndex === normalizedRequiredVisits;
+                
+                return (
+                  <div key={visitIndex} className="flex flex-col items-center justify-center z-[2] relative">
+                    <div 
+                      className={`flex items-center justify-center rounded-full border-[3px] transition-all overflow-hidden w-9 h-9 sm:w-10 sm:h-10 shrink-0`}
+                      style={{
+                        backgroundColor: isAchieved ? (walletLabelColor || '#3B82F6') : 'rgba(255,255,255,0.78)',
+                        borderColor: 'rgba(255,255,255,0.95)',
+                        boxShadow: isAchieved ? `0 0 16px ${walletLabelColor || '#3B82F6'}` : '0 8px 16px rgba(0,0,0,0.3)',
+                      }}
+                    >
+                      {hasMilestone ? (
+                        <span className="text-lg md:text-xl translate-y-px">{milestone.emoji || '🎁'}</span>
+                      ) : isFinalNode ? (
+                        <span className="text-lg translate-y-px">{prizeEmoji || '🏆'}</span>
+                      ) : (
+                        <div
+                          className="rounded-full w-[22px] h-[22px] flex items-center justify-center text-[11px]"
+                          style={{
+                            background: isAchieved
+                              ? 'linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.1) 100%)'
+                              : 'linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(30,41,59,0.78) 100%)',
+                            color: '#FFFFFF',
+                            fontWeight: 900,
+                            textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), 0 4px 8px rgba(0,0,0,0.2)',
+                            border: `2px solid ${isAchieved ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)'}`,
+                          }}
+                        >
+                           {visitIndex}
+                        </div>
+                      )}
+                    </div>
+                    {(hasMilestone || isFinalNode) && (
+                      <div className="absolute w-[50px] -bottom-[18px] text-center flex flex-col items-center">
+                        <span
+                          style={{
+                            color: '#FFFFFF',
+                            textShadow: '0 2px 4px rgba(0,0,0,0.9)',
+                            backgroundColor: 'rgba(0,0,0,0.4)',
+                            backdropFilter: 'blur(8px)'
+                          }}
+                          className="text-[8px] w-full truncate font-black leading-tight uppercase rounded-[4px] px-1 py-[1.5px] border border-white/20 shadow-md"
+                        >
+                          {hasMilestone ? milestone.reward : (prizeName || 'Premio Final')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="mt-8 text-[10px] font-black tracking-widest uppercase text-white/90 drop-shadow-md">
+              {tenant.name} · Pase de Ejemplo
+            </div>
+          </div>
+         </div>
+       </div>
+
+       <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl border border-amber-200/50 p-6 shadow-sm hidden md:block">
+         <h4 className="text-amber-800 text-sm font-black flex items-center gap-2 mb-4">
+           <span className="text-lg">💡</span> Tips de Configuración
+         </h4>
+         <ul className="space-y-4">
+           <li className="text-xs text-amber-900/80 font-bold leading-relaxed flex items-start gap-2.5">
+             <div className="w-5 h-5 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center shrink-0 mt-0.5 text-[10px]">1</div>
+             <span>Tu meta idealmente debe estar entre las 6 y 10 visitas. Programas demasiado largos generan abandono.</span>
+           </li>
+           <li className="text-xs text-amber-900/80 font-bold leading-relaxed flex items-start gap-2.5">
+             <div className="w-5 h-5 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center shrink-0 mt-0.5 text-[10px]">2</div>
+             <span>Logotipo: El fondo debe ser transparente o formas circulares. Luce muy bien en modo oscuro y claro de iOS / Android.</span>
+           </li>
+           <li className="text-xs text-amber-900/80 font-bold leading-relaxed flex items-start gap-2.5">
+             <div className="w-5 h-5 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center shrink-0 mt-0.5 text-[10px]">3</div>
+             <span>Si cambias la meta o los premios, los usuarios lo verán reflejado mágicamente en unos minutos gracias a las push ocultas.</span>
+           </li>
+         </ul>
+       </div>
+
     </div>
-    <button
-      type="button"
-      onClick={() => setMilestones(prev => [...prev, { visitTarget: '', reward: '', emoji: '🎁' }])}
-      className="w-full py-2.5 rounded-xl border-2 border-dashed border-amber-200 text-amber-600 font-black text-sm hover:bg-amber-50 transition"
-    >
-      + Agregar hito
-    </button>
-    <button
-      onClick={saveMilestones}
-      disabled={isSavingMilestones}
-      className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black py-3 rounded-xl shadow-md disabled:opacity-60 text-sm"
-    >
-      {isSavingMilestones ? 'Guardando escalera...' : '🪜 Guardar Escalera de Beneficios'}
-    </button>
+  </div>
+
+  {/* FIXED BOTTOM ACTION BAR */}
+  <div className="fixed bottom-0 left-0 md:left-64 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-gray-200 shadow-[0_-20px_40px_rgba(0,0,0,0.06)] z-40">
+    <div className="w-full max-w-5xl mx-auto flex justify-between items-center sm:px-6">
+      <div className="hidden sm:block">
+        <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Estado</p>
+        <p className="text-sm font-bold text-gray-900">{isSavingSettings ? 'Aplicando cambios globales...' : 'Modificaciones sin guardar'}</p>
+      </div>
+      <button onClick={saveSettings} disabled={isSavingSettings} className="w-full sm:w-auto bg-gray-900 text-white px-8 py-3.5 rounded-xl font-black shadow-lg hover:shadow-xl hover:-translate-y-0.5 hover:bg-black transition-all text-sm disabled:opacity-60 disabled:hover:translate-y-0 flex justify-center items-center gap-2">
+        {isSavingSettings ? (
+          <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Guardando...</>
+        ) : (
+          '💾 Guardar Todos los Cambios'
+        )}
+      </button>
+    </div>
   </div>
 </div>
-</div>
-
-<button onClick={saveSettings} disabled={isSavingSettings} className="w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white py-4 rounded-2xl font-black shadow-md hover:shadow-lg transition-all text-sm disabled:opacity-60">
-  {isSavingSettings ? 'Guardando cambios...' : '💾 Guardar Todos los Cambios'}
-</button>
-</div>
 )}
+
 </div>
 </div>
 );
