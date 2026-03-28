@@ -328,6 +328,38 @@ const saveMilestones = async () => {
   setIsSavingMilestones(true);
   try {
     const required = sanitizeRequiredVisits(requiredVisits || DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS);
+    const loyaltySettingsRes = await fetch('/api/tenant/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenantId: tenant.id,
+        tenantUserId,
+        tenantSessionToken,
+        prize: prizeName,
+        requiredVisits: required,
+        rewardPeriod,
+      }),
+    });
+    const loyaltySettingsData = await loyaltySettingsRes.json();
+    if (!loyaltySettingsRes.ok) {
+      notify('error', String(loyaltySettingsData.error || 'No se pudo guardar la configuración base del programa.'));
+      return;
+    }
+
+    if (loyaltySettingsData?.tenant) {
+      setTenant(loyaltySettingsData.tenant);
+      setPrizeName(loyaltySettingsData.tenant.prize || '');
+      setRequiredVisits(
+        String(
+          sanitizeRequiredVisits(
+            loyaltySettingsData.tenant.requiredVisits ?? DEFAULT_REQUIRED_VISITS,
+            DEFAULT_REQUIRED_VISITS,
+          ),
+        ),
+      );
+      setRewardPeriod(String(loyaltySettingsData.tenant.rewardPeriod ?? 'OPEN'));
+    }
+
     const validation = buildMilestonesPayloadForSave({
       milestones,
       requiredVisits: required,
@@ -504,9 +536,6 @@ const saveSettings = async () => {
         tenantId: tenant.id,
         tenantUserId,
         tenantSessionToken,
-        prize: prizeName,
-        requiredVisits: normalizedRequiredVisits,
-        rewardPeriod,
         logoData, // ✅ AHORA SÍ SE ENVÍA
         lat: coords[0],
         lng: coords[1],
@@ -1444,6 +1473,9 @@ return (
             <p className="text-[11px] text-gray-500 font-semibold mb-4 leading-relaxed max-w-xl">
               Premia a tus clientes en visitas clave antes de que lleguen a la meta final para mantener su motivación alta (ej. ganar un descuento intermedio en la visita 4 y la 8).
             </p>
+            <p className="text-[11px] text-amber-700 font-black mb-4 leading-relaxed max-w-2xl bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+              Este bloque guarda toda la lógica del programa (premio final, visitas requeridas, vigencia y escalera). El botón de abajo aplica exactamente lo que ves en el preview.
+            </p>
             <p className="text-[11px] text-gray-500 font-semibold mb-3">
               ¿Buscas emojis para tus beneficios? Consulta la lista aquí:{' '}
               <a
@@ -1531,7 +1563,7 @@ return (
               disabled={isSavingMilestones}
               className="mt-4 w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black py-3 rounded-xl shadow-md disabled:opacity-60 text-sm transition-all flex justify-center items-center gap-2"
             >
-              {isSavingMilestones ? 'Guardando...' : '🪜 Aplicar Configuración de Lealtad'}
+              {isSavingMilestones ? 'Guardando...' : '🪜 Guardar Programa de Recompensas'}
             </button>
           </div>
         </div>
@@ -1889,7 +1921,7 @@ return (
         {isSavingSettings ? (
           <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Guardando...</>
         ) : (
-          '💾 Guardar Todos los Cambios'
+          '💾 Guardar Diseño / Ubicación / Operación'
         )}
       </button>
     </div>
