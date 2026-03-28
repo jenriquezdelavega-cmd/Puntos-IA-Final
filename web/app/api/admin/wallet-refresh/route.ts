@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       tenantId: access.tenantId,
       origin: new URL(request.url).origin,
       reason: 'tenant-settings',
-      forceImmediate: true,
+      requireImmediate: true,
     });
 
     return apiSuccess({

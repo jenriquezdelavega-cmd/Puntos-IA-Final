@@ -258,7 +258,13 @@ export async function requestWalletRefreshForTenant(params: {
   origin: string;
   reason: WalletSyncReason;
   forceImmediate?: boolean;
+  requireImmediate?: boolean;
 }) {
+  if (params.requireImmediate) {
+    await refreshWalletsForTenant(params);
+    return { mode: 'immediate' as const };
+  }
+
   const config = await readWalletSyncRuntimeConfig(params.prisma);
   let blockedByVolumeGuard = false;
 
