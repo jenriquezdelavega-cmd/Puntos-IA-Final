@@ -171,8 +171,10 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
   const currentVisits = membership?.currentVisits ?? 0;
   const requiredVisits = tenant.requiredVisits ?? 10;
   const remainingVisits = Math.max(0, requiredVisits - currentVisits);
+  const logoFingerprint = createHash('sha1').update(asTrimmedString(tenant.logoData) || '').digest('hex').slice(0, 12);
   const walletVersionSeed = JSON.stringify({
     tenantCreatedAt: tenant.createdAt?.toISOString?.() || '',
+    logoFingerprint,
     currentVisits,
     requiredVisits,
     rewardPeriod: tenant.rewardPeriod || membership?.periodType || 'OPEN',

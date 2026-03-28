@@ -30,6 +30,7 @@ Esta matriz documenta el rol/credencial esperada por endpoint para cerrar el ent
 | `/api/admin/reports` | POST | `TENANT_ADMIN_SESSION` |
 | `/api/admin/generate` | POST | `TENANT_ADMIN_SESSION` o `TENANT_STAFF_SESSION` |
 | `/api/admin/push` | GET/POST | `TENANT_ADMIN_SESSION` |
+| `/api/admin/wallet-refresh` | POST | `TENANT_ADMIN_SESSION` |
 | `/api/tenant/settings` | POST | `TENANT_ADMIN_SESSION` |
 | `/api/tenant/users` | GET/POST/DELETE | `TENANT_ADMIN_SESSION` |
 | `/api/check-in/scan` | POST | `TENANT_ADMIN_SESSION` o `TENANT_STAFF_SESSION` |
