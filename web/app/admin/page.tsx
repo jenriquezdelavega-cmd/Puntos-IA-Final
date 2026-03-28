@@ -42,7 +42,7 @@ type TenantView = {
 type MilestoneRow = { id?: string; visitTarget: string; reward: string; emoji: string };
 
 type TeamMember = { id: string; name?: string; username?: string; role?: string };
-type AdminTab = 'dashboard' | 'team' | 'qr' | 'redeem' | 'push' | 'settings';
+type AdminTab = 'dashboard' | 'team' | 'qr' | 'redeem' | 'push' | 'settings' | 'manuals';
 type NavItem = { key: AdminTab; icon: string; label: string; adminOnly?: boolean };
 
 export default function AdminPage() {
@@ -144,6 +144,7 @@ const navItems: NavItem[] = [
   { key: 'qr', icon: '📷', label: 'QR' },
   { key: 'redeem', icon: '🎁', label: 'Canje' },
   { key: 'push', icon: '📢', label: 'Push', adminOnly: true },
+  { key: 'manuals', icon: '📘', label: 'Manuales', adminOnly: true },
   { key: 'settings', icon: '⚙️', label: 'Config', adminOnly: true },
 ];
 
@@ -1283,6 +1284,65 @@ return (
           <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">●</span> <strong>Máximo 1 notificación por día.</strong> El contador se reinicia a medianoche (hora MX).</li>
           <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">●</span> Solo llega a clientes con el pase instalado en Apple o Google Wallet.</li>
           <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">●</span> Apple Wallet muestra la notificación en la pantalla de bloqueo instantáneamente.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+)}
+
+{tab === 'manuals' && userRole === 'ADMIN' && (
+<div className="max-w-5xl mx-auto animate-fadeIn">
+  <div className="mb-6">
+    <h2 className="text-2xl font-black text-gray-900">Manuales y Guías</h2>
+    <p className="text-gray-500 font-semibold mt-1 text-sm">Descarga material práctico para operar tu panel de negocio.</p>
+  </div>
+  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div className="lg:col-span-7">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-cyan-600 to-blue-700 p-5 text-white">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">📘</span>
+            <div>
+              <h2 className="text-lg font-black">Manual del Panel Admin</h2>
+              <p className="text-white/80 text-xs font-semibold">Guía paso a paso para dueños y administradores del negocio</p>
+            </div>
+          </div>
+        </div>
+        <div className="p-6">
+          <p className="text-sm text-gray-600 font-semibold leading-relaxed">
+            Aprende cómo registrar visitas, canjear premios, gestionar tu equipo y configurar tu programa de lealtad con esta guía oficial.
+          </p>
+          <a
+            href="/manuales/Manual_Panel_Admin_Punto_IA.pdf"
+            download
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-700 px-5 py-3 text-sm font-black text-white shadow-md transition hover:shadow-lg hover:from-cyan-500 hover:to-blue-600"
+          >
+            ⬇️ Descargar manual PDF
+          </a>
+        </div>
+      </div>
+    </div>
+    <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-8 self-start">
+      <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-3xl border border-cyan-100 p-6 shadow-sm">
+        <h4 className="text-cyan-800 text-sm font-black flex items-center gap-2 mb-4">
+          <span className="text-lg">🚀</span> Recomendación rápida
+        </h4>
+        <ul className="space-y-3 text-xs text-cyan-900/80 font-bold">
+          <li className="flex items-start gap-2.5">
+            <span className="text-cyan-600 text-base mt-0.5">1.</span>
+            <span>Descarga el manual en tu computadora o celular.</span>
+          </li>
+          <li className="flex items-start gap-2.5">
+            <span className="text-cyan-600 text-base mt-0.5">2.</span>
+            <span>Compártelo con administradores y encargados de caja.</span>
+          </li>
+          <li className="flex items-start gap-2.5">
+            <span className="text-cyan-600 text-base mt-0.5">3.</span>
+            <span>Úsalo como checklist para estandarizar operación diaria.</span>
+          </li>
         </ul>
       </div>
     </div>
