@@ -49,23 +49,15 @@ export function SiteHeader({
 
   return (
     <header className={`sticky top-0 z-50 transition-all duration-300 ${headerBase}`}>
-      <div
-        className={`mx-auto flex w-full max-w-7xl flex-wrap items-center gap-3 px-6 transition-all duration-300 ${
-          isLoginPage ? 'justify-center' : 'justify-between'
-        } ${scrolled ? 'py-3' : 'py-5'}`}
-      >
-        {!isLoginPage && (
-          <Link href="/" className="inline-flex items-center gap-3">
-            <span className="rounded-2xl border border-[#36235f] bg-[linear-gradient(120deg,#281949_0%,#1f1438_56%,#392666_100%)] px-3 py-2">
-              <Image src="/logo.png" alt="Punto IA" width={176} height={68} className="h-8 w-auto object-contain sm:h-9" priority />
-            </span>
-          </Link>
-        )}
+      <div className={`mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-6 transition-all duration-300 ${scrolled ? 'py-3' : 'py-5'}`}>
+        <Link href="/" className="inline-flex items-center gap-3">
+          <span className="rounded-2xl border border-[#36235f] bg-[linear-gradient(120deg,#281949_0%,#1f1438_56%,#392666_100%)] px-3 py-2">
+            <Image src="/logo.png" alt="Punto IA" width={176} height={68} className="h-8 w-auto object-contain sm:h-9" priority />
+          </span>
+        </Link>
 
         <nav
-          className={`order-3 flex w-full items-center gap-1 overflow-x-auto rounded-full p-1 md:order-2 md:w-auto md:overflow-visible ${
-            isLoginPage ? 'mx-auto' : ''
-          } ${navBase}`}
+          className={`order-3 flex w-full items-center gap-1 overflow-x-auto rounded-full p-1 md:order-2 md:w-auto md:overflow-visible ${navBase}`}
           aria-label="Navegación principal"
         >
           {navItems.filter((item) => !item.href.startsWith('/ingresar')).map((item) => {

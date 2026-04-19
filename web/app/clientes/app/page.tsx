@@ -726,7 +726,7 @@ export default function ClientesAppPage() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#fffdf9] text-[#1d1238]">
       <MarketingBackground />
-      <div className="fixed top-4 left-4 z-40">
+      <div className="fixed top-4 right-4 z-40">
         <button type="button" onClick={logout} className="inline-flex items-center gap-2 rounded-xl border border-[#d9c8f4] bg-white/95 px-3 py-2 text-xs font-black uppercase tracking-[0.08em] text-[#3b2568] shadow-sm backdrop-blur transition hover:bg-[#f8f2ff]">
           <LogOut className="h-3.5 w-3.5" />
           Cerrar sesión
