@@ -20,7 +20,7 @@ export const metadata = {
 export default function PreciosPage() {
   return (
     <PageShell>
-      <SiteHeader navItems={NAV_ITEMS} cta={{ label: 'Comenzar prueba', href: '/ingresar?tipo=negocio&modo=registro' }} />
+      <SiteHeader navItems={NAV_ITEMS} />
       
       <main className="flex-grow">
         <PricingSection />

@@ -13,7 +13,7 @@ export default function NegociosPage() {
 
   return (
     <PageShell>
-      <SiteHeader navItems={nav} cta={{ label: negocios.hero.primaryCta.label, href: negocios.hero.primaryCta.href }} />
+      <SiteHeader navItems={nav} />
 
       <HeroSection
         eyebrow={negocios.hero.eyebrow}

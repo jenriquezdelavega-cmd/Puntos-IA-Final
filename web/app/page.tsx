@@ -14,7 +14,7 @@ export default function HomePage() {
 
   return (
     <PageShell>
-      <SiteHeader navItems={nav} cta={{ label: home.hero.primaryCta.label, href: home.hero.primaryCta.href }} />
+      <SiteHeader navItems={nav} />
 
       <HeroSection
         eyebrow={home.hero.eyebrow}

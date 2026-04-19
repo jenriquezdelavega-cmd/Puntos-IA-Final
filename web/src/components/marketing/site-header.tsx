@@ -4,18 +4,14 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ActionLink, actionButtonStyles } from './action-link';
 
 type NavItem = { label: string; href: string };
-type Cta = { label: string; href: string };
 
 export function SiteHeader({
   navItems,
-  cta,
   dark = false,
 }: {
   navItems: readonly NavItem[];
-  cta?: Cta;
   dark?: boolean;
 }) {
   const pathname = usePathname();
@@ -72,22 +68,17 @@ export function SiteHeader({
           })}
         </nav>
 
-        <div className="order-2 md:order-3 flex items-center gap-3">
+        <div className="order-2 md:order-3 flex items-center">
           <Link
             href="/ingresar"
-            className={`text-sm font-bold transition-colors ${
+            className={`inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-bold transition-colors ${
               dark 
-                ? 'text-[#dacbf0] hover:text-white' 
-                : 'text-[#583e86] hover:text-[#2d1c52]'
+                ? 'border-white/20 text-[#dacbf0] hover:border-white/40 hover:text-white' 
+                : 'border-[#d8c0f3] text-[#583e86] hover:border-[#be9ce9] hover:text-[#2d1c52]'
             }`}
           >
             Entrar
           </Link>
-          {cta && (
-            <ActionLink href={cta.href} className={actionButtonStyles('primary')}>
-              {cta.label}
-            </ActionLink>
-          )}
         </div>
       </div>
     </header>
