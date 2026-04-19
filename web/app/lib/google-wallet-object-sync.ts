@@ -199,6 +199,15 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
 
   const finalMilestone = tenant.loyaltyMilestones.find((milestone) => milestone.visitTarget === requiredVisits);
   const finalPrizeEmoji = asTrimmedString(finalMilestone?.emoji) || '🏆';
+  const milestoneSummary = tenant.loyaltyMilestones
+    .map((milestone) => {
+      const emoji = asTrimmedString(milestone.emoji);
+      const reward = asTrimmedString(milestone.reward);
+      if (!reward) return '';
+      return `${milestone.visitTarget}→${emoji ? `${emoji} ` : ''}${reward}`.trim();
+    })
+    .filter(Boolean)
+    .join(' · ');
 
   const dynamicStripParams = new URLSearchParams({
     businessId: tenant.id,
@@ -284,6 +293,13 @@ export async function syncGoogleLoyaltyObjectForCustomer(params: {
         header: 'Periodo',
         body: formatPeriodLabel(tenant.rewardPeriod || membership?.periodType || 'OPEN'),
       },
+      ...(milestoneSummary
+        ? [{
+          id: 'escalera',
+          header: 'Escalera',
+          body: milestoneSummary,
+        }]
+        : []),
     ],
   };
 
