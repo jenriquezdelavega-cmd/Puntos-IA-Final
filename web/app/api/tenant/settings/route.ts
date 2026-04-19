@@ -6,6 +6,7 @@ import { apiError, apiSuccess, type ApiErrorCode, getRequestId } from '@/app/lib
 import { parseOptionalRequiredVisits } from '@/app/lib/loyalty-program';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
 import { requestWalletRefreshForTenant } from '@/app/lib/wallet-sync-orchestrator';
+import { DEFAULT_BUSINESS_CATEGORY, isBusinessCategory } from '@/app/lib/business-categories';
 
 function accessStatusToCode(status: number): ApiErrorCode {
   if (status === 400) return 'BAD_REQUEST';
@@ -45,6 +46,11 @@ export async function POST(request: Request) {
     const ticketControlEnabled = hasOwn('ticketControlEnabled') && typeof body.ticketControlEnabled === 'boolean' ? body.ticketControlEnabled : undefined;
     const coalitionDiscountPercentRaw = hasOwn('coalitionDiscountPercent') ? body.coalitionDiscountPercent : undefined;
     const coalitionProduct = optionalTrimmedField('coalitionProduct');
+    const businessCategoryRaw = optionalTrimmedField('businessCategory');
+    const businessCategory =
+      businessCategoryRaw === undefined
+        ? undefined
+        : (isBusinessCategory(businessCategoryRaw) ? businessCategoryRaw : DEFAULT_BUSINESS_CATEGORY);
 
     const access = await requireTenantRoleAccess({ tenantId, tenantUserId, tenantSessionToken, allowedRoles: ['ADMIN'] });
     if (!access.ok) {
@@ -114,6 +120,7 @@ export async function POST(request: Request) {
         ...(ticketControlEnabled !== undefined ? { ticketControlEnabled } : {}),
         ...(parsedCoalitionDiscount !== undefined ? { coalitionDiscountPercent: parsedCoalitionDiscount } : {}),
         ...(coalitionProduct !== undefined && coalitionProduct !== null ? { coalitionProduct } : {}),
+        ...(businessCategory !== undefined ? { businessCategory } : {}),
       },
     });
 
