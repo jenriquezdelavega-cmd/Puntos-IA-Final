@@ -247,6 +247,7 @@ export default function ClientesAppPage() {
   const [loadingMemberships, setLoadingMemberships] = useState(false);
   const [syncingData, setSyncingData] = useState(false);
   const [selectedBusinessCategory, setSelectedBusinessCategory] = useState<string>('Todos');
+  const [selectedMapTenant, setSelectedMapTenant] = useState<TenantMapItem | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [dataWarnings, setDataWarnings] = useState<{
     history?: string;
@@ -307,6 +308,14 @@ export default function ClientesAppPage() {
         : tenants.filter((tenant) => (tenant.businessCategory || DEFAULT_BUSINESS_CATEGORY) === selectedBusinessCategory),
     [tenants, selectedBusinessCategory],
   );
+
+  useEffect(() => {
+    if (!selectedMapTenant) return;
+    const stillExists = filteredTenants.some((tenant) => tenant.id === selectedMapTenant.id && tenant.lat === selectedMapTenant.lat && tenant.lng === selectedMapTenant.lng);
+    if (!stillExists) {
+      setSelectedMapTenant(null);
+    }
+  }, [filteredTenants, selectedMapTenant]);
 
   const handleSessionExpired = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -1204,6 +1213,13 @@ export default function ClientesAppPage() {
                                 <div className="mt-2 flex flex-wrap gap-1.5">
                                   <button
                                     type="button"
+                                    onClick={() => setSelectedMapTenant(tenant)}
+                                    className={`${buttonStyles('secondary')} px-2.5 py-1.5 text-[11px]`}
+                                  >
+                                    Ver en mapa
+                                  </button>
+                                  <button
+                                    type="button"
                                     onClick={() => openBusinessPass(tenant)}
                                     disabled={!tenant.id}
                                     className={`${buttonStyles('tertiary')} px-2.5 py-1.5 text-[11px] ${tenant.id ? '' : 'cursor-not-allowed opacity-50'}`}
@@ -1226,12 +1242,75 @@ export default function ClientesAppPage() {
                       </ul>
                     )}
                   </div>
-                  <div className="h-[460px] overflow-hidden rounded-3xl border border-[#f0e5fc] shadow-[0_14px_28px_rgba(79,46,142,0.12)] lg:h-[520px]">
-                    {loadingTenants ? (
-                      <div className="h-full w-full animate-pulse bg-[#f7f0ff]" />
-                    ) : (
-                      <BusinessMap tenants={filteredTenants} focusCoords={null} radiusKm={50} onCreatePass={openBusinessPass} />
-                    )}
+                  <div className="space-y-3">
+                    <div className="h-[360px] overflow-hidden rounded-3xl border border-[#f0e5fc] shadow-[0_14px_28px_rgba(79,46,142,0.12)] lg:h-[410px]">
+                      {loadingTenants ? (
+                        <div className="h-full w-full animate-pulse bg-[#f7f0ff]" />
+                      ) : (
+                        <BusinessMap
+                          tenants={filteredTenants}
+                          focusCoords={selectedMapTenant ? [selectedMapTenant.lat, selectedMapTenant.lng] : null}
+                          radiusKm={50}
+                          onCreatePass={openBusinessPass}
+                          selectedTenant={selectedMapTenant}
+                          onSelectedChange={setSelectedMapTenant}
+                          showInlineSelectedCard={false}
+                        />
+                      )}
+                    </div>
+                    <div className="rounded-2xl border border-[#efe2fc] bg-[#fffafe] p-3.5">
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-[#7859a8]">Negocio seleccionado</p>
+                      {selectedMapTenant ? (
+                        <div className="mt-2.5">
+                          <div className="flex items-start gap-2.5">
+                            <BusinessLogo name={selectedMapTenant.name} logoData={selectedMapTenant.logoData || undefined} size="sm" />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-black text-[#26174c]">{selectedMapTenant.name}</p>
+                              <p className="truncate text-[11px] font-semibold text-[#77629f]">
+                                {selectedMapTenant.address || `${selectedMapTenant.lat.toFixed(4)}, ${selectedMapTenant.lng.toFixed(4)}`}
+                              </p>
+                              <p className="mt-1 text-[10px] font-black uppercase tracking-[0.08em] text-[#8b6bb8]">
+                                {selectedMapTenant.businessCategory || DEFAULT_BUSINESS_CATEGORY}
+                              </p>
+                            </div>
+                          </div>
+                          {selectedMapTenant.prize ? (
+                            <p className="mt-2 rounded-lg border border-[#f8ddcc] bg-gradient-to-r from-[#fff2ea] to-[#fff4fb] px-2.5 py-1.5 text-[11px] font-black text-[#a85635]">
+                              🎁 {selectedMapTenant.prize}
+                            </p>
+                          ) : null}
+                          <div className="mt-2.5 flex flex-wrap gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openBusinessPass(selectedMapTenant)}
+                              disabled={!selectedMapTenant.id}
+                              className={`${buttonStyles('tertiary')} px-2.5 py-1.5 text-[11px] ${selectedMapTenant.id ? '' : 'cursor-not-allowed opacity-50'}`}
+                            >
+                              Abrir pase
+                            </button>
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${selectedMapTenant.lat},${selectedMapTenant.lng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`${buttonStyles('tertiary')} px-2.5 py-1.5 text-[11px]`}
+                            >
+                              Cómo llegar
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedMapTenant(null)}
+                              className={`${buttonStyles('secondary')} px-2.5 py-1.5 text-[11px]`}
+                            >
+                              Limpiar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="mt-2.5 text-sm font-semibold text-[#5d4a82]">
+                          Selecciona un negocio desde el listado o tocando un marcador del mapa para ver sus detalles aquí.
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </article>
