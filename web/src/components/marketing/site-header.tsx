@@ -42,6 +42,13 @@ export function SiteHeader({
     ? 'text-[#dacbf0] hover:bg-white/10 hover:text-white'
     : 'text-[#583e86] hover:bg-[#f5edff] hover:text-[#2d1c52]';
 
+  const isHome = pathname === '/';
+  const loginCtaClass = dark
+    ? 'border-white/20 text-[#dacbf0] hover:border-white/40 hover:text-white'
+    : isHome
+      ? 'border-transparent bg-gradient-to-r from-[#7e4fd3] via-[#8f5fe5] to-[#ff5e91] px-6 py-2.5 text-white shadow-lg shadow-[#7e4fd3]/35 hover:brightness-110'
+      : 'border-[#d8c0f3] text-[#583e86] hover:border-[#be9ce9] hover:text-[#2d1c52]';
+
   return (
     <header className={`sticky top-0 z-50 transition-all duration-300 ${headerBase}`}>
       <div className={`mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-6 transition-all duration-300 ${scrolled ? 'py-3' : 'py-5'}`}>
@@ -52,7 +59,7 @@ export function SiteHeader({
         </Link>
 
         <nav className={`order-3 flex w-full items-center gap-1 overflow-x-auto rounded-full p-1 md:order-2 md:w-auto md:overflow-visible ${navBase}`} aria-label="Navegación principal">
-          {navItems.filter(item => item.href !== '/ingresar').map((item) => {
+          {navItems.filter((item) => !item.href.startsWith('/ingresar')).map((item) => {
             const active = pathname === item.href;
             return (
               <Link
@@ -71,11 +78,7 @@ export function SiteHeader({
         <div className="order-2 md:order-3 flex items-center">
           <Link
             href="/ingresar"
-            className={`inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-bold transition-colors ${
-              dark 
-                ? 'border-white/20 text-[#dacbf0] hover:border-white/40 hover:text-white' 
-                : 'border-[#d8c0f3] text-[#583e86] hover:border-[#be9ce9] hover:text-[#2d1c52]'
-            }`}
+            className={`inline-flex items-center justify-center rounded-xl border text-sm font-extrabold tracking-wide transition-all ${loginCtaClass}`}
           >
             Entrar
           </Link>
