@@ -15,7 +15,7 @@ import { syncGoogleLoyaltyObjectForCustomer } from '@/app/lib/google-wallet-obje
 import { addGoogleLoyaltyObjectMessage } from '@/app/lib/google-wallet';
 import { evaluateChallengesForVisit } from '@/app/lib/challenges';
 import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
-import { waitUntil } from '@vercel/functions';
+import { after } from 'next/server';
 const TZ = 'America/Monterrey';
 
 function accessStatusToCode(status: number): ApiErrorCode {
@@ -377,9 +377,9 @@ export async function POST(request: Request) {
     };
 
     try {
-      waitUntil(backgroundWork());
-    } catch (waitUntilError) {
-      logApiError('/api/check-in/scan#wait-until', waitUntilError);
+      after(backgroundWork);
+    } catch (afterError) {
+      logApiError('/api/check-in/scan#after', afterError);
       void backgroundWork();
     }
 
