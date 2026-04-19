@@ -26,6 +26,7 @@ import {
   Section,
   buttonStyles,
 } from '../../components/marketing/ui';
+import { BUSINESS_CATEGORIES, DEFAULT_BUSINESS_CATEGORY } from '../../lib/business-categories';
 
 const BusinessMap = dynamic(() => import('../../components/BusinessMap'), {
   ssr: false,
@@ -82,6 +83,7 @@ type TenantMapItem = {
   prize?: string;
   instagram?: string | null;
   logoData?: string | null;
+  businessCategory?: string;
 };
 
 type HistoryItem = {
@@ -244,6 +246,7 @@ export default function ClientesAppPage() {
   const [loadingTenants, setLoadingTenants] = useState(false);
   const [loadingMemberships, setLoadingMemberships] = useState(false);
   const [syncingData, setSyncingData] = useState(false);
+  const [selectedBusinessCategory, setSelectedBusinessCategory] = useState<string>('Todos');
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [dataWarnings, setDataWarnings] = useState<{
     history?: string;
@@ -296,6 +299,13 @@ export default function ClientesAppPage() {
   const warningMessages = useMemo(
     () => Object.values(dataWarnings).filter((message): message is string => Boolean(message)),
     [dataWarnings],
+  );
+  const filteredTenants = useMemo(
+    () =>
+      selectedBusinessCategory === 'Todos'
+        ? tenants
+        : tenants.filter((tenant) => (tenant.businessCategory || DEFAULT_BUSINESS_CATEGORY) === selectedBusinessCategory),
+    [tenants, selectedBusinessCategory],
   );
 
   const handleSessionExpired = useCallback(() => {
@@ -1148,7 +1158,25 @@ export default function ClientesAppPage() {
               <article className="rounded-3xl border border-[#e9daf9] bg-white p-4 md:p-6">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-xl font-black text-[#25174a]">Mapa de negocios</h3>
-                  <span className="text-xs font-semibold text-[#7a63a8]">{tenants.length} negocios disponibles</span>
+                  <span className="text-xs font-semibold text-[#7a63a8]">{filteredTenants.length} negocios disponibles</span>
+                </div>
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <label htmlFor="business-category-filter" className="text-[11px] font-black uppercase tracking-[0.1em] text-[#7859a8]">
+                    Filtrar por giro
+                  </label>
+                  <select
+                    id="business-category-filter"
+                    value={selectedBusinessCategory}
+                    onChange={(event) => setSelectedBusinessCategory(event.target.value)}
+                    className="rounded-xl border border-[#e7d8fb] bg-[#fffafe] px-3 py-2 text-xs font-semibold text-[#4f3b79] outline-none focus:border-[#b693ea] focus:ring-2 focus:ring-[#eadbff]"
+                  >
+                    <option value="Todos">Todos</option>
+                    {BUSINESS_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="grid gap-4 lg:grid-cols-[1fr_1.65fr]">
                   <div className="rounded-2xl border border-[#efe2fc] bg-[#fffafe] p-3.5">
@@ -1159,17 +1187,20 @@ export default function ClientesAppPage() {
                         <div className="h-14 animate-pulse rounded-xl bg-[#f4ebff]" />
                         <div className="h-14 animate-pulse rounded-xl bg-[#f4ebff]" />
                       </div>
-                    ) : tenants.length === 0 ? (
+                    ) : filteredTenants.length === 0 ? (
                       <p className="mt-3 text-sm text-[#5d4a82]">No encontramos negocios en este momento.</p>
                     ) : (
                       <ul className="mt-3 space-y-2">
-                        {tenants.slice(0, 8).map((tenant) => (
+                        {filteredTenants.slice(0, 8).map((tenant) => (
                           <li key={tenant.id || `${tenant.name}-${tenant.lat}-${tenant.lng}`} className="rounded-xl border border-[#eee2fb] bg-white p-2.5">
                             <div className="flex items-start gap-2.5">
                               <BusinessLogo name={tenant.name} logoData={tenant.logoData || undefined} size="sm" />
                               <div className="min-w-0 flex-1">
                                 <p className="truncate text-sm font-black text-[#26174c]">{tenant.name}</p>
                                 <p className="truncate text-[11px] font-semibold text-[#77629f]">{tenant.address || `${tenant.lat.toFixed(4)}, ${tenant.lng.toFixed(4)}`}</p>
+                                <p className="mt-1 text-[10px] font-black uppercase tracking-[0.08em] text-[#8b6bb8]">
+                                  {tenant.businessCategory || DEFAULT_BUSINESS_CATEGORY}
+                                </p>
                                 <div className="mt-2 flex flex-wrap gap-1.5">
                                   <button
                                     type="button"
@@ -1199,7 +1230,7 @@ export default function ClientesAppPage() {
                     {loadingTenants ? (
                       <div className="h-full w-full animate-pulse bg-[#f7f0ff]" />
                     ) : (
-                      <BusinessMap tenants={tenants} focusCoords={null} radiusKm={50} onCreatePass={openBusinessPass} />
+                      <BusinessMap tenants={filteredTenants} focusCoords={null} radiusKm={50} onCreatePass={openBusinessPass} />
                     )}
                   </div>
                 </div>

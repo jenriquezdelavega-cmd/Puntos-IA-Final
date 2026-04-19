@@ -1,5 +1,7 @@
 import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { prisma } from '@/app/lib/prisma';
+import { DEFAULT_BUSINESS_CATEGORY } from '@/app/lib/business-categories';
+import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
 import { createHash } from 'node:crypto';
 
 const MAP_TENANTS_TTL_MS = 60_000;
@@ -12,6 +14,7 @@ let cachedTenants: Array<{
   prize: string;
   instagram: string | null;
   logoData: string | null;
+  businessCategory: string;
 }> | null = null;
 let cachedTenantsExpiresAt = 0;
 let cachedTenantsEtag = '';
@@ -48,23 +51,51 @@ export async function GET(request: Request) {
       });
     }
 
-    const tenants = await prisma.tenant.findMany({
-      where: { isActive: true },
-      select: {
-        id: true,
-        name: true,
-        lat: true,
-        lng: true,
-        address: true,
-        prize: true,
-        instagram: true,
-        logoData: true,
-      },
-    });
+    const tenants = await (async () => {
+      try {
+        return await prisma.tenant.findMany({
+          where: { isActive: true },
+          select: {
+            id: true,
+            name: true,
+            lat: true,
+            lng: true,
+            address: true,
+            prize: true,
+            instagram: true,
+            logoData: true,
+            businessCategory: true,
+          },
+        });
+      } catch (error: unknown) {
+        if (!isMissingTableOrColumnError(error)) throw error;
+        const fallback = await prisma.tenant.findMany({
+          where: { isActive: true },
+          select: {
+            id: true,
+            name: true,
+            lat: true,
+            lng: true,
+            address: true,
+            prize: true,
+            instagram: true,
+            logoData: true,
+          },
+        });
 
-    cachedTenants = tenants;
+        return fallback.map((tenant) => ({
+          ...tenant,
+          businessCategory: DEFAULT_BUSINESS_CATEGORY,
+        }));
+      }
+    })();
+
+    cachedTenants = tenants.map((tenant) => ({
+      ...tenant,
+      businessCategory: tenant.businessCategory || DEFAULT_BUSINESS_CATEGORY,
+    }));
     cachedTenantsExpiresAt = now + MAP_TENANTS_TTL_MS;
-    cachedTenantsEtag = buildTenantsEtag(tenants);
+    cachedTenantsEtag = buildTenantsEtag(cachedTenants);
 
     const ifNoneMatch = request.headers.get('if-none-match');
     if (ifNoneMatch && cachedTenantsEtag && ifNoneMatch === cachedTenantsEtag) {
@@ -80,7 +111,7 @@ export async function GET(request: Request) {
 
     return apiSuccess({
       requestId,
-      data: { tenants },
+      data: { tenants: cachedTenants },
       headers: {
         etag: cachedTenantsEtag,
         'cache-control': 'public, s-maxage=60, stale-while-revalidate=300',

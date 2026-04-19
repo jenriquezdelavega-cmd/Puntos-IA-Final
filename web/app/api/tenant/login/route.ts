@@ -6,6 +6,7 @@ import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
 import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
+import { DEFAULT_BUSINESS_CATEGORY } from '@/app/lib/business-categories';
 
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
@@ -64,6 +65,7 @@ export async function POST(request: Request) {
                 codePrefix: true,
                 prize: true,
                 instagram: true,
+                businessCategory: true,
                 lat: true,
                 lng: true,
                 address: true,
@@ -110,6 +112,7 @@ export async function POST(request: Request) {
           ...fallback,
           tenant: {
             ...fallback.tenant,
+            businessCategory: DEFAULT_BUSINESS_CATEGORY,
             ticketControlEnabled: false,
           },
         };
@@ -172,6 +175,7 @@ export async function POST(request: Request) {
           codePrefix: user.tenant.codePrefix || user.tenant.slug.substring(0, 4).toUpperCase(),
           prize: user.tenant.prize,
           instagram: user.tenant.instagram,
+          businessCategory: user.tenant.businessCategory,
           lat: user.tenant.lat,
           lng: user.tenant.lng,
           address: user.tenant.address,

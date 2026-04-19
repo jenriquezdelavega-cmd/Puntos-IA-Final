@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import AdvancedDashboard, { type AdvancedReportView } from '../components/admin/AdvancedDashboard';
 import { buildMilestonesPayloadForSave, normalizeMilestonesForEditor } from '../lib/loyalty-milestones';
 import { DEFAULT_REQUIRED_VISITS, MAX_REQUIRED_VISITS, sanitizeRequiredVisits } from '../lib/loyalty-program';
+import { BUSINESS_CATEGORIES, DEFAULT_BUSINESS_CATEGORY } from '../lib/business-categories';
 
 const AdminMap = dynamic(() => import('../components/AdminMap'), { ssr: false, loading: () => <div className="h-full bg-gray-100 animate-pulse text-center pt-10 text-gray-400">Cargando...</div> });
 
@@ -36,6 +37,7 @@ type TenantView = {
   coalitionOptIn?: boolean;
   coalitionDiscountPercent?: number;
   coalitionProduct?: string;
+  businessCategory?: string;
   ticketControlEnabled?: boolean;
 };
 
@@ -74,6 +76,7 @@ const [coalitionOptIn, setCoalitionOptIn] = useState(false);
 const [coalitionDiscountPercent, setCoalitionDiscountPercent] = useState('10');
 const [coalitionProduct, setCoalitionProduct] = useState('');
 const [ticketControlEnabled, setTicketControlEnabled] = useState(false);
+const [businessCategory, setBusinessCategory] = useState(DEFAULT_BUSINESS_CATEGORY);
 const [addressSearch, setAddressSearch] = useState('');
 const [isSearching, setIsSearching] = useState(false);
 const [coords, setCoords] = useState<[number, number]>([19.4326, -99.1332]);
@@ -190,6 +193,7 @@ const handleLogin = async (e: React.FormEvent) => {
       setCoalitionDiscountPercent(String(data.tenant.coalitionDiscountPercent ?? 10));
       setCoalitionProduct(String(data.tenant.coalitionProduct ?? ''));
       setTicketControlEnabled(Boolean(data.tenant.ticketControlEnabled));
+      setBusinessCategory(String(data.tenant.businessCategory ?? DEFAULT_BUSINESS_CATEGORY));
       setRequiredVisits(String(sanitizeRequiredVisits(data.tenant.requiredVisits ?? DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS)));
       setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
       setLogoData(String(data.tenant.logoData ?? ''));
@@ -568,6 +572,7 @@ const saveSettings = async (scope: SettingsSaveScope = 'all') => {
       settingsPayload.lng = coords[1];
       settingsPayload.address = addressSearch;
       settingsPayload.instagram = instagram;
+      settingsPayload.businessCategory = businessCategory;
     }
 
     if (scope === 'all' || scope === 'operation') {
@@ -599,6 +604,7 @@ const saveSettings = async (scope: SettingsSaveScope = 'all') => {
       setCoalitionDiscountPercent(String(data.tenant.coalitionDiscountPercent ?? 10));
       setCoalitionProduct(String(data.tenant.coalitionProduct ?? ''));
       setTicketControlEnabled(Boolean(data.tenant.ticketControlEnabled));
+      setBusinessCategory(String(data.tenant.businessCategory ?? DEFAULT_BUSINESS_CATEGORY));
       setRequiredVisits(String(sanitizeRequiredVisits(data.tenant.requiredVisits ?? DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS)));
       setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
       setWalletBackgroundColor(String(data.tenant.walletBackgroundColor ?? walletBackgroundColor));
@@ -1748,6 +1754,20 @@ return (
             <div>
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider block mb-1">📸 Instagram</label>
               <input className="w-full p-3 bg-gray-50 rounded-xl font-semibold text-gray-900 border border-gray-200 focus:bg-pink-50 focus:border-pink-300 focus:ring-2 focus:ring-pink-100 outline-none transition-all text-sm" value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="@tu_negocio" />
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-wider block mb-1">🏷️ Giro del negocio</label>
+              <select
+                className="w-full p-3 bg-gray-50 rounded-xl font-semibold text-gray-900 border border-gray-200 focus:bg-purple-50 focus:border-purple-300 focus:ring-2 focus:ring-purple-100 outline-none transition-all text-sm"
+                value={businessCategory}
+                onChange={(event) => setBusinessCategory(event.target.value)}
+              >
+                {BUSINESS_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>

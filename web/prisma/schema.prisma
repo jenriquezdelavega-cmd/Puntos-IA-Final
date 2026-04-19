@@ -24,6 +24,7 @@ model Tenant {
   lng       Float?  @default(-99.1332)
   address   String? @default("Dirección pendiente")
   instagram String?
+  businessCategory String @default("Otros") @map("business_category")
   logoData  String?
   isActive  Boolean @default(true)
   coalitionOptIn Boolean @default(false) @map("coalition_opt_in")

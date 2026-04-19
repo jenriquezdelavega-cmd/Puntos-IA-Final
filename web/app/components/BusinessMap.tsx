@@ -14,6 +14,7 @@ type Tenant = {
   prize?: string;
   instagram?: string | null;
   logoData?: string | null;
+  businessCategory?: string;
 };
 
 function instagramUrl(raw?: string | null) {
@@ -196,6 +197,9 @@ export default function BusinessMap({
                   {(t.address || '').trim() && (
                     <div className="mt-0.5 text-[11px] text-[#6c5799]">{t.address}</div>
                   )}
+                  {t.businessCategory && (
+                    <div className="mt-1 text-[10px] font-black uppercase tracking-[0.08em] text-[#7d61ad]">{t.businessCategory}</div>
+                  )}
                   {t.prize && (
                     <div className="mt-1 text-[10px] font-bold text-[#b04e2f]">🎁 {t.prize}</div>
                   )}
@@ -235,6 +239,9 @@ export default function BusinessMap({
                 <div className="mt-0.5 truncate text-[10px] font-semibold text-[#77629f]">
                   {(selected.address || '').trim() || `${selected.lat.toFixed(4)}, ${selected.lng.toFixed(4)}`}
                 </div>
+                {selected.businessCategory && (
+                  <div className="mt-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-[#8667b5]">{selected.businessCategory}</div>
+                )}
               </div>
             </div>
 
