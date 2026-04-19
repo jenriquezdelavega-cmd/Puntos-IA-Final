@@ -107,6 +107,7 @@ export default function IngresarPage() {
   const [registerMessage, setRegisterMessage] = useState('');
   const [registerLoading, setRegisterLoading] = useState(false);
 
+  const [portalType, setPortalType] = useState<'cliente' | 'negocio'>('cliente');
   const [customerMode, setCustomerMode] = useState<CustomerMode>('login');
   const { minBirthDate, maxBirthDate } = BIRTH_DATE_LIMITS;
   const cleanRegisterEmail = registerEmail.trim().toLowerCase();
@@ -125,7 +126,11 @@ export default function IngresarPage() {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const modo = params.get('modo');
+    const tipo = params.get('tipo');
     const emailVerification = params.get('emailVerification');
+
+    if (tipo === 'negocio') setPortalType('negocio');
+    else if (tipo === 'cliente') setPortalType('cliente');
 
     if (modo === 'registro') setCustomerMode('registro');
     if (modo === 'login') setCustomerMode('login');
@@ -278,209 +283,233 @@ export default function IngresarPage() {
       <SiteHeader navItems={NAV_ITEMS} dark />
       <main className="relative flex-grow flex items-center justify-center py-10 px-6 sm:px-12 overflow-hidden">
 
-        <div className="relative z-10 w-full max-w-5xl mx-auto grid gap-6 lg:gap-8 lg:grid-cols-[minmax(0,1fr),350px]">
-          {/* Tarjeta de Clientes */}
-          <article className="rounded-[2.5rem] border border-white/10 bg-[#160b2b]/80 p-6 shadow-2xl backdrop-blur-xl md:p-8">
-            <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-[#dacbf0]">
-              <CircleUserRound className="h-4 w-4" />
-              Portal de Clientes
-            </p>
-            <h2 className="mt-2 text-2xl font-black text-white md:text-3xl">
-              Accede a tus recompensas
-            </h2>
-            <p className="mt-2 text-sm text-[#a593c2]">
-              Inicia sesión con tu número de WhatsApp para ver tu pase, beneficios y avances.
-            </p>
-
-            <div className="mt-8 flex rounded-xl border border-white/10 bg-white/5 p-1">
+        <div className="relative z-10 w-full max-w-md mx-auto">
+          {/* Main Card Container */}
+          <article className="rounded-[2rem] border border-white/10 bg-[#160b2b]/90 shadow-2xl backdrop-blur-2xl overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            
+            {/* Top Toggle Header */}
+            <div className="px-6 pt-6 pb-4 border-b border-white/5 relative z-10 flex gap-2">
               <button
-                type="button"
-                onClick={() => {
-                  setCustomerMode('login');
-                  setModeInUrl('login');
-                }}
-                className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
-                  customerMode === 'login'
-                    ? 'bg-[#7e4fd3] text-white shadow-lg shadow-purple-500/25'
-                    : 'text-[#dacbf0] hover:text-white hover:bg-white/5'
+                onClick={() => setPortalType('cliente')}
+                className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${
+                  portalType === 'cliente'
+                    ? 'bg-white/10 text-white border border-white/10 shadow-sm'
+                    : 'text-[#dacbf0] hover:bg-white/5'
                 }`}
               >
-                Iniciar sesión
+                <CircleUserRound className="w-4 h-4" />
+                Soy Cliente
               </button>
               <button
-                type="button"
-                onClick={() => {
-                  setCustomerMode('registro');
-                  setModeInUrl('registro');
-                }}
-                className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
-                  customerMode === 'registro'
-                    ? 'bg-[#7e4fd3] text-white shadow-lg shadow-purple-500/25'
-                    : 'text-[#dacbf0] hover:text-white hover:bg-white/5'
+                onClick={() => setPortalType('negocio')}
+                className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${
+                  portalType === 'negocio'
+                    ? 'bg-[#ff5e91]/20 text-[#ff5e91] border border-[#ff5e91]/30 shadow-sm'
+                    : 'text-[#dacbf0] hover:bg-[#ff5e91]/10 hover:text-[#ff5e91]'
                 }`}
               >
-                Crear cuenta
+                <Building2 className="w-4 h-4" />
+                Soy Negocio
               </button>
             </div>
 
-            {customerMode === 'login' ? (
-              <form className="mt-8 grid gap-4 relative" onSubmit={onCustomerLogin}>
-                <div className="grid gap-2">
-                  <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="phone">Número de WhatsApp</label>
-                  <input
-                    id="phone"
-                    value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
-                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none transition-colors"
-                    placeholder="Ejemplo: 5512345678"
-                    autoComplete="tel"
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <div className="flex justify-between items-center">
-                    <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="password">Contraseña</label>
-                    <a href="/recuperar" className="text-xs font-semibold text-[#ff5e91] hover:text-pink-400 transition-colors">¿Olvidaste tu contraseña?</a>
+            {/* Content Based on Toggle */}
+            <div className="p-6 sm:p-8 relative z-10 transition-all duration-300">
+              {portalType === 'cliente' && (
+                <div className="animate-fadeIn">
+                  <h2 className="text-xl font-black text-white text-center mb-1">
+                    Mis Recompensas
+                  </h2>
+                  <p className="text-sm text-[#a593c2] text-center mb-6">
+                    Abre tu Wallet y mira tus beneficios
+                  </p>
+
+                  <div className="flex rounded-xl border border-white/10 bg-black/30 p-1 mb-6">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomerMode('login');
+                        setModeInUrl('login');
+                      }}
+                      className={`flex-1 rounded-lg px-3 py-2 text-xs sm:text-sm font-semibold transition ${
+                        customerMode === 'login'
+                          ? 'bg-[#7e4fd3] text-white shadow-md'
+                          : 'text-[#dacbf0] hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      Iniciar sesión
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomerMode('registro');
+                        setModeInUrl('registro');
+                      }}
+                      className={`flex-1 rounded-lg px-3 py-2 text-xs sm:text-sm font-semibold transition ${
+                        customerMode === 'registro'
+                          ? 'bg-[#7e4fd3] text-white shadow-md'
+                          : 'text-[#dacbf0] hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      Crear Wallet Pass
+                    </button>
                   </div>
-                  <input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none transition-colors"
-                    placeholder="Escribe tu contraseña"
-                    autoComplete="current-password"
-                    required
-                  />
+
+                  {customerMode === 'login' ? (
+                    <form className="grid gap-4" onSubmit={onCustomerLogin}>
+                      <div className="grid gap-1.5">
+                        <label className="text-xs font-semibold text-[#dacbf0]" htmlFor="phone">WhatsApp</label>
+                        <input
+                          id="phone"
+                          value={phone}
+                          onChange={(event) => setPhone(event.target.value)}
+                          className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none"
+                          placeholder="Ejemplo: 5512345678"
+                          autoComplete="tel"
+                          required
+                        />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <div className="flex justify-between items-center">
+                          <label className="text-xs font-semibold text-[#dacbf0]" htmlFor="password">Contraseña</label>
+                          <a href="/recuperar" className="text-[10px] font-bold text-[#ff5e91] hover:text-pink-400">¿Olvidada?</a>
+                        </div>
+                        <input
+                          id="password"
+                          type="password"
+                          value={password}
+                          onChange={(event) => setPassword(event.target.value)}
+                          className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none"
+                          placeholder="Tu contraseña secreta"
+                          autoComplete="current-password"
+                          required
+                        />
+                      </div>
+                      
+                      {loginMessage && (
+                        <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200 text-center">
+                          {loginMessage}
+                        </p>
+                      )}
+
+                      <button type="submit" className={`mt-2 w-full py-3.5 px-4 rounded-xl font-bold bg-[#7e4fd3] text-white hover:bg-[#6c40bb] shadow-lg shadow-purple-500/25 transition-all text-sm ${loading ? 'opacity-70 cursor-wait' : ''}`} disabled={loading}>
+                        {loading ? 'Validando...' : 'Entrar a mi Wallet'}
+                      </button>
+                    </form>
+                  ) : (
+                    <form className="grid gap-3" onSubmit={onCustomerRegister}>
+                      <div className="grid gap-1.5">
+                        <label className="text-xs font-semibold text-[#dacbf0]" htmlFor="register-name">Nombre</label>
+                        <input
+                          id="register-name"
+                          value={registerName}
+                          onChange={(event) => setRegisterName(event.target.value)}
+                          className="rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white focus:border-[#7e4fd3] focus:outline-none"
+                          placeholder="Juan Pérez"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="grid gap-1.5">
+                          <label className="text-xs font-semibold text-[#dacbf0]" htmlFor="register-phone">WhatsApp</label>
+                          <input
+                            id="register-phone"
+                            value={registerPhone}
+                            onChange={(event) => setRegisterPhone(event.target.value)}
+                            className="rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white focus:border-[#7e4fd3] focus:outline-none"
+                            placeholder="5500000000"
+                            required
+                          />
+                        </div>
+                        <div className="grid gap-1.5">
+                          <label className="text-xs font-semibold text-[#dacbf0]" htmlFor="register-birth-date">Nacimiento</label>
+                          <input
+                            id="register-birth-date"
+                            type="text"
+                            inputMode="numeric"
+                            value={isoDateToDisplay(registerBirthDate)}
+                            onChange={(event) => setRegisterBirthDate(formatBirthDateInput(event.target.value))}
+                            className="rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white focus:border-[#7e4fd3] focus:outline-none"
+                            placeholder="DD/MM/AAAA"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="grid gap-1.5">
+                        <label className="text-xs font-semibold text-[#dacbf0]" htmlFor="register-email">Email</label>
+                        <input
+                          id="register-email"
+                          type="email"
+                          value={registerEmail}
+                          onChange={(event) => setRegisterEmail(event.target.value.trimStart())}
+                          className="rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white focus:border-[#7e4fd3] focus:outline-none"
+                          placeholder="tucorreo@ejemplo.com"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="grid gap-1.5">
+                          <label className="text-xs font-semibold text-[#dacbf0]" htmlFor="register-gender">Identidad</label>
+                          <select
+                            id="register-gender"
+                            value={registerGender}
+                            onChange={(event) => setRegisterGender(event.target.value)}
+                            className="rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white focus:border-[#7e4fd3] focus:outline-none [&>option]:text-black"
+                            required
+                          >
+                            <option value="">Elegir</option>
+                            <option value="Hombre">Hombre</option>
+                            <option value="Mujer">Mujer</option>
+                            <option value="Otro">Otro</option>
+                          </select>
+                        </div>
+                        <div className="grid gap-1.5">
+                          <label className="text-xs font-semibold text-[#dacbf0]" htmlFor="register-password">Contraseña</label>
+                          <input
+                            id="register-password"
+                            type="password"
+                            value={registerPassword}
+                            onChange={(event) => setRegisterPassword(event.target.value)}
+                            className="rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white focus:border-[#7e4fd3] focus:outline-none"
+                            placeholder="Mín. 6 letras"
+                            minLength={6}
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      {registerMessage && (
+                        <p className="mt-1 rounded-lg border border-[#7e4fd3]/30 bg-[#7e4fd3]/10 px-3 py-2 text-xs font-semibold text-[#dacbf0] text-center">
+                          {registerMessage}
+                        </p>
+                      )}
+
+                      <button type="submit" className={`mt-2 w-full py-3 px-4 rounded-xl font-bold bg-[#7e4fd3] text-white hover:bg-[#6c40bb] shadow-lg shadow-purple-500/25 transition-all text-sm ${registerLoading ? 'opacity-70 cursor-wait' : ''}`} disabled={registerLoading || !canSubmitRegister}>
+                        {registerLoading ? 'Generando Pase...' : 'Generar mi Wallet Pass'}
+                      </button>
+                    </form>
+                  )}
                 </div>
-                
-                {loginMessage && (
-                  <p className="mt-2 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200">
-                    {loginMessage}
+              )}
+
+              {portalType === 'negocio' && (
+                <div className="animate-fadeIn py-8 flex flex-col items-center">
+                  <div className="w-20 h-20 rounded-full bg-[#ff5e91]/10 border border-[#ff5e91]/20 flex items-center justify-center mb-6">
+                    <Building2 className="w-10 h-10 text-[#ff5e91]" />
+                  </div>
+                  <h2 className="text-2xl font-black text-white text-center mb-2">
+                    Acceso a Negocios
+                  </h2>
+                  <p className="text-sm text-[#a593c2] text-center mb-10 max-w-xs">
+                    Entra al portal de administración para ver analíticas, escanear pases y configurar recompensas.
                   </p>
-                )}
-
-                <button type="submit" className={`mt-2 w-full py-3.5 px-6 rounded-xl font-bold bg-[#7e4fd3] text-white hover:bg-[#6c40bb] shadow-lg shadow-purple-500/25 transition-all ${loading ? 'opacity-70 cursor-wait' : ''}`} disabled={loading}>
-                  {loading ? 'Validando...' : 'Entrar a mi Wallet'}
-                </button>
-              </form>
-            ) : (
-               <form className="mt-8 grid gap-4 sm:grid-cols-2 relative" onSubmit={onCustomerRegister}>
-                <div className="grid gap-2 sm:col-span-2">
-                  <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="register-name">Nombre completo</label>
-                  <input
-                    id="register-name"
-                    value={registerName}
-                    onChange={(event) => setRegisterName(event.target.value)}
-                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none"
-                    placeholder="¿Cómo te llamas?"
-                    autoComplete="name"
-                    required
-                  />
+                  
+                  <a href="/admin" className="w-full text-center py-4 px-6 rounded-xl font-black bg-white text-[#160b2b] hover:bg-gray-100 shadow-xl transition-all">
+                    Entrar a mi Panel B2B →
+                  </a>
                 </div>
-                <div className="grid gap-2">
-                  <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="register-phone">WhatsApp</label>
-                  <input
-                    id="register-phone"
-                    value={registerPhone}
-                    onChange={(event) => setRegisterPhone(event.target.value)}
-                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none"
-                    placeholder="Tu WhatsApp"
-                    autoComplete="tel-national"
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="register-email">Email</label>
-                  <input
-                    id="register-email"
-                    type="email"
-                    value={registerEmail}
-                    onChange={(event) => setRegisterEmail(event.target.value.trimStart())}
-                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none"
-                    placeholder="correo@ejemplo.com"
-                    autoComplete="email"
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="register-gender">Identidad</label>
-                  <select
-                    id="register-gender"
-                    value={registerGender}
-                    onChange={(event) => setRegisterGender(event.target.value)}
-                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none [&>option]:text-black"
-                    required
-                  >
-                    <option value="">Selecciona</option>
-                    <option value="Hombre">Hombre</option>
-                    <option value="Mujer">Mujer</option>
-                    <option value="Otro">Prefiero no decir</option>
-                  </select>
-                </div>
-                <div className="grid gap-2">
-                  <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="register-birth-date">Cumpleaños</label>
-                  <input
-                    id="register-birth-date"
-                    type="text"
-                    inputMode="numeric"
-                    value={isoDateToDisplay(registerBirthDate)}
-                    onChange={(event) => setRegisterBirthDate(formatBirthDateInput(event.target.value))}
-                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none sm:[color-scheme:dark]"
-                    placeholder="DD/MM/AAAA"
-                    required
-                  />
-                </div>
-                <div className="grid gap-2 sm:col-span-2">
-                  <label className="text-sm font-semibold text-[#dacbf0]" htmlFor="register-password">Contraseña segura</label>
-                  <input
-                    id="register-password"
-                    type="password"
-                    value={registerPassword}
-                    onChange={(event) => setRegisterPassword(event.target.value)}
-                    className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white focus:border-[#7e4fd3] focus:ring-1 focus:ring-[#7e4fd3] focus:outline-none"
-                    placeholder="Min. 6 caracteres"
-                    minLength={6}
-                    autoComplete="new-password"
-                    required
-                  />
-                </div>
-                
-                {registerMessage && (
-                  <p className="sm:col-span-2 mt-2 rounded-lg border border-[#7e4fd3]/30 bg-[#7e4fd3]/10 px-4 py-3 text-sm font-semibold text-[#dacbf0]">
-                    {registerMessage}
-                  </p>
-                )}
-
-                <button type="submit" className={`sm:col-span-2 mt-2 w-full py-3.5 px-6 rounded-xl font-bold bg-[#7e4fd3] text-white hover:bg-[#6c40bb] shadow-lg shadow-purple-500/25 transition-all ${registerLoading ? 'opacity-70 cursor-wait' : ''}`} disabled={registerLoading || !canSubmitRegister}>
-                  {registerLoading ? 'Generando Pase...' : 'Generar mi Wallet Pass'}
-                </button>
-              </form>
-            )}
-          </article>
-
-          {/* Tarjeta de Negocios */}
-          <article className="rounded-[2.5rem] border border-white/10 bg-[#1e1333] p-6 md:p-8 flex flex-col justify-between relative overflow-hidden">
-             
-            <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-              <Building2 className="w-48 h-48 rotate-12" />
-            </div>
-
-            <div className="relative z-10">
-              <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-[#ff5e91]">
-                <Building2 className="h-4 w-4" />
-                Negocios
-              </p>
-              <h2 className="mt-2 text-2xl font-black text-white">Acceso para negocios y staff</h2>
-              <p className="mt-2 text-sm leading-relaxed text-[#a593c2]">
-                Entra a tu panel para escanear pases, revisar métricas y administrar tu operación.
-              </p>
-            </div>
-
-            <div className="mt-8 relative z-10">
-              <a href="/admin" className="block w-full text-center py-3.5 px-6 rounded-xl font-bold bg-white/10 text-white border border-white/10 hover:bg-white/20 transition-all">
-                Entrar al panel
-              </a>
+              )}
             </div>
           </article>
         </div>
