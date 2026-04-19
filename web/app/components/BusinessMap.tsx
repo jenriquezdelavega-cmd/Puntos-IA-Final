@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { normalizeInstagramUrl, sortedBusinessTags } from '../lib/business-map-utils';
 
 type Tenant = {
   id?: string;
@@ -16,25 +17,6 @@ type Tenant = {
   logoData?: string | null;
   businessCategory?: string;
 };
-
-function instagramUrl(raw?: string | null) {
-  if (!raw) return null;
-  const v = raw.trim();
-  if (!v) return null;
-
-  // Already a URL (or protocol-relative)
-  if (/^https?:\/\//i.test(v)) return v;
-  if (v.startsWith('//')) return `https:${v}`;
-
-  // "instagram.com/..." without protocol
-  if (/^instagram\.com\//i.test(v)) return `https://${v}`;
-  if (/^www\.instagram\.com\//i.test(v)) return `https://${v}`;
-
-  // Treat as handle
-  const handle = v.replace(/^@/, '');
-  if (!handle) return null;
-  return `https://instagram.com/${handle}`;
-}
 
 function zoomForRadiusKm(radiusKm: number) {
   if (radiusKm <= 10) return 13;
@@ -133,9 +115,17 @@ export default function BusinessMap({
     if (selected) return [selected.lat, selected.lng];
     return autoCenter;
   }, [selected, autoCenter]);
+  const selectedTags = useMemo(
+    () => (selected ? sortedBusinessTags(selected.businessCategory, selected.prize) : []),
+    [selected],
+  );
+  const selectedInstagramLink = useMemo(
+    () => normalizeInstagramUrl(selected?.instagram),
+    [selected?.instagram],
+  );
 
-  // ✅ Radio local: al tocar un negocio, acercamos a 50km para que no se vea vacío
-  const localRadiusKm = selected ? 50 : radiusKm;
+  // ✅ Radio local: al tocar un negocio, acercamos a 20km para enfocar mejor la zona
+  const localRadiusKm = selected ? 20 : radiusKm;
   const fly = Boolean(selected);
 
   const onPick = (t: Tenant) => {
@@ -187,6 +177,9 @@ export default function BusinessMap({
         />
 
         {valid.map((t) => {
+          const tags = sortedBusinessTags(t.businessCategory, t.prize);
+          const instagramLink = normalizeInstagramUrl(t.instagram);
+
           return (
             <Marker
               key={t.id || `${t.name}-${t.lat}-${t.lng}`}
@@ -215,12 +208,25 @@ export default function BusinessMap({
                   {(t.address || '').trim() && (
                     <div className="mt-0.5 text-[11px] text-[#6c5799]">{t.address}</div>
                   )}
-                  {t.businessCategory && (
-                    <div className="mt-1 text-[10px] font-black uppercase tracking-[0.08em] text-[#7d61ad]">{t.businessCategory}</div>
-                  )}
-                  {t.prize && (
-                    <div className="mt-1 text-[10px] font-bold text-[#b04e2f]">🎁 {t.prize}</div>
-                  )}
+                  {tags.length > 0 ? (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {tags.map((tag) => (
+                        <span key={`${t.id || t.name}-popup-${tag}`} className="rounded-full border border-[#e9daf9] bg-[#f9f2ff] px-1.5 py-0.5 text-[10px] font-black uppercase tracking-[0.06em] text-[#8b6bb8]">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                  {instagramLink ? (
+                    <a
+                      href={instagramLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-block text-[11px] font-bold text-[#4f3a7b] no-underline"
+                    >
+                      Instagram
+                    </a>
+                  ) : null}
                 </div>
               </Popup>
             </Marker>
@@ -257,9 +263,15 @@ export default function BusinessMap({
                 <div className="mt-0.5 truncate text-[10px] font-semibold text-[#77629f]">
                   {(selected.address || '').trim() || `${selected.lat.toFixed(4)}, ${selected.lng.toFixed(4)}`}
                 </div>
-                {selected.businessCategory && (
-                  <div className="mt-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-[#8667b5]">{selected.businessCategory}</div>
-                )}
+                {selectedTags.length > 0 ? (
+                  <div className="mt-0.5 flex flex-wrap gap-1">
+                    {selectedTags.map((tag) => (
+                      <span key={`${selected.id || selected.name}-inline-${tag}`} className="rounded-full border border-[#e9daf9] bg-[#f9f2ff] px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.06em] text-[#8b6bb8]">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -269,12 +281,6 @@ export default function BusinessMap({
                 Cerrar
               </button>
             </div>
-
-            {selected.prize && (
-              <div className="mt-2 rounded-lg border border-[#f8ddcc] bg-gradient-to-r from-[#fff2ea] to-[#fff4fb] px-3 py-1.5">
-                <span className="bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-[10px] font-black text-transparent">🎁 {selected.prize}</span>
-              </div>
-            )}
 
             <div className="mt-2.5 flex flex-wrap gap-2">
               {onCreatePass && (
@@ -293,12 +299,12 @@ export default function BusinessMap({
               >
                 Cómo llegar
               </a>
-              {instagramUrl(selected.instagram) && (
+              {selectedInstagramLink && (
                 <a
                   className="rounded-xl border border-[#dfd0f6] bg-[#faf5ff] px-3 py-2 text-[11px] font-bold text-[#4f3a7b] no-underline"
                   target="_blank"
                   rel="noopener noreferrer"
-                  href={instagramUrl(selected.instagram)!}
+                  href={selectedInstagramLink}
                 >
                   Instagram
                 </a>

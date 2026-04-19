@@ -27,6 +27,7 @@ import {
   buttonStyles,
 } from '../../components/marketing/ui';
 import { BUSINESS_CATEGORIES, DEFAULT_BUSINESS_CATEGORY } from '../../lib/business-categories';
+import { normalizeInstagramUrl, sortedBusinessTags } from '../../lib/business-map-utils';
 
 const BusinessMap = dynamic(() => import('../../components/BusinessMap'), {
   ssr: false,
@@ -307,6 +308,17 @@ export default function ClientesAppPage() {
         ? tenants
         : tenants.filter((tenant) => (tenant.businessCategory || DEFAULT_BUSINESS_CATEGORY) === selectedBusinessCategory),
     [tenants, selectedBusinessCategory],
+  );
+  const selectedMapTenantTags = useMemo(
+    () =>
+      selectedMapTenant
+        ? sortedBusinessTags(selectedMapTenant.businessCategory || DEFAULT_BUSINESS_CATEGORY, selectedMapTenant.prize)
+        : [],
+    [selectedMapTenant],
+  );
+  const selectedMapTenantInstagramLink = useMemo(
+    () => normalizeInstagramUrl(selectedMapTenant?.instagram),
+    [selectedMapTenant?.instagram],
   );
 
   useEffect(() => {
@@ -1200,45 +1212,67 @@ export default function ClientesAppPage() {
                       <p className="mt-3 text-sm text-[#5d4a82]">No encontramos negocios en este momento.</p>
                     ) : (
                       <ul className="mt-3 space-y-2">
-                        {filteredTenants.slice(0, 8).map((tenant) => (
-                          <li key={tenant.id || `${tenant.name}-${tenant.lat}-${tenant.lng}`} className="rounded-xl border border-[#eee2fb] bg-white p-2.5">
-                            <div className="flex items-start gap-2.5">
-                              <BusinessLogo name={tenant.name} logoData={tenant.logoData || undefined} size="sm" />
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-black text-[#26174c]">{tenant.name}</p>
-                                <p className="truncate text-[11px] font-semibold text-[#77629f]">{tenant.address || `${tenant.lat.toFixed(4)}, ${tenant.lng.toFixed(4)}`}</p>
-                                <p className="mt-1 text-[10px] font-black uppercase tracking-[0.08em] text-[#8b6bb8]">
-                                  {tenant.businessCategory || DEFAULT_BUSINESS_CATEGORY}
-                                </p>
-                                <div className="mt-2 flex flex-wrap gap-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => setSelectedMapTenant(tenant)}
-                                    className={`${buttonStyles('secondary')} px-2.5 py-1.5 text-[11px]`}
-                                  >
-                                    Ver en mapa
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => openBusinessPass(tenant)}
-                                    disabled={!tenant.id}
-                                    className={`${buttonStyles('tertiary')} px-2.5 py-1.5 text-[11px] ${tenant.id ? '' : 'cursor-not-allowed opacity-50'}`}
-                                  >
-                                    Abrir pase
-                                  </button>
-                                  <a
-                                    href={`https://www.google.com/maps/search/?api=1&query=${tenant.lat},${tenant.lng}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`${buttonStyles('tertiary')} px-2.5 py-1.5 text-[11px]`}
-                                  >
-                                    Cómo llegar
-                                  </a>
+                        {filteredTenants.slice(0, 8).map((tenant) => {
+                          const tags = sortedBusinessTags(tenant.businessCategory || DEFAULT_BUSINESS_CATEGORY, tenant.prize);
+                          const instagramLink = normalizeInstagramUrl(tenant.instagram);
+
+                          return (
+                            <li key={tenant.id || `${tenant.name}-${tenant.lat}-${tenant.lng}`} className="rounded-xl border border-[#eee2fb] bg-white p-2.5">
+                              <div className="flex items-start gap-2.5">
+                                <BusinessLogo name={tenant.name} logoData={tenant.logoData || undefined} size="sm" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-black text-[#26174c]">{tenant.name}</p>
+                                  <p className="truncate text-[11px] font-semibold text-[#77629f]">{tenant.address || `${tenant.lat.toFixed(4)}, ${tenant.lng.toFixed(4)}`}</p>
+                                  <div className="mt-1 flex flex-wrap gap-1">
+                                    {tags.map((tag) => (
+                                      <span
+                                        key={`${tenant.id || tenant.name}-${tag}`}
+                                        className="rounded-full border border-[#e9daf9] bg-[#f9f2ff] px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.06em] text-[#8b6bb8]"
+                                      >
+                                        {tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <div className="mt-2 flex flex-wrap gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedMapTenant(tenant)}
+                                      className={`${buttonStyles('secondary')} px-2.5 py-1.5 text-[11px]`}
+                                    >
+                                      Ver en mapa
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => openBusinessPass(tenant)}
+                                      disabled={!tenant.id}
+                                      className={`${buttonStyles('tertiary')} px-2.5 py-1.5 text-[11px] ${tenant.id ? '' : 'cursor-not-allowed opacity-50'}`}
+                                    >
+                                      Abrir pase
+                                    </button>
+                                    <a
+                                      href={`https://www.google.com/maps/search/?api=1&query=${tenant.lat},${tenant.lng}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`${buttonStyles('tertiary')} px-2.5 py-1.5 text-[11px]`}
+                                    >
+                                      Cómo llegar
+                                    </a>
+                                    {instagramLink ? (
+                                      <a
+                                        href={instagramLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={`${buttonStyles('tertiary')} px-2.5 py-1.5 text-[11px]`}
+                                      >
+                                        Instagram
+                                      </a>
+                                    ) : null}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </li>
-                        ))}
+                            </li>
+                          );
+                        })}
                       </ul>
                     )}
                   </div>
@@ -1269,16 +1303,18 @@ export default function ClientesAppPage() {
                               <p className="truncate text-[11px] font-semibold text-[#77629f]">
                                 {selectedMapTenant.address || `${selectedMapTenant.lat.toFixed(4)}, ${selectedMapTenant.lng.toFixed(4)}`}
                               </p>
-                              <p className="mt-1 text-[10px] font-black uppercase tracking-[0.08em] text-[#8b6bb8]">
-                                {selectedMapTenant.businessCategory || DEFAULT_BUSINESS_CATEGORY}
-                              </p>
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {selectedMapTenantTags.map((tag) => (
+                                  <span
+                                    key={`${selectedMapTenant.id || selectedMapTenant.name}-${tag}`}
+                                    className="rounded-full border border-[#e9daf9] bg-[#f9f2ff] px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.06em] text-[#8b6bb8]"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
                           </div>
-                          {selectedMapTenant.prize ? (
-                            <p className="mt-2 rounded-lg border border-[#f8ddcc] bg-gradient-to-r from-[#fff2ea] to-[#fff4fb] px-2.5 py-1.5 text-[11px] font-black text-[#a85635]">
-                              🎁 {selectedMapTenant.prize}
-                            </p>
-                          ) : null}
                           <div className="mt-2.5 flex flex-wrap gap-1.5">
                             <button
                               type="button"
@@ -1296,6 +1332,16 @@ export default function ClientesAppPage() {
                             >
                               Cómo llegar
                             </a>
+                            {selectedMapTenantInstagramLink ? (
+                                <a
+                                  href={selectedMapTenantInstagramLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`${buttonStyles('tertiary')} px-2.5 py-1.5 text-[11px]`}
+                                >
+                                  Instagram
+                                </a>
+                            ) : null}
                             <button
                               type="button"
                               onClick={() => setSelectedMapTenant(null)}
