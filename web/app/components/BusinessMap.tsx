@@ -91,11 +91,17 @@ export default function BusinessMap({
   focusCoords,
   radiusKm = 50,
   onCreatePass,
+  selectedTenant,
+  onSelectedChange,
+  showInlineSelectedCard = true,
 }: {
   tenants: Tenant[];
   focusCoords: [number, number] | null;
   radiusKm?: number;
   onCreatePass?: (tenant: Tenant) => void;
+  selectedTenant?: Tenant | null;
+  onSelectedChange?: (tenant: Tenant | null) => void;
+  showInlineSelectedCard?: boolean;
 }) {
   const valid = useMemo(
     () =>
@@ -119,7 +125,9 @@ export default function BusinessMap({
     return [25.6866, -100.3161]; // Monterrey fallback
   }, [focusCoords, valid]);
 
-  const [selected, setSelected] = useState<Tenant | null>(null);
+  const [internalSelected, setInternalSelected] = useState<Tenant | null>(null);
+  const isControlledSelection = selectedTenant !== undefined;
+  const selected = isControlledSelection ? selectedTenant : internalSelected;
 
   const center = useMemo<[number, number]>(() => {
     if (selected) return [selected.lat, selected.lng];
@@ -131,7 +139,17 @@ export default function BusinessMap({
   const fly = Boolean(selected);
 
   const onPick = (t: Tenant) => {
-    setSelected(t);
+    if (!isControlledSelection) {
+      setInternalSelected(t);
+    }
+    onSelectedChange?.(t);
+  };
+
+  const clearSelected = () => {
+    if (!isControlledSelection) {
+      setInternalSelected(null);
+    }
+    onSelectedChange?.(null);
   };
 
   if (valid.length === 0) {
@@ -217,10 +235,10 @@ export default function BusinessMap({
         </div>
       </div>
 
-      {selected && (
+      {showInlineSelectedCard && selected && (
         <div className="pointer-events-none absolute bottom-3 left-3 right-3">
           <div className="pointer-events-auto rounded-2xl border border-[#e8daf9] bg-white/96 p-3.5 shadow-[0_14px_28px_rgba(61,37,112,0.22)] backdrop-blur-xl">
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-3">
               <div className="h-11 w-11 shrink-0 rounded-xl border border-[#3b2668] bg-[linear-gradient(120deg,#2a184f_0%,#1e133b_55%,#3a2368_100%)] p-1">
                 {selected.logoData ? (
                   <div
@@ -243,6 +261,13 @@ export default function BusinessMap({
                   <div className="mt-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-[#8667b5]">{selected.businessCategory}</div>
                 )}
               </div>
+              <button
+                type="button"
+                onClick={clearSelected}
+                className="rounded-lg border border-[#e4d8f6] bg-white px-2 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-[#6a5497]"
+              >
+                Cerrar
+              </button>
             </div>
 
             {selected.prize && (
