@@ -1214,7 +1214,6 @@ export default function ClientesAppPage() {
                       <ul className="mt-3 space-y-2">
                         {filteredTenants.slice(0, 8).map((tenant) => {
                           const tags = sortedBusinessTags(tenant.businessCategory || DEFAULT_BUSINESS_CATEGORY, tenant.prize);
-                          const instagramLink = normalizeInstagramUrl(tenant.instagram);
 
                           return (
                             <li key={tenant.id || `${tenant.name}-${tenant.lat}-${tenant.lng}`} className="rounded-xl border border-[#eee2fb] bg-white p-2.5">
@@ -1241,32 +1240,6 @@ export default function ClientesAppPage() {
                                     >
                                       Ver en mapa
                                     </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => openBusinessPass(tenant)}
-                                      disabled={!tenant.id}
-                                      className={`${buttonStyles('tertiary')} px-2.5 py-1.5 text-[11px] ${tenant.id ? '' : 'cursor-not-allowed opacity-50'}`}
-                                    >
-                                      Abrir pase
-                                    </button>
-                                    <a
-                                      href={`https://www.google.com/maps/search/?api=1&query=${tenant.lat},${tenant.lng}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className={`${buttonStyles('tertiary')} px-2.5 py-1.5 text-[11px]`}
-                                    >
-                                      Cómo llegar
-                                    </a>
-                                    {instagramLink ? (
-                                      <a
-                                        href={instagramLink}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className={`${buttonStyles('tertiary')} px-2.5 py-1.5 text-[11px]`}
-                                      >
-                                        Instagram
-                                      </a>
-                                    ) : null}
                                   </div>
                                 </div>
                               </div>
