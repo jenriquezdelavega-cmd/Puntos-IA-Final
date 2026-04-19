@@ -56,7 +56,7 @@ export function SiteHeader({
         </Link>
 
         <nav className={`order-3 flex w-full items-center gap-1 overflow-x-auto rounded-full p-1 md:order-2 md:w-auto md:overflow-visible ${navBase}`} aria-label="Navegación principal">
-          {navItems.map((item) => {
+          {navItems.filter(item => item.href !== '/ingresar').map((item) => {
             const active = pathname === item.href;
             return (
               <Link
@@ -72,13 +72,23 @@ export function SiteHeader({
           })}
         </nav>
 
-        {cta ? (
-          <div className="order-2 md:order-3">
+        <div className="order-2 md:order-3 flex items-center gap-3">
+          <Link
+            href="/ingresar"
+            className={`text-sm font-bold transition-colors ${
+              dark 
+                ? 'text-[#dacbf0] hover:text-white' 
+                : 'text-[#583e86] hover:text-[#2d1c52]'
+            }`}
+          >
+            Entrar
+          </Link>
+          {cta && (
             <ActionLink href={cta.href} className={actionButtonStyles('primary')}>
               {cta.label}
             </ActionLink>
-          </div>
-        ) : null}
+          )}
+        </div>
       </div>
     </header>
   );
