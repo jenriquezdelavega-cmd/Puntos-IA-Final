@@ -252,6 +252,35 @@ async function shouldRunImmediateRefresh(params: {
   return { immediate, appleDevices, googleCustomers };
 }
 
+
+async function queueWalletRefresh(params: {
+  prisma: PrismaClient;
+  tenantId: string;
+  origin: string;
+  reason: WalletSyncReason;
+  workerMaxAttempts: number;
+  message: string;
+}) {
+  const jobId = await enqueueWalletSyncJob({
+    prisma: params.prisma,
+    tenantId: params.tenantId,
+    reason: params.reason,
+    origin: params.origin,
+    maxAttempts: params.workerMaxAttempts,
+  });
+
+  await appendWalletSyncAuditLog({
+    prisma: params.prisma,
+    tenantId: params.tenantId,
+    reason: params.reason,
+    channel: 'apple',
+    status: 'skipped',
+    message: `${params.message} (job ${jobId})`,
+  });
+
+  return { mode: 'queued' as const, jobId };
+}
+
 export async function requestWalletRefreshForTenant(params: {
   prisma: PrismaClient;
   tenantId: string;
@@ -259,6 +288,7 @@ export async function requestWalletRefreshForTenant(params: {
   reason: WalletSyncReason;
   forceImmediate?: boolean;
   requireImmediate?: boolean;
+  preferQueued?: boolean;
 }) {
   if (params.requireImmediate) {
     await refreshWalletsForTenant(params);
@@ -266,6 +296,17 @@ export async function requestWalletRefreshForTenant(params: {
   }
 
   const config = await readWalletSyncRuntimeConfig(params.prisma);
+  if (params.preferQueued) {
+    return queueWalletRefresh({
+      prisma: params.prisma,
+      tenantId: params.tenantId,
+      origin: params.origin,
+      reason: params.reason,
+      workerMaxAttempts: config.workerMaxAttempts,
+      message: 'Wallet sync encolado por preferQueued',
+    });
+  }
+
   let blockedByVolumeGuard = false;
 
   if (params.forceImmediate) {
@@ -286,24 +327,14 @@ export async function requestWalletRefreshForTenant(params: {
     return { mode: 'immediate' as const };
   }
 
-  const jobId = await enqueueWalletSyncJob({
+  return queueWalletRefresh({
     prisma: params.prisma,
     tenantId: params.tenantId,
-    reason: params.reason,
     origin: params.origin,
-    maxAttempts: config.workerMaxAttempts,
-  });
-
-  await appendWalletSyncAuditLog({
-    prisma: params.prisma,
-    tenantId: params.tenantId,
     reason: params.reason,
-    channel: 'apple',
-    status: 'skipped',
+    workerMaxAttempts: config.workerMaxAttempts,
     message: blockedByVolumeGuard
-      ? `Wallet sync encolado (job ${jobId}) por guardia de volumen`
-      : `Wallet sync encolado (job ${jobId}) por modo queued`,
+      ? 'Wallet sync encolado por guardia de volumen'
+      : 'Wallet sync encolado por modo queued',
   });
-
-  return { mode: 'queued' as const, jobId };
 }
