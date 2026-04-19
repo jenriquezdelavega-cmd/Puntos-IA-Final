@@ -632,6 +632,27 @@ const saveSettings = async (scope: SettingsSaveScope = 'all') => {
       setWalletStripImageData(data.tenant.walletStripImageData || '');
     }
 
+    const shouldForceWalletRefresh = scope === 'design' || scope === 'all';
+    if (shouldForceWalletRefresh && tenant?.id) {
+      const refreshRes = await fetch('/api/admin/wallet-refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenantId: tenant.id,
+          tenantUserId,
+          tenantSessionToken,
+        }),
+      });
+
+      if (!refreshRes.ok) {
+        const refreshData = await refreshRes.json().catch(() => ({}));
+        clearTimeout(optimisticTimer);
+        setSaveStatus('error');
+        notify('error', String(refreshData?.error || 'Se guardó el diseño, pero no se pudo refrescar Wallet.'));
+        return;
+      }
+    }
+
     setSettingsDirty(false);
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 3000);
