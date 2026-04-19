@@ -558,6 +558,7 @@ export default function ClientesAppPage() {
       };
       void autoJoin();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.sessionToken, syncMembershipSnapshot]);
 
   const handleRedeem = async (membership: Membership) => {

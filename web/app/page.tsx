@@ -85,7 +85,7 @@ export default function HomePage() {
                 <span className="text-xs font-black uppercase tracking-widest text-[#583e86]">Para el Cliente</span>
               </div>
               <h3 className="text-3xl font-black mb-4">La billetera que todos ya saben usar</h3>
-              <p className="text-[#583e86] text-lg mb-8">Nadie quiere descargar "otra app más". Usamos la tecnología Wallet nativa de iOS y Android para asegurar 100% de adopción.</p>
+              <p className="text-[#583e86] text-lg mb-8">Nadie quiere descargar &quot;otra app más&quot;. Usamos la tecnología Wallet nativa de iOS y Android para asegurar 100% de adopción.</p>
               <ul className="space-y-4 text-sm font-semibold text-[#583e86]">
                 <li className="flex items-center gap-3">
                   <div className="w-6 h-6 rounded-full bg-[#eadcf8] flex items-center justify-center text-[#7e4fd3]">✓</div>

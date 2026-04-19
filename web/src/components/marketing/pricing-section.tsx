@@ -49,7 +49,7 @@ export function PricingSection() {
 
         {/* Pricing Cards */}
         <div className="grid gap-8 lg:grid-cols-3 sm:gap-6 lg:gap-8 max-w-md mx-auto lg:max-w-7xl">
-          {pricingContent.tiers.map((tier, idx) => (
+          {pricingContent.tiers.map((tier) => (
             <div 
               key={tier.name}
               className={`relative flex flex-col justify-between rounded-3xl p-8 xl:p-10 transition-all duration-300 ${
@@ -116,7 +116,7 @@ export function PricingSection() {
             </div>
             <div className="bg-white p-6 rounded-2xl ring-1 ring-[#eadcf8]">
               <h4 className="text-lg font-bold text-[#241548] mb-2">¿Mis clientes deben descargar algo?</h4>
-              <p className="text-gray-600 text-sm">No. Tu programa funciona sobre Apple Wallet (nativo en iPhone) y Google Wallet (nativo en Android). Nunca más les pedirás descargar "tu app".</p>
+              <p className="text-gray-600 text-sm">No. Tu programa funciona sobre Apple Wallet (nativo en iPhone) y Google Wallet (nativo en Android). Nunca más les pedirás descargar &quot;tu app&quot;.</p>
             </div>
             <div className="bg-white p-6 rounded-2xl ring-1 ring-[#eadcf8]">
               <h4 className="text-lg font-bold text-[#241548] mb-2">¿Qué necesito para leer los pases?</h4>
