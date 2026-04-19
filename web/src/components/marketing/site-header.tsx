@@ -42,13 +42,10 @@ export function SiteHeader({
     ? 'text-[#dacbf0] hover:bg-white/10 hover:text-white'
     : 'text-[#583e86] hover:bg-[#f5edff] hover:text-[#2d1c52]';
 
-  const isHome = pathname === '/';
   const isLoginPage = pathname?.startsWith('/ingresar');
   const loginCtaClass = dark
     ? 'border-white/20 text-[#dacbf0] hover:border-white/40 hover:text-white'
-    : isHome
-      ? 'border-[#5f468e] bg-[#5f468e] px-6 py-2.5 text-white shadow-md shadow-[#5f468e]/25 hover:bg-[#523b7a] hover:border-[#523b7a]'
-      : 'border-[#d8c0f3] text-[#583e86] hover:border-[#be9ce9] hover:text-[#2d1c52]';
+    : 'border-[#2d1c52] bg-[#2d1c52] px-6 py-2.5 text-white shadow-md shadow-[#2d1c52]/25 hover:border-[#231543] hover:bg-[#231543]';
 
   return (
     <header className={`sticky top-0 z-50 transition-all duration-300 ${headerBase}`}>
