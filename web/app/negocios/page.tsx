@@ -2,15 +2,11 @@ import { marketingContent } from '@/src/content/marketing-content';
 import {
   CTASection,
   HeroSection,
-  BentoGrid,
-  ScrollJourney,
-  MarketingImageSlot,
   PageShell,
-  SectionContainer,
   SiteFooter,
   SiteHeader,
 } from '@/src/components/marketing';
-import { Target, WalletCards, ShieldCheck, Zap } from 'lucide-react';
+import { Target, WalletCards, Zap } from 'lucide-react';
 
 export default function NegociosPage() {
   const { nav, negocios } = marketingContent;

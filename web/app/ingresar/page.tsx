@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, CircleUserRound, ShieldCheck } from 'lucide-react';
+import { Building2, CircleUserRound } from 'lucide-react';
 import { PageShell } from '@/src/components/marketing/page-shell';
 import { SiteHeader } from '@/src/components/marketing/site-header';
 import { SiteFooter } from '@/src/components/marketing/site-footer';

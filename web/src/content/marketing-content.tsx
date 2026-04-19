@@ -3,7 +3,6 @@ import { marketingRoutes } from '@/src/config/marketing-routes';
 import { 
   Zap, 
   LineChart, 
-  BellRing, 
   Network, 
   ShieldCheck, 
   WalletCards, 
@@ -12,8 +11,7 @@ import {
   Smartphone,
   ScanFace 
 } from 'lucide-react';type Cta = { label: string; href: string };
-type Step = { title: string; description: string };
-type Feature = { title: string; description: string; icon?: string };
+type Feature = { title: string; description: string; icon?: React.ReactNode; imageSrc?: string };
 
 export const marketingContent = {
   nav: [

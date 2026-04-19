@@ -147,6 +147,7 @@ const [isChangingPassword, setIsChangingPassword] = useState(false);
 // ── Optimistic save state ──
 const [saveStatus, setSaveStatus] = useState<'idle'|'saving'|'saved'|'error'>('idle');
 const [settingsDirty, setSettingsDirty] = useState(false);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const markDirty = () => { setSettingsDirty(true); setSaveStatus('idle'); };
 
 // ── Delete staff confirmation modal ──

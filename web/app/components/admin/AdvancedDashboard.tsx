@@ -91,7 +91,7 @@ function renderComparisonBadge(current: number, previous: number) {
   );
 }
 
-function renderAreaChart(series: ReportPoint[], color: string, _fill?: string) {
+function renderAreaChart(series: ReportPoint[], color: string) {
   const totalCount = series.reduce((sum, point) => sum + Number(point.count || 0), 0);
   return (
     <div className="mt-4 h-[180px] w-full">
@@ -245,7 +245,7 @@ export default function AdvancedDashboard(props: Props) {
             <p className="rounded-xl bg-gray-50 px-3 py-2 font-semibold text-gray-700">Clientes nuevos: <span className="font-black">{Number(week.newClients || 0)}</span></p>
             <p className="rounded-xl bg-gray-50 px-3 py-2 font-semibold text-gray-700">Recurrentes: <span className="font-black">{Number(week.returningClients || 0)}</span></p>
           </div>
-          {weekSeries.length > 0 ? renderAreaChart(weekSeries, '#6366f1', '#e0e7ff') : <p className="mt-4 text-sm text-gray-400">Sin datos semanales.</p>}
+          {weekSeries.length > 0 ? renderAreaChart(weekSeries, '#6366f1') : <p className="mt-4 text-sm text-gray-400">Sin datos semanales.</p>}
         </article>
 
         <article className="rounded-3xl border border-gray-100 bg-white p-6">
@@ -257,7 +257,7 @@ export default function AdvancedDashboard(props: Props) {
             <p className="rounded-xl bg-gray-50 px-3 py-2 font-semibold text-gray-700">Clientes activos: <span className="font-black">{Number(month.uniqueClients || 0)}</span></p>
             <p className="rounded-xl bg-gray-50 px-3 py-2 font-semibold text-gray-700">Ticket prom: <span className="font-black">{formatCurrency(Number(month.avgTicket || 0))}</span></p>
           </div>
-          {monthSeries.length > 0 ? renderAreaChart(monthSeries, '#f43f5e', '#ffe4e6') : <p className="mt-4 text-sm text-gray-400">Sin datos mensuales.</p>}
+          {monthSeries.length > 0 ? renderAreaChart(monthSeries, '#f43f5e') : <p className="mt-4 text-sm text-gray-400">Sin datos mensuales.</p>}
         </article>
       </div>
 

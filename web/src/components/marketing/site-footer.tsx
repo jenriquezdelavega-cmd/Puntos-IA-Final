@@ -4,7 +4,8 @@ import { marketingRoutes } from '@/src/config/marketing-routes';
 
 type NavItem = { label: string; href: string };
 
-export function SiteFooter({ navItems }: { navItems: readonly NavItem[] }) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function SiteFooter({ navItems }: { navItems?: readonly NavItem[] }) {
   // We ignore navItems as the prompt specified exactly the links to show.
   return (
     <footer className="border-t border-[#eadcf8] bg-[#fffaf4]">
