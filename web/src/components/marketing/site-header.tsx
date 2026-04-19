@@ -43,10 +43,11 @@ export function SiteHeader({
     : 'text-[#583e86] hover:bg-[#f5edff] hover:text-[#2d1c52]';
 
   const isHome = pathname === '/';
+  const isLoginPage = pathname?.startsWith('/ingresar');
   const loginCtaClass = dark
     ? 'border-white/20 text-[#dacbf0] hover:border-white/40 hover:text-white'
     : isHome
-      ? 'border-transparent bg-gradient-to-r from-[#7e4fd3] via-[#8f5fe5] to-[#ff5e91] px-6 py-2.5 text-white shadow-lg shadow-[#7e4fd3]/35 hover:brightness-110'
+      ? 'border-[#5f468e] bg-[#5f468e] px-6 py-2.5 text-white shadow-md shadow-[#5f468e]/25 hover:bg-[#523b7a] hover:border-[#523b7a]'
       : 'border-[#d8c0f3] text-[#583e86] hover:border-[#be9ce9] hover:text-[#2d1c52]';
 
   return (
@@ -75,14 +76,16 @@ export function SiteHeader({
           })}
         </nav>
 
-        <div className="order-2 md:order-3 flex items-center">
-          <Link
-            href="/ingresar"
-            className={`inline-flex items-center justify-center rounded-xl border text-sm font-extrabold tracking-wide transition-all ${loginCtaClass}`}
-          >
-            Entrar
-          </Link>
-        </div>
+        {!isLoginPage && (
+          <div className="order-2 md:order-3 flex items-center">
+            <Link
+              href="/ingresar"
+              className={`inline-flex items-center justify-center rounded-xl border text-sm font-extrabold tracking-wide transition-all ${loginCtaClass}`}
+            >
+              Entrar
+            </Link>
+          </div>
+        )}
       </div>
     </header>
   );
