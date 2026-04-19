@@ -156,6 +156,10 @@ export async function POST(request: Request) {
       if (!isMissingTableOrColumnError(error)) throw error;
     }
     const tenantSessionToken = generateTenantSessionToken({ tenantUserId: user.id, tenantId: user.tenant.id, role: normalizedRole });
+    const businessCategory =
+      'businessCategory' in user.tenant && typeof user.tenant.businessCategory === 'string'
+        ? user.tenant.businessCategory
+        : DEFAULT_BUSINESS_CATEGORY;
 
     return apiSuccess({
       requestId,
@@ -175,7 +179,7 @@ export async function POST(request: Request) {
           codePrefix: user.tenant.codePrefix || user.tenant.slug.substring(0, 4).toUpperCase(),
           prize: user.tenant.prize,
           instagram: user.tenant.instagram,
-          businessCategory: user.tenant.businessCategory,
+          businessCategory,
           lat: user.tenant.lat,
           lng: user.tenant.lng,
           address: user.tenant.address,
