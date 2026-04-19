@@ -15,6 +15,7 @@ import { syncGoogleLoyaltyObjectForCustomer } from '@/app/lib/google-wallet-obje
 import { addGoogleLoyaltyObjectMessage } from '@/app/lib/google-wallet';
 import { evaluateChallengesForVisit } from '@/app/lib/challenges';
 import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
+import { waitUntil } from '@vercel/functions';
 const TZ = 'America/Monterrey';
 
 function accessStatusToCode(status: number): ApiErrorCode {
@@ -286,89 +287,100 @@ export async function POST(request: Request) {
       logApiError('/api/check-in/scan#challenges', challengeError);
     }
 
-    try {
-      await ensureWalletRegistrationsTable(prisma);
-      const serialNumber = walletSerialNumber(userId, validCode.tenantId);
-      const passTypeIdentifier = asTrimmedString(process.env.APPLE_PASS_TYPE_ID) || undefined;
+    const requestOrigin = new URL(request.url).origin;
 
-      await touchWalletPassRegistrations(prisma, {
-        serialNumber,
-        passTypeIdentifier,
-      });
+    const backgroundWork = async () => {
+      try {
+        await ensureWalletRegistrationsTable(prisma);
+        const serialNumber = walletSerialNumber(userId, validCode.tenantId);
+        const passTypeIdentifier = asTrimmedString(process.env.APPLE_PASS_TYPE_ID) || undefined;
 
-      if (passTypeIdentifier) {
-        const pushTokens = await listWalletPushTokens(prisma, {
+        await touchWalletPassRegistrations(prisma, {
           serialNumber,
           passTypeIdentifier,
         });
 
-        logApiEvent('/api/check-in/scan#wallet-push', 'push_start', {
-          serialNumber,
-          passTypeIdentifier,
-          deviceCount: pushTokens.length,
-        });
+        if (passTypeIdentifier) {
+          const pushTokens = await listWalletPushTokens(prisma, {
+            serialNumber,
+            passTypeIdentifier,
+          });
 
-        for (const pushToken of pushTokens) {
-          const result = await pushWalletUpdateToDevice(pushToken, passTypeIdentifier);
-          if (result.ok) {
-            logApiEvent('/api/check-in/scan#wallet-push', 'push_sent', {
-              serialNumber,
-              status: result.status,
-              host: result.host || null,
-            });
-          } else {
-            if (shouldDeleteWalletRegistrationForPushResult(result)) {
-              await deleteWalletRegistrationsByPushToken(prisma, pushToken);
+          logApiEvent('/api/check-in/scan#wallet-push', 'push_start', {
+            serialNumber,
+            passTypeIdentifier,
+            deviceCount: pushTokens.length,
+          });
+
+          for (const pushToken of pushTokens) {
+            const result = await pushWalletUpdateToDevice(pushToken, passTypeIdentifier);
+            if (result.ok) {
+              logApiEvent('/api/check-in/scan#wallet-push', 'push_sent', {
+                serialNumber,
+                status: result.status,
+                host: result.host || null,
+              });
+            } else {
+              if (shouldDeleteWalletRegistrationForPushResult(result)) {
+                await deleteWalletRegistrationsByPushToken(prisma, pushToken);
+              }
+              logApiEvent('/api/check-in/scan#wallet-push', 'push_failed', {
+                serialNumber,
+                status: result.status,
+                reason: result.reason || 'unknown',
+                host: result.host || null,
+              });
             }
-            logApiEvent('/api/check-in/scan#wallet-push', 'push_failed', {
-              serialNumber,
-              status: result.status,
-              reason: result.reason || 'unknown',
-              host: result.host || null,
-            });
           }
+        } else {
+          logApiEvent('/api/check-in/scan#wallet-push', 'push_skipped', {
+            reason: 'APPLE_PASS_TYPE_ID not configured',
+          });
         }
-      } else {
-        logApiEvent('/api/check-in/scan#wallet-push', 'push_skipped', {
-          reason: 'APPLE_PASS_TYPE_ID not configured',
-        });
+      } catch (walletError) {
+        logApiError('/api/check-in/scan#wallet-touch', walletError);
       }
-    } catch (walletError) {
-      logApiError('/api/check-in/scan#wallet-touch', walletError);
-    }
+
+      try {
+        const googleSync = await syncGoogleLoyaltyObjectForCustomer({
+          tenantId: validCode.tenantId,
+          userId,
+          origin: requestOrigin,
+        });
+        if (!googleSync.ok) {
+          logApiEvent('/api/check-in/scan#google-sync', 'sync_skipped', {
+            tenantId: validCode.tenantId,
+            userId,
+            reason: googleSync.reason,
+            operation: googleSync.operation,
+            status: googleSync.status,
+          });
+        } else if (googleSync.objectId) {
+          const progress = `${updatedMembership.currentVisits}/${validCode.tenant.requiredVisits ?? 10}`;
+          const messageId = `checkin_${Date.now()}`;
+          const messageResult = await addGoogleLoyaltyObjectMessage({
+            objectId: googleSync.objectId,
+            header: '✅ Visita registrada',
+            body: `Llevas ${progress} sellos`,
+            messageId,
+          });
+          logApiEvent('/api/check-in/scan#google-sync', messageResult.ok ? 'message_sent' : 'message_failed', {
+            tenantId: validCode.tenantId,
+            userId,
+            objectId: googleSync.objectId,
+            status: messageResult.status,
+          });
+        }
+      } catch (googleError) {
+        logApiError('/api/check-in/scan#google-sync', googleError);
+      }
+    };
 
     try {
-      const googleSync = await syncGoogleLoyaltyObjectForCustomer({
-        tenantId: validCode.tenantId,
-        userId,
-        origin: new URL(request.url).origin,
-      });
-      if (!googleSync.ok) {
-        logApiEvent('/api/check-in/scan#google-sync', 'sync_skipped', {
-          tenantId: validCode.tenantId,
-          userId,
-          reason: googleSync.reason,
-          operation: googleSync.operation,
-          status: googleSync.status,
-        });
-      } else if (googleSync.objectId) {
-        const progress = `${updatedMembership.currentVisits}/${validCode.tenant.requiredVisits ?? 10}`;
-        const messageId = `checkin_${Date.now()}`;
-        const messageResult = await addGoogleLoyaltyObjectMessage({
-          objectId: googleSync.objectId,
-          header: '✅ Visita registrada',
-          body: `Llevas ${progress} sellos`,
-          messageId,
-        });
-        logApiEvent('/api/check-in/scan#google-sync', messageResult.ok ? 'message_sent' : 'message_failed', {
-          tenantId: validCode.tenantId,
-          userId,
-          objectId: googleSync.objectId,
-          status: messageResult.status,
-        });
-      }
-    } catch (googleError) {
-      logApiError('/api/check-in/scan#google-sync', googleError);
+      waitUntil(backgroundWork());
+    } catch (waitUntilError) {
+      logApiError('/api/check-in/scan#wait-until', waitUntilError);
+      void backgroundWork();
     }
 
     logApiEvent('/api/check-in/scan', 'visit_registered', { userId, tenantId: validCode.tenantId, visitDay });
