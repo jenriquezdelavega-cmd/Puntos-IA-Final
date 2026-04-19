@@ -134,17 +134,16 @@ export async function POST(request: Request) {
 
     const walletStyle = await getTenantWalletStyle(authorizedTenantId);
 
-    try {
-      await requestWalletRefreshForTenant({
-        prisma,
-        tenantId: authorizedTenantId,
-        origin: new URL(request.url).origin,
-        reason: 'tenant-settings',
-        forceImmediate: true,
-      });
-    } catch (walletSyncError) {
-      logApiError('/api/tenant/settings#wallet-sync', walletSyncError);
-    }
+    // Fire-and-forget: respond immediately, wallet sync runs in background.
+    // This prevents the ~5-20s blocking wait the user previously experienced.
+    // The sync orchestrator has its own retry system so this is safe.
+    requestWalletRefreshForTenant({
+      prisma,
+      tenantId: authorizedTenantId,
+      origin: new URL(request.url).origin,
+      reason: 'tenant-settings',
+      forceImmediate: true,
+    }).catch((walletSyncError) => logApiError('/api/tenant/settings#wallet-sync', walletSyncError));
 
     return apiSuccess({
       requestId,

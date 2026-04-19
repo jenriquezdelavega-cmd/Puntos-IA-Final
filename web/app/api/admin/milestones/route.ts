@@ -109,23 +109,20 @@ export async function POST(request: Request) {
       select: { id: true, visitTarget: true, reward: true, emoji: true, sortOrder: true },
     });
 
-    try {
-      const walletRequest = await requestWalletRefreshForTenant({
-        prisma,
-        tenantId: access.tenantId,
-        origin: new URL(request.url).origin,
-        reason: 'milestones',
-        forceImmediate: true,
-      });
-
+    // Fire-and-forget: respond immediately, wallet sync runs in background.
+    requestWalletRefreshForTenant({
+      prisma,
+      tenantId: access.tenantId,
+      origin: new URL(request.url).origin,
+      reason: 'milestones',
+      forceImmediate: true,
+    }).then((walletRequest) => {
       logApiEvent('/api/admin/milestones#wallet-sync', 'refresh_requested', {
         tenantId: access.tenantId,
         mode: walletRequest.mode,
         jobId: 'jobId' in walletRequest ? walletRequest.jobId : null,
       });
-    } catch (walletSyncError) {
-      logApiError('/api/admin/milestones#wallet-sync', walletSyncError);
-    }
+    }).catch((walletSyncError) => logApiError('/api/admin/milestones#wallet-sync', walletSyncError));
 
     return apiSuccess({ requestId, data: { milestones: updated, count: milestones } });
   } catch (e: unknown) {

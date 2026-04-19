@@ -144,6 +144,14 @@ const [newPasswordInput, setNewPasswordInput] = useState('');
 const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
 const [isChangingPassword, setIsChangingPassword] = useState(false);
 
+// ── Optimistic save state ──
+const [saveStatus, setSaveStatus] = useState<'idle'|'saving'|'saved'|'error'>('idle');
+const [settingsDirty, setSettingsDirty] = useState(false);
+const markDirty = () => { setSettingsDirty(true); setSaveStatus('idle'); };
+
+// ── Delete staff confirmation modal ──
+const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
 const navItems: NavItem[] = [
   { key: 'dashboard', icon: '📊', label: 'Dashboard', adminOnly: true },
   { key: 'team', icon: '👥', label: 'Equipo', adminOnly: true },
@@ -159,6 +167,8 @@ const normalizedRequiredVisits = sanitizeRequiredVisits(requiredVisits || DEFAUL
 
 const notify = (type: 'success' | 'error' | 'info', text: string) => {
   setUiNotice({ type, text });
+  // Auto-dismiss after 4 seconds
+  setTimeout(() => setUiNotice(null), 4000);
 };
 
 const sanitizeCurrencyInput = (value: string) => {
@@ -453,8 +463,7 @@ setIsCreatingStaff(false);
 };
 
 const deleteStaff = async (id: string) => {
-if(!confirm("¿Eliminar empleado?")) return;
-try { await fetch('/api/tenant/users', { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id, tenantId: tenant.id, tenantUserId, tenantSessionToken }) }); loadTeam(tenant.id, tenantUserId); } catch {}
+try { await fetch('/api/tenant/users', { method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ id, tenantId: tenant.id, tenantUserId, tenantSessionToken }) }); loadTeam(tenant.id, tenantUserId); setDeleteConfirmId(null); } catch { notify('error', 'No se pudo eliminar el empleado.'); }
 };
 
 const changeOwnPassword = async () => {
@@ -555,6 +564,11 @@ type SettingsSaveScope = 'location' | 'design' | 'operation' | 'all';
 
 const saveSettings = async (scope: SettingsSaveScope = 'all') => {
   setIsSavingSettings(true);
+  setSaveStatus('saving');
+
+  // Optimistic feedback: show "saved" after 350ms regardless, revert on error
+  const optimisticTimer = setTimeout(() => setSaveStatus('saved'), 350);
+
   try {
     const settingsPayload: Record<string, unknown> = {
       tenantId: tenant.id,
@@ -593,11 +607,12 @@ const saveSettings = async (scope: SettingsSaveScope = 'all') => {
 
     const data = await res.json();
     if (!res.ok) {
+      clearTimeout(optimisticTimer);
+      setSaveStatus('error');
       notify('error', String(data.error || 'Error guardando'));
       return;
     }
 
-    // ✅ Persistencia: actualiza tenant en UI con lo que regresa el backend
     if (data?.tenant) {
       setTenant(data.tenant);
       setLogoData(String(data.tenant.logoData ?? ''));
@@ -614,20 +629,20 @@ const saveSettings = async (scope: SettingsSaveScope = 'all') => {
       setWalletForegroundColor(String(data.tenant.walletForegroundColor ?? walletForegroundColor));
       setWalletLabelColor(String(data.tenant.walletLabelColor ?? walletLabelColor));
       setWalletStripImageData(data.tenant.walletStripImageData || '');
-
     }
 
-    const scopeLabel =
-      scope === 'location'
-        ? 'Ubicación e identidad'
-        : scope === 'design'
-          ? 'Diseño del pase'
-          : scope === 'operation'
-            ? 'Operación'
-            : 'Configuración';
+    setSettingsDirty(false);
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 3000);
 
+    const scopeLabel = scope === 'location' ? 'Ubicación e identidad'
+      : scope === 'design' ? 'Diseño del pase'
+      : scope === 'operation' ? 'Operación'
+      : 'Configuración';
     notify('success', `${scopeLabel} guardada correctamente.`);
   } catch {
+    clearTimeout(optimisticTimer);
+    setSaveStatus('error');
     notify('error', 'Ocurrió un error de conexión.');
   } finally {
     setIsSavingSettings(false);
@@ -812,22 +827,85 @@ const handleAdminScan = async (rawValue: string) => {
   }
 };
 
-if (!tenant) return <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4"><div className="bg-gray-800 p-8 rounded-2xl w-full max-w-sm shadow-2xl border border-gray-700"><div className="text-center mb-8"><h1 className="text-3xl font-black text-white tracking-tighter">punto<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500">IA</span></h1><p className="text-gray-400 text-sm mt-2">Acceso de Personal</p></div><form onSubmit={handleLogin} className="space-y-4"><input className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Usuario (Ej: PIZZA.juan)" value={username} onChange={e=>setUsername(e.target.value)} disabled={isLoggingIn} /><input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Contraseña" value={password} onChange={e=>setPassword(e.target.value)} disabled={isLoggingIn} /><button disabled={isLoggingIn} className="w-full bg-gradient-to-r from-orange-500 to-pink-600 font-bold py-4 rounded-xl text-white shadow-lg disabled:opacity-60">{isLoggingIn ? 'Ingresando...' : 'Iniciar Sesión'}</button></form><a href="/recuperar?scope=tenant" className="mt-4 block text-center text-sm font-semibold text-purple-300 hover:text-purple-200">¿Olvidaste tu contraseña?</a></div></div>;
+if (!tenant) return (
+  <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+    <div className="w-full max-w-sm animate-slideUp">
+      {/* Header */}
+      <div className="text-center mb-10">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-600/40 mb-4">
+          <svg viewBox="0 0 24 24" className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        </div>
+        <h1 className="text-2xl font-black text-white tracking-tight">punto<span className="text-indigo-400">IA</span></h1>
+        <p className="text-slate-400 text-sm mt-1 font-medium">Panel de Administración</p>
+      </div>
+      {/* Card */}
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 shadow-2xl">
+        <h2 className="text-white font-bold text-base mb-1">Inicia sesión</h2>
+        <p className="text-slate-500 text-xs mb-6">Ingresa con tu usuario y contraseña del negocio</p>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-slate-400 mb-1.5 block">Usuario</label>
+            <input
+              className="w-full px-4 py-3 rounded-xl bg-slate-800 text-white border border-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition placeholder:text-slate-600 text-sm font-medium"
+              placeholder="Ej: TACOS.maria"
+              value={username}
+              autoComplete="username"
+              onChange={e=>setUsername(e.target.value)}
+              disabled={isLoggingIn}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-400 mb-1.5 block">Contraseña</label>
+            <input
+              type="password"
+              className="w-full px-4 py-3 rounded-xl bg-slate-800 text-white border border-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition placeholder:text-slate-600 text-sm font-medium"
+              placeholder="Tu contraseña"
+              value={password}
+              autoComplete="current-password"
+              onChange={e=>setPassword(e.target.value)}
+              disabled={isLoggingIn}
+            />
+          </div>
+          {uiNotice?.type === 'error' && (
+            <div className="bg-red-950/50 border border-red-800/50 rounded-xl px-4 py-3 text-red-400 text-xs font-semibold animate-fadeIn">
+              {uiNotice.text}
+            </div>
+          )}
+          <button
+            type="submit"
+            disabled={isLoggingIn}
+            className="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 font-bold py-3 rounded-xl text-white shadow-lg shadow-indigo-600/30 disabled:opacity-50 transition-all text-sm flex items-center justify-center gap-2 mt-2"
+          >
+            {isLoggingIn ? (
+              <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Ingresando...</>
+            ) : 'Entrar al panel'}
+          </button>
+        </form>
+        <a href="/recuperar?scope=tenant" className="mt-5 block text-center text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition">¿Olvidaste tu contraseña?</a>
+      </div>
+      <p className="text-center text-slate-600 text-xs mt-6">Acceso exclusivo para personal autorizado</p>
+    </div>
+  </div>
+);
 
 if (mustChangePassword) {
   return (
-    <div className="min-h-screen bg-gray-900 flex justify-center items-center p-4">
-      <div className="bg-gray-800 p-8 rounded-2xl w-full max-w-md shadow-2xl border border-gray-700">
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-black text-white tracking-tighter">punto<span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500">IA</span></h1>
-          <p className="text-gray-300 text-sm mt-2 font-semibold">Actualiza tu contraseña temporal para continuar</p>
+    <div className="min-h-screen bg-slate-950 flex justify-center items-center p-4">
+      <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl w-full max-w-md shadow-2xl animate-slideUp">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xl shrink-0">🔑</div>
+          <div>
+            <h2 className="text-white font-black text-base">Cambia tu contraseña</h2>
+            <p className="text-slate-400 text-xs font-medium mt-0.5">Tu cuenta tiene una contraseña temporal. Debes cambiarla para continuar.</p>
+          </div>
         </div>
         <div className="space-y-3">
-          <input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Contraseña actual" value={currentPasswordInput} onChange={(e)=>setCurrentPasswordInput(e.target.value)} disabled={isChangingPassword} />
-          <input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Nueva contraseña (mín. 6)" value={newPasswordInput} onChange={(e)=>setNewPasswordInput(e.target.value)} disabled={isChangingPassword} />
-          <input type="password" className="w-full p-4 rounded-xl bg-gray-700 text-white border border-gray-600 outline-none" placeholder="Confirmar nueva contraseña" value={confirmPasswordInput} onChange={(e)=>setConfirmPasswordInput(e.target.value)} disabled={isChangingPassword} />
-          <button onClick={changeOwnPassword} disabled={isChangingPassword} className="w-full bg-gradient-to-r from-orange-500 to-pink-600 font-bold py-4 rounded-xl text-white shadow-lg disabled:opacity-60">
-            {isChangingPassword ? 'Guardando...' : 'Guardar nueva contraseña'}
+          <input type="password" className="w-full px-4 py-3 rounded-xl bg-slate-800 text-white border border-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition text-sm font-medium placeholder:text-slate-600" placeholder="Contraseña actual" value={currentPasswordInput} onChange={(e)=>setCurrentPasswordInput(e.target.value)} disabled={isChangingPassword} />
+          <input type="password" className="w-full px-4 py-3 rounded-xl bg-slate-800 text-white border border-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition text-sm font-medium placeholder:text-slate-600" placeholder="Nueva contraseña (mínimo 6 caracteres)" value={newPasswordInput} onChange={(e)=>setNewPasswordInput(e.target.value)} disabled={isChangingPassword} />
+          <input type="password" className="w-full px-4 py-3 rounded-xl bg-slate-800 text-white border border-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition text-sm font-medium placeholder:text-slate-600" placeholder="Confirmar nueva contraseña" value={confirmPasswordInput} onChange={(e)=>setConfirmPasswordInput(e.target.value)} disabled={isChangingPassword} />
+          {uiNotice?.type === 'error' && <div className="bg-red-950/50 border border-red-800/50 rounded-xl px-4 py-3 text-red-400 text-xs font-semibold">{uiNotice.text}</div>}
+          <button onClick={changeOwnPassword} disabled={isChangingPassword} className="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-3 rounded-xl text-white shadow-lg shadow-indigo-600/30 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+            {isChangingPassword ? (<><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Guardando...</>) : 'Guardar contraseña'}
           </button>
         </div>
       </div>
@@ -837,36 +915,89 @@ if (mustChangePassword) {
 
 
 return (
-<div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
-<div className="w-full md:w-64 bg-gray-950/95 text-white flex md:flex-col p-3 md:p-6 fixed inset-x-4 bottom-4 md:inset-x-0 md:bottom-auto md:relative z-50 md:h-full justify-between md:justify-start border border-gray-800/80 md:border-t-0 md:border-l-0 md:border-b-0 md:border-r rounded-[2rem] md:rounded-none shadow-[0_-10px_30px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-<h1 className="text-2xl font-black tracking-tighter mb-4 hidden md:block">punto<span className="text-pink-500">IA</span></h1>
-<div className="hidden md:block mb-6"><span className={`px-3 py-1 rounded-full text-xs font-black tracking-wider shadow-sm ring-1 ring-white/10 ${userRole==='ADMIN'?'bg-gradient-to-r from-purple-600 to-pink-600':'bg-gradient-to-r from-sky-600 to-blue-700'}`}>{userRole}</span></div>
-<nav className="flex md:flex-col gap-2 w-full md:justify-start overflow-x-auto md:overflow-visible pb-1 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-  {visibleNavItems.map((item) => (
-    <button
-      key={item.key}
-      onClick={() => setTab(item.key)}
-      className={`shrink-0 min-w-[84px] md:min-w-0 flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2 px-3 py-3 rounded-2xl transition-all ${tab===item.key?'bg-white/10 text-white shadow-lg ring-1 ring-white/10':'text-white/80 hover:bg-white/10'}`}
-      aria-current={tab === item.key ? 'page' : undefined}
-    >
-      <span className="text-xl leading-none">{item.icon}</span>
-      <span className="text-[10px] md:text-sm font-black md:font-bold uppercase md:normal-case tracking-widest md:tracking-normal">{item.label}</span>
-    </button>
-  ))}
-</nav>
-<div className="hidden md:block mt-auto pt-6 border-t border-gray-800"><p className="font-bold text-sm truncate">{tenant.name}</p><button onClick={() => setTenant(null)} className="text-xs text-red-400 mt-4 hover:text-red-300 border border-red-900 p-2 rounded w-full">Cerrar Sesión</button></div>
-</div>
-<button onClick={() => setTenant(null)} className="md:hidden fixed top-4 right-4 z-50 bg-red-600 text-white w-8 h-8 rounded-full font-bold flex items-center justify-center shadow-lg">✕</button>
+<div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
 
-<div className="flex-1 p-6 md:p-8 overflow-y-auto pb-32 md:pb-0">
-{uiNotice ? (
-  <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-md animate-fadeIn drop-shadow-2xl">
-    <div className={`rounded-xl border p-4 text-sm font-semibold flex items-center justify-between gap-4 shadow-lg ${uiNotice.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : uiNotice.type === 'error' ? 'border-red-200 bg-red-50 text-red-800' : 'border-blue-200 bg-blue-50 text-blue-800'}`}>
+{/* ── Sidebar ── */}
+<div className="w-full md:w-60 bg-slate-950 text-white flex md:flex-col p-3 md:p-5 fixed inset-x-3 bottom-3 md:inset-x-0 md:bottom-auto md:relative z-50 md:h-screen md:min-h-screen justify-between md:justify-start border border-slate-800/80 md:border-r md:border-t-0 md:border-l-0 md:border-b-0 rounded-[1.75rem] md:rounded-none shadow-[0_-8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl md:shadow-none md:backdrop-blur-none">
+  {/* Logo – desktop */}
+  <div className="hidden md:flex items-center gap-3 mb-8 px-1">
+    <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
+      <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    </div>
+    <div>
+      <p className="text-white font-black text-base tracking-tight leading-none">punto<span className="text-indigo-400">IA</span></p>
+      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full mt-0.5 inline-block ${userRole==='ADMIN'?'bg-indigo-600/30 text-indigo-300':'bg-sky-600/30 text-sky-300'}`}>{userRole === 'ADMIN' ? 'Administrador' : 'Operador'}</span>
+    </div>
+  </div>
+  {/* Nav */}
+  <nav className="flex md:flex-col gap-1 w-full md:justify-start overflow-x-auto md:overflow-visible pb-1 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-1">
+    {visibleNavItems.map((item) => (
+      <button
+        key={item.key}
+        onClick={() => setTab(item.key)}
+        className={`shrink-0 min-w-[72px] md:min-w-0 flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-2.5 px-2 md:px-3 py-2.5 md:py-2.5 rounded-xl transition-all duration-150 ${
+          tab===item.key
+            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+        }`}
+        aria-current={tab === item.key ? 'page' : undefined}
+      >
+        <span className="text-lg md:text-base leading-none">{item.icon}</span>
+        <span className="text-[9px] md:text-xs font-bold uppercase md:normal-case tracking-wider md:tracking-normal">{item.label}</span>
+      </button>
+    ))}
+  </nav>
+  {/* Footer – desktop */}
+  <div className="hidden md:block pt-4 border-t border-slate-800 mt-4">
+    <p className="font-semibold text-xs text-slate-400 truncate mb-0.5">{tenant.name}</p>
+    <p className="font-mono text-[10px] text-slate-600 truncate mb-3">Sesión activa</p>
+    <button onClick={() => setTenant(null)} className="w-full text-xs text-red-400 hover:text-red-300 border border-red-900/50 hover:border-red-700 px-3 py-2 rounded-lg transition-colors font-semibold flex items-center justify-center gap-1.5">
+      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
+      Cerrar sesión
+    </button>
+  </div>
+</div>
+
+{/* ── Close btn – mobile ── */}
+<button onClick={() => setTenant(null)} className="md:hidden fixed top-3 right-3 z-[60] bg-slate-900 text-slate-400 hover:text-white border border-slate-700 w-8 h-8 rounded-full font-bold flex items-center justify-center shadow-lg transition">
+  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+</button>
+
+{/* ── Delete confirmation modal ── */}
+{deleteConfirmId && (
+  <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn">
+    <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 w-full max-w-sm mx-4 animate-slideUp">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-xl shrink-0">⚠️</div>
+        <div>
+          <h3 className="font-black text-gray-900 text-sm">¿Eliminar este empleado?</h3>
+          <p className="text-gray-500 text-xs mt-0.5">Esta acción no se puede deshacer. El operador perderá acceso inmediatamente.</p>
+        </div>
+      </div>
+      <div className="flex gap-3 mt-5">
+        <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 transition">Cancelar</button>
+        <button onClick={() => deleteStaff(deleteConfirmId)} className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-sm transition shadow-sm">Sí, eliminar</button>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* ── Main content ── */}
+<div className="flex-1 p-4 md:p-8 overflow-y-auto pb-32 md:pb-8">
+
+{/* Toast */}
+{uiNotice && tab !== 'settings' ? (
+  <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[100] w-[92%] max-w-md animate-fadeInSlide">
+    <div className={`rounded-2xl px-4 py-3 text-sm font-semibold flex items-center justify-between gap-3 shadow-xl border ${
+      uiNotice.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+      : uiNotice.type === 'error' ? 'bg-red-50 border-red-200 text-red-800'
+      : 'bg-blue-50 border-blue-200 text-blue-800'
+    }`}>
       <span className="flex items-center gap-2">
-        <span className="text-lg">{uiNotice.type === 'success' ? '✅' : uiNotice.type === 'error' ? '❌' : 'ℹ️'}</span>
-        {uiNotice.text}
+        <span>{uiNotice.type === 'success' ? '✅' : uiNotice.type === 'error' ? '❌' : 'ℹ️'}</span>
+        <span>{uiNotice.text}</span>
       </span>
-      <button onClick={() => setUiNotice(null)} className="text-xs font-black opacity-70 hover:opacity-100 bg-black/5 hover:bg-black/10 px-3 py-1.5 rounded-lg transition-colors shrink-0">Cerrar</button>
+      <button onClick={() => setUiNotice(null)} className="text-current opacity-40 hover:opacity-80 shrink-0 transition">✕</button>
     </div>
   </div>
 ) : null}
@@ -896,96 +1027,119 @@ return (
 
 {tab === 'team' && userRole === 'ADMIN' && (
 <div className="max-w-5xl mx-auto animate-fadeIn">
-  <div className="mb-6">
-    <h2 className="text-2xl font-black text-gray-900">Gestión de Personal</h2>
-    <p className="text-gray-500 font-semibold mt-1 text-sm">Administra los operadores que pueden registrar visitas y canjear premios</p>
+  <div className="mb-7">
+    <h2 className="text-xl font-black text-slate-900">Gestión de Personal</h2>
+    <p className="text-slate-500 text-sm mt-1">Crea y administra los operadores que atienden a tus clientes</p>
   </div>
   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-    <div className="lg:col-span-7 space-y-4">
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-5 text-white">
-          <div className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl">👥</span>
-            <div>
-              <h2 className="text-lg font-black">Agregar Personal</h2>
-              <p className="text-white/80 text-xs font-semibold">Crea cuentas operativas para tu equipo (solo 1 admin por negocio)</p>
-            </div>
-          </div>
+    <div className="lg:col-span-7 space-y-5">
+
+      {/* Add staff card */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100">
+          <h3 className="text-sm font-black text-slate-800">➕ Agregar operador</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Cada empleado tendrá su propio acceso para registrar visitas</p>
         </div>
         <div className="p-6 space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-300 focus:bg-white transition text-sm font-semibold" placeholder="Nombre (ej: Pedro)" value={newStaff.name} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, name: e.target.value})} />
-            <input type="email" className="p-3.5 bg-gray-50 rounded-xl outline-none border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-300 focus:bg-white transition text-sm font-semibold" placeholder="Correo (obligatorio para recuperación)" value={newStaff.email} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, email: e.target.value})} />
-            <div className="flex items-center bg-gray-50 rounded-xl px-3.5 border border-gray-200 focus-within:ring-2 focus-within:ring-purple-300 focus-within:bg-white transition">
-              <span className="text-gray-500 font-mono text-xs font-black mr-1 select-none shrink-0">{tenant.codePrefix || 'PREFIJO'}.</span>
-              <input className="bg-transparent w-full py-3.5 outline-none font-semibold text-gray-900 placeholder:text-gray-400 text-sm" placeholder="usuario" value={newStaff.username} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, username: e.target.value})} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Nombre</label>
+              <input className="w-full px-3.5 py-3 bg-slate-50 rounded-xl outline-none border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-300 focus:bg-white transition text-sm font-semibold" placeholder="Ej: Pedro García" value={newStaff.name} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, name: e.target.value})} />
             </div>
-            <div className="p-3.5 bg-blue-50 rounded-xl border border-blue-100 text-blue-700 text-xs font-bold flex items-center gap-2">
-              🔐 Se generará contraseña temporal; el operador deberá cambiarla al primer ingreso.
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Correo electrónico</label>
+              <input type="email" className="w-full px-3.5 py-3 bg-slate-50 rounded-xl outline-none border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-300 focus:bg-white transition text-sm font-semibold" placeholder="pedro@correo.com" value={newStaff.email} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, email: e.target.value})} />
             </div>
           </div>
-          <button onClick={createStaff} disabled={isCreatingStaff} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black py-3.5 rounded-xl shadow-md text-sm hover:shadow-lg transition-all disabled:opacity-60">{isCreatingStaff ? 'Creando...' : '+ Agregar Empleado'}</button>
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Nombre de usuario</label>
+            <div className="flex items-center bg-slate-50 rounded-xl px-3.5 border border-slate-200 focus-within:ring-2 focus-within:ring-indigo-300 focus-within:bg-white transition">
+              <span className="text-slate-400 font-mono text-xs font-black mr-1 select-none shrink-0">{tenant.codePrefix || 'PREFIJO'}.</span>
+              <input className="bg-transparent w-full py-3 outline-none font-semibold text-slate-900 placeholder:text-slate-400 text-sm" placeholder="pedro" value={newStaff.username} disabled={isCreatingStaff} onChange={e=>setNewStaff({...newStaff, username: e.target.value})} />
+            </div>
+          </div>
+          <div className="flex items-start gap-2 px-3 py-2.5 bg-indigo-50 rounded-xl border border-indigo-100 text-indigo-700 text-xs font-semibold">
+            <span className="mt-0.5">🔐</span>
+            <span>Se generará una contraseña temporal automáticamente. El operador deberá cambiarla al primer ingreso.</span>
+          </div>
+          <button onClick={createStaff} disabled={isCreatingStaff} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3 rounded-xl shadow-sm text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+            {isCreatingStaff ? (<><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Creando...</>) : '+ Agregar operador'}
+          </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-black text-gray-800">Mi Equipo</h2>
-            <span className="bg-gray-100 text-gray-500 text-[10px] font-black px-2 py-0.5 rounded-full">{team.length}</span>
-          </div>
+      {/* Team list */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+          <h3 className="text-sm font-black text-slate-800">Tu equipo</h3>
+          <span className="bg-slate-100 text-slate-500 text-[10px] font-black px-2 py-0.5 rounded-full">{team.length}</span>
         </div>
-        <div className="divide-y divide-gray-50">
+        <div className="divide-y divide-slate-50">
           {team.length > 0 ? team.map((u: TeamMember) => (
-            <div key={u.id} className="px-6 py-4 flex items-center justify-between gap-3 hover:bg-gray-50/50 transition">
+            <div key={u.id} className="px-6 py-4 flex items-center justify-between gap-3 hover:bg-slate-50/50 transition">
               <div className="flex items-center gap-3 min-w-0">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0 ${u.role === 'ADMIN' ? 'bg-gradient-to-br from-purple-500 to-pink-500' : 'bg-gradient-to-br from-sky-500 to-blue-600'}`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0 ${
+                  u.role === 'ADMIN' ? 'bg-indigo-600' : 'bg-slate-600'
+                }`}>
                   {u.name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-bold text-gray-900 text-sm truncate">{u.name}</h3>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="font-mono text-[11px] text-gray-400 font-semibold truncate">{u.username}</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${u.role === 'ADMIN' ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>{u.role === 'ADMIN' ? 'Admin' : 'Staff'}</span>
+                  <p className="font-bold text-slate-900 text-sm truncate">{u.name}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="font-mono text-[11px] text-slate-400 truncate">{u.username}</span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${
+                      u.role === 'ADMIN' ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'
+                    }`}>{u.role === 'ADMIN' ? 'Admin' : 'Operador'}</span>
                   </div>
                 </div>
               </div>
-              <button onClick={() => deleteStaff(String(u.id))} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition shrink-0" title="Eliminar">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-              </button>
+              {u.role !== 'ADMIN' && (
+                <button
+                  onClick={() => setDeleteConfirmId(String(u.id))}
+                  className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition shrink-0"
+                  title="Eliminar operador"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+              )}
             </div>
           )) : (
-            <div className="px-6 py-10 text-center">
-              <p className="text-gray-300 text-3xl mb-2">👥</p>
-              <p className="text-gray-400 text-sm font-semibold">Sin empleados registrados</p>
+            <div className="px-6 py-12 text-center">
+              <p className="text-slate-300 text-3xl mb-2">👥</p>
+              <p className="text-slate-400 text-sm font-semibold">Sin operadores registrados aún</p>
+              <p className="text-slate-400 text-xs mt-1">Agrega a tu primer empleado usando el formulario de arriba</p>
             </div>
           )}
         </div>
       </div>
     </div>
 
-    <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-8 self-start">
-      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl border border-indigo-100 p-6 shadow-sm">
-        <h4 className="text-indigo-800 text-sm font-black flex items-center gap-2 mb-4">
-          <span className="text-lg">💡</span> Roles del equipo
-        </h4>
-        <ul className="space-y-3 text-xs text-indigo-900/80 font-bold">
-          <li className="flex items-start gap-2.5 p-3 bg-purple-100/60 rounded-xl">
-            <span className="text-purple-600 text-base mt-0.5">👑</span>
-            <div><strong>Admin:</strong> Acceso total. Configura el programa, ve reportes, gestiona staff y envía notificaciones.</div>
-          </li>
-          <li className="flex items-start gap-2.5 p-3 bg-blue-100/60 rounded-xl">
-            <span className="text-blue-600 text-base mt-0.5">👤</span>
-            <div><strong>Operador (Staff):</strong> Solo puede escanear pases de clientes y canjear premios. Sin acceso a configuración ni reportes.</div>
-          </li>
-        </ul>
+    <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-6 self-start">
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 p-5">
+        <h4 className="text-white text-xs font-black uppercase tracking-wider mb-4">Diferencia de roles</h4>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 p-3 bg-indigo-600/10 rounded-xl border border-indigo-600/20">
+            <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-sm shrink-0">👑</div>
+            <div>
+              <p className="text-white text-xs font-black">Administrador</p>
+              <p className="text-slate-400 text-[11px] mt-0.5">Acceso total: reportes, configuración, notificaciones y gestión de equipo.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 p-3 bg-slate-800 rounded-xl">
+            <div className="w-7 h-7 rounded-lg bg-slate-600 flex items-center justify-center text-sm shrink-0">👤</div>
+            <div>
+              <p className="text-white text-xs font-black">Operador (Staff)</p>
+              <p className="text-slate-400 text-[11px] mt-0.5">Solo puede escanear pases y canjear premios. Sin acceso a ajustes ni datos.</p>
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="bg-white rounded-3xl border border-gray-100 p-5 shadow-sm">
-        <p className="text-xs font-black text-gray-500 uppercase tracking-wider mb-3">⚠️ Buenas prácticas</p>
-        <ul className="space-y-2 text-xs text-gray-600 font-semibold">
-          <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">●</span> Asigna una cuenta única por operador para rastrear actividad.</li>
-          <li className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">●</span> Elimina al operador cuando deje de trabajar contigo para proteger tu programa.</li>
-          <li className="flex items-start gap-2"><span className="text-emerald-500 mt-0.5">●</span> El correo de alta llega automáticamente al crear la cuenta.</li>
+      <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5">
+        <p className="text-amber-800 text-xs font-black uppercase tracking-wider mb-3">Buenas prácticas</p>
+        <ul className="space-y-2 text-xs text-amber-900/80 font-semibold">
+          <li className="flex items-start gap-2"><span className="text-amber-600 mt-0.5">•</span> Una cuenta por operador — nunca compartas credenciales.</li>
+          <li className="flex items-start gap-2"><span className="text-amber-600 mt-0.5">•</span> Elimina el acceso cuando un operador deje el negocio.</li>
+          <li className="flex items-start gap-2"><span className="text-emerald-600 mt-0.5">•</span> El operador recibe su contraseña por correo automáticamente.</li>
         </ul>
       </div>
     </div>
@@ -1979,20 +2133,46 @@ return (
     </div>
   </div>
 
-  {/* FIXED BOTTOM ACTION BAR */}
-  <div className="fixed bottom-0 left-0 md:left-64 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-gray-200 shadow-[0_-20px_40px_rgba(0,0,0,0.06)] z-40">
-    <div className="w-full max-w-5xl mx-auto flex justify-between items-center sm:px-6">
-      <div className="hidden sm:block flex-1 mr-4">
-        <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Estado</p>
-        <p className="text-sm font-bold text-gray-900 truncate">
-          {isSavingSettings ? 'Guardando cambios...' : (uiNotice?.type === 'success' ? '✅ Ajustes guardados correctamente' : 'Listo para guardar')}
-        </p>
+  {/* FIXED BOTTOM ACTION BAR — optimistic feedback */}
+  <div className="fixed bottom-0 left-0 md:left-60 right-0 p-3 bg-white/95 backdrop-blur-xl border-t border-slate-200 shadow-[0_-8px_30px_rgba(0,0,0,0.07)] z-40">
+    <div className="w-full max-w-5xl mx-auto flex justify-between items-center gap-4">
+      <div className="hidden sm:flex items-center gap-2.5">
+        {saveStatus === 'saved' && (
+          <div className="flex items-center gap-2 text-emerald-700 animate-fadeIn">
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" className="animate-checkDraw" d="M4.5 12.75l6 6 9-13.5" /></svg>
+            <span className="text-sm font-bold">Guardado</span>
+          </div>
+        )}
+        {saveStatus === 'error' && (
+          <div className="flex items-center gap-2 text-red-600 animate-fadeIn">
+            <span className="text-sm">❌</span>
+            <span className="text-sm font-bold">Error al guardar</span>
+          </div>
+        )}
+        {saveStatus === 'idle' && settingsDirty && (
+          <p className="text-xs font-semibold text-slate-500">Tienes cambios sin guardar</p>
+        )}
+        {saveStatus === 'idle' && !settingsDirty && (
+          <p className="text-xs font-semibold text-slate-400">Sin cambios pendientes</p>
+        )}
       </div>
-      <button onClick={() => saveSettings('all')} disabled={isSavingSettings} className="w-full sm:w-auto bg-gray-900 text-white px-8 py-3.5 rounded-xl font-black shadow-lg hover:shadow-xl hover:-translate-y-0.5 hover:bg-black transition-all text-sm disabled:opacity-60 disabled:hover:translate-y-0 flex justify-center items-center gap-2">
+      <button
+        onClick={() => saveSettings('all')}
+        disabled={isSavingSettings}
+        className={`w-full sm:w-auto px-8 py-3 rounded-xl font-black shadow-md text-sm transition-all flex justify-center items-center gap-2 ${
+          saveStatus === 'saved'
+            ? 'bg-emerald-600 text-white shadow-emerald-600/30'
+            : saveStatus === 'error'
+              ? 'bg-red-600 text-white shadow-red-600/20'
+              : 'bg-slate-900 text-white hover:bg-black hover:-translate-y-0.5 hover:shadow-lg'
+        } disabled:opacity-60 disabled:hover:translate-y-0`}
+      >
         {isSavingSettings ? (
-          <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Guardando...</>
+          <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Guardando...</>
+        ) : saveStatus === 'saved' ? (
+          '✓ Cambios guardados'
         ) : (
-          '💾 Guardar Todo (Diseño / Ubicación / Operación)'
+          '💾 Guardar configuración'
         )}
       </button>
     </div>
