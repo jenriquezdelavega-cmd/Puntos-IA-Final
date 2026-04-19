@@ -22,7 +22,6 @@ import {
 import {
   MarketingBackground,
   MarketingFooter,
-  MarketingHeader,
   Section,
   buttonStyles,
 } from '../../components/marketing/ui';
@@ -714,7 +713,6 @@ export default function ClientesAppPage() {
     return (
       <main className="relative min-h-screen overflow-hidden bg-[#fffdf9] text-[#1d1238]">
         <MarketingBackground />
-        <MarketingHeader badge="Área de cliente" />
         <Section title="Cargando tu sesión..." description="Estamos validando tu acceso de cliente.">
           <div className="rounded-2xl border border-[#ead8fb] bg-white p-4 text-sm text-[#5c4a82]">
             Validando credenciales...
@@ -727,7 +725,6 @@ export default function ClientesAppPage() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#fffdf9] text-[#1d1238]">
       <MarketingBackground />
-      <MarketingHeader badge="Área de cliente" primaryCta={{ href: '/pass?customer_id=' + encodeURIComponent(user.id), label: 'Abrir mi pase' }} />
 
       <Section
         eyebrow="Mi cuenta"
@@ -760,9 +757,6 @@ export default function ClientesAppPage() {
                     {syncingData ? 'Actualizando' : 'Actualizar datos'}
                   </span>
                 </button>
-                <Link href={`/pass?customer_id=${encodeURIComponent(user.id)}`} className={buttonStyles('secondary')}>
-                  <span className="inline-flex items-center gap-2"><ScanLine className="h-4 w-4" /> Abrir mi pase</span>
-                </Link>
               </div>
             </div>
 
