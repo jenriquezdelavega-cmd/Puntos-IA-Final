@@ -13,7 +13,7 @@ export default function ClientesPage() {
 
   return (
     <PageShell>
-      <SiteHeader navItems={nav} cta={{ label: clientes.hero.primaryCta.label, href: clientes.hero.primaryCta.href }} />
+      <SiteHeader navItems={nav} />
 
       <HeroSection
         eyebrow={clientes.hero.eyebrow}
