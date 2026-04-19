@@ -355,34 +355,38 @@ export default function PassPage() {
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
               className="mt-4 grid gap-2"
             >
-              <motion.button whileTap={{ scale: 0.95 }} onClick={downloadQrSvg} className="w-full rounded-xl border border-pink-100 bg-pink-50 py-2 text-sm font-black text-pink-700 hover:bg-pink-100">
-                Descargar QR (SVG)
-              </motion.button>
+              <p className="text-xs font-black text-slate-700 px-1">
+                Guarda tu pase para usarlo en segundos cuando llegues al local.
+              </p>
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 type="button"
                 onClick={openAppleWallet}
                 disabled={!pass.business?.id}
-                className="w-full rounded-xl border-2 border-black bg-black py-2 text-sm font-black text-white hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full rounded-xl border-2 border-indigo-700 bg-indigo-700 py-2.5 text-sm font-black text-white hover:bg-indigo-800 hover:border-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                🍎 Descargar en Apple Wallet (.pkpass)
+                Guardar en mi Wallet (iPhone)
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 type="button"
                 onClick={openGoogleWallet}
                 disabled={!pass.business?.id}
-                className="w-full rounded-xl border-2 border-slate-900 bg-white py-2 text-sm font-black text-slate-900 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full rounded-xl border-2 border-indigo-200 bg-white py-2.5 text-sm font-black text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                🇬 Descargar en Google Wallet
+                Guardar en mi Wallet (Android)
               </motion.button>
+              <motion.button whileTap={{ scale: 0.95 }} onClick={downloadQrSvg} className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-100">
+                Descargar mi código QR
+              </motion.button>
+              <p className="text-[11px] font-semibold text-slate-500 px-1">Si no usas Wallet, puedes mostrar tu QR al llegar.</p>
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 type="button"
                 onClick={goToPoints}
                 className="w-full rounded-xl border border-indigo-200 bg-indigo-50 py-2.5 text-sm font-black text-indigo-700 hover:bg-indigo-100"
               >
-                ⬅️ Ir a mi área de cliente
+                ⬅️ Volver a mi área de cliente
               </motion.button>
             </motion.div>
           </div>
