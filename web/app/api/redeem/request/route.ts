@@ -2,36 +2,12 @@ import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { logApiError, logApiEvent } from '@/app/lib/api-log';
 import { RewardPeriod } from '@prisma/client';
 import { prisma } from '@/app/lib/prisma';
-import { touchWalletPassRegistrations, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
-import { listWalletPushTokens, pushWalletUpdateToDevice, deleteWalletRegistrationsByPushToken } from '@/app/lib/apple-wallet-push';
 import { verifyUserSessionToken } from '@/app/lib/user-session-token';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 import { asTrimmedString, parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/request-validation';
-import { syncGoogleLoyaltyObjectForCustomer } from '@/app/lib/google-wallet-object-sync';
-import { addGoogleLoyaltyObjectMessage } from '@/app/lib/google-wallet';
-import { sendRedemptionRequestedEmail } from '@/app/lib/email';
-import { generateUniqueRedemptionCode } from '@/app/lib/redemption-code';
+import { periodKey } from '@/app/lib/reward-period';
+import { resetMembershipForPeriodRollover } from '@/app/lib/period-rollover';
 const TZ = 'America/Monterrey';
-
-function tzParts(d: Date) {
-  const fmt = new Intl.DateTimeFormat('en-CA', {
-    timeZone: TZ,
-    year: 'numeric',
-    month: '2-digit',
-  });
-  const parts = fmt.formatToParts(d);
-  const get = (t: string) => parts.find((p) => p.type === t)?.value || '';
-  return { y: parseInt(get('year'), 10), m: parseInt(get('month'), 10) };
-}
-
-function periodKey(period: RewardPeriod, now = new Date()) {
-  if (period === 'OPEN') return 'OPEN';
-  const { y, m } = tzParts(now);
-  if (period === 'MONTHLY') return `${y}-M${String(m).padStart(2, '0')}`;
-  if (period === 'QUARTERLY') return `${y}-Q${Math.floor((m - 1) / 3) + 1}`;
-  if (period === 'SEMESTER') return `${y}-S${m <= 6 ? 1 : 2}`;
-  return `${y}-Y`;
-}
 
 function dayKeyInBusinessTz(d = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -42,21 +18,6 @@ function dayKeyInBusinessTz(d = new Date()) {
   }).formatToParts(d);
   const get = (type: string) => parts.find((part) => part.type === type)?.value || '';
   return `${get('year')}-${get('month')}-${get('day')}`;
-}
-
-function formatRewardValidityLabel(period: RewardPeriod | string | null | undefined) {
-  switch (String(period || 'OPEN')) {
-    case 'MONTHLY':
-      return 'Válido durante el mes en curso';
-    case 'QUARTERLY':
-      return 'Válido durante el trimestre en curso';
-    case 'SEMESTER':
-      return 'Válido durante el semestre en curso';
-    case 'ANNUAL':
-      return 'Válido durante el año en curso';
-    default:
-      return 'Sin vigencia por periodo';
-  }
 }
 
 export async function POST(request: Request) {
@@ -176,9 +137,46 @@ export async function POST(request: Request) {
     const curKey = periodKey(curType, now);
 
     if ((membership.periodKey || 'OPEN') !== curKey) {
-      membership = await prisma.membership.update({
-        where: { id: membership.id },
-        data: { currentVisits: 0, periodKey: curKey },
+      const rollover = await resetMembershipForPeriodRollover({
+        membershipId: membership.id,
+        tenantId: normalizedTenantId,
+        userId: normalizedUserId,
+        nextPeriodKey: curKey,
+      });
+      membership = rollover.membership;
+      logApiEvent('/api/redeem/request', 'period_rollover_reset', {
+        userId: normalizedUserId,
+        tenantId: normalizedTenantId,
+        nextPeriodKey: curKey,
+        deletedPendingRewards: rollover.deletedPendingRewards,
+      });
+    }
+
+    const existingPending = await prisma.redemption.findFirst({
+      where: {
+        userId: normalizedUserId,
+        tenantId: normalizedTenantId,
+        isUsed: false,
+        loyaltyMilestoneId: null,
+        coalitionRewardUnlockId: null,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (existingPending) {
+      if (!String(existingPending.rewardSnapshot ?? '').trim()) {
+        await prisma.redemption.update({
+          where: { id: existingPending.id },
+          data: { rewardSnapshot: String(tenant.prize ?? '').trim() || null },
+        });
+      }
+      return apiSuccess({
+        requestId,
+        data: {
+          success: true,
+          code: existingPending.code,
+          alreadyPending: true,
+        },
       });
     }
 
@@ -228,145 +226,19 @@ export async function POST(request: Request) {
       });
     }
 
-    const existingPending = await prisma.redemption.findFirst({
-      where: {
-        userId: normalizedUserId,
-        tenantId: normalizedTenantId,
-        isUsed: false,
-        loyaltyMilestoneId: null,
-        coalitionRewardUnlockId: null,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (existingPending) {
-      if (!String(existingPending.rewardSnapshot ?? '').trim()) {
-        await prisma.redemption.update({
-          where: { id: existingPending.id },
-          data: { rewardSnapshot: String(tenant.prize ?? '').trim() || null },
-        });
-      }
-      return apiSuccess({
-        requestId,
-        data: {
-          success: true,
-          code: existingPending.code,
-          alreadyPending: true,
-        },
-      });
-    }
-
-    const code = await generateUniqueRedemptionCode(normalizedTenantId);
-
-    await prisma.redemption.create({
-      data: {
-        code,
-        userId: normalizedUserId,
-        tenantId: normalizedTenantId,
-        isUsed: false,
-        rewardSnapshot: String(tenant.prize ?? '').trim() || null,
-      },
-    });
-
-    logApiEvent('/api/redeem/request', 'redemption_requested', {
+    logApiEvent('/api/redeem/request', 'no_pending_code_available', {
       userId: normalizedUserId,
       tenantId: normalizedTenantId,
-      code,
+      currentVisits,
+      requiredVisits,
     });
-
-    try {
-      const customer = await prisma.user.findUnique({
-        where: { id: normalizedUserId },
-        select: { email: true, name: true },
-      });
-      if (customer?.email) {
-        const emailResult = await sendRedemptionRequestedEmail({
-          to: customer.email,
-          name: customer.name,
-          businessName: tenant.name,
-          code,
-          rewardName: tenant.prize,
-          validityLabel: formatRewardValidityLabel(tenant.rewardPeriod),
-        });
-        if (!emailResult.ok) {
-          logApiEvent('/api/redeem/request', 'redeem_request_email_failed', {
-            userId: normalizedUserId,
-            reason: emailResult.error || 'unknown',
-          });
-        }
-      }
-    } catch (emailError: unknown) {
-      logApiError('/api/redeem/request#email', emailError);
-    }
-
-    try {
-      const serialNumber = walletSerialNumber(normalizedUserId, normalizedTenantId);
-      const passTypeIdentifier = asTrimmedString(process.env.APPLE_PASS_TYPE_ID) || undefined;
-
-      await touchWalletPassRegistrations(prisma, { serialNumber, passTypeIdentifier });
-
-      if (passTypeIdentifier) {
-        const pushTokens = await listWalletPushTokens(prisma, { serialNumber, passTypeIdentifier });
-        for (const pushToken of pushTokens) {
-          const result = await pushWalletUpdateToDevice(pushToken, passTypeIdentifier);
-          if (result.ok) {
-            logApiEvent('/api/redeem/request#wallet-push', 'push_sent', {
-              serialNumber,
-              status: result.status,
-            });
-          } else {
-            if (result.status === 410 || result.status === 400) {
-              await deleteWalletRegistrationsByPushToken(prisma, pushToken);
-            }
-            logApiEvent('/api/redeem/request#wallet-push', 'push_failed', {
-              serialNumber,
-              status: result.status,
-              reason: result.reason || 'unknown',
-            });
-          }
-        }
-      }
-    } catch (walletError) {
-      logApiError('/api/redeem/request#wallet-push', walletError);
-    }
-
-    try {
-      const googleSync = await syncGoogleLoyaltyObjectForCustomer({
-        tenantId: normalizedTenantId,
-        userId: normalizedUserId,
-        origin: new URL(request.url).origin,
-      });
-      if (!googleSync.ok) {
-        logApiEvent('/api/redeem/request#google-sync', 'sync_skipped', {
-          tenantId: normalizedTenantId,
-          userId: normalizedUserId,
-          reason: googleSync.reason,
-          operation: googleSync.operation,
-          status: googleSync.status,
-        });
-      } else if (googleSync.objectId) {
-        const messageResult = await addGoogleLoyaltyObjectMessage({
-          objectId: googleSync.objectId,
-          header: '🎁 Canje solicitado',
-          body: 'Tus sellos se reiniciaron. ¡Empieza tu siguiente recompensa!',
-          messageId: `redeem_${Date.now()}`,
-        });
-        logApiEvent('/api/redeem/request#google-sync', messageResult.ok ? 'message_sent' : 'message_failed', {
-          tenantId: normalizedTenantId,
-          userId: normalizedUserId,
-          objectId: googleSync.objectId,
-          status: messageResult.status,
-        });
-      }
-    } catch (googleError) {
-      logApiError('/api/redeem/request#google-sync', googleError);
-    }
 
     return apiSuccess({
       requestId,
       data: {
-        success: true,
-        code,
+        success: false,
+        alreadyPending: false,
+        message: 'Tu código se genera automáticamente al registrar la visita donde completas la meta.',
       },
     });
   } catch (error: unknown) {

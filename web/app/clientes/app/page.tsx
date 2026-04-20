@@ -576,9 +576,9 @@ export default function ClientesAppPage() {
       }),
     });
 
-    const body = (await response.json()) as { code?: string; message?: string; error?: string; alreadyPending?: boolean };
+    const body = (await response.json()) as { code?: string; message?: string; error?: string; alreadyPending?: boolean; success?: boolean };
     if (!response.ok) {
-      const message = body?.message || body?.error || 'No se pudo generar canje';
+      const message = body?.message || body?.error || 'No se pudo consultar el estado del canje';
       if (isUnauthorizedResponse(response, body)) {
         handleSessionExpired();
         return;
@@ -587,11 +587,16 @@ export default function ClientesAppPage() {
       return;
     }
 
+    if (!body?.code) {
+      setStatusMessage(body?.message || 'Tu código se genera automáticamente al llegar a la meta en tienda.');
+      return;
+    }
+
     setRedeemCode({ code: body.code || '--------', business: membership.name || 'Negocio', reward: membership.prize || 'Recompensa principal' });
     setStatusMessage(
       body.alreadyPending
-        ? `Ya tenías un código pendiente para ${membership.name || 'el negocio'}.`
-        : `Código de canje generado para ${membership.name || 'el negocio'}.`,
+        ? `Código pendiente disponible para ${membership.name || 'el negocio'}.`
+        : `Código disponible para ${membership.name || 'el negocio'}.`,
     );
     void syncMembershipSnapshot();
   };
@@ -872,7 +877,7 @@ export default function ClientesAppPage() {
                   const progress = Math.min(100, Math.round((currentVisits / requiredVisits) * 100));
                   const canRedeem = currentVisits >= requiredVisits;
                   const hasPendingCode = membership.rewardCodeStatus === 'CODE_PENDING';
-                  const redeemDisabled = !canRedeem || hasPendingCode;
+                  const redeemDisabled = !hasPendingCode;
                   return (
                     <article key={membership.tenantId} className="rounded-3xl border border-[#e9daf9] bg-white p-5 shadow-[0_14px_34px_rgba(53,30,95,0.09)] md:p-6">
                       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -909,10 +914,10 @@ export default function ClientesAppPage() {
                           </p>
                         ) : hasPendingCode ? (
                           <p className="mt-2 text-xs font-semibold text-[#a34f27]">
-                            {membership.rewardCodeLabel || 'Ya tienes un código pendiente. Úsalo antes de generar otro.'}
+                            {membership.rewardCodeLabel || 'Ya tienes un código pendiente. Úsalo en caja para redimir tu premio.'}
                           </p>
                         ) : (
-                          <p className="mt-2 text-xs font-semibold text-[#2c7a4f]">Tu recompensa está lista. Puedes generar tu código de canje.</p>
+                          <p className="mt-2 text-xs font-semibold text-[#2c7a4f]">Tu código se crea automáticamente cuando registras la visita que completa tu meta.</p>
                         )}
                         {membership.rewardCodeStatus === 'CODE_USED' ? (
                           <p className="mt-1 text-[11px] font-semibold text-[#5f4a89]">{membership.rewardCodeLabel || 'Tu último código ya fue canjeado.'}</p>
@@ -978,7 +983,7 @@ export default function ClientesAppPage() {
                           disabled={redeemDisabled}
                           className={`${buttonStyles('primary')} disabled:cursor-not-allowed disabled:opacity-60`}
                         >
-                          {hasPendingCode ? 'Código pendiente' : 'Canjear recompensa'}
+                          {hasPendingCode ? 'Ver estado del canje' : 'Código automático'}
                         </button>
                         {hasPendingCode && membership.pendingRewardCode ? (
                           <button

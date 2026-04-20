@@ -4,6 +4,9 @@ import { apiError, apiSuccess, getRequestId } from '@/app/lib/api-response';
 import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
 import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
 import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
+import { periodKey } from '@/app/lib/reward-period';
+import { resetMembershipForPeriodRollover } from '@/app/lib/period-rollover';
+import { RewardPeriod } from '@prisma/client';
 
 type MilestoneSnapshot = {
   id: string;
@@ -73,8 +76,10 @@ export async function POST(request: Request) {
         },
       },
       select: {
+        id: true,
         tenantId: true,
         currentVisits: true,
+        periodKey: true,
         tenant: {
           select: {
             isActive: true,
@@ -82,6 +87,7 @@ export async function POST(request: Request) {
             prize: true,
             instagram: true,
             requiredVisits: true,
+            rewardPeriod: true,
             loyaltyMilestones: {
               orderBy: { visitTarget: 'asc' },
               select: { id: true, visitTarget: true, reward: true, emoji: true },
@@ -91,6 +97,28 @@ export async function POST(request: Request) {
       },
       orderBy: { tenantId: 'asc' },
     });
+
+    for (let index = 0; index < memberships.length; index += 1) {
+      const membership = memberships[index];
+      const rewardPeriod = (membership.tenant.rewardPeriod as RewardPeriod) || 'OPEN';
+      const expectedPeriodKey = periodKey(rewardPeriod, new Date());
+      if ((membership.currentVisits ?? 0) <= 0 && membership.periodKey === expectedPeriodKey) {
+        continue;
+      }
+      const currentPeriodKey = membership.periodKey || 'OPEN';
+      if (currentPeriodKey !== expectedPeriodKey) {
+        const rollover = await resetMembershipForPeriodRollover({
+          membershipId: membership.id,
+          tenantId: membership.tenantId,
+          userId,
+          nextPeriodKey: expectedPeriodKey,
+        });
+        memberships[index] = {
+          ...membership,
+          currentVisits: rollover.membership.currentVisits,
+        };
+      }
+    }
 
     const tenantIds = memberships.map((membership) => membership.tenantId);
     const [mainRedemptions, usedMilestoneRedemptions] = tenantIds.length
@@ -190,7 +218,7 @@ export async function POST(request: Request) {
         const latestMainRedemption = tenantMainRedemptions[0] || null;
 
         let rewardCodeStatus: MembershipSnapshot['rewardCodeStatus'] = 'READY_TO_GENERATE';
-        let rewardCodeLabel = 'Listo para generar código';
+        let rewardCodeLabel = 'El código se crea automáticamente al alcanzar la meta en una visita registrada';
 
         if (pendingRedemption) {
           rewardCodeStatus = 'CODE_PENDING';

@@ -15,6 +15,11 @@ import { syncGoogleLoyaltyObjectForCustomer } from '@/app/lib/google-wallet-obje
 import { addGoogleLoyaltyObjectMessage } from '@/app/lib/google-wallet';
 import { evaluateChallengesForVisit } from '@/app/lib/challenges';
 import { isMissingTableOrColumnError } from '@/app/lib/prisma-error-helpers';
+import { generateUniqueRedemptionCode } from '@/app/lib/redemption-code';
+import { sendRedemptionRequestedEmail } from '@/app/lib/email';
+import { periodKey } from '@/app/lib/reward-period';
+import { resetMembershipForPeriodRollover } from '@/app/lib/period-rollover';
+import { maybeSendPeriodExpiryPush } from '@/app/lib/period-expiry-push';
 import { after } from 'next/server';
 const TZ = 'America/Monterrey';
 
@@ -36,27 +41,6 @@ function dayKeyInBusinessTz(d = new Date()) {
 
   const get = (type: string) => parts.find((part) => part.type === type)?.value || '';
   return `${get('year')}-${get('month')}-${get('day')}`; // para DailyCode.day
-}
-
-function tzParts(d: Date) {
-  const fmt = new Intl.DateTimeFormat('en-CA', {
-    timeZone: TZ,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  const parts = fmt.formatToParts(d);
-  const get = (t: string) => parts.find(p => p.type === t)?.value || '';
-  return { y: parseInt(get('year'), 10), m: parseInt(get('month'), 10), day: parseInt(get('day'), 10) };
-}
-
-function periodKey(period: RewardPeriod, now = new Date()) {
-  if (period === 'OPEN') return 'OPEN';
-  const { y, m } = tzParts(now);
-  if (period === 'MONTHLY') return `${y}-M${String(m).padStart(2, '0')}`;
-  if (period === 'QUARTERLY') return `${y}-Q${Math.floor((m - 1) / 3) + 1}`;
-  if (period === 'SEMESTER') return `${y}-S${m <= 6 ? 1 : 2}`;
-  return `${y}-Y`;
 }
 
 function parsePurchaseAmount(value: unknown) {
@@ -112,6 +96,7 @@ export async function POST(request: Request) {
                 id: true,
                 isActive: true,
                 name: true,
+                prize: true,
                 requiredVisits: true,
                 rewardPeriod: true,
                 ticketControlEnabled: true,
@@ -129,6 +114,7 @@ export async function POST(request: Request) {
                 id: true,
                 isActive: true,
                 name: true,
+                prize: true,
                 requiredVisits: true,
                 rewardPeriod: true,
               },
@@ -222,9 +208,18 @@ export async function POST(request: Request) {
     const curKey = periodKey(curType, now);
 
     if ((membership.periodKey || 'OPEN') !== curKey) {
-      membership = await prisma.membership.update({
-        where: { id: membership.id },
-        data: { currentVisits: 0, periodKey: curKey },
+      const rollover = await resetMembershipForPeriodRollover({
+        membershipId: membership.id,
+        tenantId: validCode.tenantId,
+        userId,
+        nextPeriodKey: curKey,
+      });
+      membership = rollover.membership;
+      logApiEvent('/api/check-in/scan', 'period_rollover_reset', {
+        userId,
+        tenantId: validCode.tenantId,
+        nextPeriodKey: curKey,
+        deletedPendingRewards: rollover.deletedPendingRewards,
       });
     }
 
@@ -234,9 +229,10 @@ export async function POST(request: Request) {
         : false;
     const ticketNumber = ticketControlEnabled ? rawTicketNumber : '';
 
+    let createdVisit: { id: string } | null = null;
     let updatedMembership;
     try {
-      [, updatedMembership] = await prisma.$transaction([
+      [createdVisit, updatedMembership] = await prisma.$transaction([
         prisma.visit.create({
           data: {
             membershipId: membership.id,
@@ -259,7 +255,7 @@ export async function POST(request: Request) {
       ]);
     } catch (error: unknown) {
       if (!isMissingTableOrColumnError(error)) throw error;
-      [, updatedMembership] = await prisma.$transaction([
+      [createdVisit, updatedMembership] = await prisma.$transaction([
         prisma.visit.create({
           data: {
             membershipId: membership.id,
@@ -278,6 +274,98 @@ export async function POST(request: Request) {
           },
         }),
       ]);
+    }
+
+    const requiredVisits = validCode.tenant.requiredVisits ?? 10;
+    const rewardReachedNow = updatedMembership.currentVisits >= requiredVisits;
+
+    if (rewardReachedNow) {
+      const existingPendingMainReward = await prisma.redemption.findFirst({
+        where: {
+          userId,
+          tenantId: validCode.tenantId,
+          isUsed: false,
+          loyaltyMilestoneId: null,
+          coalitionRewardUnlockId: null,
+        },
+        select: {
+          id: true,
+          code: true,
+          rewardSnapshot: true,
+          redemptionEmailSentAt: true,
+        },
+      });
+
+      const rewardSnapshot = String(validCode.tenant.prize ?? '').trim() || null;
+      let pendingCode = existingPendingMainReward?.code ?? null;
+
+      if (!existingPendingMainReward) {
+        const generatedCode = await generateUniqueRedemptionCode(validCode.tenantId);
+        const createdRedemption = await prisma.redemption.create({
+          data: {
+            code: generatedCode,
+            userId,
+            tenantId: validCode.tenantId,
+            isUsed: false,
+            rewardSnapshot,
+            earnedVisitId: createdVisit?.id ?? null,
+          },
+          select: {
+            id: true,
+            code: true,
+            redemptionEmailSentAt: true,
+          },
+        });
+        pendingCode = createdRedemption.code;
+        logApiEvent('/api/check-in/scan', 'reward_code_auto_created', {
+          userId,
+          tenantId: validCode.tenantId,
+          redemptionId: createdRedemption.id,
+          code: createdRedemption.code,
+          earnedVisitId: createdVisit?.id ?? null,
+        });
+      } else if (!String(existingPendingMainReward.rewardSnapshot ?? '').trim() && rewardSnapshot) {
+        await prisma.redemption.update({
+          where: { id: existingPendingMainReward.id },
+          data: { rewardSnapshot, earnedVisitId: createdVisit?.id ?? null },
+        });
+      }
+
+      if (pendingCode) {
+        try {
+          const customer = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { email: true, name: true },
+          });
+          const hasEmail = Boolean(customer?.email && customer.email.trim());
+          if (hasEmail && !existingPendingMainReward?.redemptionEmailSentAt) {
+            const emailResult = await sendRedemptionRequestedEmail({
+              to: String(customer?.email).trim(),
+              name: customer?.name,
+              businessName: validCode.tenant.name,
+              rewardName: String(validCode.tenant.prize || 'Recompensa'),
+              code: pendingCode,
+            });
+            if (!emailResult.ok) {
+              logApiEvent('/api/check-in/scan', 'reward_code_email_failed', {
+                userId,
+                tenantId: validCode.tenantId,
+                reason: emailResult.error || 'unknown',
+              });
+            } else {
+              await prisma.redemption.updateMany({
+                where: { code: pendingCode, tenantId: validCode.tenantId },
+                data: { redemptionEmailSentAt: new Date() },
+              });
+            }
+          }
+        } catch (rewardEmailError) {
+          logApiError('/api/check-in/scan#reward-email', rewardEmailError, {
+            userId,
+            tenantId: validCode.tenantId,
+          });
+        }
+      }
     }
 
 
@@ -342,6 +430,18 @@ export async function POST(request: Request) {
       }
 
       try {
+        await maybeSendPeriodExpiryPush({
+          tenantId: validCode.tenantId,
+          origin: requestOrigin,
+        });
+      } catch (periodPushError) {
+        logApiError('/api/check-in/scan#period-expiry-push', periodPushError, {
+          tenantId: validCode.tenantId,
+          userId,
+        });
+      }
+
+      try {
         const googleSync = await syncGoogleLoyaltyObjectForCustomer({
           tenantId: validCode.tenantId,
           userId,
@@ -390,7 +490,7 @@ export async function POST(request: Request) {
       data: {
         success: true,
         visits: updatedMembership.currentVisits,
-        requiredVisits: validCode.tenant.requiredVisits ?? 10,
+        requiredVisits,
         rewardPeriod: validCode.tenant.rewardPeriod,
         message: `¡Visita registrada en ${validCode.tenant.name}!`,
         purchaseAmount,
