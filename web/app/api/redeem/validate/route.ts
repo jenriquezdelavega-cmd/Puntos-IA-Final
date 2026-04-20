@@ -7,6 +7,16 @@ import { parseJsonObject, parseWithSchema, requiredString } from '@/app/lib/requ
 import { sendRedemptionValidatedEmail } from '@/app/lib/email';
 import { isValidRedemptionCode, normalizeRedemptionCode } from '@/app/lib/redemption-code';
 import { getRedemptionRewardLabel } from '@/app/lib/redemption-display';
+import { after } from 'next/server';
+import { asTrimmedString } from '@/app/lib/request-validation';
+import { ensureWalletRegistrationsTable, touchWalletPassRegistrations, walletSerialNumber } from '@/app/lib/apple-wallet-webservice';
+import {
+  deleteWalletRegistrationsByPushToken,
+  listWalletPushTokens,
+  pushWalletUpdateToDevice,
+  shouldDeleteWalletRegistrationForPushResult,
+} from '@/app/lib/apple-wallet-push';
+import { syncGoogleLoyaltyObjectForCustomer } from '@/app/lib/google-wallet-object-sync';
 
 function accessStatusToCode(status: number): ApiErrorCode {
   if (status === 400) return 'BAD_REQUEST';
@@ -129,6 +139,8 @@ export async function POST(request: Request) {
       coalitionRewardUnlock: redemption.coalitionRewardUnlock,
     });
 
+    const shouldResetMainCounter = !redemption.loyaltyMilestone && !redemption.coalitionRewardUnlockId;
+
     await prisma.$transaction([
       prisma.redemption.update({
         where: { id: redemption.id },
@@ -139,7 +151,7 @@ export async function POST(request: Request) {
           redeemedByTenantUserId: tenantUserId,
         },
       }),
-      ...(!redemption.loyaltyMilestone && !redemption.coalitionRewardUnlockId
+      ...(shouldResetMainCounter
         ? [
             prisma.membership.updateMany({
               where: {
@@ -165,6 +177,59 @@ export async function POST(request: Request) {
       code: normalizedCode,
       redemptionId: redemption.id,
     });
+
+    if (shouldResetMainCounter) {
+      const requestOrigin = new URL(request.url).origin;
+      const backgroundWalletSync = async () => {
+        try {
+          await ensureWalletRegistrationsTable(prisma);
+          const serialNumber = walletSerialNumber(redemption.userId, redemption.tenantId);
+          const passTypeIdentifier = asTrimmedString(process.env.APPLE_PASS_TYPE_ID) || undefined;
+
+          await touchWalletPassRegistrations(prisma, {
+            serialNumber,
+            passTypeIdentifier,
+          });
+
+          if (!passTypeIdentifier) return;
+          const pushTokens = await listWalletPushTokens(prisma, {
+            serialNumber,
+            passTypeIdentifier,
+          });
+          for (const pushToken of pushTokens) {
+            const result = await pushWalletUpdateToDevice(pushToken, passTypeIdentifier);
+            if (!result.ok && shouldDeleteWalletRegistrationForPushResult(result)) {
+              await deleteWalletRegistrationsByPushToken(prisma, pushToken);
+            }
+          }
+        } catch (walletError) {
+          logApiError('/api/redeem/validate#wallet-touch', walletError, {
+            tenantId: redemption.tenantId,
+            userId: redemption.userId,
+          });
+        }
+
+        try {
+          await syncGoogleLoyaltyObjectForCustomer({
+            tenantId: redemption.tenantId,
+            userId: redemption.userId,
+            origin: requestOrigin,
+          });
+        } catch (googleError) {
+          logApiError('/api/redeem/validate#google-sync', googleError, {
+            tenantId: redemption.tenantId,
+            userId: redemption.userId,
+          });
+        }
+      };
+
+      try {
+        after(backgroundWalletSync);
+      } catch (afterError) {
+        logApiError('/api/redeem/validate#after', afterError);
+        void backgroundWalletSync();
+      }
+    }
 
     if (redemption.user.email) {
       const emailResult = await sendRedemptionValidatedEmail({

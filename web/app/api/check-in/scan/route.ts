@@ -292,7 +292,32 @@ export async function POST(request: Request) {
     }
 
     const requiredVisits = validCode.tenant.requiredVisits ?? 10;
+    const shouldResetVisitsAfterCheckIn = membership.currentVisits >= requiredVisits
+      && Boolean(
+        await prisma.redemption.findFirst({
+          where: {
+            userId,
+            tenantId: validCode.tenantId,
+            isUsed: false,
+            loyaltyMilestoneId: null,
+            coalitionRewardUnlockId: null,
+          },
+          select: { id: true },
+        }),
+      );
     const rewardReachedNow = updatedMembership.currentVisits >= requiredVisits;
+
+    if (shouldResetVisitsAfterCheckIn) {
+      updatedMembership = await prisma.membership.update({
+        where: { id: membership.id },
+        data: { currentVisits: 0 },
+      });
+      logApiEvent('/api/check-in/scan', 'post_reward_checkin_counter_reset', {
+        userId,
+        tenantId: validCode.tenantId,
+        membershipId: membership.id,
+      });
+    }
 
     if (rewardReachedNow) {
       const existingPendingMainReward = await prisma.redemption.findFirst({
