@@ -103,3 +103,16 @@ test('user register includes anti-abuse rate limiting', () => {
   assert.match(content, /checkRateLimit\s*\(/, 'user register should enforce rate limiting');
   assert.match(content, /buildRateLimitKey\s*\(\s*['"]user-register['"]/, 'user register should use user-register limiter scope');
 });
+
+
+test('check-in milestone auto-issuance excludes final reward milestone target', () => {
+  const file = 'app/api/check-in/scan/route.ts';
+  const content = readFileSync(join(process.cwd(), file), 'utf8');
+
+  assert.match(
+    content,
+    /visitTarget:\s*\{[\s\S]*lte:\s*updatedMembership\.currentVisits,[\s\S]*lt:\s*requiredVisits,[\s\S]*\}/,
+    'check-in scan should exclude the final milestone target to avoid double reward code issuance',
+  );
+});
+

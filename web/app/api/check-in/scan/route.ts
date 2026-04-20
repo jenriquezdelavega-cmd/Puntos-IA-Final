@@ -386,7 +386,10 @@ export async function POST(request: Request) {
     const unlockedMilestones = await prisma.loyaltyMilestone.findMany({
       where: {
         tenantId: validCode.tenantId,
-        visitTarget: { lte: updatedMembership.currentVisits },
+        visitTarget: {
+          lte: updatedMembership.currentVisits,
+          lt: requiredVisits,
+        },
       },
       orderBy: { visitTarget: 'asc' },
       select: {
