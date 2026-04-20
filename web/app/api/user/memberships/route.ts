@@ -16,6 +16,16 @@ type MilestoneSnapshot = {
   redeemed: boolean;
 };
 
+type EarnedCodeSnapshot = {
+  id: string;
+  code: string;
+  reward: string;
+  channel: 'FINAL' | 'MILESTONE';
+  status: 'PENDING' | 'USED';
+  createdAt: string;
+  usedAt?: string | null;
+};
+
 type MembershipSnapshot = {
   tenantId: string;
   name?: string;
@@ -30,6 +40,7 @@ type MembershipSnapshot = {
   rewardCodeLabel?: string;
   pendingRewardCode?: string | null;
   milestones?: MilestoneSnapshot[];
+  earnedCodes?: EarnedCodeSnapshot[];
 };
 
 export async function POST(request: Request) {
@@ -121,7 +132,7 @@ export async function POST(request: Request) {
     }
 
     const tenantIds = memberships.map((membership) => membership.tenantId);
-    const [mainRedemptions, usedMilestoneRedemptions] = tenantIds.length
+    const [mainRedemptions, usedMilestoneRedemptions, earnedRedemptions] = tenantIds.length
       ? await Promise.all([
           prisma.redemption.findMany({
             where: {
@@ -161,14 +172,58 @@ export async function POST(request: Request) {
               },
             },
           }),
+          prisma.redemption.findMany({
+            where: {
+              userId,
+              tenantId: { in: tenantIds },
+              coalitionRewardUnlockId: null,
+            },
+            select: {
+              id: true,
+              tenantId: true,
+              code: true,
+              isUsed: true,
+              createdAt: true,
+              usedAt: true,
+              rewardSnapshot: true,
+              loyaltyMilestoneId: true,
+              loyaltyMilestone: {
+                select: {
+                  reward: true,
+                  emoji: true,
+                },
+              },
+            },
+            orderBy: { createdAt: 'desc' },
+          }),
         ])
-      : [[], []];
+      : [[], [], []];
 
     const mainRedemptionsByTenant = new Map<string, Array<(typeof mainRedemptions)[number]>>();
     mainRedemptions.forEach((redemption) => {
       const list = mainRedemptionsByTenant.get(redemption.tenantId) || [];
       list.push(redemption);
       mainRedemptionsByTenant.set(redemption.tenantId, list);
+    });
+
+    const earnedCodesByTenant = new Map<string, EarnedCodeSnapshot[]>();
+    earnedRedemptions.forEach((redemption) => {
+      const channel: EarnedCodeSnapshot['channel'] = redemption.loyaltyMilestoneId ? 'MILESTONE' : 'FINAL';
+      const rewardLabel = String(redemption.rewardSnapshot ?? '').trim();
+      const fallbackReward = redemption.loyaltyMilestoneId
+        ? `${redemption.loyaltyMilestone?.emoji ? `${redemption.loyaltyMilestone.emoji} ` : ''}${redemption.loyaltyMilestone?.reward ?? 'Beneficio intermedio'}`
+        : 'Premio final';
+      const list = earnedCodesByTenant.get(redemption.tenantId) || [];
+      list.push({
+        id: redemption.id,
+        code: redemption.code,
+        reward: rewardLabel || fallbackReward.trim(),
+        channel,
+        status: redemption.isUsed ? 'USED' : 'PENDING',
+        createdAt: redemption.createdAt.toISOString(),
+        usedAt: redemption.usedAt?.toISOString() ?? null,
+      });
+      earnedCodesByTenant.set(redemption.tenantId, list);
     });
 
     const normalizeLabel = (label: string) => label.trim().toLowerCase();
@@ -238,13 +293,14 @@ export async function POST(request: Request) {
           prize: membership.tenant.prize ?? 'Premio Sorpresa',
           instagram: membership.tenant.instagram ?? '',
           requiredVisits: membership.tenant.requiredVisits ?? 10,
-          rewardPeriod: 'OPEN',
+          rewardPeriod: membership.tenant.rewardPeriod ?? 'OPEN',
           logoData: '',
           visits,
           points,
           rewardCodeStatus,
           rewardCodeLabel,
           pendingRewardCode: pendingRedemption?.code ?? null,
+          earnedCodes: earnedCodesByTenant.get(membership.tenantId) || [],
           milestones: membership.tenant.loyaltyMilestones.map((milestone) => ({
             id: milestone.id,
             visitTarget: milestone.visitTarget,
