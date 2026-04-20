@@ -6,9 +6,10 @@ export type TenantWalletStyle = {
   foregroundColor: string;
   labelColor: string;
   stripImageData: string;
+  updatedAt: Date;
 };
 
-const DEFAULT_STYLE: Omit<TenantWalletStyle, 'tenantId'> = {
+const DEFAULT_STYLE: Omit<TenantWalletStyle, 'tenantId' | 'updatedAt'> = {
   backgroundColor: 'rgb(31,41,55)',
   foregroundColor: 'rgb(255,255,255)',
   labelColor: 'rgb(191,219,254)',
@@ -86,6 +87,7 @@ export async function getTenantWalletStyle(tenantId: string): Promise<TenantWall
     foregroundColor: normalizeColor(row.foregroundColor, DEFAULT_STYLE.foregroundColor),
     labelColor: normalizeColor(row.labelColor, DEFAULT_STYLE.labelColor),
     stripImageData: normalizeImageData(row.stripImageData),
+    updatedAt: row.updatedAt,
   };
 }
 
@@ -93,5 +95,6 @@ export function defaultTenantWalletStyle(tenantId: string): TenantWalletStyle {
   return {
     tenantId,
     ...DEFAULT_STYLE,
+    updatedAt: new Date(0),
   };
 }
