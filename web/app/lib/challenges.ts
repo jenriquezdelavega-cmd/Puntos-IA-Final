@@ -7,6 +7,31 @@ function windowStartFromDays(days: number) {
   return new Date(now.getTime() - safeDays * 24 * 60 * 60 * 1000);
 }
 
+type MissionFilters = {
+  businessCategory?: string;
+  coalitionOnly?: boolean;
+};
+
+function parseMissionFilters(rawText: string): MissionFilters {
+  const text = String(rawText || '');
+  const categoryMatch = text.match(/\[(?:categoria|category)\s*:\s*([^[\]]+)\]/i);
+  const coalitionOnlyMatch = text.match(/\[(?:solo_coalicion|coalition_only)\s*:\s*(true|false|1|0|si|no)\]/i);
+
+  const businessCategory = categoryMatch?.[1]?.trim();
+  const rawCoalitionOnly = coalitionOnlyMatch?.[1]?.trim().toLowerCase();
+  const coalitionOnly =
+    rawCoalitionOnly === 'true' || rawCoalitionOnly === '1' || rawCoalitionOnly === 'si'
+      ? true
+      : rawCoalitionOnly === 'false' || rawCoalitionOnly === '0' || rawCoalitionOnly === 'no'
+        ? false
+        : undefined;
+
+  return {
+    ...(businessCategory ? { businessCategory } : {}),
+    ...(coalitionOnly !== undefined ? { coalitionOnly } : {}),
+  };
+}
+
 export async function evaluateChallengesForVisit(params: { userId: string }) {
   const { userId } = params;
 
@@ -29,20 +54,32 @@ export async function evaluateChallengesForVisit(params: { userId: string }) {
 
   for (const challenge of activeChallenges) {
     const start = windowStartFromDays(challenge.timeWindow);
+    const missionFilters = parseMissionFilters(`${challenge.title}\n${challenge.description}`);
+
+    const tenantFilter = {
+      ...(missionFilters.businessCategory ? { businessCategory: missionFilters.businessCategory } : {}),
+      ...(missionFilters.coalitionOnly === true ? { coalitionOptIn: true } : {}),
+    };
 
     let progressValue = 0;
 
     if (challenge.challengeType === ChallengeType.VISIT_COUNT) {
       progressValue = await prisma.visit.count({
         where: {
-          membership: { userId },
+          membership: {
+            userId,
+            ...(Object.keys(tenantFilter).length > 0 ? { tenant: tenantFilter } : {}),
+          },
           visitedAt: { gte: start },
         },
       });
     } else if (challenge.challengeType === ChallengeType.DISTINCT_BUSINESSES) {
       const visitedTenants = await prisma.visit.findMany({
         where: {
-          membership: { userId },
+          membership: {
+            userId,
+            ...(Object.keys(tenantFilter).length > 0 ? { tenant: tenantFilter } : {}),
+          },
           visitedAt: { gte: start },
         },
         distinct: ['tenantId'],

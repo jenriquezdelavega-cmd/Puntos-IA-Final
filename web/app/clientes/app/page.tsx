@@ -144,6 +144,11 @@ type ChallengeItem = {
   } | null;
 };
 
+type ChallengeStats = {
+  availablePoints: number;
+  coalitionVisits: number;
+};
+
 function rewardValidityLabel(period?: string) {
   switch (String(period || 'OPEN')) {
     case 'MONTHLY':
@@ -256,6 +261,7 @@ export default function ClientesAppPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [rewards, setRewards] = useState<CoalitionReward[]>([]);
   const [challenges, setChallenges] = useState<ChallengeItem[]>([]);
+  const [challengeStats, setChallengeStats] = useState<ChallengeStats>({ availablePoints: 0, coalitionVisits: 0 });
   const [tenants, setTenants] = useState<TenantMapItem[]>([]);
 
   const [savingProfile, setSavingProfile] = useState(false);
@@ -506,16 +512,29 @@ export default function ClientesAppPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(authPayload),
         });
-        const body = (await response.json()) as { challenges?: ChallengeItem[]; message?: string; error?: string; code?: string; warning?: string };
+        const body = (await response.json()) as {
+          challenges?: ChallengeItem[];
+          availablePoints?: number;
+          coalitionVisits?: number;
+          message?: string;
+          error?: string;
+          code?: string;
+          warning?: string;
+        };
         if (!response.ok) {
           if (isUnauthorizedResponse(response, body)) {
             handleSessionExpired();
             return;
           }
+          setChallengeStats({ availablePoints: 0, coalitionVisits: 0 });
           setDataWarnings((prev) => ({ ...prev, challenges: body?.message || body?.error || 'No se pudieron cargar retos' }));
           return;
         }
         setChallenges(body.challenges || []);
+        setChallengeStats({
+          availablePoints: Math.max(0, Number(body.availablePoints || 0)),
+          coalitionVisits: Math.max(0, Number(body.coalitionVisits || 0)),
+        });
         if (body.warning) {
           setDataWarnings((prev) => ({ ...prev, challenges: body.warning }));
         }
@@ -999,6 +1018,13 @@ export default function ClientesAppPage() {
                   <div className="rounded-2xl border border-[#ead8fb] bg-[#fcf9ff] p-4">
                     <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#7f61ad]">Completados</p>
                     <p className="mt-1 text-2xl font-black text-[#2a184f]">{completedChallenges}</p>
+                  </div>
+                  <div className="rounded-2xl border border-[#ead8fb] bg-[#fcf9ff] p-4 sm:col-span-3">
+                    <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#7f61ad]">Puntos disponibles</p>
+                    <p className="mt-1 text-2xl font-black text-[#2a184f]">{challengeStats.availablePoints}</p>
+                    <p className="mt-1 text-xs font-semibold text-[#6c549a]">
+                      Acumulados por {challengeStats.coalitionVisits} visita(s) en negocios de la coalición.
+                    </p>
                   </div>
                 </div>
               </article>
