@@ -63,6 +63,7 @@ export async function POST(request: Request) {
       const effectiveDate = redemption.usedAt ?? redemption.createdAt;
       return {
         id: redemption.id,
+        code: redemption.code,
         tenant: redemption.tenant.name,
         prize: getRedemptionRewardLabel({
           tenantPrize: redemption.tenant.prize,
@@ -82,6 +83,8 @@ export async function POST(request: Request) {
           minute: '2-digit',
           timeZone: BUSINESS_TZ,
         }),
+        earnedAt: redemption.createdAt.toISOString(),
+        redeemedAt: redemption.usedAt ? redemption.usedAt.toISOString() : null,
       };
     });
 

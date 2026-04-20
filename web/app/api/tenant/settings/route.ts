@@ -44,6 +44,10 @@ export async function POST(request: Request) {
     const walletStripImageData = hasOwn('walletStripImageData') ? asTrimmedString(body.walletStripImageData) : undefined;
     const coalitionOptIn = hasOwn('coalitionOptIn') && typeof body.coalitionOptIn === 'boolean' ? body.coalitionOptIn : undefined;
     const ticketControlEnabled = hasOwn('ticketControlEnabled') && typeof body.ticketControlEnabled === 'boolean' ? body.ticketControlEnabled : undefined;
+    const periodExpiryPushEnabled = hasOwn('periodExpiryPushEnabled') && typeof body.periodExpiryPushEnabled === 'boolean'
+      ? body.periodExpiryPushEnabled
+      : undefined;
+    const periodExpiryPushDaysBeforeRaw = hasOwn('periodExpiryPushDaysBefore') ? body.periodExpiryPushDaysBefore : undefined;
     const coalitionDiscountPercentRaw = hasOwn('coalitionDiscountPercent') ? body.coalitionDiscountPercent : undefined;
     const coalitionProduct = optionalTrimmedField('coalitionProduct');
     const businessCategoryRaw = optionalTrimmedField('businessCategory');
@@ -76,6 +80,10 @@ export async function POST(request: Request) {
       coalitionDiscountPercentRaw === undefined || coalitionDiscountPercentRaw === null || coalitionDiscountPercentRaw === ''
         ? undefined
         : Math.max(0, parseInt(String(coalitionDiscountPercentRaw), 10));
+    const parsedPeriodExpiryPushDaysBefore =
+      periodExpiryPushDaysBeforeRaw === undefined || periodExpiryPushDaysBeforeRaw === null || periodExpiryPushDaysBeforeRaw === ''
+        ? undefined
+        : Math.min(30, Math.max(0, parseInt(String(periodExpiryPushDaysBeforeRaw), 10)));
 
     let effectiveCoalitionDiscount = parsedCoalitionDiscount;
     if (effectiveCoalitionDiscount === undefined && coalitionOptIn === true) {
@@ -118,6 +126,8 @@ export async function POST(request: Request) {
         ...(logoData !== undefined && logoData !== null ? { logoData } : {}),
         ...(coalitionOptIn !== undefined ? { coalitionOptIn } : {}),
         ...(ticketControlEnabled !== undefined ? { ticketControlEnabled } : {}),
+        ...(periodExpiryPushEnabled !== undefined ? { periodExpiryPushEnabled } : {}),
+        ...(parsedPeriodExpiryPushDaysBefore !== undefined ? { periodExpiryPushDaysBefore: parsedPeriodExpiryPushDaysBefore } : {}),
         ...(parsedCoalitionDiscount !== undefined ? { coalitionDiscountPercent: parsedCoalitionDiscount } : {}),
         ...(coalitionProduct !== undefined && coalitionProduct !== null ? { coalitionProduct } : {}),
         ...(businessCategory !== undefined ? { businessCategory } : {}),

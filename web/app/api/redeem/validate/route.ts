@@ -132,7 +132,12 @@ export async function POST(request: Request) {
     await prisma.$transaction([
       prisma.redemption.update({
         where: { id: redemption.id },
-        data: { isUsed: true, usedAt: validationTimestamp, rewardSnapshot: rewardSnapshot || null },
+        data: {
+          isUsed: true,
+          usedAt: validationTimestamp,
+          rewardSnapshot: rewardSnapshot || null,
+          redeemedByTenantUserId: tenantUserId,
+        },
       }),
       ...(!redemption.loyaltyMilestone && !redemption.coalitionRewardUnlockId
         ? [
@@ -190,6 +195,8 @@ export async function POST(request: Request) {
           tenantId: redemption.tenantId,
           isUsed: true,
           usedAt: validationTimestamp.toISOString(),
+          earnedAt: redemption.createdAt.toISOString(),
+          redeemedByTenantUserId: tenantUserId,
         },
       },
     });
