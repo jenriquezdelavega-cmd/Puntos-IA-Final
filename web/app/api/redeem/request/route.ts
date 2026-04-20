@@ -44,6 +44,21 @@ function dayKeyInBusinessTz(d = new Date()) {
   return `${get('year')}-${get('month')}-${get('day')}`;
 }
 
+function formatRewardValidityLabel(period: RewardPeriod | string | null | undefined) {
+  switch (String(period || 'OPEN')) {
+    case 'MONTHLY':
+      return 'Válido durante el mes en curso';
+    case 'QUARTERLY':
+      return 'Válido durante el trimestre en curso';
+    case 'SEMESTER':
+      return 'Válido durante el semestre en curso';
+    case 'ANNUAL':
+      return 'Válido durante el año en curso';
+    default:
+      return 'Sin vigencia por periodo';
+  }
+}
+
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
 
@@ -270,6 +285,8 @@ export async function POST(request: Request) {
           name: customer.name,
           businessName: tenant.name,
           code,
+          rewardName: tenant.prize,
+          validityLabel: formatRewardValidityLabel(tenant.rewardPeriod),
         });
         if (!emailResult.ok) {
           logApiEvent('/api/redeem/request', 'redeem_request_email_failed', {

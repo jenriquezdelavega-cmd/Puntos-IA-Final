@@ -7,6 +7,21 @@ import { asTrimmedString, parseJsonObject } from '@/app/lib/request-validation';
 import { generateUniqueRedemptionCode } from '@/app/lib/redemption-code';
 import { sendRedemptionRequestedEmail } from '@/app/lib/email';
 
+function formatRewardValidityLabel(period: string | null | undefined) {
+  switch (String(period || 'OPEN')) {
+    case 'MONTHLY':
+      return 'Válido durante el mes en curso';
+    case 'QUARTERLY':
+      return 'Válido durante el trimestre en curso';
+    case 'SEMESTER':
+      return 'Válido durante el semestre en curso';
+    case 'ANNUAL':
+      return 'Válido durante el año en curso';
+    default:
+      return 'Sin vigencia por periodo';
+  }
+}
+
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
 
@@ -175,15 +190,18 @@ export async function POST(request: Request) {
 
     try {
       const [tenant, customer] = await Promise.all([
-        prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }),
+        prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, rewardPeriod: true } }),
         prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true } }),
       ]);
       if (tenant?.name && customer?.email) {
+        const milestoneReward = `${milestone.emoji ? `${milestone.emoji} ` : ''}${milestone.reward}`.trim();
         const emailResult = await sendRedemptionRequestedEmail({
           to: customer.email,
           name: customer.name,
           businessName: tenant.name,
           code,
+          rewardName: milestoneReward || milestone.reward,
+          validityLabel: formatRewardValidityLabel(tenant.rewardPeriod),
         });
         if (!emailResult.ok) {
           logApiEvent('/api/redeem/milestone-request', 'milestone_redemption_email_failed', {
