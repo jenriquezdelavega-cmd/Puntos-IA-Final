@@ -31,6 +31,10 @@ model Tenant {
   coalitionDiscountPercent Int @default(0) @map("coalition_discount_percent")
   coalitionProduct String @default("") @map("coalition_product")
   ticketControlEnabled Boolean @default(false) @map("ticket_control_enabled")
+  periodExpiryPushEnabled Boolean @default(false) @map("period_expiry_push_enabled")
+  periodExpiryPushDaysBefore Int @default(3) @map("period_expiry_push_days_before")
+  periodExpiryLastNotifiedPeriodKey String? @map("period_expiry_last_notified_period_key")
+  periodExpiryLastNotifiedAt DateTime? @map("period_expiry_last_notified_at")
 
   createdAt DateTime @default(now())
 
@@ -57,6 +61,7 @@ model TenantUser {
   tenantId       String
   tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   generatedCodes DailyCode[] @relation("DailyCodeGeneratedBy")
+  validatedRedemptions Redemption[] @relation("RedemptionValidatedByTenantUser")
   passwordResetTokens TenantUserPasswordResetToken[]
 }
 
@@ -186,6 +191,7 @@ model Visit {
 
   dailyCodeId String
   dailyCode   DailyCode @relation(fields: [dailyCodeId], references: [id])
+  earnedRedemptions Redemption[]
 
   @@unique([membershipId, tenantId, visitDay])
 }
@@ -196,15 +202,24 @@ model Redemption {
   rewardSnapshot String? @map("reward_snapshot")
   isUsed    Boolean  @default(false)
   usedAt    DateTime?
+  redemptionEmailSentAt DateTime? @map("redemption_email_sent_at")
   createdAt DateTime @default(now())
+  earnedVisitId String? @map("earned_visit_id")
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id])
+  redeemedByTenantUserId String? @map("redeemed_by_tenant_user_id")
+  redeemedByTenantUser TenantUser? @relation("RedemptionValidatedByTenantUser", fields: [redeemedByTenantUserId], references: [id], onDelete: SetNull)
   coalitionRewardUnlockId String? @unique @map("coalition_reward_unlock_id")
   coalitionRewardUnlock   CustomerCoalitionReward? @relation(fields: [coalitionRewardUnlockId], references: [id], onDelete: SetNull)
   loyaltyMilestoneId String? @map("loyalty_milestone_id")
   loyaltyMilestone   LoyaltyMilestone? @relation(fields: [loyaltyMilestoneId], references: [id], onDelete: SetNull)
+  earnedVisit Visit? @relation(fields: [earnedVisitId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, userId, isUsed, loyaltyMilestoneId, coalitionRewardUnlockId])
+  @@index([earnedVisitId])
+  @@index([redeemedByTenantUserId])
 }
 
 

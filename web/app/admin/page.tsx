@@ -39,6 +39,9 @@ type TenantView = {
   coalitionProduct?: string;
   businessCategory?: string;
   ticketControlEnabled?: boolean;
+  periodExpiryPushEnabled?: boolean;
+  periodExpiryPushDaysBefore?: number;
+  periodExpiryLastNotifiedAt?: string | null;
 };
 
 type MilestoneRow = { id?: string; visitTarget: string; reward: string; emoji: string };
@@ -76,6 +79,9 @@ const [coalitionOptIn, setCoalitionOptIn] = useState(false);
 const [coalitionDiscountPercent, setCoalitionDiscountPercent] = useState('10');
 const [coalitionProduct, setCoalitionProduct] = useState('');
 const [ticketControlEnabled, setTicketControlEnabled] = useState(false);
+const [periodExpiryPushEnabled, setPeriodExpiryPushEnabled] = useState(false);
+const [periodExpiryPushDaysBefore, setPeriodExpiryPushDaysBefore] = useState('3');
+const [periodExpiryLastNotifiedAt, setPeriodExpiryLastNotifiedAt] = useState<string | null>(null);
 const [businessCategory, setBusinessCategory] = useState<BusinessCategory>(DEFAULT_BUSINESS_CATEGORY);
 const [addressSearch, setAddressSearch] = useState('');
 const [isSearching, setIsSearching] = useState(false);
@@ -207,6 +213,9 @@ const handleLogin = async (e: React.FormEvent) => {
       setCoalitionDiscountPercent(String(data.tenant.coalitionDiscountPercent ?? 10));
       setCoalitionProduct(String(data.tenant.coalitionProduct ?? ''));
       setTicketControlEnabled(Boolean(data.tenant.ticketControlEnabled));
+      setPeriodExpiryPushEnabled(Boolean(data.tenant.periodExpiryPushEnabled));
+      setPeriodExpiryPushDaysBefore(String(Math.min(30, Math.max(0, Number(data.tenant.periodExpiryPushDaysBefore ?? 3)))));
+      setPeriodExpiryLastNotifiedAt(data.tenant.periodExpiryLastNotifiedAt ? String(data.tenant.periodExpiryLastNotifiedAt) : null);
       setBusinessCategory(parseBusinessCategory(data.tenant.businessCategory));
       setRequiredVisits(String(sanitizeRequiredVisits(data.tenant.requiredVisits ?? DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS)));
       setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
@@ -598,6 +607,8 @@ const saveSettings = async (scope: SettingsSaveScope = 'all') => {
       settingsPayload.coalitionDiscountPercent = coalitionDiscountPercent;
       settingsPayload.coalitionProduct = coalitionProduct;
       settingsPayload.ticketControlEnabled = ticketControlEnabled;
+      settingsPayload.periodExpiryPushEnabled = periodExpiryPushEnabled;
+      settingsPayload.periodExpiryPushDaysBefore = Math.min(30, Math.max(0, Number(periodExpiryPushDaysBefore || 0)));
     }
 
     const res = await fetch('/api/tenant/settings', {
@@ -623,6 +634,9 @@ const saveSettings = async (scope: SettingsSaveScope = 'all') => {
       setCoalitionDiscountPercent(String(data.tenant.coalitionDiscountPercent ?? 10));
       setCoalitionProduct(String(data.tenant.coalitionProduct ?? ''));
       setTicketControlEnabled(Boolean(data.tenant.ticketControlEnabled));
+      setPeriodExpiryPushEnabled(Boolean(data.tenant.periodExpiryPushEnabled));
+      setPeriodExpiryPushDaysBefore(String(Math.min(30, Math.max(0, Number(data.tenant.periodExpiryPushDaysBefore ?? 3)))));
+      setPeriodExpiryLastNotifiedAt(data.tenant.periodExpiryLastNotifiedAt ? String(data.tenant.periodExpiryLastNotifiedAt) : null);
       setBusinessCategory(parseBusinessCategory(data.tenant.businessCategory));
       setRequiredVisits(String(sanitizeRequiredVisits(data.tenant.requiredVisits ?? DEFAULT_REQUIRED_VISITS, DEFAULT_REQUIRED_VISITS)));
       setRewardPeriod(String(data.tenant.rewardPeriod ?? 'OPEN'));
@@ -1995,6 +2009,47 @@ return (
             <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform shadow-sm ${ticketControlEnabled ? 'translate-x-5' : 'translate-x-0'}`}></div>
           </div>
         </label>
+        <div className="px-6 pb-2">
+          <label className="flex items-start md:items-center justify-between gap-6 p-4 rounded-2xl border border-amber-100 bg-amber-50/40 cursor-pointer hover:bg-amber-50/70 transition-colors">
+            <div>
+              <h3 className="text-sm font-black text-amber-900 flex items-center gap-2">⏳ Push por cierre de periodo</h3>
+              <p className="text-[11px] text-amber-700 font-semibold mt-1">
+                Notifica automáticamente a tus clientes antes de que termine el periodo y se reinicien visitas/premios pendientes.
+              </p>
+            </div>
+            <div className="shrink-0 mt-1 md:mt-0 relative">
+              <input
+                type="checkbox"
+                checked={periodExpiryPushEnabled}
+                onChange={(e) => setPeriodExpiryPushEnabled(e.target.checked)}
+                className="peer sr-only"
+              />
+              <div className={`w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-amber-500 transition-colors shadow-inner`}></div>
+              <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform shadow-sm ${periodExpiryPushEnabled ? 'translate-x-5' : 'translate-x-0'}`}></div>
+            </div>
+          </label>
+          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider block mb-1">Días antes de cierre</label>
+              <input
+                type="number"
+                min={0}
+                max={30}
+                value={periodExpiryPushDaysBefore}
+                onChange={(e) => setPeriodExpiryPushDaysBefore(e.target.value.replace(/[^0-9]/g, ''))}
+                className="w-full p-3 bg-gray-50 rounded-xl font-semibold text-gray-900 border border-gray-200 focus:ring-2 focus:ring-amber-300 outline-none transition-all text-sm"
+              />
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
+              <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Última salida push automática</p>
+              <p className="mt-1 text-sm font-bold text-gray-800">
+                {periodExpiryLastNotifiedAt
+                  ? new Date(periodExpiryLastNotifiedAt).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })
+                  : 'Sin envíos automáticos aún'}
+              </p>
+            </div>
+          </div>
+        </div>
         <div className="px-6 pb-6">
           <button onClick={() => saveSettings('operation')} disabled={isSavingSettings} className="w-full bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-black py-2.5 rounded-xl transition text-xs mt-1 flex justify-center items-center gap-2">
             {isSavingSettings ? 'Guardando...' : '💾 Guardar Operación'}

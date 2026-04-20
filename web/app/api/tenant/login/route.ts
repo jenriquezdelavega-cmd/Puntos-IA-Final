@@ -73,6 +73,9 @@ export async function POST(request: Request) {
                 rewardPeriod: true,
                 logoData: true,
                 ticketControlEnabled: true,
+                periodExpiryPushEnabled: true,
+                periodExpiryPushDaysBefore: true,
+                periodExpiryLastNotifiedAt: true,
               },
             },
           },
@@ -103,6 +106,7 @@ export async function POST(request: Request) {
                 requiredVisits: true,
                 rewardPeriod: true,
                 logoData: true,
+                periodExpiryLastNotifiedAt: true,
               },
             },
           },
@@ -114,6 +118,8 @@ export async function POST(request: Request) {
             ...fallback.tenant,
             businessCategory: DEFAULT_BUSINESS_CATEGORY,
             ticketControlEnabled: false,
+            periodExpiryPushEnabled: false,
+            periodExpiryPushDaysBefore: 3,
           },
         };
       }
@@ -194,6 +200,9 @@ export async function POST(request: Request) {
           coalitionDiscountPercent: null,
           coalitionProduct: '',
           ticketControlEnabled,
+          periodExpiryPushEnabled: Boolean((user.tenant as { periodExpiryPushEnabled?: boolean }).periodExpiryPushEnabled),
+          periodExpiryPushDaysBefore: Number((user.tenant as { periodExpiryPushDaysBefore?: number }).periodExpiryPushDaysBefore ?? 3),
+          periodExpiryLastNotifiedAt: (user.tenant as { periodExpiryLastNotifiedAt?: Date | null }).periodExpiryLastNotifiedAt ?? null,
         },
       },
     });
