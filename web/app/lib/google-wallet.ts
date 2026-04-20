@@ -426,6 +426,27 @@ export async function upsertGoogleLoyaltyObject(payload: Record<string, unknown>
     };
   }
 
+  const replacePayload = {
+    ...payload,
+  };
+  delete replacePayload.id;
+
+  // Prefer full replacement so repeated fields (e.g. text/image modules) are refreshed consistently.
+  const replaceResponse = await fetch(`${WALLET_OBJECT_URL}/${encodeURIComponent(objectId)}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(replacePayload),
+  });
+
+  if (replaceResponse.ok) {
+    return {
+      operation: 'updated' as const,
+      status: replaceResponse.status,
+      body: await parseGoogleWalletApiResponse(replaceResponse),
+      objectId,
+    };
+  }
+
   const updatePayload = {
     state: payload.state,
     accountName: payload.accountName,
@@ -443,26 +464,6 @@ export async function upsertGoogleLoyaltyObject(payload: Record<string, unknown>
     headers,
     body: JSON.stringify(updatePayload),
   });
-
-  if (!updateResponse.ok) {
-    const replacePayload = {
-      ...payload,
-    };
-    delete replacePayload.id;
-
-    const replaceResponse = await fetch(`${WALLET_OBJECT_URL}/${encodeURIComponent(objectId)}`, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify(replacePayload),
-    });
-
-    return {
-      operation: replaceResponse.ok ? ('updated' as const) : ('failed' as const),
-      status: replaceResponse.status,
-      body: await parseGoogleWalletApiResponse(replaceResponse),
-      objectId,
-    };
-  }
 
   return {
     operation: updateResponse.ok ? ('updated' as const) : ('failed' as const),
