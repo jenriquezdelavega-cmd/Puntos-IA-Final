@@ -428,13 +428,22 @@ export async function sendRedemptionRequestedEmail(params: {
   name?: string | null;
   businessName: string;
   code: string;
+  rewardName?: string | null;
+  validityLabel?: string | null;
 }) {
   const displayName = params.name?.trim() || 'cliente';
+  const rewardName = params.rewardName?.trim() || 'Premio disponible';
+  const validityLabel = params.validityLabel?.trim() || 'Hasta que sea canjeado';
   const subject = 'Tu código de canje está listo';
   const text = [
     `Hola ${displayName},`,
     '',
-    `Tu código de canje para ${params.businessName} es: ${params.code}`,
+    '¡Tu pase ya ganó un premio!',
+    `Cupón: ${params.code}`,
+    `Premio: ${rewardName}`,
+    `Negocio: ${params.businessName}`,
+    `Vigencia: ${validityLabel}`,
+    '',
     'Muéstralo en caja para validar tu premio.',
   ].join('\n');
 
@@ -443,7 +452,11 @@ export async function sendRedemptionRequestedEmail(params: {
     title: 'Código de canje generado',
     greeting: `Hola ${displayName},`,
     paragraphs: [
-      `Tu código de canje para ${params.businessName} es: ${params.code}`,
+      '¡Tu pase ya ganó un premio! Aquí tienes los datos de tu cupón:',
+      `Cupón: ${params.code}`,
+      `Premio: ${rewardName}`,
+      `Negocio: ${params.businessName}`,
+      `Vigencia: ${validityLabel}`,
       'Muéstralo en caja para validar tu premio.',
     ],
     ctaLabel: 'Ver mi cuenta',

@@ -7,6 +7,16 @@ import { buildRateLimitKey, checkRateLimit } from '@/app/lib/rate-limit';
 import { generateUniqueRedemptionCode } from '@/app/lib/redemption-code';
 import { sendRedemptionRequestedEmail } from '@/app/lib/email';
 
+function formatExpiryDateLabel(expiresAt: Date | null | undefined) {
+  if (!expiresAt) return 'Sin fecha de expiración';
+  return new Intl.DateTimeFormat('es-MX', {
+    year: 'numeric',
+    month: 'long',
+    day: '2-digit',
+    timeZone: 'America/Monterrey',
+  }).format(expiresAt);
+}
+
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
 
@@ -129,6 +139,10 @@ export async function POST(request: Request) {
           name: customer.name,
           businessName: customerReward.reward.business.name,
           code,
+          rewardName: customerReward.reward.rewardValue
+            ? `${customerReward.reward.title} · ${customerReward.reward.rewardValue}`
+            : customerReward.reward.title,
+          validityLabel: formatExpiryDateLabel(customerReward.reward.expiresAt),
         });
         if (!emailResult.ok) {
           logApiEvent('/api/redeem/coalition/request', 'coalition_redemption_email_failed', {
