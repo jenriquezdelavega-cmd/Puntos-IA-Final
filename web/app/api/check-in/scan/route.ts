@@ -56,6 +56,21 @@ function parseTicketNumber(value: unknown) {
   return normalized.slice(0, 40);
 }
 
+function formatRewardValidityLabel(period: string | null | undefined) {
+  switch (String(period || 'OPEN')) {
+    case 'MONTHLY':
+      return 'Válido durante el mes en curso';
+    case 'QUARTERLY':
+      return 'Válido durante el trimestre en curso';
+    case 'SEMESTER':
+      return 'Válido durante el semestre en curso';
+    case 'ANNUAL':
+      return 'Válido durante el año en curso';
+    default:
+      return 'Sin vigencia por periodo';
+  }
+}
+
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
 
@@ -363,6 +378,130 @@ export async function POST(request: Request) {
           logApiError('/api/check-in/scan#reward-email', rewardEmailError, {
             userId,
             tenantId: validCode.tenantId,
+          });
+        }
+      }
+    }
+
+    const unlockedMilestones = await prisma.loyaltyMilestone.findMany({
+      where: {
+        tenantId: validCode.tenantId,
+        visitTarget: { lte: updatedMembership.currentVisits },
+      },
+      orderBy: { visitTarget: 'asc' },
+      select: {
+        id: true,
+        visitTarget: true,
+        reward: true,
+        emoji: true,
+      },
+    });
+
+    if (unlockedMilestones.length > 0) {
+      const latestMainRewardRedemption = await prisma.redemption.findFirst({
+        where: {
+          userId,
+          tenantId: validCode.tenantId,
+          isUsed: true,
+          loyaltyMilestoneId: null,
+          coalitionRewardUnlockId: null,
+        },
+        select: { usedAt: true, createdAt: true },
+        orderBy: [{ usedAt: 'desc' }, { createdAt: 'desc' }],
+      });
+      const cycleStartAt = latestMainRewardRedemption
+        ? (latestMainRewardRedemption.usedAt ?? latestMainRewardRedemption.createdAt)
+        : null;
+      const unlockedMilestoneIds = unlockedMilestones.map((milestone) => milestone.id);
+      const [existingMilestoneRedemptions, customer] = await Promise.all([
+        prisma.redemption.findMany({
+          where: {
+            userId,
+            tenantId: validCode.tenantId,
+            loyaltyMilestoneId: { in: unlockedMilestoneIds },
+          },
+          select: {
+            code: true,
+            isUsed: true,
+            usedAt: true,
+            createdAt: true,
+            loyaltyMilestoneId: true,
+            redemptionEmailSentAt: true,
+          },
+        }),
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true, name: true },
+        }),
+      ]);
+
+      const pendingByMilestone = new Map<string, { code: string; emailSentAt: Date | null }>();
+      const usedInCycleByMilestone = new Set<string>();
+      existingMilestoneRedemptions.forEach((redemption) => {
+        const milestoneId = String(redemption.loyaltyMilestoneId ?? '');
+        if (!milestoneId) return;
+        if (!redemption.isUsed && !pendingByMilestone.has(milestoneId)) {
+          pendingByMilestone.set(milestoneId, { code: redemption.code, emailSentAt: redemption.redemptionEmailSentAt });
+          return;
+        }
+        if (redemption.isUsed) {
+          const redeemedAt = redemption.usedAt ?? redemption.createdAt;
+          if (!cycleStartAt || redeemedAt > cycleStartAt) {
+            usedInCycleByMilestone.add(milestoneId);
+          }
+        }
+      });
+
+      for (const milestone of unlockedMilestones) {
+        if (pendingByMilestone.has(milestone.id) || usedInCycleByMilestone.has(milestone.id)) {
+          continue;
+        }
+
+        const generatedMilestoneCode = await generateUniqueRedemptionCode(validCode.tenantId);
+        const milestoneReward = `${milestone.emoji ? `${milestone.emoji} ` : ''}${milestone.reward}`.trim();
+        await prisma.redemption.create({
+          data: {
+            code: generatedMilestoneCode,
+            userId,
+            tenantId: validCode.tenantId,
+            isUsed: false,
+            loyaltyMilestoneId: milestone.id,
+            rewardSnapshot: milestoneReward || milestone.reward,
+            earnedVisitId: createdVisit?.id ?? null,
+          },
+        });
+        logApiEvent('/api/check-in/scan', 'milestone_reward_code_auto_created', {
+          userId,
+          tenantId: validCode.tenantId,
+          milestoneId: milestone.id,
+          visitTarget: milestone.visitTarget,
+          code: generatedMilestoneCode,
+          earnedVisitId: createdVisit?.id ?? null,
+        });
+
+        const hasEmail = Boolean(customer?.email && customer.email.trim());
+        if (!hasEmail) {
+          continue;
+        }
+        const emailResult = await sendRedemptionRequestedEmail({
+          to: String(customer?.email).trim(),
+          name: customer?.name,
+          businessName: validCode.tenant.name,
+          code: generatedMilestoneCode,
+          rewardName: milestoneReward || milestone.reward,
+          validityLabel: formatRewardValidityLabel(validCode.tenant.rewardPeriod),
+        });
+        if (!emailResult.ok) {
+          logApiEvent('/api/check-in/scan', 'milestone_reward_code_email_failed', {
+            userId,
+            tenantId: validCode.tenantId,
+            milestoneId: milestone.id,
+            reason: emailResult.error || 'unknown',
+          });
+        } else {
+          await prisma.redemption.updateMany({
+            where: { code: generatedMilestoneCode, tenantId: validCode.tenantId },
+            data: { redemptionEmailSentAt: new Date() },
           });
         }
       }

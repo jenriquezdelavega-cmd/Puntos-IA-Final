@@ -57,6 +57,15 @@ type Membership = {
   rewardCodeStatus?: 'READY_TO_GENERATE' | 'CODE_PENDING' | 'CODE_USED';
   rewardCodeLabel?: string;
   pendingRewardCode?: string | null;
+  earnedCodes?: Array<{
+    id: string;
+    code: string;
+    reward: string;
+    channel: 'FINAL' | 'MILESTONE';
+    status: 'PENDING' | 'USED';
+    createdAt: string;
+    usedAt?: string | null;
+  }>;
   milestones?: MilestoneData[];
 };
 
@@ -134,6 +143,21 @@ type ChallengeItem = {
     businessName: string;
   } | null;
 };
+
+function rewardValidityLabel(period?: string) {
+  switch (String(period || 'OPEN')) {
+    case 'MONTHLY':
+      return 'vigentes durante el mes en curso';
+    case 'QUARTERLY':
+      return 'vigentes durante el trimestre en curso';
+    case 'SEMESTER':
+      return 'vigentes durante el semestre en curso';
+    case 'ANNUAL':
+      return 'vigentes durante el año en curso';
+    default:
+      return 'vigentes hasta su canje';
+  }
+}
 
 type ClientTab = 'puntos' | 'retos' | 'negocios' | 'perfil';
 
@@ -258,8 +282,6 @@ export default function ClientesAppPage() {
     tenants?: string;
   }>({});
 
-  const [redeemCode, setRedeemCode] = useState<{ code: string; business: string; reward?: string } | null>(null);
-  const [milestoneCodeLoading, setMilestoneCodeLoading] = useState<Record<string, boolean>>({});
   const membershipSyncInFlight = useRef<Promise<void> | null>(null);
 
   const activeMemberships = useMemo(() => user?.memberships || [], [user?.memberships]);
@@ -561,91 +583,6 @@ export default function ClientesAppPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, user?.sessionToken, syncMembershipSnapshot]);
 
-  const handleRedeem = async (membership: Membership) => {
-    if (!user?.id || !user?.sessionToken) return;
-    setStatusMessage('');
-    setRedeemCode(null);
-
-    const response = await fetch('/api/redeem/request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: user.id,
-        tenantId: membership.tenantId,
-        sessionToken: user.sessionToken,
-      }),
-    });
-
-    const body = (await response.json()) as { code?: string; message?: string; error?: string; alreadyPending?: boolean; success?: boolean };
-    if (!response.ok) {
-      const message = body?.message || body?.error || 'No se pudo consultar el estado del canje';
-      if (isUnauthorizedResponse(response, body)) {
-        handleSessionExpired();
-        return;
-      }
-      setStatusMessage(message);
-      return;
-    }
-
-    if (!body?.code) {
-      setStatusMessage(body?.message || 'Tu código se genera automáticamente al llegar a la meta en tienda.');
-      return;
-    }
-
-    setRedeemCode({ code: body.code || '--------', business: membership.name || 'Negocio', reward: membership.prize || 'Recompensa principal' });
-    setStatusMessage(
-      body.alreadyPending
-        ? `Código pendiente disponible para ${membership.name || 'el negocio'}.`
-        : `Código disponible para ${membership.name || 'el negocio'}.`,
-    );
-    void syncMembershipSnapshot();
-  };
-
-  const handleMilestoneRedeem = async (membership: Membership, milestone: MilestoneData) => {
-    if (!user?.id || !user?.sessionToken) return;
-    const key = `${membership.tenantId}:${milestone.id}`;
-    setStatusMessage('');
-    setMilestoneCodeLoading((prev) => ({ ...prev, [key]: true }));
-
-    try {
-      const response = await fetch('/api/redeem/milestone-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          tenantId: membership.tenantId,
-          sessionToken: user.sessionToken,
-          milestoneId: milestone.id,
-        }),
-      });
-
-      const body = (await response.json()) as { code?: string; message?: string; error?: string; alreadyPending?: boolean };
-      if (!response.ok) {
-        const message = body?.message || body?.error || 'No se pudo generar canje intermedio';
-        if (isUnauthorizedResponse(response, body)) {
-          handleSessionExpired();
-          return;
-        }
-        setStatusMessage(message);
-        return;
-      }
-
-      setRedeemCode({
-        code: body.code || '--------',
-        business: membership.name || 'Negocio',
-        reward: `${milestone.emoji} ${milestone.reward}`,
-      });
-      setStatusMessage(
-        body.alreadyPending
-          ? `Ya tenías un código pendiente para ${milestone.reward}.`
-          : `Código intermedio generado para ${milestone.reward}.`,
-      );
-      void syncMembershipSnapshot();
-    } finally {
-      setMilestoneCodeLoading((prev) => ({ ...prev, [key]: false }));
-    }
-  };
-
   const saveProfile = async () => {
     if (!user?.id || !user?.sessionToken) return;
     const normalizedBirthDate = profileBirthDate ? displayDateToIso(profileBirthDate) : '';
@@ -877,7 +814,7 @@ export default function ClientesAppPage() {
                   const progress = Math.min(100, Math.round((currentVisits / requiredVisits) * 100));
                   const canRedeem = currentVisits >= requiredVisits;
                   const hasPendingCode = membership.rewardCodeStatus === 'CODE_PENDING';
-                  const redeemDisabled = !hasPendingCode;
+                  const earnedCodes = membership.earnedCodes || [];
                   return (
                     <article key={membership.tenantId} className="rounded-3xl border border-[#e9daf9] bg-white p-5 shadow-[0_14px_34px_rgba(53,30,95,0.09)] md:p-6">
                       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -930,8 +867,6 @@ export default function ClientesAppPage() {
                           <div className="flex flex-col gap-1.5">
                             {membership.milestones.map((m) => {
                               const unlocked = currentVisits >= m.visitTarget;
-                              const key = `${membership.tenantId}:${m.id}`;
-                              const requestingMilestoneCode = Boolean(milestoneCodeLoading[key]);
                               const redeemedMilestone = Boolean(m.redeemed);
                               return (
                                 <div
@@ -954,19 +889,41 @@ export default function ClientesAppPage() {
                                     </p>
                                   </div>
                                   {unlocked && !redeemedMilestone ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleMilestoneRedeem(membership, m)}
-                                      disabled={requestingMilestoneCode}
-                                      className={`${buttonStyles('secondary')} !px-2.5 !py-1.5 !text-[11px] disabled:opacity-60`}
-                                    >
-                                      {requestingMilestoneCode ? 'Generando...' : 'Generar código'}
-                                    </button>
+                                    <span className="rounded-full border border-[#c8f3d8] bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-[#2c7a4f]">
+                                      Código automático
+                                    </span>
                                   ) : null}
                                 </div>
                               );
                             })}
                           </div>
+                        </div>
+                      ) : null}
+
+                      {earnedCodes.length > 0 ? (
+                        <div className="mt-3 rounded-2xl border border-[#e9daf9] bg-white p-3.5">
+                          <p className="mb-2 text-[10px] font-black uppercase tracking-[0.15em] text-[#7755a6]">Códigos ya ganados</p>
+                          <div className="space-y-1.5">
+                            {earnedCodes.map((earnedCode) => (
+                              <div key={earnedCode.id} className={`flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2 ${
+                                earnedCode.status === 'PENDING' ? 'border-[#f3d3c2] bg-[#fff8f3]' : 'border-gray-100 bg-gray-50 opacity-70'
+                              }`}>
+                                <p className="font-mono text-xs font-black tracking-[0.08em] text-[#2a184f]">{earnedCode.code}</p>
+                                <span className="text-[10px] font-black uppercase tracking-[0.08em] text-[#7a5aa8]">
+                                  {earnedCode.channel === 'MILESTONE' ? 'Intermedio' : 'Final'}
+                                </span>
+                                <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.08em] ${
+                                  earnedCode.status === 'PENDING' ? 'bg-[#ffe3d7] text-[#a34f27]' : 'bg-gray-200 text-gray-600'
+                                }`}>
+                                  {earnedCode.status === 'PENDING' ? 'Pendiente' : 'Canjeado'}
+                                </span>
+                                <p className="w-full text-[11px] font-semibold text-[#5c4a82]">{earnedCode.reward}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="mt-2 text-[11px] font-semibold text-[#7b63a8]">
+                            Los códigos ganados se mantienen aquí hasta que se canjean o termina su vigencia ({rewardValidityLabel(membership.rewardPeriod)}).
+                          </p>
                         </div>
                       ) : null}
 
@@ -977,27 +934,9 @@ export default function ClientesAppPage() {
                         >
                           <span className="inline-flex items-center gap-2"><ScanLine className="h-4 w-4" /> Ver pase</span>
                         </Link>
-                        <button
-                          type="button"
-                          onClick={() => handleRedeem(membership)}
-                          disabled={redeemDisabled}
-                          className={`${buttonStyles('primary')} disabled:cursor-not-allowed disabled:opacity-60`}
-                        >
-                          {hasPendingCode ? 'Ver estado del canje' : 'Código automático'}
-                        </button>
-                        {hasPendingCode && membership.pendingRewardCode ? (
-                          <button
-                            type="button"
-                            onClick={() => setRedeemCode({
-                              code: membership.pendingRewardCode || '--------',
-                              business: membership.name || 'Negocio',
-                              reward: membership.prize || 'Recompensa principal',
-                            })}
-                            className={buttonStyles('tertiary')}
-                          >
-                            Ver código actual
-                          </button>
-                        ) : null}
+                        <span className={`${buttonStyles('primary')} !cursor-default !opacity-100`}>
+                          {hasPendingCode ? 'Tienes códigos pendientes' : 'Códigos automáticos al desbloquear'}
+                        </span>
                         {membership.instagram ? (
                           <a
                             href={membership.instagram.startsWith('http') ? membership.instagram : `https://instagram.com/${membership.instagram.replace('@', '')}`}
@@ -1503,15 +1442,6 @@ export default function ClientesAppPage() {
                 </div>
               </article>
             </section>
-          ) : null}
-
-          {redeemCode ? (
-            <article className="rounded-3xl border border-[#f7d9cc] bg-[#fff8f4] p-6">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#c9654c]">Código de canje</p>
-              <p className="mt-2 text-3xl font-black tracking-[0.12em] text-[#2a184f]">{redeemCode.code}</p>
-              <p className="mt-2 text-sm text-[#5c4a82]">Muestra este código en {redeemCode.business}.</p>
-              {redeemCode.reward ? <p className="mt-1 text-xs font-semibold text-[#8a5c4d]">Aplica a: {redeemCode.reward}</p> : null}
-            </article>
           ) : null}
 
           {statusMessage ? (
