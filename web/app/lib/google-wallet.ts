@@ -29,7 +29,11 @@ const DEFAULT_CLASS_SYNC_TTL_MS = 15 * 60 * 1000;
 const TENANT_CLASS_SCHEMA_VERSION = 'v6';
 export const GOOGLE_WALLET_PROGRAM_NAME_HIDDEN = '\u200B';
 
-const classSyncState = new Map<string, { lastSyncAt: number; inFlight: Promise<void> | null }>();
+const classSyncState = new Map<string, {
+  lastSyncAt: number;
+  inFlight: Promise<void> | null;
+  lastPayloadFingerprint: string;
+}>();
 
 function firstEnv(names: readonly string[]) {
   for (const name of names) {
@@ -535,10 +539,21 @@ export function ensureGoogleLoyaltyClassSynced(options?: {
 
   const ttlMs = Math.max(0, options?.ttlMs ?? DEFAULT_CLASS_SYNC_TTL_MS);
   const now = Date.now();
-  const currentState = classSyncState.get(classId) || { lastSyncAt: 0, inFlight: null };
+  const payloadFingerprint = JSON.stringify({
+    issuerName: options?.issuerName || '',
+    programName: options?.programName || '',
+    logoUri: options?.logoUri || '',
+    programColor: options?.programColor || '',
+  });
+  const currentState = classSyncState.get(classId) || {
+    lastSyncAt: 0,
+    inFlight: null,
+    lastPayloadFingerprint: '',
+  };
+  const payloadChanged = currentState.lastPayloadFingerprint !== payloadFingerprint;
 
   if (currentState.inFlight) return currentState.inFlight;
-  if (now - currentState.lastSyncAt < ttlMs) return Promise.resolve();
+  if (!payloadChanged && (now - currentState.lastSyncAt < ttlMs)) return Promise.resolve();
 
   const nextInFlight = (async () => {
     try {
@@ -549,13 +564,29 @@ export function ensureGoogleLoyaltyClassSynced(options?: {
         throw new Error(`Unable to sync Google Wallet class ${classId} (status ${result.status})${details}`);
       }
 
-      classSyncState.set(classId, { lastSyncAt: Date.now(), inFlight: null });
+      classSyncState.set(classId, {
+        lastSyncAt: Date.now(),
+        inFlight: null,
+        lastPayloadFingerprint: payloadFingerprint,
+      });
     } finally {
-      const latestState = classSyncState.get(classId) || { lastSyncAt: 0, inFlight: null };
-      classSyncState.set(classId, { lastSyncAt: latestState.lastSyncAt, inFlight: null });
+      const latestState = classSyncState.get(classId) || {
+        lastSyncAt: 0,
+        inFlight: null,
+        lastPayloadFingerprint: payloadFingerprint,
+      };
+      classSyncState.set(classId, {
+        lastSyncAt: latestState.lastSyncAt,
+        inFlight: null,
+        lastPayloadFingerprint: latestState.lastPayloadFingerprint || payloadFingerprint,
+      });
     }
   })();
 
-  classSyncState.set(classId, { lastSyncAt: currentState.lastSyncAt, inFlight: nextInFlight });
+  classSyncState.set(classId, {
+    lastSyncAt: currentState.lastSyncAt,
+    inFlight: nextInFlight,
+    lastPayloadFingerprint: payloadFingerprint,
+  });
   return nextInFlight;
 }
