@@ -71,6 +71,10 @@ function formatRewardValidityLabel(period: string | null | undefined) {
   }
 }
 
+function normalizeRewardLabel(value: string | null | undefined) {
+  return String(value || '').trim().toLowerCase();
+}
+
 export async function POST(request: Request) {
   const requestId = getRequestId(request);
 
@@ -440,13 +444,12 @@ export async function POST(request: Request) {
       const cycleStartAt = latestMainRewardRedemption
         ? (latestMainRewardRedemption.usedAt ?? latestMainRewardRedemption.createdAt)
         : null;
-      const unlockedMilestoneIds = unlockedMilestones.map((milestone) => milestone.id);
       const [existingMilestoneRedemptions, customer] = await Promise.all([
         prisma.redemption.findMany({
           where: {
             userId,
             tenantId: validCode.tenantId,
-            loyaltyMilestoneId: { in: unlockedMilestoneIds },
+            loyaltyMilestoneId: { not: null },
           },
           select: {
             code: true,
@@ -454,8 +457,17 @@ export async function POST(request: Request) {
             usedAt: true,
             createdAt: true,
             loyaltyMilestoneId: true,
+            rewardSnapshot: true,
             redemptionEmailSentAt: true,
+            loyaltyMilestone: {
+              select: {
+                visitTarget: true,
+                reward: true,
+                emoji: true,
+              },
+            },
           },
+          orderBy: { createdAt: 'desc' },
         }),
         prisma.user.findUnique({
           where: { id: userId },
@@ -464,24 +476,61 @@ export async function POST(request: Request) {
       ]);
 
       const pendingByMilestone = new Map<string, { code: string; emailSentAt: Date | null }>();
+      const pendingByVisitTarget = new Set<number>();
+      const pendingByRewardLabel = new Set<string>();
       const usedInCycleByMilestone = new Set<string>();
+      const usedInCycleByVisitTarget = new Set<number>();
+      const usedInCycleByRewardLabel = new Set<string>();
+
       existingMilestoneRedemptions.forEach((redemption) => {
         const milestoneId = String(redemption.loyaltyMilestoneId ?? '');
+        const milestoneTarget = Number(redemption.loyaltyMilestone?.visitTarget ?? 0);
+        const snapshotLabel = normalizeRewardLabel(redemption.rewardSnapshot);
+        const milestoneRewardLabel = normalizeRewardLabel(
+          `${redemption.loyaltyMilestone?.emoji ? `${redemption.loyaltyMilestone.emoji} ` : ''}${redemption.loyaltyMilestone?.reward ?? ''}`,
+        );
+
         if (!milestoneId) return;
         if (!redemption.isUsed && !pendingByMilestone.has(milestoneId)) {
           pendingByMilestone.set(milestoneId, { code: redemption.code, emailSentAt: redemption.redemptionEmailSentAt });
+          if (Number.isFinite(milestoneTarget) && milestoneTarget > 0) {
+            pendingByVisitTarget.add(milestoneTarget);
+          }
+          if (snapshotLabel) pendingByRewardLabel.add(snapshotLabel);
+          if (milestoneRewardLabel) pendingByRewardLabel.add(milestoneRewardLabel);
           return;
         }
         if (redemption.isUsed) {
           const redeemedAt = redemption.usedAt ?? redemption.createdAt;
           if (!cycleStartAt || redeemedAt > cycleStartAt) {
             usedInCycleByMilestone.add(milestoneId);
+            if (Number.isFinite(milestoneTarget) && milestoneTarget > 0) {
+              usedInCycleByVisitTarget.add(milestoneTarget);
+            }
+            if (snapshotLabel) usedInCycleByRewardLabel.add(snapshotLabel);
+            if (milestoneRewardLabel) usedInCycleByRewardLabel.add(milestoneRewardLabel);
           }
         }
       });
 
       for (const milestone of unlockedMilestones) {
-        if (pendingByMilestone.has(milestone.id) || usedInCycleByMilestone.has(milestone.id)) {
+        const milestoneLabel = normalizeRewardLabel(`${milestone.emoji ? `${milestone.emoji} ` : ''}${milestone.reward}`);
+        const blockedByPending = pendingByMilestone.has(milestone.id)
+          || pendingByVisitTarget.has(milestone.visitTarget)
+          || pendingByRewardLabel.has(milestoneLabel);
+        const blockedByUsed = usedInCycleByMilestone.has(milestone.id)
+          || usedInCycleByVisitTarget.has(milestone.visitTarget)
+          || usedInCycleByRewardLabel.has(milestoneLabel);
+
+        if (blockedByPending || blockedByUsed) {
+          logApiEvent('/api/check-in/scan', 'milestone_reward_auto_create_skipped_existing', {
+            userId,
+            tenantId: validCode.tenantId,
+            milestoneId: milestone.id,
+            visitTarget: milestone.visitTarget,
+            blockedByPending,
+            blockedByUsed,
+          });
           continue;
         }
 

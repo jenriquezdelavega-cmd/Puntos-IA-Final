@@ -116,3 +116,55 @@ test('check-in milestone auto-issuance excludes final reward milestone target', 
   );
 });
 
+test('check-in milestone auto-issuance blocks duplicates by id, target and reward label', () => {
+  const file = 'app/api/check-in/scan/route.ts';
+  const content = readFileSync(join(process.cwd(), file), 'utf8');
+
+  assert.match(
+    content,
+    /pendingByVisitTarget\.has\(milestone\.visitTarget\)/,
+    'check-in scan should block duplicate milestone code creation by visit target',
+  );
+  assert.match(
+    content,
+    /pendingByRewardLabel\.has\(milestoneLabel\)/,
+    'check-in scan should block duplicate milestone code creation by reward label',
+  );
+  assert.match(
+    content,
+    /milestone_reward_auto_create_skipped_existing/,
+    'check-in scan should log skip events when duplicate auto-issuance is prevented',
+  );
+});
+
+test('pass view does not expose manual milestone redeem trigger', () => {
+  const file = 'app/pass/page.tsx';
+  const content = readFileSync(join(process.cwd(), file), 'utf8');
+
+  assert.doesNotMatch(
+    content,
+    /\/api\/redeem\/milestone-request/,
+    'pass page should not call manual milestone request endpoint',
+  );
+  assert.match(
+    content,
+    /Código automático/,
+    'pass page should indicate automatic code flow for milestone rewards',
+  );
+});
+
+test('pass API resolves pending milestone codes from full milestone redemption history', () => {
+  const file = 'app/api/pass/[customer_id]/route.ts';
+  const content = readFileSync(join(process.cwd(), file), 'utf8');
+
+  assert.match(
+    content,
+    /loyaltyMilestoneId:\s*\{\s*not:\s*null\s*\}/,
+    'pass API should load all milestone-linked redemptions to avoid missing pending codes after milestone edits',
+  );
+  assert.match(
+    content,
+    /rewardSnapshot:\s*true/,
+    'pass API should inspect rewardSnapshot for fallback pending code matching',
+  );
+});
