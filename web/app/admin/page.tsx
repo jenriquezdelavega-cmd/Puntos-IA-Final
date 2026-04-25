@@ -685,7 +685,7 @@ const saveSettings = async (scope: SettingsSaveScope = 'all') => {
   }
 };
 
-const triggerDownload = (filename: string, content: string, type: 'text/csv' | 'application/json') => {
+const triggerDownload = (filename: string, content: string, type: 'text/csv') => {
   const blob = new Blob([content], { type: `${type};charset=utf-8;` });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -724,26 +724,6 @@ const downloadVisitsCsv = () => {
   const csv = jsonToCsv(reportData.visitsCsvData);
   triggerDownload(`visitas-${tenant?.slug || 'export'}-${new Date().toISOString().split('T')[0]}.csv`, csv, 'text/csv');
   notify('success', 'Archivo CSV de visitas descargado');
-};
-
-const downloadDatabaseJson = () => {
-  if (!reportData) {
-    notify('error', 'No hay datos cargados para exportar');
-    return;
-  }
-  const fullExport = {
-    tenant: tenant?.name,
-    exportedAt: new Date().toISOString(),
-    metrics: {
-      totalRevenue: reportData.totalRevenue,
-      avgTicket: reportData.avgTicket,
-      clvAverage: reportData.clvAverage,
-    },
-    clients: reportData.customerProfiles,
-    visits: reportData.visitsCsvData,
-  };
-  triggerDownload(`db-completa-${tenant?.slug || 'export'}.json`, JSON.stringify(fullExport, null, 2), 'application/json');
-  notify('success', 'Base de datos descargada en JSON');
 };
 
 const validateRedeem = async () => {
@@ -1054,7 +1034,6 @@ return (
   }}
   onExportClientsCsv={downloadClientsCsv}
   onExportVisitsCsv={downloadVisitsCsv}
-  onExportDatabaseJson={downloadDatabaseJson}
   onGoQr={() => setTab('qr')}
   onGoRedeem={() => setTab('redeem')}
   onGoSettings={() => setTab('settings')}

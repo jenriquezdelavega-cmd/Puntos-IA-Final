@@ -137,7 +137,6 @@ type Props = {
   onRefresh: () => void;
   onExportClientsCsv: () => void;
   onExportVisitsCsv: () => void;
-  onExportDatabaseJson: () => void;
   onGoQr: () => void;
   onGoRedeem: () => void;
   onGoSettings: () => void;
@@ -204,13 +203,10 @@ export default function AdvancedDashboard(props: Props) {
               {props.isRefreshing ? 'Actualizando...' : 'Actualizar'}
             </button>
             <button type="button" onClick={props.onExportClientsCsv} className="rounded-xl bg-white px-4 py-2 text-sm font-black text-gray-900">
-              Clientes CSV
+              Exportar clientes (CRM)
             </button>
             <button type="button" onClick={props.onExportVisitsCsv} className="rounded-xl bg-white px-4 py-2 text-sm font-black text-gray-900">
-              Visitas CSV
-            </button>
-            <button type="button" onClick={props.onExportDatabaseJson} className="rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-2 text-sm font-black text-white">
-              Base completa JSON
+              Exportar visitas (Operación)
             </button>
           </div>
         </div>

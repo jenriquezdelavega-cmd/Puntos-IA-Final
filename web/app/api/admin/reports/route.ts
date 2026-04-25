@@ -154,8 +154,24 @@ export async function POST(request: Request) {
       return withAmount > 0 ? sumRevenue(rows) / withAmount : 0;
     };
 
+    const formatDate = (value?: Date | null) => (value ? value.toISOString().split('T')[0] : '-');
+    const formatDateTime = (value?: Date | null) => (value ? value.toISOString() : '-');
+    const daysSince = (value?: Date | null) => {
+      if (!value) return '-';
+      const ms = startOfToday.getTime() - value.getTime();
+      return ms >= 0 ? Math.floor(ms / (1000 * 60 * 60 * 24)) : 0;
+    };
+    const safeAvg = (sum: number, count: number) => (count > 0 ? sum / count : 0);
+
     const revenueByUser = new Map<string, number>();
     const visitsByDate = new Map<string, { count: number; revenue: number }>();
+    const userMetrics = new Map<string, {
+      visits: number;
+      paidVisits: number;
+      revenue: number;
+      firstVisitAt: Date | null;
+      lastVisitAt: Date | null;
+    }>();
     visits.forEach((visit) => {
       const dateKey = visit.visitedAt.toISOString().split('T')[0];
       const bucket = visitsByDate.get(dateKey) || { count: 0, revenue: 0 };
@@ -163,6 +179,14 @@ export async function POST(request: Request) {
       bucket.revenue += Number(visit.purchaseAmount || 0);
       visitsByDate.set(dateKey, bucket);
       revenueByUser.set(visit.userId, (revenueByUser.get(visit.userId) || 0) + Number(visit.purchaseAmount || 0));
+
+      const current = userMetrics.get(visit.userId) || { visits: 0, paidVisits: 0, revenue: 0, firstVisitAt: null, lastVisitAt: null };
+      current.visits += 1;
+      if (visit.purchaseAmount > 0) current.paidVisits += 1;
+      current.revenue += Number(visit.purchaseAmount || 0);
+      if (!current.firstVisitAt) current.firstVisitAt = visit.visitedAt;
+      current.lastVisitAt = visit.visitedAt;
+      userMetrics.set(visit.userId, current);
     });
 
     const chartData = Array.from(visitsByDate.entries())
@@ -243,28 +267,93 @@ export async function POST(request: Request) {
       revenue: value.revenue,
     }));
 
-    const clientsCsvData = memberships.map((membership) => ({
-      Nombre: membership.user.name || 'Anónimo',
-      Telefono: membership.user.phone || '',
-      Email: membership.user.email || '',
-      Genero: membership.user.gender || '',
-      Visitas: membership.totalVisits,
-      UltimaVisita: membership.lastVisitAt ? membership.lastVisitAt.toISOString().split('T')[0] : '-',
-      GastoTotal: Number(revenueByUser.get(String(membership.userId)) || 0).toFixed(2),
-    }));
+    const monthMetrics = new Map<string, { visits: number; paidVisits: number; revenue: number }>();
+    monthVisits.forEach((visit) => {
+      const current = monthMetrics.get(visit.userId) || { visits: 0, paidVisits: 0, revenue: 0 };
+      current.visits += 1;
+      if (visit.purchaseAmount > 0) current.paidVisits += 1;
+      current.revenue += Number(visit.purchaseAmount || 0);
+      monthMetrics.set(visit.userId, current);
+    });
 
-    const visitsCsvData = visits.map((visit) => ({
-      Fecha: visit.visitedAt.toISOString(),
-      Dia: visit.visitDay || visit.visitedAt.toISOString().split('T')[0],
-      ClienteId: visit.userId,
-      MontoCompra: Number(visit.purchaseAmount || 0).toFixed(2),
-      Ticket: visit.ticketNumber || '',
-    }));
+    const customerByUserId = new Map(
+      memberships.map((membership) => [
+        String(membership.userId || ''),
+        {
+          name: membership.user.name || 'Anónimo',
+          phone: membership.user.phone || '',
+          email: membership.user.email || '',
+          createdAt: membership.user.createdAt || null,
+          totalVisits: Number(membership.totalVisits || 0),
+          firstVisitAt: userMetrics.get(String(membership.userId || ''))?.firstVisitAt || null,
+          lastVisitAt: membership.lastVisitAt || userMetrics.get(String(membership.userId || ''))?.lastVisitAt || null,
+          totalRevenue: Number(revenueByUser.get(String(membership.userId || '')) || 0),
+          averageTicket: safeAvg(
+            Number(revenueByUser.get(String(membership.userId || '')) || 0),
+            Number(userMetrics.get(String(membership.userId || ''))?.paidVisits || 0),
+          ),
+        },
+      ]),
+    );
+
+    const clientsCsvData = memberships.map((membership) => {
+      const userId = String(membership.userId || '');
+      const totals = userMetrics.get(userId) || { visits: 0, paidVisits: 0, revenue: 0, firstVisitAt: null, lastVisitAt: null };
+      const month = monthMetrics.get(userId) || { visits: 0, paidVisits: 0, revenue: 0 };
+      const lastVisitAt = membership.lastVisitAt || totals.lastVisitAt;
+
+      return {
+        Nombre: membership.user.name || 'Anónimo',
+        Telefono: membership.user.phone || '',
+        Celular: membership.user.phone || '',
+        Email: membership.user.email || '',
+        Genero: membership.user.gender || '',
+        FechaCreacionCliente: formatDate(membership.user.createdAt),
+        FechaPrimeraVisita: formatDate(totals.firstVisitAt),
+        FechaUltimaVisita: formatDate(lastVisitAt),
+        DiasDesdeUltimaVisita: daysSince(lastVisitAt),
+        VisitasTotales: Number(membership.totalVisits || totals.visits || 0),
+        VisitasMesActual: month.visits,
+        NumeroUltimaVisita: Number(membership.totalVisits || totals.visits || 0),
+        GastoTotal: totals.revenue.toFixed(2),
+        GastoMesActual: month.revenue.toFixed(2),
+        TicketPromedio: safeAvg(totals.revenue, totals.paidVisits).toFixed(2),
+        TicketPromedioMes: safeAvg(month.revenue, month.paidVisits).toFixed(2),
+        Segmento: Number(membership.totalVisits || totals.visits || 0) >= 5 ? 'Frecuente' : Number(membership.totalVisits || totals.visits || 0) >= 2 ? 'Recurrente' : 'Nuevo',
+      };
+    });
+
+    const sequentialVisitCounter = new Map<string, number>();
+    const visitsCsvData = visits.map((visit) => {
+      const customer = customerByUserId.get(visit.userId);
+      const currentCount = (sequentialVisitCounter.get(visit.userId) || 0) + 1;
+      sequentialVisitCounter.set(visit.userId, currentCount);
+
+      const totals = userMetrics.get(visit.userId) || { visits: 0, paidVisits: 0, revenue: 0, firstVisitAt: null, lastVisitAt: null };
+      const averageTicket = safeAvg(totals.revenue, totals.paidVisits);
+
+      return {
+        FechaVisita: formatDateTime(visit.visitedAt),
+        Dia: visit.visitDay || visit.visitedAt.toISOString().split('T')[0],
+        Cliente: customer?.name || 'Anónimo',
+        Telefono: customer?.phone || '',
+        Celular: customer?.phone || '',
+        Email: customer?.email || '',
+        FechaCreacionCliente: formatDate(customer?.createdAt || null),
+        NumeroVisita: currentCount,
+        NumeroUltimaVisita: customer?.totalVisits || totals.visits || 0,
+        FechaPrimeraVisita: formatDate(customer?.firstVisitAt || totals.firstVisitAt),
+        FechaUltimaVisita: formatDate(customer?.lastVisitAt || totals.lastVisitAt),
+        MontoCompra: Number(visit.purchaseAmount || 0).toFixed(2),
+        TicketPromedioCliente: averageTicket.toFixed(2),
+        GastoAcumuladoCliente: totals.revenue.toFixed(2),
+        Ticket: visit.ticketNumber || '',
+      };
+    });
 
     const customerProfiles = memberships.map((membership) => {
       const userId = String(membership.userId || '');
-      const monthCustomerVisits = monthVisits.filter((visit) => visit.userId === userId);
-      const monthRevenue = sumRevenue(monthCustomerVisits);
+      const month = monthMetrics.get(userId) || { visits: 0, paidVisits: 0, revenue: 0 };
       const age = membership.user.birthDate ? now.getFullYear() - new Date(membership.user.birthDate).getFullYear() : null;
       return {
         userId,
@@ -274,8 +363,8 @@ export async function POST(request: Request) {
         gender: membership.user.gender || '',
         age,
         visits: Number(membership.totalVisits || 0),
-        monthVisits: monthCustomerVisits.length,
-        monthRevenue,
+        monthVisits: month.visits,
+        monthRevenue: month.revenue,
         totalRevenue: Number(revenueByUser.get(userId) || 0),
         lastVisit: membership.lastVisitAt ? membership.lastVisitAt.toISOString() : null,
       };
