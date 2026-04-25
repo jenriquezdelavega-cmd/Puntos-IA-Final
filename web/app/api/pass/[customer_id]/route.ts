@@ -39,8 +39,16 @@ export async function GET(req: Request, { params }: Params) {
 
     const url = new URL(req.url);
     const businessId = asTrimmedString(url.searchParams.get('businessId') || url.searchParams.get('business_id'));
+    const normalizeRewardLabel = (value: string | null | undefined) => String(value || '').trim().toLowerCase();
 
-    type MilestoneData = { id: string; visitTarget: number; reward: string; emoji: string; redeemed: boolean };
+    type MilestoneData = {
+      id: string;
+      visitTarget: number;
+      reward: string;
+      emoji: string;
+      redeemed: boolean;
+      pendingCode?: string | null;
+    };
     let business: {
       id: string;
       name: string;
@@ -74,17 +82,69 @@ export async function GET(req: Request, { params }: Params) {
           select: { currentVisits: true },
         });
 
-        // Find which milestones already have a used redemption for this user
-        const usedRedemptions = await prisma.redemption.findMany({
+        // Find milestone redemptions (used + pending) to present the current state in the pass.
+        const milestoneRedemptions = await prisma.redemption.findMany({
           where: {
             userId: user.id,
             tenantId: tenant.id,
-            loyaltyMilestoneId: { in: tenant.loyaltyMilestones.map(m => m.id) },
-            isUsed: true,
+            loyaltyMilestoneId: { not: null },
           },
-          select: { loyaltyMilestoneId: true },
+          select: {
+            loyaltyMilestoneId: true,
+            isUsed: true,
+            code: true,
+            createdAt: true,
+            rewardSnapshot: true,
+            loyaltyMilestone: {
+              select: {
+                visitTarget: true,
+                reward: true,
+                emoji: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
         });
-        const redeemedSet = new Set(usedRedemptions.map(r => r.loyaltyMilestoneId).filter(Boolean));
+        const redeemedSet = new Set<string>();
+        const pendingCodeByMilestone = new Map<string, string>();
+        const pendingCodeByVisitTarget = new Map<number, string>();
+        const pendingCodeByRewardLabel = new Map<string, string>();
+
+        milestoneRedemptions.forEach((redemption) => {
+          const milestoneId = String(redemption.loyaltyMilestoneId || '').trim();
+          if (!milestoneId) return;
+          if (redemption.isUsed) {
+            redeemedSet.add(milestoneId);
+            return;
+          }
+          const milestoneTarget = Number(redemption.loyaltyMilestone?.visitTarget ?? 0);
+          if (Number.isFinite(milestoneTarget) && milestoneTarget > 0 && !pendingCodeByVisitTarget.has(milestoneTarget)) {
+            pendingCodeByVisitTarget.set(milestoneTarget, redemption.code);
+          }
+          const snapshotLabel = normalizeRewardLabel(redemption.rewardSnapshot);
+          if (snapshotLabel && !pendingCodeByRewardLabel.has(snapshotLabel)) {
+            pendingCodeByRewardLabel.set(snapshotLabel, redemption.code);
+          }
+          const fullRewardLabel = normalizeRewardLabel(
+            `${redemption.loyaltyMilestone?.emoji ? `${redemption.loyaltyMilestone.emoji} ` : ''}${redemption.loyaltyMilestone?.reward ?? ''}`,
+          );
+          if (fullRewardLabel && !pendingCodeByRewardLabel.has(fullRewardLabel)) {
+            pendingCodeByRewardLabel.set(fullRewardLabel, redemption.code);
+          }
+          const matchingMilestone = tenant.loyaltyMilestones.find((milestone) => milestone.id === milestoneId);
+          if (matchingMilestone && !pendingCodeByVisitTarget.has(matchingMilestone.visitTarget)) {
+            pendingCodeByVisitTarget.set(matchingMilestone.visitTarget, redemption.code);
+            const fullRewardLabel = normalizeRewardLabel(
+              `${matchingMilestone.emoji ? `${matchingMilestone.emoji} ` : ''}${matchingMilestone.reward}`,
+            );
+            if (fullRewardLabel && !pendingCodeByRewardLabel.has(fullRewardLabel)) {
+              pendingCodeByRewardLabel.set(fullRewardLabel, redemption.code);
+            }
+          }
+          if (!pendingCodeByMilestone.has(milestoneId)) {
+            pendingCodeByMilestone.set(milestoneId, redemption.code);
+          }
+        });
 
         business = {
           id: tenant.id,
@@ -97,6 +157,11 @@ export async function GET(req: Request, { params }: Params) {
             reward: m.reward,
             emoji: m.emoji,
             redeemed: redeemedSet.has(m.id),
+            pendingCode:
+              pendingCodeByMilestone.get(m.id)
+              || pendingCodeByVisitTarget.get(m.visitTarget)
+              || pendingCodeByRewardLabel.get(normalizeRewardLabel(`${m.emoji ? `${m.emoji} ` : ''}${m.reward}`))
+              || null,
           })),
         };
       }

@@ -7,7 +7,14 @@ import { motion } from 'framer-motion';
 const PASS_CACHE_PREFIX = 'punto_pass_cache:';
 const PASS_CACHE_TTL_MS = 60_000;
 
-type MilestoneData = { id: string; visitTarget: number; reward: string; emoji: string; redeemed: boolean };
+type MilestoneData = {
+  id: string;
+  visitTarget: number;
+  reward: string;
+  emoji: string;
+  redeemed: boolean;
+  pendingCode?: string | null;
+};
 
 type PassResponse = {
   customer_id: string;
@@ -68,42 +75,6 @@ export default function PassPage() {
   const [error, setError] = useState('');
   const [pass, setPass] = useState<PassResponse | null>(null);
   const [sourceBusinessName, setSourceBusinessName] = useState('');
-  // milestoneCode: maps milestoneId -> { code, loading }
-  const [milestoneCodes, setMilestoneCodes] = useState<Record<string, { code: string; loading: boolean }>>({});
-
-  const requestMilestoneCode = async (milestone: MilestoneData) => {
-    if (!pass) return;
-    const sessionToken = typeof window !== 'undefined' ? (localStorage.getItem('punto_session_token') || '') : '';
-    const userId = pass.customer_id;
-    const tenantId = pass.business?.id;
-    if (!tenantId) return;
-
-    // If we already have a code for this milestone, toggle hide it
-    if (milestoneCodes[milestone.id]?.code) {
-      setMilestoneCodes(prev => ({ ...prev, [milestone.id]: { code: '', loading: false } }));
-      return;
-    }
-
-    setMilestoneCodes(prev => ({ ...prev, [milestone.id]: { code: '', loading: true } }));
-    try {
-      const res = await fetch('/api/redeem/milestone-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, tenantId, sessionToken, milestoneId: milestone.id }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || 'No se pudo generar el código');
-        setMilestoneCodes(prev => ({ ...prev, [milestone.id]: { code: '', loading: false } }));
-      } else {
-        setMilestoneCodes(prev => ({ ...prev, [milestone.id]: { code: String(data.code), loading: false } }));
-      }
-    } catch {
-      setMilestoneCodes(prev => ({ ...prev, [milestone.id]: { code: '', loading: false } }));
-    }
-  };
-
-
   const loadPass = async (customerId: string, businessId?: string, silent = false) => {
     const cleanCustomerId = String(customerId || '').trim();
     const cleanBusinessId = String(businessId || '').trim();
@@ -290,9 +261,8 @@ export default function PassPage() {
                       {pass.business.milestones.map((m) => {
                         const unlocked = (pass.business?.currentVisits ?? 0) >= m.visitTarget;
                         const redeemed = m.redeemed;
-                        const codeEntry = milestoneCodes[m.id];
-                        const showCode = Boolean(codeEntry?.code);
-                        const codeLoading = Boolean(codeEntry?.loading);
+                        const pendingCode = String(m.pendingCode || '').trim();
+                        const showCode = Boolean(pendingCode);
 
                         return (
                           <div key={m.id} className={`rounded-xl border transition-all ${
@@ -305,27 +275,20 @@ export default function PassPage() {
                               <div className="flex-1 min-w-0">
                                 <p className={`font-bold text-xs truncate ${redeemed ? 'text-gray-400 line-through' : unlocked ? 'text-emerald-800' : 'text-gray-500'}`}>{m.reward}</p>
                                 <p className={`text-[10px] font-semibold ${redeemed ? 'text-gray-400' : unlocked ? 'text-emerald-600' : 'text-gray-400'}`}>
-                                  {redeemed ? '¡Ya canjeado!' : unlocked ? '¡Desbloqueado!' : `Faltan ${m.visitTarget - (pass.business?.currentVisits ?? 0)} visita(s)`} · Visita {m.visitTarget}
+                                  {redeemed
+                                    ? '¡Ya canjeado!'
+                                    : unlocked
+                                      ? showCode
+                                        ? 'Código automático disponible'
+                                        : '¡Desbloqueado! El código se genera automáticamente'
+                                      : `Faltan ${m.visitTarget - (pass.business?.currentVisits ?? 0)} visita(s)`} · Visita {m.visitTarget}
                                 </p>
                               </div>
-                              {unlocked && !redeemed ? (
-                                <button
-                                  onClick={() => requestMilestoneCode(m)}
-                                  disabled={codeLoading}
-                                  className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-black transition-all ${
-                                    showCode
-                                      ? 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                                      : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                                  } disabled:opacity-60`}
-                                >
-                                  {codeLoading ? '...' : showCode ? 'Ocultar' : 'Canjear'}
-                                </button>
-                              ) : null}
                             </div>
                             {showCode ? (
                               <div className="border-t border-emerald-200 px-3 py-2.5 bg-white rounded-b-xl">
                                 <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700 mb-1">Código de canje</p>
-                                <p className="text-3xl font-black tracking-[0.25em] text-emerald-800">{codeEntry?.code}</p>
+                                <p className="text-3xl font-black tracking-[0.25em] text-emerald-800">{pendingCode}</p>
                                 <p className="text-[10px] text-emerald-600 font-semibold mt-1">Muestra este código al encargado del negocio</p>
                               </div>
                             ) : null}
