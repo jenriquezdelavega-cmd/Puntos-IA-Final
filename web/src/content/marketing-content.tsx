@@ -24,8 +24,8 @@ export const marketingContent = {
   home: {
     hero: {
       eyebrow: 'LA PLATAFORMA DE LEALTAD N°1 PARA NEGOCIOS LOCALES',
-      title: 'Deja de perder a los clientes que te visitaron solo una vez',
-      description: 'Punto IA transforma a compradores ocasionales en clientes frecuentes. Activa recompensas en Apple Wallet y Google Wallet, y mide tus ventas recurrentes en tiempo real.',
+      title: 'Deja de perder a los clientes que te visitaron solo una vez.',
+      description: 'La tecnología de fidelización de las grandes empresas, ahora en tu negocio. Crea tu programa de lealtad digital en Apple Wallet y Google Wallet, y transforma compradores ocasionales en clientes frecuentes.',
       chips: ['💳 Wallet Nativos', '📊 Datos en Tiempo Real', '⚡ Operación en Segundos'],
       primaryCta: { label: 'Comenzar prueba gratis', href: marketingRoutes.businessDemo } satisfies Cta,
       secondaryCta: { label: 'Descubrir cómo funciona', href: '#como-funciona' } satisfies Cta,
@@ -39,7 +39,7 @@ export const marketingContent = {
       },
     },
     bento: {
-      title: 'Retención de clase mundial comercial, accesible para tu negocio',
+      title: 'Retención de clase mundial, ahora accesible para tu negocio',
       description: 'Olvídate de las tarjetas de cartón que se pierden o las tablets que estorban. Lleva tu fidelización directamente al celular de tus clientes.',
       items: [
         {
@@ -112,7 +112,7 @@ export const marketingContent = {
     hero: {
       eyebrow: 'EL MOTOR DE CRECIMIENTO PARA DUEÑOS',
       title: 'Compite como gigante. Fideliza como local.',
-      description: 'Toma el control absoluto de tus clientes recurrentes. Sin hardware extra, sin integraciones eternas, y con la misma tecnología de fidelidad que hoy usan las grandes cadenas (Apple Wallet / Google Wallet).',
+      description: 'Toma el control absoluto de tus ventas recurrentes. Sin hardware extra, sin integraciones complejas, y con la misma tecnología de lealtad que hoy usan las grandes empresas (Apple Wallet / Google Wallet).',
       chips: ['✅ Reportes de Usuarios', '✅ Cero Hardware Extra', '✅ Setup en 5 minutos'],
       primaryCta: { label: 'Iniciar prueba gratuita', href: marketingRoutes.businessDemo } satisfies Cta,
       secondaryCta: { label: 'Ver precios transparentes', href: marketingRoutes.precios } satisfies Cta,
@@ -198,7 +198,7 @@ export const marketingContent = {
   clientes: {
     hero: {
       eyebrow: 'TU BILLETERA DE RECOMPENSAS',
-      title: 'Tus visitas diarias, ahora valen premios',
+      title: 'Tus visitas diarias, ahora valen premios.',
       description: 'Deja de perder tarjetas de cartón. Guarda tu pase directamente en Wallet, visita tus lugares favoritos y recibe notificaciones cuando tengas beneficios desbloqueados.',
       chips: ['🍏 Apple Wallet', '🤖 Google Wallet', '🚀 Cero descargas'],
       primaryCta: { label: 'Acceder a tus recompensas', href: marketingRoutes.login } satisfies Cta,

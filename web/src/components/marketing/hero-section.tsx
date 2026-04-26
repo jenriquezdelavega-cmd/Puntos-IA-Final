@@ -43,7 +43,7 @@ export function HeroSection({
   };
 
   return (
-    <section className="relative overflow-hidden bg-[#0d071a] pt-20 pb-28 sm:pt-32 sm:pb-40 lg:pb-48">
+    <section className="relative overflow-hidden bg-[#0d071a] pt-20 pb-12 sm:pt-32 sm:pb-16 lg:pb-20">
       {/* Background Glows (Tech Feel) */}
       <div className="pointer-events-none absolute -top-40 left-1/2 w-[800px] -translate-x-1/2 opacity-40 mix-blend-screen" aria-hidden="true">
          <div className="aspect-[1/1] rounded-full bg-gradient-radial from-[#8a60f6] to-transparent blur-[100px]" />
@@ -93,7 +93,7 @@ export function HeroSection({
 
       {/* Flotating UI Mockups (B2B + B2C) */}
       <div className="relative mx-auto mt-20 max-w-6xl px-6 lg:mt-24 pointer-events-none">
-        <div className="relative h-[300px] sm:h-[450px] lg:h-[550px] w-full perspective-[1000px]">
+        <div className="relative h-[250px] sm:h-[350px] lg:h-[450px] w-full perspective-[1000px]">
            {/* Negocio Dashboard */}
            <motion.div 
              initial={{ opacity: 0, x: -50, rotateY: 10 }}
@@ -140,7 +140,7 @@ export function HeroSection({
              initial={{ opacity: 0, x: 20, scale: 0.9 }}
              animate={{ opacity: 1, x: 0, scale: 1 }}
              transition={{ duration: 0.5, delay: 2.5, ease: 'backOut' }}
-             className="absolute right-[0%] lg:right-[5%] bottom-[5%] lg:bottom-[15%] z-20 flex max-w-[220px] items-center gap-3 rounded-2xl border border-indigo-500/30 bg-[#120a21]/90 px-4 py-3 shadow-[0_8px_30px_rgb(99,102,241,0.2)] backdrop-blur-md"
+             className="absolute right-[0%] lg:right-[5%] top-[50%] lg:top-[40%] z-20 flex max-w-[220px] items-center gap-3 rounded-2xl border border-indigo-500/30 bg-[#120a21]/90 px-4 py-3 shadow-[0_8px_30px_rgb(99,102,241,0.2)] backdrop-blur-md"
            >
              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-indigo-400">
                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
