@@ -54,10 +54,19 @@ export function SiteHeader({
       <div className={`mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-6 transition-all duration-300 ${scrolled ? 'py-3' : 'py-5'}`}>
         
         <div className="flex items-center md:flex-1">
-          <Link href="/" className="inline-flex items-center gap-3">
-            <span className="rounded-2xl border border-[#36235f] bg-[linear-gradient(120deg,#281949_0%,#1f1438_56%,#392666_100%)] px-3 py-2">
-              <Image src="/logo.png" alt="Punto IA" width={176} height={68} className="h-8 w-auto object-contain sm:h-9" priority />
-            </span>
+          <Link 
+            href="/" 
+            className="inline-flex items-center transition-transform hover:scale-105 hover:opacity-90 active:scale-95"
+            aria-label="Ir al inicio"
+          >
+            <Image 
+              src="/logo.png" 
+              alt="Punto IA" 
+              width={176} 
+              height={68} 
+              className="h-7 w-auto object-contain sm:h-8 drop-shadow-lg" 
+              priority 
+            />
           </Link>
         </div>
 
