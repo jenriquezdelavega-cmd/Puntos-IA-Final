@@ -14,7 +14,7 @@ export default function HomePage() {
 
   return (
     <PageShell>
-      <SiteHeader navItems={nav} />
+      <SiteHeader navItems={nav} dark position="fixed" />
 
       <HeroSection
         eyebrow={home.hero.eyebrow}
