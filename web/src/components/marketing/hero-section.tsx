@@ -43,7 +43,7 @@ export function HeroSection({
   };
 
   return (
-    <section className="relative overflow-hidden bg-[#0d071a] pt-20 pb-12 sm:pt-32 sm:pb-16 lg:pb-20">
+    <section className="relative overflow-hidden bg-[#0d071a] pt-10 pb-12 sm:pt-16 sm:pb-16 lg:pt-20 lg:pb-20">
       {/* Background Glows (Tech Feel) */}
       <div className="pointer-events-none absolute -top-40 left-1/2 w-[800px] -translate-x-1/2 opacity-40 mix-blend-screen" aria-hidden="true">
          <div className="aspect-[1/1] rounded-full bg-gradient-radial from-[#8a60f6] to-transparent blur-[100px]" />
