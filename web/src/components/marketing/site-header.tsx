@@ -29,7 +29,7 @@ export function SiteHeader({
 
   const headerBase = dark
     ? scrolled
-      ? 'border-b border-white/10 bg-[#0d071a]/95 backdrop-blur-xl shadow-md'
+      ? 'border-transparent bg-[#0d071a]/95 backdrop-blur-xl shadow-lg'
       : 'bg-[#0d071a]/90 backdrop-blur-lg border-transparent'
     : scrolled
       ? 'border-b border-white/20 bg-white/70 backdrop-blur-xl shadow-sm'
@@ -70,25 +70,27 @@ export function SiteHeader({
           </Link>
         </div>
 
-        <nav
-          className={`order-3 flex w-full items-center justify-start sm:justify-center gap-1 overflow-x-auto rounded-full p-1 md:order-2 md:flex-none md:w-auto md:overflow-visible ${navBase}`}
-          aria-label="Navegación principal"
-        >
-          {navItems.filter((item) => !item.href.startsWith('/ingresar')).map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7e4fd3] ${
-                  active ? linkActive : linkInactive
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="order-3 flex w-full justify-center md:order-2 md:w-auto md:flex-none overflow-hidden">
+          <nav
+            className={`flex items-center gap-1 overflow-x-auto rounded-full p-1 max-w-full ${navBase} [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]`}
+            aria-label="Navegación principal"
+          >
+            {navItems.filter((item) => !item.href.startsWith('/ingresar')).map((item) => {
+              const active = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7e4fd3] ${
+                    active ? linkActive : linkInactive
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
 
         <div className="order-2 flex items-center justify-end md:order-3 md:flex-1">
           {!isLoginPage && (
