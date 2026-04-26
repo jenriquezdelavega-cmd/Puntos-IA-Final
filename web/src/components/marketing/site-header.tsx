@@ -10,7 +10,7 @@ type NavItem = { label: string; href: string };
 export function SiteHeader({
   navItems,
   dark = true,
-  position = 'fixed',
+  position = 'sticky',
 }: {
   navItems: readonly NavItem[];
   dark?: boolean;
@@ -46,7 +46,7 @@ export function SiteHeader({
 
   const isLoginPage = pathname?.startsWith('/ingresar');
   const loginCtaClass = dark
-    ? 'border-white/20 text-[#dacbf0] hover:border-white/40 hover:text-white'
+    ? 'border-white/15 bg-white/5 px-6 py-2.5 text-[#dacbf0] shadow-sm backdrop-blur-md hover:bg-white/15 hover:text-white hover:border-white/30'
     : 'border-[#2d1c52] bg-[#2d1c52] px-6 py-2.5 text-white shadow-md shadow-[#2d1c52]/25 hover:border-[#231543] hover:bg-[#231543]';
 
   return (
