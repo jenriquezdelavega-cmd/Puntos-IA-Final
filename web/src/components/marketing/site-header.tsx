@@ -52,44 +52,46 @@ export function SiteHeader({
   return (
     <header className={`${position} top-0 w-full z-50 transition-all duration-300 ${headerBase}`}>
       <div className={`mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-6 transition-all duration-300 ${scrolled ? 'py-3' : 'py-5'}`}>
-        <Link href="/" className="inline-flex items-center gap-3">
-          <span className="rounded-2xl border border-[#36235f] bg-[linear-gradient(120deg,#281949_0%,#1f1438_56%,#392666_100%)] px-3 py-2">
-            <Image src="/logo.png" alt="Punto IA" width={176} height={68} className="h-8 w-auto object-contain sm:h-9" priority />
-          </span>
-        </Link>
+        
+        <div className="flex items-center md:flex-1">
+          <Link href="/" className="inline-flex items-center gap-3">
+            <span className="rounded-2xl border border-[#36235f] bg-[linear-gradient(120deg,#281949_0%,#1f1438_56%,#392666_100%)] px-3 py-2">
+              <Image src="/logo.png" alt="Punto IA" width={176} height={68} className="h-8 w-auto object-contain sm:h-9" priority />
+            </span>
+          </Link>
+        </div>
 
-        <div className="flex items-center gap-2 md:gap-4 ml-auto">
-          <nav
-            className={`flex w-full items-center gap-1 overflow-x-auto rounded-full p-1 md:w-auto md:overflow-visible ${navBase}`}
-            aria-label="Navegación principal"
-          >
-            {navItems.filter((item) => !item.href.startsWith('/ingresar')).map((item) => {
-              const active = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7e4fd3] ${
-                    active ? linkActive : linkInactive
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {!isLoginPage && (
-            <div className="flex items-center">
+        <nav
+          className={`order-3 flex w-full items-center justify-start sm:justify-center gap-1 overflow-x-auto rounded-full p-1 md:order-2 md:flex-none md:w-auto md:overflow-visible ${navBase}`}
+          aria-label="Navegación principal"
+        >
+          {navItems.filter((item) => !item.href.startsWith('/ingresar')).map((item) => {
+            const active = pathname === item.href;
+            return (
               <Link
-                href="/ingresar"
-                className={`inline-flex items-center justify-center rounded-xl border text-sm font-extrabold tracking-wide transition-all ${loginCtaClass}`}
+                key={item.href}
+                href={item.href}
+                className={`rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7e4fd3] ${
+                  active ? linkActive : linkInactive
+                }`}
               >
-                Entrar
+                {item.label}
               </Link>
-            </div>
+            );
+          })}
+        </nav>
+
+        <div className="order-2 flex items-center justify-end md:order-3 md:flex-1">
+          {!isLoginPage && (
+            <Link
+              href="/ingresar"
+              className={`inline-flex items-center justify-center rounded-xl border text-sm font-extrabold tracking-wide transition-all ${loginCtaClass}`}
+            >
+              Entrar
+            </Link>
           )}
         </div>
+        
       </div>
     </header>
   );
