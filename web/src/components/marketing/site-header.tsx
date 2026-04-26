@@ -9,8 +9,8 @@ type NavItem = { label: string; href: string };
 
 export function SiteHeader({
   navItems,
-  dark = false,
-  position = 'sticky',
+  dark = true,
+  position = 'fixed',
 }: {
   navItems: readonly NavItem[];
   dark?: boolean;
@@ -29,8 +29,8 @@ export function SiteHeader({
 
   const headerBase = dark
     ? scrolled
-      ? 'border-b border-white/10 bg-[#0d071a]/80 backdrop-blur-xl shadow-md'
-      : 'bg-transparent border-transparent'
+      ? 'border-b border-white/10 bg-[#0d071a]/95 backdrop-blur-xl shadow-md'
+      : 'bg-[#0d071a]/90 backdrop-blur-lg border-transparent'
     : scrolled
       ? 'border-b border-white/20 bg-white/70 backdrop-blur-xl shadow-sm'
       : 'bg-transparent border-transparent';
