@@ -9,10 +9,12 @@ type NavItem = { label: string; href: string };
 
 export function SiteHeader({
   navItems,
-  dark = false,
+  dark = true,
+  position = 'sticky',
 }: {
   navItems: readonly NavItem[];
   dark?: boolean;
+  position?: 'sticky' | 'fixed' | 'absolute';
 }) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
@@ -27,8 +29,8 @@ export function SiteHeader({
 
   const headerBase = dark
     ? scrolled
-      ? 'border-b border-white/10 bg-[#0d071a]/80 backdrop-blur-xl shadow-md'
-      : 'bg-transparent border-transparent'
+      ? 'border-b border-white/10 bg-[#0d071a]/95 backdrop-blur-xl shadow-md'
+      : 'bg-[#0d071a]/90 backdrop-blur-lg border-transparent'
     : scrolled
       ? 'border-b border-white/20 bg-white/70 backdrop-blur-xl shadow-sm'
       : 'bg-transparent border-transparent';
@@ -44,20 +46,23 @@ export function SiteHeader({
 
   const isLoginPage = pathname?.startsWith('/ingresar');
   const loginCtaClass = dark
-    ? 'border-white/20 text-[#dacbf0] hover:border-white/40 hover:text-white'
+    ? 'border-white/15 bg-white/5 px-6 py-2.5 text-[#dacbf0] shadow-sm backdrop-blur-md hover:bg-white/15 hover:text-white hover:border-white/30'
     : 'border-[#2d1c52] bg-[#2d1c52] px-6 py-2.5 text-white shadow-md shadow-[#2d1c52]/25 hover:border-[#231543] hover:bg-[#231543]';
 
   return (
-    <header className={`sticky top-0 z-50 transition-all duration-300 ${headerBase}`}>
+    <header className={`${position} top-0 w-full z-50 transition-all duration-300 ${headerBase}`}>
       <div className={`mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-6 transition-all duration-300 ${scrolled ? 'py-3' : 'py-5'}`}>
-        <Link href="/" className="inline-flex items-center gap-3">
-          <span className="rounded-2xl border border-[#36235f] bg-[linear-gradient(120deg,#281949_0%,#1f1438_56%,#392666_100%)] px-3 py-2">
-            <Image src="/logo.png" alt="Punto IA" width={176} height={68} className="h-8 w-auto object-contain sm:h-9" priority />
-          </span>
-        </Link>
+        
+        <div className="flex items-center md:flex-1">
+          <Link href="/" className="inline-flex items-center gap-3">
+            <span className="rounded-2xl border border-[#36235f] bg-[linear-gradient(120deg,#281949_0%,#1f1438_56%,#392666_100%)] px-3 py-2">
+              <Image src="/logo.png" alt="Punto IA" width={176} height={68} className="h-8 w-auto object-contain sm:h-9" priority />
+            </span>
+          </Link>
+        </div>
 
         <nav
-          className={`order-3 flex w-full items-center gap-1 overflow-x-auto rounded-full p-1 md:order-2 md:w-auto md:overflow-visible ${navBase}`}
+          className={`order-3 flex w-full items-center justify-start sm:justify-center gap-1 overflow-x-auto rounded-full p-1 md:order-2 md:flex-none md:w-auto md:overflow-visible ${navBase}`}
           aria-label="Navegación principal"
         >
           {navItems.filter((item) => !item.href.startsWith('/ingresar')).map((item) => {
@@ -76,16 +81,17 @@ export function SiteHeader({
           })}
         </nav>
 
-        {!isLoginPage && (
-          <div className="order-2 md:order-3 flex items-center">
+        <div className="order-2 flex items-center justify-end md:order-3 md:flex-1">
+          {!isLoginPage && (
             <Link
               href="/ingresar"
               className={`inline-flex items-center justify-center rounded-xl border text-sm font-extrabold tracking-wide transition-all ${loginCtaClass}`}
             >
               Entrar
             </Link>
-          </div>
-        )}
+          )}
+        </div>
+        
       </div>
     </header>
   );

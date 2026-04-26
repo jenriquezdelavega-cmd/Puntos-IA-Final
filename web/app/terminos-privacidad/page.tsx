@@ -1,10 +1,21 @@
-import { MarketingBackground, MarketingFooter, MarketingHeader, Section } from '../components/marketing/ui';
+import { marketingRoutes } from '@/src/config/marketing-routes';
+import { PageShell } from '@/src/components/marketing/page-shell';
+import { SiteHeader } from '@/src/components/marketing/site-header';
+import { SiteFooter } from '@/src/components/marketing/site-footer';
+import { Section } from '../components/marketing/ui';
+
+const NAV_ITEMS = [
+  { label: 'Inicio', href: marketingRoutes.home },
+  { label: 'Negocios', href: marketingRoutes.negocios },
+  { label: 'Clientes', href: marketingRoutes.clientes },
+  { label: 'Precios', href: marketingRoutes.precios },
+  { label: 'Entrar', href: marketingRoutes.login },
+] as const;
 
 export default function LegalPage() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#fffaf8] text-[#231644]">
-      <MarketingBackground />
-      <MarketingHeader badge="Legal" />
+    <PageShell>
+      <SiteHeader navItems={NAV_ITEMS} />
       <Section
         eyebrow="Legal"
         title="Términos y privacidad"
@@ -14,7 +25,7 @@ export default function LegalPage() {
           Esta sección funciona como punto de contacto legal del marketing site y evita enlaces rotos o ambiguos.
         </div>
       </Section>
-      <MarketingFooter />
-    </main>
+      <SiteFooter navItems={NAV_ITEMS} />
+    </PageShell>
   );
 }
