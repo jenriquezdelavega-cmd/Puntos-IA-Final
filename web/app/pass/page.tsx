@@ -254,50 +254,6 @@ export default function PassPage() {
                 <p className="text-xs font-bold text-emerald-700 mt-1">
                   {pass.business.name} · {pass.business.currentVisits}/{pass.business.requiredVisits} visitas
                 </p>
-                {pass.business.milestones && pass.business.milestones.length > 0 ? (
-                  <div className="mt-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-pink-500 mb-2">Escalera de beneficios</p>
-                    <div className="flex flex-col gap-2">
-                      {pass.business.milestones.map((m) => {
-                        const unlocked = (pass.business?.currentVisits ?? 0) >= m.visitTarget;
-                        const redeemed = m.redeemed;
-                        const pendingCode = String(m.pendingCode || '').trim();
-                        const showCode = Boolean(pendingCode);
-
-                        return (
-                          <div key={m.id} className={`rounded-xl border transition-all ${
-                            redeemed ? 'bg-gray-50 border-gray-100 opacity-60' :
-                            unlocked ? 'bg-emerald-50 border-emerald-200' :
-                            'bg-gray-50 border-gray-100 opacity-50'
-                          }`}>
-                            <div className="flex items-center gap-2.5 px-3 py-2">
-                              <span className="text-base shrink-0">{redeemed ? '✅' : unlocked ? m.emoji : '🔒'}</span>
-                              <div className="flex-1 min-w-0">
-                                <p className={`font-bold text-xs truncate ${redeemed ? 'text-gray-400 line-through' : unlocked ? 'text-emerald-800' : 'text-gray-500'}`}>{m.reward}</p>
-                                <p className={`text-[10px] font-semibold ${redeemed ? 'text-gray-400' : unlocked ? 'text-emerald-600' : 'text-gray-400'}`}>
-                                  {redeemed
-                                    ? '¡Ya canjeado!'
-                                    : unlocked
-                                      ? showCode
-                                        ? 'Código automático disponible'
-                                        : '¡Desbloqueado! El código se genera automáticamente'
-                                      : `Faltan ${m.visitTarget - (pass.business?.currentVisits ?? 0)} visita(s)`} · Visita {m.visitTarget}
-                                </p>
-                              </div>
-                            </div>
-                            {showCode ? (
-                              <div className="border-t border-emerald-200 px-3 py-2.5 bg-white rounded-b-xl">
-                                <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700 mb-1">Código de canje</p>
-                                <p className="text-3xl font-black tracking-[0.25em] text-emerald-800">{pendingCode}</p>
-                                <p className="text-[10px] text-emerald-600 font-semibold mt-1">Muestra este código al encargado del negocio</p>
-                              </div>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
               </>
             ) : (
               <p className="text-xs font-bold text-amber-700 mt-1">
