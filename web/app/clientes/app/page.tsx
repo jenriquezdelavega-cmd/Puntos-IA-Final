@@ -18,6 +18,7 @@ import {
   Sparkles,
   Target,
   Trophy,
+  Instagram,
   UserRound,
 } from 'lucide-react';
 import {
@@ -49,6 +50,7 @@ type Membership = {
   name?: string;
   prize?: string;
   instagram?: string;
+  businessCategory?: string;
   requiredVisits?: number;
   rewardPeriod?: string;
   logoData?: string;
@@ -309,6 +311,15 @@ export default function ClientesAppPage() {
     tenants.forEach((tenant) => {
       if (tenant.id && tenant.logoData) {
         map[tenant.id] = tenant.logoData;
+      }
+    });
+    return map;
+  }, [tenants]);
+  const tenantCategoryById = useMemo(() => {
+    const map: Record<string, string> = {};
+    tenants.forEach((tenant) => {
+      if (tenant.id) {
+        map[tenant.id] = tenant.businessCategory || DEFAULT_BUSINESS_CATEGORY;
       }
     });
     return map;
@@ -830,6 +841,8 @@ export default function ClientesAppPage() {
                   const requiredVisits = Math.max(1, Number(membership.requiredVisits || 10));
                   const currentVisits = Number(membership.visits || 0);
                   const currentPoints = Number(membership.points || 0);
+                  const instagramUrl = normalizeInstagramUrl(membership.instagram);
+                  const businessCategory = membership.businessCategory || tenantCategoryById[membership.tenantId] || DEFAULT_BUSINESS_CATEGORY;
                   const progress = Math.min(100, Math.round((currentVisits / requiredVisits) * 100));
                   const canRedeem = currentVisits >= requiredVisits;
                   const hasPendingCode = membership.rewardCodeStatus === 'CODE_PENDING';
@@ -843,8 +856,21 @@ export default function ClientesAppPage() {
                             logoData={membership.logoData || tenantLogoById[membership.tenantId] || undefined}
                           />
                           <div className="min-w-0">
-                            <h3 className="truncate text-xl font-black text-[#231644] md:text-2xl">{membership.name || 'Negocio aliado'}</h3>
-                            <p className="mt-1 truncate text-sm text-[#5c4a82]">{membership.prize || 'Premio disponible'}</p>
+                            <div className="flex items-center gap-2">
+                              <h3 className="truncate text-xl font-black text-[#231644] md:text-2xl">{membership.name || 'Negocio aliado'}</h3>
+                              {instagramUrl ? (
+                                <a
+                                  href={instagramUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  aria-label={`Instagram de ${membership.name || 'negocio aliado'}`}
+                                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#e7d7fb] text-[#5a3c8a] transition hover:bg-[#f7f1ff]"
+                                >
+                                  <Instagram className="h-4 w-4" />
+                                </a>
+                              ) : null}
+                            </div>
+                            <p className="mt-1 truncate text-sm text-[#5c4a82]">{businessCategory}</p>
                           </div>
                         </div>
                         <div className="rounded-2xl border border-[#eddffb] bg-[#fcf8ff] px-3.5 py-2.5 text-right text-sm font-semibold text-[#4e3a78]">
@@ -953,19 +979,6 @@ export default function ClientesAppPage() {
                         >
                           <span className="inline-flex items-center gap-2"><ScanLine className="h-4 w-4" /> Ver pase</span>
                         </Link>
-                        <span className={`${buttonStyles('primary')} !cursor-default !opacity-100`}>
-                          {hasPendingCode ? 'Tienes códigos pendientes' : 'Códigos automáticos al desbloquear'}
-                        </span>
-                        {membership.instagram ? (
-                          <a
-                            href={membership.instagram.startsWith('http') ? membership.instagram : `https://instagram.com/${membership.instagram.replace('@', '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={buttonStyles('tertiary')}
-                          >
-                            Instagram
-                          </a>
-                        ) : null}
                       </div>
                     </article>
                   );
