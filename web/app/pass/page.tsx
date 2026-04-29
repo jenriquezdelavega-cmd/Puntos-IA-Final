@@ -249,13 +249,16 @@ export default function PassPage() {
             <p className="text-xs uppercase tracking-[0.15em] font-black text-pink-600">Cliente</p>
             <p className="text-xl font-black mt-1">{pass.name}</p>
 
-            {pass.business ? (
-              <>
-                <p className="text-xs font-bold text-emerald-700 mt-1">
-                  {pass.business.name} · {pass.business.currentVisits}/{pass.business.requiredVisits} visitas
-                </p>
-              </>
-            ) : (
+                {pass.business ? (
+                  <>
+                    <p className="text-xs font-bold text-emerald-700 mt-1">
+                      {pass.business.name} · {pass.business.currentVisits}/{pass.business.requiredVisits} visitas
+                    </p>
+                    <p className="mt-2 text-[11px] font-semibold text-emerald-700/90">
+                      Los premios se generan con <span className="font-black">Código automático</span> en tu sección de mis puntos.
+                    </p>
+                  </>
+                ) : (
               <p className="text-xs font-bold text-amber-700 mt-1">
                 No se pudo resolver el negocio del pase. Regresa a la app y abre el pase desde una tarjeta de negocio.
               </p>
