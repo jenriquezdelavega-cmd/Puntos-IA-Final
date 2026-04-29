@@ -18,6 +18,7 @@ import {
   Sparkles,
   Target,
   Trophy,
+  Instagram,
   UserRound,
 } from 'lucide-react';
 import {
@@ -49,6 +50,7 @@ type Membership = {
   name?: string;
   prize?: string;
   instagram?: string;
+  businessCategory?: string;
   requiredVisits?: number;
   rewardPeriod?: string;
   logoData?: string;
@@ -844,7 +846,7 @@ export default function ClientesAppPage() {
                           />
                           <div className="min-w-0">
                             <h3 className="truncate text-xl font-black text-[#231644] md:text-2xl">{membership.name || 'Negocio aliado'}</h3>
-                            <p className="mt-1 truncate text-sm text-[#5c4a82]">{membership.prize || 'Premio disponible'}</p>
+                            <p className="mt-1 truncate text-sm text-[#5c4a82]">{membership.businessCategory || DEFAULT_BUSINESS_CATEGORY}</p>
                           </div>
                         </div>
                         <div className="rounded-2xl border border-[#eddffb] bg-[#fcf8ff] px-3.5 py-2.5 text-right text-sm font-semibold text-[#4e3a78]">
@@ -953,17 +955,15 @@ export default function ClientesAppPage() {
                         >
                           <span className="inline-flex items-center gap-2"><ScanLine className="h-4 w-4" /> Ver pase</span>
                         </Link>
-                        <span className={`${buttonStyles('primary')} !cursor-default !opacity-100`}>
-                          {hasPendingCode ? 'Tienes códigos pendientes' : 'Códigos automáticos al desbloquear'}
-                        </span>
                         {membership.instagram ? (
                           <a
                             href={membership.instagram.startsWith('http') ? membership.instagram : `https://instagram.com/${membership.instagram.replace('@', '')}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={buttonStyles('tertiary')}
+                            aria-label={`Instagram de ${membership.name || 'negocio aliado'}`}
+                            className={`${buttonStyles('tertiary')} !px-4`}
                           >
-                            Instagram
+                            <Instagram className="h-5 w-5" />
                           </a>
                         ) : null}
                       </div>
