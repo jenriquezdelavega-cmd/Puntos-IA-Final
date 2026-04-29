@@ -28,7 +28,7 @@ import {
   buttonStyles,
 } from '../../components/marketing/ui';
 import { BUSINESS_CATEGORIES, DEFAULT_BUSINESS_CATEGORY } from '../../lib/business-categories';
-import { normalizeInstagramUrl, sortedBusinessTags } from '../../lib/business-map-utils';
+import { normalizeInstagramUrl } from '../../lib/business-map-utils';
 
 const BusinessMap = dynamic(() => import('../../components/BusinessMap'), {
   ssr: false,
@@ -348,18 +348,6 @@ export default function ClientesAppPage() {
         : tenants.filter((tenant) => (tenant.businessCategory || DEFAULT_BUSINESS_CATEGORY) === selectedBusinessCategory),
     [tenants, selectedBusinessCategory],
   );
-  const selectedMapTenantTags = useMemo(
-    () =>
-      selectedMapTenant
-        ? sortedBusinessTags(selectedMapTenant.businessCategory || DEFAULT_BUSINESS_CATEGORY, selectedMapTenant.prize)
-        : [],
-    [selectedMapTenant],
-  );
-  const selectedMapTenantInstagramLink = useMemo(
-    () => normalizeInstagramUrl(selectedMapTenant?.instagram),
-    [selectedMapTenant?.instagram],
-  );
-
   useEffect(() => {
     if (!selectedMapTenant) return;
     const stillExists = filteredTenants.some((tenant) => tenant.id === selectedMapTenant.id && tenant.lat === selectedMapTenant.lat && tenant.lng === selectedMapTenant.lng);
@@ -1198,7 +1186,8 @@ export default function ClientesAppPage() {
                     ) : (
                       <ul className="mt-3 space-y-2">
                         {filteredTenants.slice(0, 8).map((tenant) => {
-                          const tags = sortedBusinessTags(tenant.businessCategory || DEFAULT_BUSINESS_CATEGORY, tenant.prize);
+                          const instagramUrl = normalizeInstagramUrl(tenant.instagram);
+                          const prizeTag = tenant.prize ? `🎁 ${tenant.prize}` : null;
 
                           return (
                             <li key={tenant.id || `${tenant.name}-${tenant.lat}-${tenant.lng}`} className="rounded-xl border border-[#eee2fb] bg-white p-2.5">
@@ -1207,16 +1196,13 @@ export default function ClientesAppPage() {
                                 <div className="min-w-0 flex-1">
                                   <p className="truncate text-sm font-black text-[#26174c]">{tenant.name}</p>
                                   <p className="truncate text-[11px] font-semibold text-[#77629f]">{tenant.address || `${tenant.lat.toFixed(4)}, ${tenant.lng.toFixed(4)}`}</p>
-                                  <div className="mt-1 flex flex-wrap gap-1">
-                                    {tags.map((tag) => (
-                                      <span
-                                        key={`${tenant.id || tenant.name}-${tag}`}
-                                        className="rounded-full border border-[#e9daf9] bg-[#f9f2ff] px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.06em] text-[#8b6bb8]"
-                                      >
-                                        {tag}
+                                  {prizeTag ? (
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                      <span className="rounded-full border border-[#e9daf9] bg-[#f9f2ff] px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.06em] text-[#8b6bb8]">
+                                        {prizeTag}
                                       </span>
-                                    ))}
-                                  </div>
+                                    </div>
+                                  ) : null}
                                   <div className="mt-2 flex flex-wrap gap-1.5">
                                     <button
                                       type="button"
@@ -1227,6 +1213,17 @@ export default function ClientesAppPage() {
                                     </button>
                                   </div>
                                 </div>
+                                {instagramUrl ? (
+                                  <a
+                                    href={instagramUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    aria-label={`Instagram de ${tenant.name || 'negocio aliado'}`}
+                                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#e8d9fa] bg-white text-[#7e4cd9] transition hover:border-[#c9a9f3] hover:bg-[#f8f0ff] hover:text-[#5f2fb5]"
+                                  >
+                                    <Instagram className="h-4 w-4" />
+                                  </a>
+                                ) : null}
                               </div>
                             </li>
                           );
@@ -1242,7 +1239,7 @@ export default function ClientesAppPage() {
                         <BusinessMap
                           tenants={filteredTenants}
                           focusCoords={selectedMapTenant ? [selectedMapTenant.lat, selectedMapTenant.lng] : null}
-                          radiusKm={50}
+                          radiusKm={selectedMapTenant ? 2 : 50}
                           onCreatePass={openBusinessPass}
                           selectedTenant={selectedMapTenant}
                           onSelectedChange={setSelectedMapTenant}
@@ -1261,16 +1258,13 @@ export default function ClientesAppPage() {
                               <p className="truncate text-[11px] font-semibold text-[#77629f]">
                                 {selectedMapTenant.address || `${selectedMapTenant.lat.toFixed(4)}, ${selectedMapTenant.lng.toFixed(4)}`}
                               </p>
-                              <div className="mt-1 flex flex-wrap gap-1">
-                                {selectedMapTenantTags.map((tag) => (
-                                  <span
-                                    key={`${selectedMapTenant.id || selectedMapTenant.name}-${tag}`}
-                                    className="rounded-full border border-[#e9daf9] bg-[#f9f2ff] px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.06em] text-[#8b6bb8]"
-                                  >
-                                    {tag}
+                              {selectedMapTenant.prize ? (
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  <span className="rounded-full border border-[#e9daf9] bg-[#f9f2ff] px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.06em] text-[#8b6bb8]">
+                                    {`🎁 ${selectedMapTenant.prize}`}
                                   </span>
-                                ))}
-                              </div>
+                                </div>
+                              ) : null}
                             </div>
                           </div>
                           <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -1290,22 +1284,12 @@ export default function ClientesAppPage() {
                             >
                               Cómo llegar
                             </a>
-                            {selectedMapTenantInstagramLink ? (
-                                <a
-                                  href={selectedMapTenantInstagramLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className={`${buttonStyles('tertiary')} px-2.5 py-1.5 text-[11px]`}
-                                >
-                                  Instagram
-                                </a>
-                            ) : null}
                             <button
                               type="button"
                               onClick={() => setSelectedMapTenant(null)}
                               className={`${buttonStyles('secondary')} px-2.5 py-1.5 text-[11px]`}
                             >
-                              Limpiar
+                              Cerrar
                             </button>
                           </div>
                         </div>
